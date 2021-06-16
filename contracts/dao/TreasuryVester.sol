@@ -1,11 +1,7 @@
 pragma solidity 0.6.12;
 
-import "./SafeMath.sol";
-
 contract TreasuryVester {
-    using SafeMath for uint;
-
-    address public immutable gtc;
+    address public immutable ipct;
     address public recipient;
 
     uint public immutable vestingAmount;
@@ -16,7 +12,7 @@ contract TreasuryVester {
     uint public lastUpdate;
 
     constructor(
-        address gtc_,
+        address ipct_,
         address recipient_,
         uint vestingAmount_,
         uint vestingBegin_,
@@ -27,7 +23,7 @@ contract TreasuryVester {
         require(vestingCliff_ >= vestingBegin_, 'TreasuryVester::constructor: cliff is too early');
         require(vestingEnd_ > vestingCliff_, 'TreasuryVester::constructor: end is too early');
 
-        gtc = gtc_;
+        ipct = ipct_;
         recipient = recipient_;
 
         vestingAmount = vestingAmount_;
@@ -47,16 +43,16 @@ contract TreasuryVester {
         require(block.timestamp >= vestingCliff, 'TreasuryVester::claim: not time yet');
         uint amount;
         if (block.timestamp >= vestingEnd) {
-            amount = IGtc(gtc).balanceOf(address(this));
+            amount = IIpct(ipct).balanceOf(address(this));
         } else {
             amount = vestingAmount.mul(block.timestamp - lastUpdate).div(vestingEnd - vestingBegin);
             lastUpdate = block.timestamp;
         }
-        IGtc(gtc).transfer(recipient, amount);
+        IIpct(ipct).transfer(recipient, amount);
     }
 }
 
-interface IGtc {
+interface IIpct {
     function balanceOf(address account) external view returns (uint);
     function transfer(address dst, uint rawAmount) external returns (bool);
 }

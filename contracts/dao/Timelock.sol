@@ -1,10 +1,6 @@
 pragma solidity 0.6.12;
 
-import "./SafeMath.sol";
-
 contract Timelock {
-    using SafeMath for uint;
-
     event NewAdmin(address indexed newAdmin);
     event NewPendingAdmin(address indexed newPendingAdmin);
     event NewDelay(uint indexed newDelay);
