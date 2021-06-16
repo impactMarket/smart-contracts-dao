@@ -1,26 +1,25 @@
 pragma solidity 0.6.12;
-pragma experimental ABIEncoderV2;
 
 import "./SafeMath.sol";
 
-contract GTC {
+contract IPCT {
     /// @notice EIP-20 token name for this token
-    string public constant name = "Gitcoin";
+    string public constant name = "Impact Market token";
 
     /// @notice EIP-20 token symbol for this token
-    string public constant symbol = "GTC";
+    string public constant symbol = "IPCT";
 
     /// @notice EIP-20 token decimals for this token
     uint8 public constant decimals = 18;
 
     /// @notice Total number of tokens in circulation
-    uint public totalSupply = 100_000_000e18; // 100 million GTC
+    uint public totalSupply = 100_000_000e18; // 100 million IPCT
 
     /// @notice Address which may mint new tokens
     address public minter;
 
-    /// @notice Address of the GTCDistribution contract 
-    address public GTCDist;
+    /// @notice Address of the IPCTDistribution contract 
+    address public IPCTDist;
 
     /// @notice The timestamp after which minting may occur
     uint public mintingAllowedAfter;
@@ -68,7 +67,7 @@ contract GTC {
     event MinterChanged(address minter, address newMinter);
 
     /// @notice An event thats emitted when the minter address is changed
-    event GTCDistChanged(address delegator, address delegatee);
+    event IPCTDistChanged(address delegator, address delegatee);
 
     /// @notice An event thats emitted when an account changes its delegate
     event DelegateChanged(address indexed delegator, address indexed fromDelegate, address indexed toDelegate);
@@ -83,13 +82,13 @@ contract GTC {
     event Approval(address indexed owner, address indexed spender, uint256 amount);
 
     /**
-     * @notice Construct a new GTC token
+     * @notice Construct a new IPCT token
      * @param account The initial account to grant all the tokens
      * @param minter_ The account with minting ability
      * @param mintingAllowedAfter_ The timestamp after which minting may occur
      */
     constructor(address account, address minter_, uint mintingAllowedAfter_) public {
-        require(mintingAllowedAfter_ >= block.timestamp, "GTC::constructor: minting can only begin after deployment");
+        require(mintingAllowedAfter_ >= block.timestamp, "IPCT::constructor: minting can only begin after deployment");
         balances[account] = uint96(totalSupply);
         emit Transfer(address(0), account, totalSupply);
         minter = minter_;
@@ -102,19 +101,19 @@ contract GTC {
      * @param minter_ The address of the new minter
      */
     function setMinter(address minter_) external {
-        require(msg.sender == minter, "GTC::setMinter: only the minter can change the minter address");
+        require(msg.sender == minter, "IPCT::setMinter: only the minter can change the minter address");
         emit MinterChanged(minter, minter_);
         minter = minter_;
     }
 
     /**
-     * @notice Change/set TokenDistribution address, needs to be called after GTCToken contract is deployed 
-     * @param GTCDist_ The address of the TokenDistributor contract
+     * @notice Change/set TokenDistribution address, needs to be called after IPCTToken contract is deployed 
+     * @param IPCTDist_ The address of the TokenDistributor contract
      */
-    function setGTCDist(address GTCDist_) external {
-        require(msg.sender == minter, "GTC::setGTCDist: only the minter can change the GTCDist address");
-        emit GTCDistChanged(GTCDist, GTCDist_);
-        GTCDist = GTCDist_;
+    function setIPCTDist(address IPCTDist_) external {
+        require(msg.sender == minter, "IPCT::setIPCTDist: only the minter can change the IPCTDist address");
+        emit IPCTDistChanged(IPCTDist, IPCTDist_);
+        IPCTDist = IPCTDist_;
     }
 
     /**
@@ -123,20 +122,20 @@ contract GTC {
      * @param rawAmount The number of tokens to be minted
      */
     function mint(address dst, uint rawAmount) external {
-        require(msg.sender == minter, "GTC::mint: only the minter can mint");
-        require(block.timestamp >= mintingAllowedAfter, "GTC::mint: minting not allowed yet");
-        require(dst != address(0), "GTC::mint: cannot transfer to the zero address");
+        require(msg.sender == minter, "IPCT::mint: only the minter can mint");
+        require(block.timestamp >= mintingAllowedAfter, "IPCT::mint: minting not allowed yet");
+        require(dst != address(0), "IPCT::mint: cannot transfer to the zero address");
 
         // record the mint
         mintingAllowedAfter = SafeMath.add(block.timestamp, minimumTimeBetweenMints);
 
         // mint the amount
-        uint96 amount = safe96(rawAmount, "GTC::mint: amount exceeds 96 bits");
-        require(amount <= SafeMath.div(SafeMath.mul(totalSupply, mintCap), 100), "GTC::mint: exceeded mint cap");
-        totalSupply = safe96(SafeMath.add(totalSupply, amount), "GTC::mint: totalSupply exceeds 96 bits");
+        uint96 amount = safe96(rawAmount, "IPCT::mint: amount exceeds 96 bits");
+        require(amount <= SafeMath.div(SafeMath.mul(totalSupply, mintCap), 100), "IPCT::mint: exceeded mint cap");
+        totalSupply = safe96(SafeMath.add(totalSupply, amount), "IPCT::mint: totalSupply exceeds 96 bits");
 
         // transfer the amount to the recipient
-        balances[dst] = add96(balances[dst], amount, "GTC::mint: transfer amount overflows");
+        balances[dst] = add96(balances[dst], amount, "IPCT::mint: transfer amount overflows");
         emit Transfer(address(0), dst, amount);
 
         // move delegates
@@ -166,7 +165,7 @@ contract GTC {
         if (rawAmount == uint(-1)) {
             amount = uint96(-1);
         } else {
-            amount = safe96(rawAmount, "GTC::approve: amount exceeds 96 bits");
+            amount = safe96(rawAmount, "IPCT::approve: amount exceeds 96 bits");
         }
 
         allowances[msg.sender][spender] = amount;
@@ -190,16 +189,16 @@ contract GTC {
         if (rawAmount == uint(-1)) {
             amount = uint96(-1);
         } else {
-            amount = safe96(rawAmount, "GTC::permit: amount exceeds 96 bits");
+            amount = safe96(rawAmount, "IPCT::permit: amount exceeds 96 bits");
         }
 
         bytes32 domainSeparator = keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)), getChainId(), address(this)));
         bytes32 structHash = keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, rawAmount, nonces[owner]++, deadline));
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
         address signatory = ecrecover(digest, v, r, s);
-        require(signatory != address(0), "GTC::permit: invalid signature");
-        require(signatory == owner, "GTC::permit: unauthorized");
-        require(now <= deadline, "GTC::permit: signature expired");
+        require(signatory != address(0), "IPCT::permit: invalid signature");
+        require(signatory == owner, "IPCT::permit: unauthorized");
+        require(now <= deadline, "IPCT::permit: signature expired");
 
         allowances[owner][spender] = amount;
 
@@ -222,7 +221,7 @@ contract GTC {
      * @return Whether or not the transfer succeeded
      */
     function transfer(address dst, uint rawAmount) external returns (bool) {
-        uint96 amount = safe96(rawAmount, "GTC::transfer: amount exceeds 96 bits");
+        uint96 amount = safe96(rawAmount, "IPCT::transfer: amount exceeds 96 bits");
         _transferTokens(msg.sender, dst, amount);
         return true;
     }
@@ -237,10 +236,10 @@ contract GTC {
     function transferFrom(address src, address dst, uint rawAmount) external returns (bool) {
         address spender = msg.sender;
         uint96 spenderAllowance = allowances[src][spender];
-        uint96 amount = safe96(rawAmount, "GTC::approve: amount exceeds 96 bits");
+        uint96 amount = safe96(rawAmount, "IPCT::approve: amount exceeds 96 bits");
 
         if (spender != src && spenderAllowance != uint96(-1)) {
-            uint96 newAllowance = sub96(spenderAllowance, amount, "GTC::transferFrom: transfer amount exceeds spender allowance");
+            uint96 newAllowance = sub96(spenderAllowance, amount, "IPCT::transferFrom: transfer amount exceeds spender allowance");
             allowances[src][spender] = newAllowance;
 
             emit Approval(src, spender, newAllowance);
@@ -264,7 +263,7 @@ contract GTC {
      * @param delegatee The address to delegate votes to
      */
     function delegateOnDist(address delegator, address delegatee) external {
-        require(msg.sender == GTCDist, "Sender not authorized");
+        require(msg.sender == IPCTDist, "Sender not authorized");
         return _delegate(delegator, delegatee);
     }
 
@@ -282,9 +281,9 @@ contract GTC {
         bytes32 structHash = keccak256(abi.encode(DELEGATION_TYPEHASH, delegatee, nonce, expiry));
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
         address signatory = ecrecover(digest, v, r, s);
-        require(signatory != address(0), "GTC::delegateBySig: invalid signature");
-        require(nonce == nonces[signatory]++, "GTC::delegateBySig: invalid nonce");
-        require(now <= expiry, "GTC::delegateBySig: signature expired");
+        require(signatory != address(0), "IPCT::delegateBySig: invalid signature");
+        require(nonce == nonces[signatory]++, "IPCT::delegateBySig: invalid nonce");
+        require(now <= expiry, "IPCT::delegateBySig: signature expired");
         return _delegate(signatory, delegatee);
     }
 
@@ -306,7 +305,7 @@ contract GTC {
      * @return The number of votes the account had as of the given block
      */
     function getPriorVotes(address account, uint blockNumber) external view returns (uint96) {
-        require(blockNumber < block.number, "GTC::getPriorVotes: not yet determined");
+        require(blockNumber < block.number, "IPCT::getPriorVotes: not yet determined");
 
         uint32 nCheckpoints = numCheckpoints[account];
         if (nCheckpoints == 0) {
@@ -350,11 +349,11 @@ contract GTC {
     }
 
     function _transferTokens(address src, address dst, uint96 amount) internal {
-        require(src != address(0), "GTC::_transferTokens: cannot transfer from the zero address");
-        require(dst != address(0), "GTC::_transferTokens: cannot transfer to the zero address");
+        require(src != address(0), "IPCT::_transferTokens: cannot transfer from the zero address");
+        require(dst != address(0), "IPCT::_transferTokens: cannot transfer to the zero address");
 
-        balances[src] = sub96(balances[src], amount, "GTC::_transferTokens: transfer amount exceeds balance");
-        balances[dst] = add96(balances[dst], amount, "GTC::_transferTokens: transfer amount overflows");
+        balances[src] = sub96(balances[src], amount, "IPCT::_transferTokens: transfer amount exceeds balance");
+        balances[dst] = add96(balances[dst], amount, "IPCT::_transferTokens: transfer amount overflows");
         emit Transfer(src, dst, amount);
 
         _moveDelegates(delegates[src], delegates[dst], amount);
@@ -365,21 +364,21 @@ contract GTC {
             if (srcRep != address(0)) {
                 uint32 srcRepNum = numCheckpoints[srcRep];
                 uint96 srcRepOld = srcRepNum > 0 ? checkpoints[srcRep][srcRepNum - 1].votes : 0;
-                uint96 srcRepNew = sub96(srcRepOld, amount, "GTC::_moveVotes: vote amount underflows");
+                uint96 srcRepNew = sub96(srcRepOld, amount, "IPCT::_moveVotes: vote amount underflows");
                 _writeCheckpoint(srcRep, srcRepNum, srcRepOld, srcRepNew);
             }
 
             if (dstRep != address(0)) {
                 uint32 dstRepNum = numCheckpoints[dstRep];
                 uint96 dstRepOld = dstRepNum > 0 ? checkpoints[dstRep][dstRepNum - 1].votes : 0;
-                uint96 dstRepNew = add96(dstRepOld, amount, "GTC::_moveVotes: vote amount overflows");
+                uint96 dstRepNew = add96(dstRepOld, amount, "IPCT::_moveVotes: vote amount overflows");
                 _writeCheckpoint(dstRep, dstRepNum, dstRepOld, dstRepNew);
             }
         }
     }
 
     function _writeCheckpoint(address delegatee, uint32 nCheckpoints, uint96 oldVotes, uint96 newVotes) internal {
-      uint32 blockNumber = safe32(block.number, "GTC::_writeCheckpoint: block number exceeds 32 bits");
+      uint32 blockNumber = safe32(block.number, "IPCT::_writeCheckpoint: block number exceeds 32 bits");
 
       if (nCheckpoints > 0 && checkpoints[delegatee][nCheckpoints - 1].fromBlock == blockNumber) {
           checkpoints[delegatee][nCheckpoints - 1].votes = newVotes;
