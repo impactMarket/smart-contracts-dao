@@ -1,0 +1,28 @@
+{
+  "name": "impact-market-token",
+  "version": "1.0.0",
+  "description": "Token and governance for Impact Market",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/keyko-io/impact-market-token.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/keyko-io/impact-market-token/issues"
+  },
+  "homepage": "https://github.com/keyko-io/impact-market-token#readme",
+  "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.0.2",
+    "@nomiclabs/hardhat-waffle": "^2.0.1",
+    "chai": "^4.3.4",
+    "ethereum-waffle": "^3.3.0",
+    "ethers": "^5.3.1",
+    "hardhat": "^2.3.3"
+  }
+}
