@@ -1,6 +1,4 @@
-pragma solidity 0.6.12;
-
-import "./SafeMath.sol";
+pragma solidity 0.8.5;
 
 contract IPCT {
     /// @notice EIP-20 token name for this token
@@ -127,12 +125,12 @@ contract IPCT {
         require(dst != address(0), "IPCT::mint: cannot transfer to the zero address");
 
         // record the mint
-        mintingAllowedAfter = SafeMath.add(block.timestamp, minimumTimeBetweenMints);
+        mintingAllowedAfter = block.timestamp + minimumTimeBetweenMints;
 
         // mint the amount
         uint96 amount = safe96(rawAmount, "IPCT::mint: amount exceeds 96 bits");
-        require(amount <= SafeMath.div(SafeMath.mul(totalSupply, mintCap), 100), "IPCT::mint: exceeded mint cap");
-        totalSupply = safe96(SafeMath.add(totalSupply, amount), "IPCT::mint: totalSupply exceeds 96 bits");
+        require(amount <= (totalSupply * mintCap) / 100, "IPCT::mint: exceeded mint cap");
+        totalSupply = safe96(totalSupply + amount, "IPCT::mint: totalSupply exceeds 96 bits");
 
         // transfer the amount to the recipient
         balances[dst] = add96(balances[dst], amount, "IPCT::mint: transfer amount overflows");
@@ -162,8 +160,8 @@ contract IPCT {
      */
     function approve(address spender, uint rawAmount) external returns (bool) {
         uint96 amount;
-        if (rawAmount == uint(-1)) {
-            amount = uint96(-1);
+        if (rawAmount == type(uint).max) {
+            amount = type(uint96).max;
         } else {
             amount = safe96(rawAmount, "IPCT::approve: amount exceeds 96 bits");
         }
@@ -186,8 +184,8 @@ contract IPCT {
      */
     function permit(address owner, address spender, uint rawAmount, uint deadline, uint8 v, bytes32 r, bytes32 s) external {
         uint96 amount;
-        if (rawAmount == uint(-1)) {
-            amount = uint96(-1);
+        if (rawAmount == type(uint).max) {
+            amount = type(uint96).max;
         } else {
             amount = safe96(rawAmount, "IPCT::permit: amount exceeds 96 bits");
         }
@@ -198,7 +196,7 @@ contract IPCT {
         address signatory = ecrecover(digest, v, r, s);
         require(signatory != address(0), "IPCT::permit: invalid signature");
         require(signatory == owner, "IPCT::permit: unauthorized");
-        require(now <= deadline, "IPCT::permit: signature expired");
+        require(block.timestamp <= deadline, "IPCT::permit: signature expired");
 
         allowances[owner][spender] = amount;
 
@@ -238,7 +236,7 @@ contract IPCT {
         uint96 spenderAllowance = allowances[src][spender];
         uint96 amount = safe96(rawAmount, "IPCT::approve: amount exceeds 96 bits");
 
-        if (spender != src && spenderAllowance != uint96(-1)) {
+        if (spender != src && spenderAllowance != type(uint96).max) {
             uint96 newAllowance = sub96(spenderAllowance, amount, "IPCT::transferFrom: transfer amount exceeds spender allowance");
             allowances[src][spender] = newAllowance;
 
@@ -283,7 +281,7 @@ contract IPCT {
         address signatory = ecrecover(digest, v, r, s);
         require(signatory != address(0), "IPCT::delegateBySig: invalid signature");
         require(nonce == nonces[signatory]++, "IPCT::delegateBySig: invalid nonce");
-        require(now <= expiry, "IPCT::delegateBySig: signature expired");
+        require(block.timestamp <= expiry, "IPCT::delegateBySig: signature expired");
         return _delegate(signatory, delegatee);
     }
 
@@ -411,7 +409,7 @@ contract IPCT {
         return a - b;
     }
 
-    function getChainId() internal pure returns (uint) {
+    function getChainId() internal view returns (uint) {
         uint256 chainId;
         assembly { chainId := chainid() }
         return chainId;
