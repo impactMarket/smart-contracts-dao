@@ -1,4 +1,4 @@
-pragma solidity 0.6.12;
+pragma solidity 0.8.5;
 
 contract IPCTGovernor {
     /// @notice The name of this contract
@@ -151,27 +151,24 @@ contract IPCTGovernor {
         uint endBlock = add256(startBlock, votingPeriod());
 
         proposalCount++;
-        Proposal memory newProposal = Proposal({
-            id: proposalCount,
-            proposer: msg.sender,
-            eta: 0,
-            targets: targets,
-            values: values,
-            signatures: signatures,
-            calldatas: calldatas,
-            startBlock: startBlock,
-            endBlock: endBlock,
-            forVotes: 0,
-            againstVotes: 0,
-            canceled: false,
-            executed: false
-        });
+        proposals[proposalCount].id = proposalCount;
+        proposals[proposalCount].proposer = msg.sender;
+        proposals[proposalCount].eta = 0;
+        proposals[proposalCount].targets = targets;
+        proposals[proposalCount].values = values;
+        proposals[proposalCount].signatures = signatures;
+        proposals[proposalCount].calldatas = calldatas;
+        proposals[proposalCount].startBlock = startBlock;
+        proposals[proposalCount].endBlock = endBlock;
+        proposals[proposalCount].forVotes = 0;
+        proposals[proposalCount].againstVotes = 0;
+        proposals[proposalCount].canceled = false;
+        proposals[proposalCount].executed = false;
 
-        proposals[newProposal.id] = newProposal;
-        latestProposalIds[newProposal.proposer] = newProposal.id;
+        latestProposalIds[msg.sender] = proposalCount;
 
-        emit ProposalCreated(newProposal.id, msg.sender, targets, values, signatures, calldatas, startBlock, endBlock, description);
-        return newProposal.id;
+        emit ProposalCreated(proposalCount, msg.sender, targets, values, signatures, calldatas, startBlock, endBlock, description);
+        return proposalCount;
     }
 
     function queue(uint proposalId) public {
@@ -195,7 +192,8 @@ contract IPCTGovernor {
         Proposal storage proposal = proposals[proposalId];
         proposal.executed = true;
         for (uint i = 0; i < proposal.targets.length; i++) {
-            timelock.executeTransaction.value(proposal.values[i])(proposal.targets[i], proposal.values[i], proposal.signatures[i], proposal.calldatas[i], proposal.eta);
+//            timelock.executeTransaction.value(proposal.values[i])(proposal.targets[i], proposal.values[i], proposal.signatures[i], proposal.calldatas[i], proposal.eta);
+            timelock.executeTransaction{value: proposal.values[i]}(proposal.targets[i], proposal.values[i], proposal.signatures[i], proposal.calldatas[i], proposal.eta);
         }
         emit ProposalExecuted(proposalId);
     }
@@ -290,7 +288,7 @@ contract IPCTGovernor {
         return a - b;
     }
 
-    function getChainId() internal pure returns (uint) {
+    function getChainId() internal view returns (uint) {
         uint chainId;
         assembly { chainId := chainid() }
         return chainId;
