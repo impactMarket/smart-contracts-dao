@@ -21,6 +21,7 @@ describe("IPCTGovernator", function() {
     this.IPCT = await ethers.getContractFactory("IPCT");
     this.Timelock = await ethers.getContractFactory("Timelock");
     this.IPCTGovernor = await ethers.getContractFactory("IPCTGovernor");
+    this.TestToken = await ethers.getContractFactory("TestToken");
 
     [
       this.owner, 
@@ -37,13 +38,14 @@ describe("IPCTGovernator", function() {
   });
 
   beforeEach(async function () {
+    this.testToken1 = await this.TestToken.deploy("Test Token #1", "TT1", bigNum(1000000));
+    this.testToken2 = await this.TestToken.deploy("Test Token #2", "TT2", bigNum(1000000));
+    this.testToken3 = await this.TestToken.deploy("Test Token #3", "TT3", bigNum(1000000));
+
     this.token = await this.IPCT.deploy(this.owner.address, this.owner.address, 1723332078);
     await this.token.deployed();
 
-    this.timelock = await this.Timelock.deploy(this.owner.address, 172800);
-    await this.timelock.deployed();
-
-    this.governor = await this.IPCTGovernor.deploy(this.timelock.address, this.token.address);
+    this.governor = await this.IPCTGovernor.deploy(this.owner.address, this.token.address, 172800);
     await this.governor.deployed();
 
     await this.token.transfer(this.alice.address, bigNum(1000001));
@@ -55,11 +57,9 @@ describe("IPCTGovernator", function() {
     await this.token.connect(this.bob).delegate(this.bob.address);
     await this.token.connect(this.carol).delegate(this.carol.address);
 
-    await this.timelock.forceSetAdmin(this.governor.address);
 
     console.log('-----------------------------------------------');
     console.log('token:     ' + this.token.address);
-    console.log('timelock: ' + this.timelock.address);
     console.log('dao:      ' + this.governor.address);
   });
 
@@ -98,9 +98,7 @@ describe("IPCTGovernator", function() {
     // await this.governor.connect(this.alice).propose([this.carol.address], [2000], ['signatures'], [12345678], 'description');
 
     console.log('//*/*/*/*/*/*/*/*/*/*/*/*/**//**//*//*/*/');
-    console.log(smallNum(await this.token.balanceOf(this.timelock.address)));
     await this.token.transfer(this.governor.address, bigNum(1234));
     await this.governor.connect(this.alice).sendMoney(bigNum(1234));
-    console.log(smallNum(await this.token.balanceOf(this.timelock.address)));
   });
 });

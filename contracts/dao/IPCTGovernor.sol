@@ -19,15 +19,6 @@ contract IPCTGovernor {
     /// @notice The duration of voting on a proposal, in blocks
     function votingPeriod() public pure returns (uint) { return 40_320; } // ~7 days in blocks (assuming 15s blocks)
 
-    /// @notice The address of the IPCT Protocol Timelock
-    TimelockInterface public timelock;
-
-    /// @notice The address of the IPCT governance token
-    IPCTInterface public ipct;
-
-    /// @notice The total number of proposals
-    uint public proposalCount;
-
     struct Proposal {
         /// @notice Unique id for looking up a proposal
         uint id;
@@ -96,11 +87,27 @@ contract IPCTGovernor {
         Executed
     }
 
+    uint public constant GRACE_PERIOD = 14 days;
+    uint public constant MINIMUM_DELAY = 2 days;
+    uint public constant MAXIMUM_DELAY = 30 days;
+
+    /// @notice The address of the IPCT governance token
+    IPCTInterface public ipct;
+
+    /// @notice The total number of proposals
+    uint public proposalCount;
+
+    address public admin;
+
+    uint public delay;
+
     /// @notice The official record of all proposals ever proposed
     mapping (uint => Proposal) public proposals;
 
     /// @notice The latest proposal for each proposer
     mapping (address => uint) public latestProposalIds;
+
+    mapping (bytes32 => bool) public queuedTransactions;
 
     /// @notice The EIP-712 typehash for the contract's domain
     bytes32 public constant DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)");
@@ -123,19 +130,28 @@ contract IPCTGovernor {
     /// @notice An event emitted when a proposal has been executed in the Timelock
     event ProposalExecuted(uint id);
 
+    event CancelTransaction(bytes32 indexed txHash, address indexed target, uint value, string signature,  bytes data, uint eta);
+    event ExecuteTransaction(bytes32 indexed txHash, address indexed target, uint value, string signature,  bytes data, uint eta);
+    event QueueTransaction(bytes32 indexed txHash, address indexed target, uint value, string signature, bytes data, uint eta);
+
     /**
      * @notice Construct a new IPCTGovernor contract
-     * @param timelock_ - address for the TimeLock contract 
-     * @param ipct_ - address of ERC20 that claims will be distributed from  
+     * @param admin_ - contract admin
+     * @param ipct_ - address of ERC20 that claims will be distributed from
+     * @param delay_ - delay before successful proposal
      **/
 
-    constructor(address timelock_, address ipct_) public {
-        timelock = TimelockInterface(timelock_);
+    constructor(address admin_, address ipct_, uint delay_) public {
+        require(delay_ >= MINIMUM_DELAY, "IPCTGovernor::constructor: Delay must exceed minimum delay.");
+        require(delay_ <= MAXIMUM_DELAY, "IPCTGovernor::constructor: Delay must not exceed maximum delay.");
+
         ipct = IPCTInterface(ipct_);
+        delay = delay_;
+        admin = admin_;
     }
 
     function propose(address[] memory targets, uint[] memory values, string[] memory signatures, bytes[] memory calldatas, string memory description) public returns (uint) {
-        require(ipct.getPriorVotes(msg.sender, sub256(block.number, 1)) > proposalThreshold(), "IPCTGovernor::propose: proposer votes below proposal threshold");
+        require(ipct.getPriorVotes(msg.sender, block.number - 1) > proposalThreshold(), "IPCTGovernor::propose: proposer votes below proposal threshold");
         require(targets.length == values.length && targets.length == signatures.length && targets.length == calldatas.length, "IPCTGovernor::propose: proposal function information parity mismatch");
         require(targets.length != 0, "IPCTGovernor::propose: must provide actions");
         require(targets.length <= proposalMaxOperations(), "IPCTGovernor::propose: too many actions");
@@ -147,8 +163,8 @@ contract IPCTGovernor {
           require(proposersLatestProposalState != ProposalState.Pending, "IPCTGovernor::propose: one live proposal per proposer, found an already pending proposal");
         }
 
-        uint startBlock = add256(block.number, votingDelay());
-        uint endBlock = add256(startBlock, votingPeriod());
+        uint startBlock = block.number + votingDelay();
+        uint endBlock = startBlock + votingPeriod();
 
         proposalCount++;
         proposals[proposalCount].id = proposalCount;
@@ -174,7 +190,7 @@ contract IPCTGovernor {
     function queue(uint proposalId) public {
         require(state(proposalId) == ProposalState.Succeeded, "IPCTGovernor::queue: proposal can only be queued if it is succeeded");
         Proposal storage proposal = proposals[proposalId];
-        uint eta = add256(block.timestamp, timelock.delay());
+        uint eta = block.timestamp + delay;
         for (uint i = 0; i < proposal.targets.length; i++) {
             _queueOrRevert(proposal.targets[i], proposal.values[i], proposal.signatures[i], proposal.calldatas[i], eta);
         }
@@ -183,8 +199,8 @@ contract IPCTGovernor {
     }
 
     function _queueOrRevert(address target, uint value, string memory signature, bytes memory data, uint eta) internal {
-        require(!timelock.queuedTransactions(keccak256(abi.encode(target, value, signature, data, eta))), "IPCTGovernor::_queueOrRevert: proposal action already queued at eta");
-        timelock.queueTransaction(target, value, signature, data, eta);
+        require(!queuedTransactions[keccak256(abi.encode(target, value, signature, data, eta))], "IPCTGovernor::_queueOrRevert: proposal action already queued at eta");
+        queueTransaction(target, value, signature, data, eta);
     }
 
     function execute(uint proposalId) public payable {
@@ -193,7 +209,7 @@ contract IPCTGovernor {
         proposal.executed = true;
         for (uint i = 0; i < proposal.targets.length; i++) {
 //            timelock.executeTransaction.value(proposal.values[i])(proposal.targets[i], proposal.values[i], proposal.signatures[i], proposal.calldatas[i], proposal.eta);
-            timelock.executeTransaction{value: proposal.values[i]}(proposal.targets[i], proposal.values[i], proposal.signatures[i], proposal.calldatas[i], proposal.eta);
+            executeTransaction(proposal.targets[i], proposal.values[i], proposal.signatures[i], proposal.calldatas[i], proposal.eta);
         }
         emit ProposalExecuted(proposalId);
     }
@@ -203,11 +219,11 @@ contract IPCTGovernor {
         require(state != ProposalState.Executed, "IPCTGovernor::cancel: cannot cancel executed proposal");
 
         Proposal storage proposal = proposals[proposalId];
-        require(ipct.getPriorVotes(proposal.proposer, sub256(block.number, 1)) < proposalThreshold(), "IPCTGovernor::cancel: proposer above threshold");
+        require(ipct.getPriorVotes(proposal.proposer, block.number - 1) < proposalThreshold(), "IPCTGovernor::cancel: proposer above threshold");
 
         proposal.canceled = true;
         for (uint i = 0; i < proposal.targets.length; i++) {
-            timelock.cancelTransaction(proposal.targets[i], proposal.values[i], proposal.signatures[i], proposal.calldatas[i], proposal.eta);
+            cancelTransaction(proposal.targets[i], proposal.values[i], proposal.signatures[i], proposal.calldatas[i], proposal.eta);
         }
 
         emit ProposalCanceled(proposalId);
@@ -237,7 +253,7 @@ contract IPCTGovernor {
             return ProposalState.Succeeded;
         } else if (proposal.executed) {
             return ProposalState.Executed;
-        } else if (block.timestamp >= add256(proposal.eta, timelock.GRACE_PERIOD())) {
+        } else if (block.timestamp >= proposal.eta + GRACE_PERIOD) {
             return ProposalState.Expired;
         } else {
             return ProposalState.Queued;
@@ -265,9 +281,9 @@ contract IPCTGovernor {
         uint96 votes = ipct.getPriorVotes(voter, proposal.startBlock);
 
         if (support) {
-            proposal.forVotes = add256(proposal.forVotes, votes);
+            proposal.forVotes = proposal.forVotes + votes;
         } else {
-            proposal.againstVotes = add256(proposal.againstVotes, votes);
+            proposal.againstVotes = proposal.againstVotes + votes;
         }
 
         receipt.hasVoted = true;
@@ -277,32 +293,59 @@ contract IPCTGovernor {
         emit VoteCast(voter, proposalId, support, votes);
     }
 
-    function add256(uint256 a, uint256 b) internal pure returns (uint) {
-        uint c = a + b;
-        require(c >= a, "addition overflow");
-        return c;
-    }
-
-    function sub256(uint256 a, uint256 b) internal pure returns (uint) {
-        require(b <= a, "subtraction underflow");
-        return a - b;
-    }
-
     function getChainId() internal view returns (uint) {
         uint chainId;
         assembly { chainId := chainid() }
         return chainId;
     }
-}
 
-interface TimelockInterface {
-    function delay() external view returns (uint);
-    function GRACE_PERIOD() external view returns (uint);
-    function acceptAdmin() external;
-    function queuedTransactions(bytes32 hash) external view returns (bool);
-    function queueTransaction(address target, uint value, string calldata signature, bytes calldata data, uint eta) external returns (bytes32);
-    function cancelTransaction(address target, uint value, string calldata signature, bytes calldata data, uint eta) external;
-    function executeTransaction(address target, uint value, string calldata signature, bytes calldata data, uint eta) external payable returns (bytes memory);
+    function queueTransaction(address target, uint value, string memory signature, bytes memory data, uint eta) internal returns (bytes32) {
+        require(msg.sender == admin, "IPCTGovernor::queueTransaction: Call must come from admin.");
+        require(eta >= block.timestamp + delay, "Timelock::queueTransaction: Estimated execution block must satisfy delay.");
+
+        bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));
+        queuedTransactions[txHash] = true;
+
+        emit QueueTransaction(txHash, target, value, signature, data, eta);
+        return txHash;
+    }
+
+    function cancelTransaction(address target, uint value, string memory signature, bytes memory data, uint eta) internal {
+        require(msg.sender == admin, "IPCTGovernor::cancelTransaction: Call must come from admin.");
+
+        bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));
+        queuedTransactions[txHash] = false;
+
+        emit CancelTransaction(txHash, target, value, signature, data, eta);
+    }
+
+    function executeTransaction(address target, uint value, string memory signature, bytes memory data, uint eta) public payable returns (bytes memory) {
+        require(msg.sender == admin, "IPCTGovernor::executeTransaction: Call must come from admin.");
+
+        bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));
+        require(queuedTransactions[txHash], "IPCTGovernor::executeTransaction: Transaction hasn't been queued.");
+        require(block.timestamp >= eta, "IPCTGovernor::executeTransaction: Transaction hasn't surpassed time lock.");
+        require(block.timestamp <= eta + GRACE_PERIOD, "IPCTGovernor::executeTransaction: Transaction is stale.");
+
+        queuedTransactions[txHash] = false;
+
+        bytes memory callData;
+
+        if (bytes(signature).length == 0) {
+            callData = data;
+        } else {
+            callData = abi.encodePacked(bytes4(keccak256(bytes(signature))), data);
+        }
+
+        // solium-disable-next-line security/no-call-value
+        //        (bool success, bytes memory returnData) = target.call.value(value)(callData);
+        (bool success, bytes memory returnData) = target.call{value: value}(callData);
+        require(success, "IPCTGovernor::executeTransaction: Transaction execution reverted.");
+
+        emit ExecuteTransaction(txHash, target, value, signature, data, eta);
+
+        return returnData;
+    }
 }
 
 interface IPCTInterface {
