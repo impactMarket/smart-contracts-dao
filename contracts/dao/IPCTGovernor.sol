@@ -24,6 +24,8 @@ contract IPCTGovernor {
         /// @notice Unique id for looking up a proposal
         uint id;
 
+        ProposalType proposalType;
+
         /// @notice Creator of the proposal
         address proposer;
 
@@ -64,7 +66,7 @@ contract IPCTGovernor {
         uint96 votes;
     }
 
-    struct ProposalChangeDaoParams {
+    struct ProposalUpdateGovernorParams {
         address admin;
         address ipct;
         uint delay;
@@ -74,6 +76,12 @@ contract IPCTGovernor {
         address token;
         address to;
         uint value;
+    }
+
+    struct ProposalCreateCommunityParams {
+        address communityAddress;
+        address allowanceToken;
+        uint allowance;
     }
 
     /// @notice Possible states that a proposal may be in
@@ -89,10 +97,10 @@ contract IPCTGovernor {
     }
 
     enum ProposalType {
-        ChangeDao,
+        UpdateGovernor,
         SendMoney,
         CreateCommunity,
-        DeleteCommunity
+        UpdateCommunity
     }
 
     uint public constant GRACE_PERIOD = 14 days;
@@ -112,9 +120,11 @@ contract IPCTGovernor {
     /// @notice The official record of all proposals ever proposed
     mapping (uint => Proposal) public proposals;
 
-    mapping (uint => ProposalChangeDaoParams) public proposalsChangeDaoParams;
+    mapping (uint => ProposalUpdateGovernorParams) public proposalsUpdateGovernorParams;
 
     mapping (uint => ProposalSendMoneyParams) public proposalsSendMoneyParams;
+
+    mapping (uint => ProposalCreateCommunityParams) public proposalsCreateCommunityParams;
 
     mapping (bytes32 => bool) public queuedTransactions;
 
@@ -158,25 +168,15 @@ contract IPCTGovernor {
         admin = admin_;
     }
 
-    function _createProposal(ProposalType _proposalType, string memory _description) internal returns (uint) {
-        require(ipct.getPriorVotes(msg.sender, block.number - 1) > proposalThreshold(), "IPCTGovernor::propose: proposer votes below proposal threshold");
+    function proposeUpdateGovernor(address _admin, address _ipct, uint _delay, string memory _description) external {
+        uint proposalId = _createProposal(ProposalType.UpdateGovernor, _description);
 
-        uint startBlock = block.number + votingDelay();
-        uint endBlock = startBlock + votingPeriod();
+        ProposalUpdateGovernorParams memory _params;
+        _params.admin = _admin;
+        _params.ipct = _ipct;
+        _params.delay = _delay;
 
-        proposalCount++;
-        proposals[proposalCount].id = proposalCount;
-        proposals[proposalCount].proposer = msg.sender;
-        proposals[proposalCount].eta = 0;
-        proposals[proposalCount].startBlock = startBlock;
-        proposals[proposalCount].endBlock = endBlock;
-        proposals[proposalCount].forVotes = 0;
-        proposals[proposalCount].againstVotes = 0;
-        proposals[proposalCount].canceled = false;
-        proposals[proposalCount].executed = false;
-
-        emit ProposalCreated(proposalCount, msg.sender, startBlock, endBlock, _description);
-        return proposalCount;
+        proposalsUpdateGovernorParams[proposalId] = _params;
     }
 
     function proposeSendMoney(address _token, address _to, uint _value, string memory _description) external {
@@ -190,18 +190,61 @@ contract IPCTGovernor {
         proposalsSendMoneyParams[proposalId] = _params;
     }
 
-    function queue(uint proposalId) public {
-        require(state(proposalId) == ProposalState.Succeeded, "IPCTGovernor::queue: proposal can only be queued if it is succeeded");
-        Proposal storage proposal = proposals[proposalId];
-        proposal.eta = block.timestamp + delay;
+    function proposeCreateCommunity(address _communityAddress, address _allowanceToken, uint _allowance, string memory _description) external {
+        uint proposalId = _createProposal(ProposalType.CreateCommunity, _description);
 
-        emit ProposalQueued(proposalId, proposal.eta);
+        ProposalCreateCommunityParams memory _params;
+        _params.communityAddress = _communityAddress;
+        _params.allowanceToken = _allowanceToken;
+        _params.allowance = _allowance;
+
+        proposalsCreateCommunityParams[proposalId] = _params;
+    }
+
+    function _createProposal(ProposalType _proposalType, string memory _description) internal returns (uint) {
+        require(ipct.getPriorVotes(msg.sender, block.number - 1) > proposalThreshold(),
+            "IPCTGovernor::propose: proposer votes below proposal threshold");
+
+        uint startBlock = block.number + votingDelay();
+        uint endBlock = startBlock + votingPeriod();
+
+        proposalCount++;
+        proposals[proposalCount].id = proposalCount;
+        proposals[proposalCount].proposalType = _proposalType;
+        proposals[proposalCount].proposer = msg.sender;
+        proposals[proposalCount].eta = 0;
+        proposals[proposalCount].startBlock = startBlock;
+        proposals[proposalCount].endBlock = endBlock;
+        proposals[proposalCount].forVotes = 0;
+        proposals[proposalCount].againstVotes = 0;
+        proposals[proposalCount].canceled = false;
+        proposals[proposalCount].executed = false;
+
+        emit ProposalCreated(proposalCount, msg.sender, startBlock, endBlock, _description);
+        return proposalCount;
+    }
+
+    function queue(uint proposalId) public {
+        require(state(proposalId) == ProposalState.Succeeded,
+            "IPCTGovernor::queue: proposal can only be queued if it is succeeded");
+        proposals[proposalId].eta = block.timestamp + delay;
+
+        emit ProposalQueued(proposalId, proposals[proposalId].eta);
     }
 
     function execute(uint proposalId) public payable {
-        require(state(proposalId) == ProposalState.Queued, "IPCTGovernor::execute: proposal can only be executed if it is queued");
-        Proposal storage proposal = proposals[proposalId];
-        proposal.executed = true;
+        require(state(proposalId) == ProposalState.Queued,
+            "IPCTGovernor::execute: proposal can only be executed if it is queued");
+
+        if (proposals[proposalId].proposalType == ProposalType.UpdateGovernor) {
+            _executeUpdateGovernorProposal(proposalId);
+        } else if (proposals[proposalId].proposalType == ProposalType.SendMoney) {
+            _executeSendMoneyProposal(proposalId);
+        } else if (proposals[proposalId].proposalType == ProposalType.CreateCommunity) {
+            _executeCreateCommunityProposal(proposalId);
+        }
+
+        proposals[proposalId].executed = true;
 
         emit ProposalExecuted(proposalId);
     }
@@ -282,8 +325,26 @@ contract IPCTGovernor {
         assembly { chainId := chainid() }
         return chainId;
     }
+
+    function _executeSendMoneyProposal(uint proposalId) internal {
+        console.log("executeSendMoneyProposal");
+        ERC20Interface erc20 = ERC20Interface(proposalsSendMoneyParams[proposalId].token);
+        erc20.transferFrom(address(this), proposalsSendMoneyParams[proposalId].to, proposalsSendMoneyParams[proposalId].value);
+    }
+
+    function _executeUpdateGovernorProposal(uint proposalId) internal {
+        console.log("executeUpdateGovernorProposal");
+    }
+
+    function _executeCreateCommunityProposal(uint proposalId) internal {
+        console.log("executeCreateCommunityProposal");
+    }
 }
 
 interface IPCTInterface {
     function getPriorVotes(address account, uint blockNumber) external view returns (uint96);
+}
+
+interface ERC20Interface {
+    function transferFrom(address from, address to, uint amount) external;
 }
