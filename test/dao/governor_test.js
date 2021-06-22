@@ -60,13 +60,15 @@ describe("IPCTGovernator", function() {
 
     console.log('-----------------------------------------------');
     console.log('token:     ' + this.token.address);
-    console.log('dao:      ' + this.governor.address);
+    console.log('governance:      ' + this.governor.address);
   });
 
   it("should work", async function() {
     console.log('********************');
 
-    await this.governor.proposeSendMoney(this.token.address, this.carol.address, bigNum(1000001), 'description');
+    await this.token.transfer(this.governor.address, bigNum(1234));
+
+    await this.governor.proposeSendMoney(this.token.address, this.carol.address, bigNum(1234), 'description');
 
     // await this.governor.castVote(1, true);   evm_mine
 
@@ -91,7 +93,7 @@ describe("IPCTGovernator", function() {
 
     console.log(smallNum(await this.token.balanceOf(this.carol.address)));
 
-    console.log(await this.governor.proposalsSendMoneyParams(1));
+    // console.log(await this.governor.proposals(1));
 
 
     // console.log(await this.governor.getActions(1));
