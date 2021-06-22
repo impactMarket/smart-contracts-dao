@@ -66,7 +66,7 @@ describe("IPCTGovernator", function() {
   it("should work", async function() {
     console.log('********************');
 
-    await this.governor.propose([this.carol.address], [bigNum(1000001)], ['signatures'], [12345678], 'description');
+    await this.governor.proposeSendMoney(this.token.address, this.carol.address, bigNum(1000001), 'description');
 
     // await this.governor.castVote(1, true);   evm_mine
 
@@ -91,14 +91,15 @@ describe("IPCTGovernator", function() {
 
     console.log(smallNum(await this.token.balanceOf(this.carol.address)));
 
+    console.log(await this.governor.proposalsSendMoneyParams(1));
+
 
     // console.log(await this.governor.getActions(1));
 
 
     // await this.governor.connect(this.alice).propose([this.carol.address], [2000], ['signatures'], [12345678], 'description');
 
-    console.log('//*/*/*/*/*/*/*/*/*/*/*/*/**//**//*//*/*/');
-    await this.token.transfer(this.governor.address, bigNum(1234));
-    await this.governor.connect(this.alice).sendMoney(bigNum(1234));
+    // console.log('//*/*/*/*/*/*/*/*/*/*/*/*/**//**//*//*/*/');
+    // await this.token.transfer(this.governor.address, bigNum(1234));
   });
 });
