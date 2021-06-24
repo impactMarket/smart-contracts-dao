@@ -333,7 +333,9 @@ contract IPCTGovernor {
     }
 
     function _executeUpdateGovernorProposal(uint proposalId) internal {
-        console.log("executeUpdateGovernorProposal");
+        ipct = IPCTInterface(proposalsUpdateGovernorParams[proposalId].ipct);
+        admin = proposalsUpdateGovernorParams[proposalId].admin;
+        delay = proposalsUpdateGovernorParams[proposalId].delay;
     }
 
     function _executeCreateCommunityProposal(uint proposalId) internal {
