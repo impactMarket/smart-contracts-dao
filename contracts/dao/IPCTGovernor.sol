@@ -1,5 +1,8 @@
 pragma solidity 0.8.5;
 
+import "../community/interfaces/ICommunityFactory.sol";
+import "../community/CommunityFactory.sol";
+
 import "hardhat/console.sol";
 
 contract IPCTGovernor {
@@ -79,9 +82,12 @@ contract IPCTGovernor {
     }
 
     struct ProposalCreateCommunityParams {
-        address communityAddress;
-        address allowanceToken;
-        uint allowance;
+        address firstManager;
+        uint256 claimAmount;
+        uint256 maxClaim;
+        uint256 baseInterval;
+        uint256 incrementInterval;
+        address previousCommunityAddress;
     }
 
     /// @notice Possible states that a proposal may be in
@@ -109,6 +115,7 @@ contract IPCTGovernor {
 
     /// @notice The address of the IPCT governance token
     IPCTInterface public ipct;
+    address public communityFactory;
 
     /// @notice The total number of proposals
     uint public proposalCount;
@@ -164,6 +171,7 @@ contract IPCTGovernor {
         require(delay_ <= MAXIMUM_DELAY, "IPCTGovernor::constructor: Delay must not exceed maximum delay.");
 
         ipct = IPCTInterface(ipct_);
+        communityFactory = address(new CommunityFactory(address(this), address(this)));
         delay = delay_;
         admin = admin_;
     }
@@ -190,13 +198,24 @@ contract IPCTGovernor {
         proposalsSendMoneyParams[proposalId] = _params;
     }
 
-    function proposeCreateCommunity(address _communityAddress, address _allowanceToken, uint _allowance, string memory _description) external {
+    function proposeCreateCommunity(
+        address _firstManager,
+        uint256 _claimAmount,
+        uint256 _maxClaim,
+        uint256 _baseInterval,
+        uint256 _incrementInterval,
+        address _previousCommunityAddress,
+        string memory _description
+    ) external {
         uint proposalId = _createProposal(ProposalType.CreateCommunity, _description);
 
         ProposalCreateCommunityParams memory _params;
-        _params.communityAddress = _communityAddress;
-        _params.allowanceToken = _allowanceToken;
-        _params.allowance = _allowance;
+        _params.firstManager = _firstManager;
+        _params.claimAmount = _claimAmount;
+        _params.maxClaim = _maxClaim;
+        _params.baseInterval = _baseInterval;
+        _params.incrementInterval = _incrementInterval;
+        _params.previousCommunityAddress = _previousCommunityAddress;
 
         proposalsCreateCommunityParams[proposalId] = _params;
     }
@@ -340,6 +359,15 @@ contract IPCTGovernor {
 
     function _executeCreateCommunityProposal(uint proposalId) internal {
         console.log("executeCreateCommunityProposal");
+        ICommunityFactory(communityFactory).deployCommunity(
+                proposalsCreateCommunityParams[proposalId].firstManager,
+                proposalsCreateCommunityParams[proposalId].claimAmount,
+                proposalsCreateCommunityParams[proposalId].maxClaim,
+                proposalsCreateCommunityParams[proposalId].baseInterval,
+                proposalsCreateCommunityParams[proposalId].incrementInterval,
+                proposalsCreateCommunityParams[proposalId].previousCommunityAddress
+        );
+
     }
 }
 
