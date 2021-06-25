@@ -8,6 +8,7 @@ var expect = chai.expect;
 
 const bigNum = num=>(num + '0'.repeat(18))
 const smallNum = num=>(parseInt(num)/bigNum(1))
+const zeroAddress = '0x0000000000000000000000000000000000000000'
 
 async function advanceNBlocks(n) {
   while (n) {
@@ -63,12 +64,64 @@ describe("IPCTGovernator", function() {
     console.log('governance:      ' + this.governor.address);
   });
 
-  it("should work", async function() {
+  it("should send founds", async function() {
     console.log('********************');
 
     await this.token.transfer(this.governor.address, bigNum(1234));
 
     await this.governor.proposeSendMoney(this.token.address, this.carol.address, bigNum(1234), 'description');
+
+    // await this.governor.castVote(1, true);   evm_mine
+
+
+    await advanceNBlocks(11);
+    // await time.advanceBlockTo(parseInt(await time.latestBlock()) + 1);;
+
+
+    await this.governor.castVote(1, true);
+    await this.governor.connect(this.alice).castVote(1, true);
+
+    await advanceNBlocks(21);
+
+
+    await this.governor.queue(1);
+    await network.provider.send("evm_increaseTime", [1000000]);
+    // await advanceNBlocks(1);
+
+    console.log(smallNum(await this.token.balanceOf(this.carol.address)));
+
+    await this.governor.connect(this.alice).execute(1);
+
+    console.log(smallNum(await this.token.balanceOf(this.carol.address)));
+
+    // console.log(await this.governor.proposals(1));
+
+
+    // console.log(await this.governor.getActions(1));
+
+
+    // await this.governor.connect(this.alice).propose([this.carol.address], [2000], ['signatures'], [12345678], 'description');
+
+    // console.log('//*/*/*/*/*/*/*/*/*/*/*/*/**//**//*//*/*/');
+    // await this.token.transfer(this.governor.address, bigNum(1234));
+  });
+
+
+  it("should create community", async function() {
+    console.log('********************');
+
+    await this.token.transfer(this.governor.address, bigNum(1234));
+
+    await this.governor.proposeCreateCommunity(this.alice.address, bigNum(100), bigNum(1000), 1111, 111, zeroAddress, 'description');
+
+    // proposalsCreateCommunityParams[proposalId].firstManager,
+    //     proposalsCreateCommunityParams[proposalId].claimAmount,
+    //     proposalsCreateCommunityParams[proposalId].maxClaim,
+    //     proposalsCreateCommunityParams[proposalId].baseInterval,
+    //     proposalsCreateCommunityParams[proposalId].incrementInterval,
+    //     proposalsCreateCommunityParams[proposalId].previousCommunityAddress
+
+
 
     // await this.governor.castVote(1, true);   evm_mine
 
