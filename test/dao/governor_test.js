@@ -114,14 +114,6 @@ describe("IPCTGovernator", function() {
 
     await this.governor.proposeCreateCommunity(this.alice.address, bigNum(100), bigNum(1000), 1111, 111, zeroAddress, 'description');
 
-    // proposalsCreateCommunityParams[proposalId].firstManager,
-    //     proposalsCreateCommunityParams[proposalId].claimAmount,
-    //     proposalsCreateCommunityParams[proposalId].maxClaim,
-    //     proposalsCreateCommunityParams[proposalId].baseInterval,
-    //     proposalsCreateCommunityParams[proposalId].incrementInterval,
-    //     proposalsCreateCommunityParams[proposalId].previousCommunityAddress
-
-
 
     // await this.governor.castVote(1, true);   evm_mine
 
@@ -140,21 +132,7 @@ describe("IPCTGovernator", function() {
     await network.provider.send("evm_increaseTime", [1000000]);
     // await advanceNBlocks(1);
 
-    console.log(smallNum(await this.token.balanceOf(this.carol.address)));
 
     await this.governor.connect(this.alice).execute(1);
-
-    console.log(smallNum(await this.token.balanceOf(this.carol.address)));
-
-    // console.log(await this.governor.proposals(1));
-
-
-    // console.log(await this.governor.getActions(1));
-
-
-    // await this.governor.connect(this.alice).propose([this.carol.address], [2000], ['signatures'], [12345678], 'description');
-
-    // console.log('//*/*/*/*/*/*/*/*/*/*/*/*/**//**//*//*/*/');
-    // await this.token.transfer(this.governor.address, bigNum(1234));
   });
 });
