@@ -90,6 +90,13 @@ contract IPCTGovernor {
         address previousCommunityAddress;
     }
 
+    struct ProposalExternalCallParams {
+        address target;
+        uint value;
+        string signature;
+        bytes data;
+    }
+
     /// @notice Possible states that a proposal may be in
     enum ProposalState {
         Pending,
@@ -105,6 +112,7 @@ contract IPCTGovernor {
     enum ProposalType {
         UpdateGovernor,
         SendMoney,
+        ExternalCall,
         CreateCommunity,
         UpdateCommunity
     }
@@ -132,6 +140,8 @@ contract IPCTGovernor {
     mapping (uint => ProposalSendMoneyParams) public proposalsSendMoneyParams;
 
     mapping (uint => ProposalCreateCommunityParams) public proposalsCreateCommunityParams;
+
+    mapping (uint => ProposalExternalCallParams) public proposalsExternalCallParams;
 
     mapping (bytes32 => bool) public queuedTransactions;
 
@@ -220,6 +230,24 @@ contract IPCTGovernor {
         proposalsCreateCommunityParams[proposalId] = _params;
     }
 
+    function proposeExternalCall(
+        address _target,
+        uint _value,
+        string memory _signature,
+        bytes memory _data,
+        string memory _description
+    ) external {
+        uint proposalId = _createProposal(ProposalType.ExternalCall, _description);
+
+        ProposalExternalCallParams memory _params;
+        _params.target = _target;
+        _params.value = _value;
+        _params.signature = _signature;
+        _params.data = _data;
+
+        proposalsExternalCallParams[proposalId] = _params;
+    }
+
     function _createProposal(ProposalType _proposalType, string memory _description) internal returns (uint) {
         require(ipct.getPriorVotes(msg.sender, block.number - 1) > proposalThreshold(),
             "IPCTGovernor::propose: proposer votes below proposal threshold");
@@ -261,6 +289,8 @@ contract IPCTGovernor {
             _executeSendMoneyProposal(proposalId);
         } else if (proposals[proposalId].proposalType == ProposalType.CreateCommunity) {
             _executeCreateCommunityProposal(proposalId);
+        } else if (proposals[proposalId].proposalType == ProposalType.ExternalCall) {
+            _executeExternalCallProposal(proposalId);
         }
 
         proposals[proposalId].executed = true;
@@ -367,7 +397,21 @@ contract IPCTGovernor {
                 proposalsCreateCommunityParams[proposalId].incrementInterval,
                 proposalsCreateCommunityParams[proposalId].previousCommunityAddress
         );
+    }
 
+    function _executeExternalCallProposal(uint proposalId) internal {
+        console.log("executeExternalCall");
+
+        bytes memory callData;
+
+        if (bytes(proposalsExternalCallParams[proposalId].signature).length == 0) {
+            callData = proposalsExternalCallParams[proposalId].data;
+        } else {
+            callData = abi.encodePacked(bytes4(keccak256(bytes(proposalsExternalCallParams[proposalId].signature))), proposalsExternalCallParams[proposalId].data);
+        }
+
+        communityFactory.call(callData);
+        proposalsExternalCallParams[proposalId].target.call(callData);
     }
 }
 
