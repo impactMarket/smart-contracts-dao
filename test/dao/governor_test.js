@@ -135,4 +135,42 @@ describe("IPCTGovernator", function() {
 
     await this.governor.connect(this.alice).execute(1);
   });
+
+  it("should call external", async function() {
+    console.log('********************');
+
+    await this.token.transfer(this.governor.address, bigNum(1234));
+
+    const params = ethers.utils.defaultAbiCoder.encode(['address','uint256','uint256','uint256','uint256','address'],
+        [this.alice.address, bigNum(100), bigNum(1000), 1111, 111, zeroAddress]);
+    console.log('paramsparamsparamsparamsparamsparamsparams');
+    console.log(params);
+    await this.governor.proposeExternalCall(
+        this.governor.address,
+        10,
+        'deployCommunity(address,uint256,uint256,uint256,uint256,address)',
+        params,
+        'description');
+
+
+    // await this.governor.castVote(1, true);   evm_mine
+
+
+    await advanceNBlocks(11);
+    // await time.advanceBlockTo(parseInt(await time.latestBlock()) + 1);;
+
+
+    await this.governor.castVote(1, true);
+    await this.governor.connect(this.alice).castVote(1, true);
+
+    await advanceNBlocks(21);
+
+
+    await this.governor.queue(1);
+    await network.provider.send("evm_increaseTime", [1000000]);
+    // await advanceNBlocks(1);
+
+
+    await this.governor.connect(this.alice).execute(1);
+  });
 });
