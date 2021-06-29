@@ -46,7 +46,7 @@ describe("IPCTGovernator", function() {
     this.token = await this.IPCT.deploy(this.owner.address, this.owner.address, 1723332078);
     await this.token.deployed();
 
-    this.governor = await this.IPCTGovernor.deploy(this.owner.address, this.token.address, 172800);
+    this.governor = await this.IPCTGovernor.deploy(this.owner.address, this.token.address);
     await this.governor.deployed();
 
     await this.token.transfer(this.alice.address, bigNum(1000001));

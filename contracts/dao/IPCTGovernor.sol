@@ -9,20 +9,6 @@ contract IPCTGovernor {
     /// @notice The name of this contract
     string public constant name = "Impact Market Governor";
 
-    /// @notice The number of votes in support of a proposal required in order for a quorum to be reached and for a vote to succeed
-    function quorumVotes() public pure returns (uint) { return 2_500_000e18; } // 2.5% of IPCT
-
-    /// @notice The number of votes required in order for a voter to become a proposer
-    function proposalThreshold() public pure returns (uint) { return 1_000_000e18; } // 1% of IPCT
-
-    /// @notice The delay before voting on a proposal may take place, once proposed
-//    function votingDelay() public pure returns (uint) { return 13140; } // ~2 days in blocks (assuming 15s blocks)
-    function votingDelay() public pure returns (uint) { return 10; } // ~2 days in blocks (assuming 15s blocks)
-
-    /// @notice The duration of voting on a proposal, in blocks
-//    function votingPeriod() public pure returns (uint) { return 40_320; } // ~7 days in blocks (assuming 15s blocks)
-    function votingPeriod() public pure returns (uint) { return 20; } // ~7 days in blocks (assuming 15s blocks)
-
     struct Proposal {
         /// @notice Unique id for looking up a proposal
         uint id;
@@ -73,6 +59,10 @@ contract IPCTGovernor {
         address admin;
         address ipct;
         uint delay;
+        uint quorumVotes;
+        uint proposalThreshold;
+        uint votingDelay;
+        uint votingPeriod;
     }
 
     struct ProposalSendMoneyParams {
@@ -121,8 +111,25 @@ contract IPCTGovernor {
     uint public constant MINIMUM_DELAY = 2 days;
     uint public constant MAXIMUM_DELAY = 30 days;
 
+    /// @notice The number of votes in support of a proposal required in order for a quorum to be reached and for a vote to succeed
+    uint public quorumVotes = 2_500_000e18; // 2.5% of IPCT
+
+    /// @notice The number of votes required in order for a voter to become a proposer
+    uint public proposalThreshold = 1_000_000e18; // 1% of IPCT
+
+    /// @notice The delay before voting on a proposal may take place, once proposed
+    //    uint public votingDelay = 13140; // ~2 days in blocks (assuming 15s blocks)
+    uint public votingDelay = 10;
+
+    /// @notice The duration of voting on a proposal, in blocks
+    //    uint public votingPeriod = 40_320; // ~7 days in blocks (assuming 15s blocks)
+    uint public votingPeriod = 20; // ~7 days in blocks (assuming 15s blocks)
+
+    uint public delay = 172800;
+
     /// @notice The address of the IPCT governance token
     IPCTInterface public ipct;
+
     address public communityFactory;
 
     /// @notice The total number of proposals
@@ -130,7 +137,6 @@ contract IPCTGovernor {
 
     address public admin;
 
-    uint public delay;
 
     /// @notice The official record of all proposals ever proposed
     mapping (uint => Proposal) public proposals;
@@ -174,25 +180,36 @@ contract IPCTGovernor {
      * @notice Construct a new IPCTGovernor contract
      * @param admin_ - contract admin
      * @param ipct_ - address of ERC20 that claims will be distributed from
-     * @param delay_ - delay before successful proposal
      **/
-    constructor(address admin_, address ipct_, uint delay_) public {
-        require(delay_ >= MINIMUM_DELAY, "IPCTGovernor::constructor: Delay must exceed minimum delay.");
-        require(delay_ <= MAXIMUM_DELAY, "IPCTGovernor::constructor: Delay must not exceed maximum delay.");
-
+    constructor(address admin_, address ipct_) public {
         ipct = IPCTInterface(ipct_);
         communityFactory = address(new CommunityFactory(address(this), address(this)));
-        delay = delay_;
         admin = admin_;
     }
 
-    function proposeUpdateGovernor(address _admin, address _ipct, uint _delay, string memory _description) external {
+    function proposeUpdateGovernor(
+        address _admin,
+        address _ipct,
+        uint _delay,
+        uint _quorumVotes,
+        uint _proposalThreshold,
+        uint _votingDelay,
+        uint _votingPeriod,
+        string memory _description
+    ) external {
+        require(_delay >= MINIMUM_DELAY, "IPCTGovernor::constructor: Delay must exceed minimum delay.");
+        require(_delay <= MAXIMUM_DELAY, "IPCTGovernor::constructor: Delay must not exceed maximum delay.");
+
         uint proposalId = _createProposal(ProposalType.UpdateGovernor, _description);
 
         ProposalUpdateGovernorParams memory _params;
         _params.admin = _admin;
         _params.ipct = _ipct;
         _params.delay = _delay;
+        _params.quorumVotes = _quorumVotes;
+        _params.proposalThreshold = _proposalThreshold;
+        _params.votingDelay = _votingDelay;
+        _params.votingPeriod = votingPeriod;
 
         proposalsUpdateGovernorParams[proposalId] = _params;
     }
@@ -249,11 +266,11 @@ contract IPCTGovernor {
     }
 
     function _createProposal(ProposalType _proposalType, string memory _description) internal returns (uint) {
-        require(ipct.getPriorVotes(msg.sender, block.number - 1) > proposalThreshold(),
+        require(ipct.getPriorVotes(msg.sender, block.number - 1) > proposalThreshold,
             "IPCTGovernor::propose: proposer votes below proposal threshold");
 
-        uint startBlock = block.number + votingDelay();
-        uint endBlock = startBlock + votingPeriod();
+        uint startBlock = block.number + votingDelay;
+        uint endBlock = startBlock + votingPeriod;
 
         proposalCount++;
         proposals[proposalCount].id = proposalCount;
@@ -303,7 +320,7 @@ contract IPCTGovernor {
         require(state != ProposalState.Executed, "IPCTGovernor::cancel: cannot cancel executed proposal");
 
         Proposal storage proposal = proposals[proposalId];
-        require(ipct.getPriorVotes(proposal.proposer, block.number - 1) < proposalThreshold(), "IPCTGovernor::cancel: proposer above threshold");
+        require(ipct.getPriorVotes(proposal.proposer, block.number - 1) < proposalThreshold, "IPCTGovernor::cancel: proposer above threshold");
 
         proposal.canceled = true;
 
@@ -323,7 +340,7 @@ contract IPCTGovernor {
             return ProposalState.Pending;
         } else if (block.number <= proposal.endBlock) {
             return ProposalState.Active;
-        } else if (proposal.forVotes <= proposal.againstVotes || proposal.forVotes < quorumVotes()) {
+        } else if (proposal.forVotes <= proposal.againstVotes || proposal.forVotes < quorumVotes) {
             return ProposalState.Defeated;
         } else if (proposal.eta == 0) {
             return ProposalState.Succeeded;
@@ -385,6 +402,10 @@ contract IPCTGovernor {
         ipct = IPCTInterface(proposalsUpdateGovernorParams[proposalId].ipct);
         admin = proposalsUpdateGovernorParams[proposalId].admin;
         delay = proposalsUpdateGovernorParams[proposalId].delay;
+        quorumVotes = proposalsUpdateGovernorParams[proposalId].quorumVotes;
+        proposalThreshold = proposalsUpdateGovernorParams[proposalId].proposalThreshold;
+        votingDelay = proposalsUpdateGovernorParams[proposalId].votingDelay;
+        votingPeriod = proposalsUpdateGovernorParams[proposalId].votingPeriod;
     }
 
     function _executeCreateCommunityProposal(uint proposalId) internal {
