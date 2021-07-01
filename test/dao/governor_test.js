@@ -19,8 +19,8 @@ async function advanceNBlocks(n) {
 
 describe("IPCTGovernator", function() {
   before(async function () {
+    this.CommunityFactory = await ethers.getContractFactory("CommunityFactory");
     this.IPCT = await ethers.getContractFactory("IPCT");
-    this.Timelock = await ethers.getContractFactory("Timelock");
     this.IPCTGovernor = await ethers.getContractFactory("IPCTGovernor");
     this.TestToken = await ethers.getContractFactory("TestToken");
 
@@ -44,10 +44,13 @@ describe("IPCTGovernator", function() {
     this.testToken3 = await this.TestToken.deploy("Test Token #3", "TT3", bigNum(1000000));
 
     this.token = await this.IPCT.deploy(this.owner.address, this.owner.address, 1723332078);
-    await this.token.deployed();
+    // await this.token.deployed();
 
-    this.governor = await this.IPCTGovernor.deploy(this.owner.address, this.token.address);
-    await this.governor.deployed();
+    this.governor = await this.IPCTGovernor.deploy(this.token.address, [this.owner.address], 1);
+    // await this.governor.deployed();
+
+    this.communityFactory = await this.CommunityFactory.deploy(this.testToken1.address, this.governor.address);
+
 
     await this.token.transfer(this.alice.address, bigNum(1000001));
     await this.token.transfer(this.bob.address, bigNum(1000001));
@@ -64,113 +67,107 @@ describe("IPCTGovernator", function() {
     console.log('governance:      ' + this.governor.address);
   });
 
-  it("should send founds", async function() {
-    console.log('********************');
+  // signers tests
+  it("should change signers", async function() {
+    expect(await this.governor.isSigner(this.owner.address)).to.be.true;
+    expect(await this.governor.isSigner(this.owner.address)).to.be.true;
 
-    await this.token.transfer(this.governor.address, bigNum(1234));
+    this.governor = await this.IPCTGovernor.deploy(this.token.address, [this.owner.address, this.alice.address], 1);
 
-    await this.governor.proposeSendMoney(this.token.address, this.carol.address, bigNum(1234), 'description');
+    expect(await this.governor.isSigner(this.owner.address)).to.be.true;
+    expect(await this.governor.isSigner(this.alice.address)).to.be.true;
+    expect(await this.governor.isSigner(this.bob.address)).to.be.false;
+  });
 
-    // await this.governor.castVote(1, true);   evm_mine
-
-
-    await advanceNBlocks(11);
-    // await time.advanceBlockTo(parseInt(await time.latestBlock()) + 1);;
-
-
-    await this.governor.castVote(1, true);
-    await this.governor.connect(this.alice).castVote(1, true);
-
-    await advanceNBlocks(21);
+  it("should change self call", async function() {
 
 
-    await this.governor.queue(1);
-    await network.provider.send("evm_increaseTime", [1000000]);
-    // await advanceNBlocks(1);
+      const functionSignature = 'testSelfCall2(uint256)';
+      const functionParams = ethers.utils.defaultAbiCoder.encode(['uint256'], [12345]);
 
-    console.log(smallNum(await this.token.balanceOf(this.carol.address)));
-
-    await this.governor.connect(this.alice).execute(1);
-
-    console.log(smallNum(await this.token.balanceOf(this.carol.address)));
-
-    // console.log(await this.governor.proposals(1));
-
-
-    // console.log(await this.governor.getActions(1));
-
-
-    // await this.governor.connect(this.alice).propose([this.carol.address], [2000], ['signatures'], [12345678], 'description');
-
-    // console.log('//*/*/*/*/*/*/*/*/*/*/*/*/**//**//*//*/*/');
-    // await this.token.transfer(this.governor.address, bigNum(1234));
+      await this.governor.testSelfCall(this.governor.address, functionSignature, functionParams);
   });
 
 
-  it("should create community", async function() {
-    console.log('********************');
-
-    await this.token.transfer(this.governor.address, bigNum(1234));
-
-    await this.governor.proposeCreateCommunity(this.alice.address, bigNum(100), bigNum(1000), 1111, 111, zeroAddress, 'description');
-
-
-    // await this.governor.castVote(1, true);   evm_mine
-
-
-    await advanceNBlocks(11);
-    // await time.advanceBlockTo(parseInt(await time.latestBlock()) + 1);;
-
-
-    await this.governor.castVote(1, true);
-    await this.governor.connect(this.alice).castVote(1, true);
-
-    await advanceNBlocks(21);
-
-
-    await this.governor.queue(1);
-    await network.provider.send("evm_increaseTime", [1000000]);
-    // await advanceNBlocks(1);
-
-
-    await this.governor.connect(this.alice).execute(1);
-  });
-
-  it("should call external", async function() {
-    console.log('********************');
-
-    await this.token.transfer(this.governor.address, bigNum(1234));
-
-    const params = ethers.utils.defaultAbiCoder.encode(['address','uint256','uint256','uint256','uint256','address'],
-        [this.alice.address, bigNum(100), bigNum(1000), 1111, 111, zeroAddress]);
-    console.log('paramsparamsparamsparamsparamsparamsparams');
-    console.log(params);
-    await this.governor.proposeExternalCall(
-        this.governor.address,
-        10,
-        'deployCommunity(address,uint256,uint256,uint256,uint256,address)',
-        params,
-        'description');
-
-
-    // await this.governor.castVote(1, true);   evm_mine
-
-
-    await advanceNBlocks(11);
-    // await time.advanceBlockTo(parseInt(await time.latestBlock()) + 1);;
-
-
-    await this.governor.castVote(1, true);
-    await this.governor.connect(this.alice).castVote(1, true);
-
-    await advanceNBlocks(21);
-
-
-    await this.governor.queue(1);
-    await network.provider.send("evm_increaseTime", [1000000]);
-    // await advanceNBlocks(1);
-
-
-    await this.governor.connect(this.alice).execute(1);
-  });
+  // it("should send founds", async function() {
+  //   console.log('********************');
+  //
+  //   await this.token.transfer(this.governor.address, bigNum(1234));
+  //
+  //   await this.governor.proposeSendMoney(this.token.address, this.carol.address, bigNum(1234), 'description');
+  //
+  //   // await this.governor.castVote(1, true);   evm_mine
+  //
+  //
+  //   await advanceNBlocks(11);
+  //   // await time.advanceBlockTo(parseInt(await time.latestBlock()) + 1);;
+  //
+  //
+  //   await this.governor.castVote(1, true);
+  //   await this.governor.connect(this.alice).castVote(1, true);
+  //
+  //   await advanceNBlocks(21);
+  //
+  //
+  //   await this.governor.queue(1);
+  //   await network.provider.send("evm_increaseTime", [1000000]);
+  //   // await advanceNBlocks(1);
+  //
+  //   console.log(smallNum(await this.token.balanceOf(this.carol.address)));
+  //
+  //   await this.governor.connect(this.alice).execute(1);
+  //
+  //   console.log(smallNum(await this.token.balanceOf(this.carol.address)));
+  //
+  //   // console.log(await this.governor.proposals(1));
+  //
+  //
+  //   // console.log(await this.governor.getActions(1));
+  //
+  //
+  //   // await this.governor.connect(this.alice).propose([this.carol.address], [2000], ['signatures'], [12345678], 'description');
+  //
+  //   // console.log('//*/*/*/*/*/*/*/*/*/*/*/*/**//**//*//*/*/');
+  //   // await this.token.transfer(this.governor.address, bigNum(1234));
+  // });
+  //
+  // it("should create community through external call", async function() {
+  //   console.log('********************');
+  //
+  //   await this.token.transfer(this.governor.address, bigNum(1234));
+  //
+  //   const functionSignature = 'deployCommunity(address,uint256,uint256,uint256,uint256,address)';
+  //   const functionParams = ethers.utils.defaultAbiCoder.encode(['address','uint256','uint256','uint256','uint256','address'],
+  //       [this.alice.address, bigNum(100), bigNum(1000), 1111, 111, zeroAddress]);
+  //
+  //   console.log(functionParams);
+  //
+  //   await this.governor.proposeExternalCall(
+  //       this.communityFactory.address,
+  //       0,
+  //       functionSignature,
+  //       functionParams,
+  //       'description');
+  //
+  //
+  //   // await this.governor.castVote(1, true);   evm_mine
+  //
+  //
+  //   await advanceNBlocks(11);
+  //   // await time.advanceBlockTo(parseInt(await time.latestBlock()) + 1);;
+  //
+  //
+  //   await this.governor.castVote(1, true);
+  //   await this.governor.connect(this.alice).castVote(1, true);
+  //
+  //   await advanceNBlocks(21);
+  //
+  //
+  //   await this.governor.queue(1);
+  //   await network.provider.send("evm_increaseTime", [1000000]);
+  //   // await advanceNBlocks(1);
+  //
+  //
+  //   await this.governor.connect(this.alice).execute(1);
+  // });
 });
