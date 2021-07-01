@@ -8,11 +8,37 @@ contract IPCTGovernor {
     /// @notice The name of this contract
     string public constant name = "Impact Market Governor";
 
+    /// @notice Possible states that a proposal may be in
+    enum ProposalState {
+        Pending,
+        Active,
+        Canceled,
+        Defeated,
+        Succeeded,
+        Queued,
+        Expired,
+        Executed
+    }
+
+    enum ProposalType {
+        ByHolders,
+        BySigners
+    }
+
+    struct CallParams {
+        address target;
+        uint value;
+        string signature;
+        bytes data;
+    }
+
     struct Proposal {
         /// @notice Unique id for looking up a proposal
         uint id;
 
         ProposalType proposalType;
+
+        CallParams callParams;
 
         /// @notice Creator of the proposal
         address proposer;
@@ -41,7 +67,8 @@ contract IPCTGovernor {
         /// @notice Receipts of ballots for the entire set of voters
         mapping (address => Receipt) receipts;
 
-        address[] signers;
+        mapping (address => bool) hasSigned;
+        uint count;
     }
 
     /// @notice Ballot receipt record for a voter
@@ -54,48 +81,6 @@ contract IPCTGovernor {
 
         /// @notice The number of votes the voter had, which were cast
         uint96 votes;
-    }
-
-    struct ProposalUpdateGovernorParams {
-        address[] signers;
-        uint signersThreshold;
-        address ipct;
-        uint delay;
-        uint quorumVotes;
-        uint proposalThreshold;
-        uint votingDelay;
-        uint votingPeriod;
-    }
-
-    struct ProposalSendMoneyParams {
-        address token;
-        address to;
-        uint value;
-    }
-
-    struct ProposalExternalCallParams {
-        address target;
-        uint value;
-        string signature;
-        bytes data;
-    }
-
-    /// @notice Possible states that a proposal may be in
-    enum ProposalState {
-        Pending,
-        Active,
-        Canceled,
-        Defeated,
-        Succeeded,
-        Queued,
-        Expired,
-        Executed
-    }
-
-    enum ProposalType {
-        UpdateGovernor,
-        SendMoney,
-        ExternalCall
     }
 
     uint public constant GRACE_PERIOD = 14 days;
@@ -132,12 +117,6 @@ contract IPCTGovernor {
 
     /// @notice The official record of all proposals ever proposed
     mapping (uint => Proposal) public proposals;
-
-    mapping (uint => ProposalUpdateGovernorParams) public proposalsUpdateGovernorParams;
-
-    mapping (uint => ProposalSendMoneyParams) public proposalsSendMoneyParams;
-
-    mapping (uint => ProposalExternalCallParams) public proposalsExternalCallParams;
 
     mapping (bytes32 => bool) public queuedTransactions;
 
@@ -180,7 +159,7 @@ contract IPCTGovernor {
         _changeSigners(_signers, _signersThreshold);
     }
 
-    function proposeUpdateGovernor(
+    function updateGovernor(
         address[] memory _signers,
         uint _signersThreshold,
         address _ipct,
@@ -190,103 +169,50 @@ contract IPCTGovernor {
         uint _votingDelay,
         uint _votingPeriod,
         string memory _description
-    ) external {
-        require(_delay >= MINIMUM_DELAY, "IPCTGovernor::proposeUpdateGovernor: Delay must exceed minimum delay.");
-        require(_delay <= MAXIMUM_DELAY, "IPCTGovernor::proposeUpdateGovernor: Delay must not exceed maximum delay.");
+    ) public {
+        require(_delay >= MINIMUM_DELAY, "IPCTGovernor::updateGovernor: Delay must exceed minimum delay.");
+        require(_delay <= MAXIMUM_DELAY, "IPCTGovernor::updateGovernor: Delay must not exceed maximum delay.");
 
         require (_signers.length >= _signersThreshold,
             "IPCTGovernor::proposeUpdateGovernor: signersThreshold must be lower than total number of signers");
 
-        uint proposalId = _createProposal(ProposalType.UpdateGovernor, _description);
-
-        ProposalUpdateGovernorParams memory _params;
-        _params.signers = _signers;
-        _params.signersThreshold = _signersThreshold;
-        _params.ipct = _ipct;
-        _params.delay = _delay;
-        _params.quorumVotes = _quorumVotes;
-        _params.proposalThreshold = _proposalThreshold;
-        _params.votingDelay = _votingDelay;
-        _params.votingPeriod = votingPeriod;
-
-        proposalsUpdateGovernorParams[proposalId] = _params;
+        ipct = IPCTInterface(_ipct);
+        delay = _delay;
+        quorumVotes = _quorumVotes;
+        proposalThreshold = _proposalThreshold;
+        votingDelay = _votingDelay;
+        votingPeriod = _votingPeriod;
+        _changeSigners(_signers, _signersThreshold);
     }
 
-//    function proposeUpdateGovernor(
-//        address[] memory _signers,
-//        uint _signersThreshold,
-//        address _ipct,
-//        uint _delay,
-//        uint _quorumVotes,
-//        uint _proposalThreshold,
-//        uint _votingDelay,
-//        uint _votingPeriod,
-//        string memory _description
-//    ) external {
-//        require(_delay >= MINIMUM_DELAY, "IPCTGovernor::proposeUpdateGovernor: Delay must exceed minimum delay.");
-//        require(_delay <= MAXIMUM_DELAY, "IPCTGovernor::proposeUpdateGovernor: Delay must not exceed maximum delay.");
-//
-//        uint proposalId = _createProposal(ProposalType.UpdateGovernor, _description);
-//
-//        ProposalUpdateGovernorParams memory _params;
-//        _params.signers = _signers;
-//        _params.signersThreshold = _signersThreshold;
-//        _params.ipct = _ipct;
-//        _params.delay = _delay;
-//        _params.quorumVotes = _quorumVotes;
-//        _params.proposalThreshold = _proposalThreshold;
-//        _params.votingDelay = _votingDelay;
-//        _params.votingPeriod = votingPeriod;
-//
-//        proposalsUpdateGovernorParams[proposalId] = _params;
-//    }
-
-    function proposeSendMoney(address _token, address _to, uint _value, string memory _description) external {
-        uint proposalId = _createProposal(ProposalType.SendMoney, _description);
-
-        ProposalSendMoneyParams memory _params;
-        _params.token = _token;
-        _params.to = _to;
-        _params.value = _value;
-
-        proposalsSendMoneyParams[proposalId] = _params;
-    }
-
-    function proposeExternalCall(
+    function propose(
         address _target,
         uint _value,
         string memory _signature,
         bytes memory _data,
         string memory _description
     ) external {
-        uint proposalId = _createProposal(ProposalType.ExternalCall, _description);
-
-        ProposalExternalCallParams memory _params;
-        _params.target = _target;
-        _params.value = _value;
-        _params.signature = _signature;
-        _params.data = _data;
-
-        proposalsExternalCallParams[proposalId] = _params;
+        uint proposalId = _createProposal(_target, _value, _signature, _data, _description, ProposalType.ByHolders);
     }
 
-    function testSelfCall(
+    function proposeBySigner(
         address _target,
+        uint _value,
         string memory _signature,
-        bytes memory _data
+        bytes memory _data,
+        string memory _description
     ) external {
-        bytes memory callData = abi.encodePacked(bytes4(keccak256(bytes(_signature))), _data);
-        console.log('before');
-        _target.call(callData);
-        console.log('after');
+        uint proposalId = _createProposal(_target, _value, _signature, _data, _description, ProposalType.BySigners);
     }
 
-    function testSelfCall2(uint _ceva) public {
-        console.log('briliant');
-    }
-
-
-    function _createProposal(ProposalType _proposalType, string memory _description) internal returns (uint) {
+    function _createProposal(
+        address _target,
+        uint _value,
+        string memory _signature,
+        bytes memory _data,
+        string memory _description,
+        ProposalType _proposalType
+    ) internal returns (uint) {
         require(ipct.getPriorVotes(msg.sender, block.number - 1) > proposalThreshold,
             "IPCTGovernor::propose: proposer votes below proposal threshold");
 
@@ -294,6 +220,12 @@ contract IPCTGovernor {
         uint endBlock = startBlock + votingPeriod;
 
         proposalCount++;
+
+        proposals[proposalCount].callParams.target = _target;
+        proposals[proposalCount].callParams.value = _value;
+        proposals[proposalCount].callParams.signature = _signature;
+        proposals[proposalCount].callParams.data = _data;
+
         proposals[proposalCount].id = proposalCount;
         proposals[proposalCount].proposalType = _proposalType;
         proposals[proposalCount].proposer = msg.sender;
@@ -321,13 +253,15 @@ contract IPCTGovernor {
         require(state(proposalId) == ProposalState.Queued,
             "IPCTGovernor::execute: proposal can only be executed if it is queued");
 
-        if (proposals[proposalId].proposalType == ProposalType.UpdateGovernor) {
-            _executeUpdateGovernorProposal(proposalId);
-        } else if (proposals[proposalId].proposalType == ProposalType.SendMoney) {
-            _executeSendMoneyProposal(proposalId);
-        } else if (proposals[proposalId].proposalType == ProposalType.ExternalCall) {
-            _executeExternalCallProposal(proposalId);
+        bytes memory callData;
+
+        if (bytes(proposals[proposalId].callParams.signature).length == 0) {
+            callData = proposals[proposalId].callParams.data;
+        } else {
+            callData = abi.encodePacked(bytes4(keccak256(bytes(proposals[proposalId].callParams.signature))), proposals[proposalId].callParams.data);
         }
+
+        proposals[proposalId].callParams.target.call(callData);
 
         proposals[proposalId].executed = true;
 
@@ -372,6 +306,13 @@ contract IPCTGovernor {
         }
     }
 
+    function signProposal(uint proposalId) external {
+        Proposal storage proposal = proposals[proposalId];
+        require(proposal.hasSigned[msg.sender] == false, "IPCTGovernor::signProposal: You have already signed this proposal");
+        proposal.hasSigned[msg.sender] = true;
+        proposal.count++;
+    }
+
     function castVote(uint proposalId, bool support) public {
         return _castVote(msg.sender, proposalId, support);
     }
@@ -409,36 +350,6 @@ contract IPCTGovernor {
         uint chainId;
         assembly { chainId := chainid() }
         return chainId;
-    }
-
-    function _executeSendMoneyProposal(uint proposalId) internal {
-        console.log("executeSendMoneyProposal");
-        ERC20Interface erc20 = ERC20Interface(proposalsSendMoneyParams[proposalId].token);
-        erc20.transferFrom(address(this), proposalsSendMoneyParams[proposalId].to, proposalsSendMoneyParams[proposalId].value);
-    }
-
-    function _executeUpdateGovernorProposal(uint proposalId) internal {
-        ipct = IPCTInterface(proposalsUpdateGovernorParams[proposalId].ipct);
-        delay = proposalsUpdateGovernorParams[proposalId].delay;
-        quorumVotes = proposalsUpdateGovernorParams[proposalId].quorumVotes;
-        proposalThreshold = proposalsUpdateGovernorParams[proposalId].proposalThreshold;
-        votingDelay = proposalsUpdateGovernorParams[proposalId].votingDelay;
-        votingPeriod = proposalsUpdateGovernorParams[proposalId].votingPeriod;
-        _changeSigners(proposalsUpdateGovernorParams[proposalId].signers, proposalsUpdateGovernorParams[proposalId].signersThreshold);
-    }
-
-    function _executeExternalCallProposal(uint proposalId) internal {
-        console.log("executeExternalCall");
-
-        bytes memory callData;
-
-        if (bytes(proposalsExternalCallParams[proposalId].signature).length == 0) {
-            callData = proposalsExternalCallParams[proposalId].data;
-        } else {
-            callData = abi.encodePacked(bytes4(keccak256(bytes(proposalsExternalCallParams[proposalId].signature))), proposalsExternalCallParams[proposalId].data);
-        }
-
-        proposalsExternalCallParams[proposalId].target.call(callData);
     }
 
     function _changeSigners(address[] memory _newSigners, uint _newSignersThreshold) internal {
