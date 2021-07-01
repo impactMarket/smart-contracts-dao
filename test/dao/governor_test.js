@@ -46,7 +46,7 @@ describe("IPCTGovernator", function() {
     this.token = await this.IPCT.deploy(this.owner.address, this.owner.address, 1723332078);
     // await this.token.deployed();
 
-    this.governor = await this.IPCTGovernor.deploy(this.token.address, [this.owner.address], 1);
+    this.governor = await this.IPCTGovernor.deploy(this.token.address, [this.owner.address, this.alice.address], 1);
     // await this.governor.deployed();
 
     this.communityFactory = await this.CommunityFactory.deploy(this.testToken1.address, this.governor.address);
@@ -68,24 +68,13 @@ describe("IPCTGovernator", function() {
   });
 
   // signers tests
-  it("should change signers", async function() {
-    expect(await this.governor.isSigner(this.owner.address)).to.be.true;
-    expect(await this.governor.isSigner(this.owner.address)).to.be.true;
-
-    this.governor = await this.IPCTGovernor.deploy(this.token.address, [this.owner.address, this.alice.address], 1);
-
+  it("should have correct number of signers", async function() {
     expect(await this.governor.isSigner(this.owner.address)).to.be.true;
     expect(await this.governor.isSigner(this.alice.address)).to.be.true;
-    expect(await this.governor.isSigner(this.bob.address)).to.be.false;
-  });
 
-  it("should change self call", async function() {
-
-
-      const functionSignature = 'testSelfCall2(uint256)';
-      const functionParams = ethers.utils.defaultAbiCoder.encode(['uint256'], [12345]);
-
-      await this.governor.testSelfCall(this.governor.address, functionSignature, functionParams);
+    await expect(this.governor.signers(0)).to.be.fulfilled;
+    await expect(this.governor.signers(1)).to.be.fulfilled;
+    await expect(this.governor.signers(2)).to.be.rejected;
   });
 
 
@@ -131,43 +120,53 @@ describe("IPCTGovernator", function() {
   //   // await this.token.transfer(this.governor.address, bigNum(1234));
   // });
   //
-  // it("should create community through external call", async function() {
-  //   console.log('********************');
-  //
-  //   await this.token.transfer(this.governor.address, bigNum(1234));
-  //
-  //   const functionSignature = 'deployCommunity(address,uint256,uint256,uint256,uint256,address)';
-  //   const functionParams = ethers.utils.defaultAbiCoder.encode(['address','uint256','uint256','uint256','uint256','address'],
-  //       [this.alice.address, bigNum(100), bigNum(1000), 1111, 111, zeroAddress]);
-  //
-  //   console.log(functionParams);
-  //
-  //   await this.governor.proposeExternalCall(
-  //       this.communityFactory.address,
-  //       0,
-  //       functionSignature,
-  //       functionParams,
-  //       'description');
-  //
-  //
-  //   // await this.governor.castVote(1, true);   evm_mine
-  //
-  //
-  //   await advanceNBlocks(11);
-  //   // await time.advanceBlockTo(parseInt(await time.latestBlock()) + 1);;
-  //
-  //
-  //   await this.governor.castVote(1, true);
-  //   await this.governor.connect(this.alice).castVote(1, true);
-  //
-  //   await advanceNBlocks(21);
-  //
-  //
-  //   await this.governor.queue(1);
-  //   await network.provider.send("evm_increaseTime", [1000000]);
-  //   // await advanceNBlocks(1);
-  //
-  //
-  //   await this.governor.connect(this.alice).execute(1);
-  // });
+
+  it("should create community by holders", async function() {
+    await this.token.transfer(this.governor.address, bigNum(1234));
+
+    const target = this.communityFactory.address;
+    const value = 0;
+    const signature = 'deployCommunity(address,uint256,uint256,uint256,uint256,address)';
+    const data = ethers.utils.defaultAbiCoder.encode(['address','uint256','uint256','uint256','uint256','address'],
+        [this.alice.address, bigNum(100), bigNum(1000), 1111, 111, zeroAddress]);
+    const description = 'description';
+
+    await this.governor.propose(target, value, signature, data, description);
+
+    await advanceNBlocks(11);
+
+    await this.governor.castVote(1, true);
+    await this.governor.connect(this.alice).castVote(1, true);
+
+    await advanceNBlocks(21);
+
+    await this.governor.queue(1);
+    await network.provider.send("evm_increaseTime", [1000000]);
+
+    await this.governor.connect(this.alice).execute(1);
+  });
+
+  it("should create community by signers", async function() {
+    await this.token.transfer(this.governor.address, bigNum(1234));
+
+    const target = this.communityFactory.address;
+    const value = 0;
+    const signature = 'deployCommunity(address,uint256,uint256,uint256,uint256,address)';
+    const data = ethers.utils.defaultAbiCoder.encode(['address','uint256','uint256','uint256','uint256','address'],
+        [this.alice.address, bigNum(100), bigNum(1000), 1111, 111, zeroAddress]);
+    const description = 'description';
+
+    await this.governor.proposeBySigner(target, value, signature, data, description);
+
+    await this.governor.signProposal(1);
+
+    console.log((await this.governor.proposals(1))['count']);
+    await this.governor.connect(this.alice).signProposal(1);
+    console.log((await this.governor.proposals(1))['count']);
+
+    await this.governor.queue(1);
+    await network.provider.send("evm_increaseTime", [1000000]);
+
+    await this.governor.connect(this.alice).execute(1);
+  });
 });
