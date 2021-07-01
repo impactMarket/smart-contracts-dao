@@ -15,8 +15,6 @@ contract IPCTGovernor {
         Canceled,
         Defeated,
         Succeeded,
-        Queued,
-        Expired,
         Executed
     }
 
@@ -43,9 +41,6 @@ contract IPCTGovernor {
         /// @notice Creator of the proposal
         address proposer;
 
-        /// @notice The timestamp that the proposal will be available for execution, set once the vote succeeds
-        uint eta;
-
         /// @notice The block at which voting begins: holders must delegate their votes prior to this block
         uint startBlock;
 
@@ -67,8 +62,8 @@ contract IPCTGovernor {
         /// @notice Receipts of ballots for the entire set of voters
         mapping (address => Receipt) receipts;
 
-        mapping (address => bool) hasSigned;
-        uint count;
+        mapping (address => bool) signers;
+        uint signersCount;
     }
 
     /// @notice Ballot receipt record for a voter
@@ -83,7 +78,6 @@ contract IPCTGovernor {
         uint96 votes;
     }
 
-    uint public constant GRACE_PERIOD = 14 days;
     uint public constant MINIMUM_DELAY = 2 days;
     uint public constant MAXIMUM_DELAY = 30 days;
 
@@ -118,8 +112,6 @@ contract IPCTGovernor {
     /// @notice The official record of all proposals ever proposed
     mapping (uint => Proposal) public proposals;
 
-    mapping (bytes32 => bool) public queuedTransactions;
-
     /// @notice The EIP-712 typehash for the contract's domain
     bytes32 public constant DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)");
 
@@ -135,15 +127,11 @@ contract IPCTGovernor {
     /// @notice An event emitted when a proposal has been canceled
     event ProposalCanceled(uint id);
 
-    /// @notice An event emitted when a proposal has been queued in the Timelock
-    event ProposalQueued(uint id, uint eta);
-
     /// @notice An event emitted when a proposal has been executed in the Timelock
     event ProposalExecuted(uint id);
 
-    event CancelTransaction(bytes32 indexed txHash, address indexed target, uint value, string signature,  bytes data, uint eta);
-    event ExecuteTransaction(bytes32 indexed txHash, address indexed target, uint value, string signature,  bytes data, uint eta);
-    event QueueTransaction(bytes32 indexed txHash, address indexed target, uint value, string signature, bytes data, uint eta);
+    event CancelTransaction(bytes32 indexed txHash, address indexed target, uint value, string signature,  bytes data);
+    event ExecuteTransaction(bytes32 indexed txHash, address indexed target, uint value, string signature,  bytes data);
 
     /**
      * @notice Construct a new IPCTGovernor contract
@@ -231,7 +219,6 @@ contract IPCTGovernor {
         proposals[proposalCount].proposer = msg.sender;
         proposals[proposalCount].startBlock = startBlock;
         proposals[proposalCount].endBlock = endBlock;
-//        proposals[proposalCount].eta = 0;
 //        proposals[proposalCount].forVotes = 0;
 //        proposals[proposalCount].againstVotes = 0;
 //        proposals[proposalCount].canceled = false;
@@ -241,17 +228,30 @@ contract IPCTGovernor {
         return proposalCount;
     }
 
-    function queue(uint proposalId) public {
+    function execute(uint proposalId) public payable {
         require(state(proposalId) == ProposalState.Succeeded,
-            "IPCTGovernor::queue: proposal can only be queued if it is succeeded");
-        proposals[proposalId].eta = block.timestamp + delay;
+            "IPCTGovernor::execute: proposal can only be executed if it is succeeded");
 
-        emit ProposalQueued(proposalId, proposals[proposalId].eta);
+        bytes memory callData;
+
+        if (bytes(proposals[proposalId].callParams.signature).length == 0) {
+            callData = proposals[proposalId].callParams.data;
+        } else {
+            callData = abi.encodePacked(bytes4(keccak256(bytes(proposals[proposalId].callParams.signature))), proposals[proposalId].callParams.data);
+        }
+
+        proposals[proposalId].callParams.target.call(callData);
+
+        proposals[proposalId].executed = true;
+
+        emit ProposalExecuted(proposalId);
     }
 
-    function execute(uint proposalId) public payable {
-        require(state(proposalId) == ProposalState.Queued,
-            "IPCTGovernor::execute: proposal can only be executed if it is queued");
+    function executeBySigner(uint proposalId) public payable {
+        ProposalState proposalState = state(proposalId);
+        require(proposalState == ProposalState.Pending || proposalState == ProposalState.Active,
+            "IPCTGovernor::executeBySigner: proposal can only be executed if it is pending or active");
+        require(proposals[proposalId].signersCount >= signersThreshold, "IPCTGovernor::executeBySigner: proposal doesn't have enough signatures");
 
         bytes memory callData;
 
@@ -287,30 +287,29 @@ contract IPCTGovernor {
     function state(uint proposalId) public view returns (ProposalState) {
         require(proposalCount >= proposalId && proposalId > 0, "IPCTGovernor::state: invalid proposal id");
         Proposal storage proposal = proposals[proposalId];
+
         if (proposal.canceled) {
             return ProposalState.Canceled;
+        } else if (proposal.executed) {
+            return ProposalState.Executed;
         } else if (block.number <= proposal.startBlock) {
             return ProposalState.Pending;
         } else if (block.number <= proposal.endBlock) {
             return ProposalState.Active;
+        } else if (proposal.forVotes > proposal.againstVotes && proposal.forVotes >= quorumVotes) {
+            return ProposalState.Succeeded;
         } else if (proposal.forVotes <= proposal.againstVotes || proposal.forVotes < quorumVotes) {
             return ProposalState.Defeated;
-        } else if (proposal.eta == 0) {
-            return ProposalState.Succeeded;
-        } else if (proposal.executed) {
-            return ProposalState.Executed;
-        } else if (block.timestamp >= proposal.eta + GRACE_PERIOD) {
-            return ProposalState.Expired;
         } else {
-            return ProposalState.Queued;
+            revert("IPCTGovernor::state: invalid state");
         }
     }
 
     function signProposal(uint proposalId) external {
         Proposal storage proposal = proposals[proposalId];
-        require(proposal.hasSigned[msg.sender] == false, "IPCTGovernor::signProposal: You have already signed this proposal");
-        proposal.hasSigned[msg.sender] = true;
-        proposal.count++;
+        require(proposal.signers[msg.sender] == false, "IPCTGovernor::signProposal: You have already signed this proposal");
+        proposal.signers[msg.sender] = true;
+        proposal.signersCount++;
     }
 
     function castVote(uint proposalId, bool support) public {

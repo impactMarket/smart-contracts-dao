@@ -140,7 +140,6 @@ describe("IPCTGovernator", function() {
 
     await advanceNBlocks(21);
 
-    await this.governor.queue(1);
     await network.provider.send("evm_increaseTime", [1000000]);
 
     await this.governor.connect(this.alice).execute(1);
@@ -160,13 +159,10 @@ describe("IPCTGovernator", function() {
 
     await this.governor.signProposal(1);
 
-    console.log((await this.governor.proposals(1))['count']);
     await this.governor.connect(this.alice).signProposal(1);
-    console.log((await this.governor.proposals(1))['count']);
 
-    await this.governor.queue(1);
     await network.provider.send("evm_increaseTime", [1000000]);
 
-    await this.governor.connect(this.alice).execute(1);
+    await this.governor.connect(this.alice).executeBySigner(1);
   });
 });
