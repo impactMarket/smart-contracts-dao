@@ -19,8 +19,8 @@ contract IPCTGovernor {
     }
 
     enum ProposalType {
-        ByHolders,
-        BySigners
+        ByHolder,
+        ByAdmin
     }
 
     struct CallParams {
@@ -62,8 +62,8 @@ contract IPCTGovernor {
         /// @notice Receipts of ballots for the entire set of voters
         mapping (address => Receipt) receipts;
 
-        mapping (address => bool) signers;
-        uint signersCount;
+        mapping (address => bool) signatures;
+        uint signaturesCount;
     }
 
     /// @notice Ballot receipt record for a voter
@@ -103,11 +103,11 @@ contract IPCTGovernor {
     /// @notice The total number of proposals
     uint public proposalCount;
 
-    address[] public signers;
+    address[] public admins;
 
-    uint public signersThreshold;
+    uint public signaturesThreshold;
 
-    mapping (address => bool) public isSigner;
+    mapping (address => bool) public isAdmin;
 
     /// @notice The official record of all proposals ever proposed
     mapping (uint => Proposal) public proposals;
@@ -133,23 +133,28 @@ contract IPCTGovernor {
     event CancelTransaction(bytes32 indexed txHash, address indexed target, uint value, string signature,  bytes data);
     event ExecuteTransaction(bytes32 indexed txHash, address indexed target, uint value, string signature,  bytes data);
 
+    modifier onlyAdmin() {
+        require(isAdmin[msg.sender], "NOT_ADMIN");
+        _;
+    }
+
     /**
      * @notice Construct a new IPCTGovernor contract
-     * @param _signers - contract signers
-     * @param _signersThreshold - number of signers that are required to sign a proposal in the initial phase
+     * @param _admins - contract admins
+     * @param _signaturesThreshold - number of admin that are required to sign a proposal in the initial phase
      * @param _ipct - address of ERC20 that claims will be distributed from
      **/
-    constructor(address _ipct, address[] memory _signers, uint _signersThreshold) public {
-        require (_signers.length >= _signersThreshold,
-            "IPCTGovernor::constructor: signersThreshold must be lower than total number of signers");
+    constructor(address _ipct, address[] memory _admins, uint _signaturesThreshold) public {
+        require (_admins.length >= _signaturesThreshold,
+            "IPCTGovernor::constructor: signaturesThreshold must be lower than total number of admins");
 
         ipct = IPCTInterface(_ipct);
-        _changeSigners(_signers, _signersThreshold);
+        _changeAdmins(_admins, _signaturesThreshold);
     }
 
     function updateGovernor(
-        address[] memory _signers,
-        uint _signersThreshold,
+        address[] memory _admins,
+        uint _signaturesThreshold,
         address _ipct,
         uint _delay,
         uint _quorumVotes,
@@ -161,8 +166,8 @@ contract IPCTGovernor {
         require(_delay >= MINIMUM_DELAY, "IPCTGovernor::updateGovernor: Delay must exceed minimum delay.");
         require(_delay <= MAXIMUM_DELAY, "IPCTGovernor::updateGovernor: Delay must not exceed maximum delay.");
 
-        require (_signers.length >= _signersThreshold,
-            "IPCTGovernor::proposeUpdateGovernor: signersThreshold must be lower than total number of signers");
+        require (_admins.length >= _signaturesThreshold,
+            "IPCTGovernor::proposeUpdateGovernor: signaturesThreshold must be lower than total number of admins");
 
         ipct = IPCTInterface(_ipct);
         delay = _delay;
@@ -170,7 +175,7 @@ contract IPCTGovernor {
         proposalThreshold = _proposalThreshold;
         votingDelay = _votingDelay;
         votingPeriod = _votingPeriod;
-        _changeSigners(_signers, _signersThreshold);
+        _changeAdmins(_admins, _signaturesThreshold);
     }
 
     function propose(
@@ -180,17 +185,17 @@ contract IPCTGovernor {
         bytes memory _data,
         string memory _description
     ) external {
-        uint proposalId = _createProposal(_target, _value, _signature, _data, _description, ProposalType.ByHolders);
+        uint proposalId = _createProposal(_target, _value, _signature, _data, _description, ProposalType.ByHolder);
     }
 
-    function proposeBySigner(
+    function proposeByAdmin(
         address _target,
         uint _value,
         string memory _signature,
         bytes memory _data,
         string memory _description
-    ) external {
-        uint proposalId = _createProposal(_target, _value, _signature, _data, _description, ProposalType.BySigners);
+    ) external onlyAdmin {
+        uint proposalId = _createProposal(_target, _value, _signature, _data, _description, ProposalType.ByAdmin);
     }
 
     function _createProposal(
@@ -247,11 +252,11 @@ contract IPCTGovernor {
         emit ProposalExecuted(proposalId);
     }
 
-    function executeBySigner(uint proposalId) public payable {
+    function executeByAdmin(uint proposalId) public payable onlyAdmin {
         ProposalState proposalState = state(proposalId);
         require(proposalState == ProposalState.Pending || proposalState == ProposalState.Active,
-            "IPCTGovernor::executeBySigner: proposal can only be executed if it is pending or active");
-        require(proposals[proposalId].signersCount >= signersThreshold, "IPCTGovernor::executeBySigner: proposal doesn't have enough signatures");
+            "IPCTGovernor::executeByAdmin: proposal can only be executed if it is pending or active");
+        require(proposals[proposalId].signaturesCount >= signaturesThreshold, "IPCTGovernor::executeByAdmin: proposal doesn't have enough signatures");
 
         bytes memory callData;
 
@@ -307,9 +312,9 @@ contract IPCTGovernor {
 
     function signProposal(uint proposalId) external {
         Proposal storage proposal = proposals[proposalId];
-        require(proposal.signers[msg.sender] == false, "IPCTGovernor::signProposal: You have already signed this proposal");
-        proposal.signers[msg.sender] = true;
-        proposal.signersCount++;
+        require(proposal.signatures[msg.sender] == false, "IPCTGovernor::signProposal: You have already signed this proposal");
+        proposal.signatures[msg.sender] = true;
+        proposal.signaturesCount++;
     }
 
     function castVote(uint proposalId, bool support) public {
@@ -351,15 +356,15 @@ contract IPCTGovernor {
         return chainId;
     }
 
-    function _changeSigners(address[] memory _newSigners, uint _newSignersThreshold) internal {
-        for (uint u = 0; u < signers.length; u += 1) {
-            isSigner[signers[u]] = false;
+    function _changeAdmins(address[] memory _newAdmins, uint _newSignaturesThreshold) internal {
+        for (uint u = 0; u < admins.length; u += 1) {
+            isAdmin[admins[u]] = false;
         }
-        for (uint u = 0; u < _newSigners.length; u += 1) {
-            isSigner[_newSigners[u]] = true;
+        for (uint u = 0; u < _newAdmins.length; u += 1) {
+            isAdmin[_newAdmins[u]] = true;
         }
-        signers = _newSigners;
-        signersThreshold = _newSignersThreshold;
+        admins = _newAdmins;
+        signaturesThreshold = _newSignaturesThreshold;
     }
 }
 

@@ -69,12 +69,12 @@ describe("IPCTGovernator", function() {
 
   // signers tests
   it("should have correct number of signers", async function() {
-    expect(await this.governor.isSigner(this.owner.address)).to.be.true;
-    expect(await this.governor.isSigner(this.alice.address)).to.be.true;
+    expect(await this.governor.isAdmin(this.owner.address)).to.be.true;
+    expect(await this.governor.isAdmin(this.alice.address)).to.be.true;
 
-    await expect(this.governor.signers(0)).to.be.fulfilled;
-    await expect(this.governor.signers(1)).to.be.fulfilled;
-    await expect(this.governor.signers(2)).to.be.rejected;
+    await expect(this.governor.admins(0)).to.be.fulfilled;
+    await expect(this.governor.admins(1)).to.be.fulfilled;
+    await expect(this.governor.admins(2)).to.be.rejected;
   });
 
 
@@ -155,7 +155,7 @@ describe("IPCTGovernator", function() {
         [this.alice.address, bigNum(100), bigNum(1000), 1111, 111, zeroAddress]);
     const description = 'description';
 
-    await this.governor.proposeBySigner(target, value, signature, data, description);
+    await this.governor.connect(this.alice).proposeByAdmin(target, value, signature, data, description);
 
     await this.governor.signProposal(1);
 
@@ -163,6 +163,6 @@ describe("IPCTGovernator", function() {
 
     await network.provider.send("evm_increaseTime", [1000000]);
 
-    await this.governor.connect(this.alice).executeBySigner(1);
+    await this.governor.connect(this.alice).executeByAdmin(1);
   });
 });
