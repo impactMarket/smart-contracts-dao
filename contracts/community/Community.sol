@@ -135,6 +135,7 @@ contract Community is AccessControl {
      * @dev Allow community managers to add beneficiaries.
      */
     function addBeneficiary(address _account) external onlyManagers {
+        require(beneficiaries[_account] == BeneficiaryState.NONE, "NOT_YET");
         beneficiaries[_account] = BeneficiaryState.Valid;
         // solhint-disable-next-line not-rely-on-time
         cooldown[_account] = block.timestamp;
@@ -164,9 +165,10 @@ contract Community is AccessControl {
     }
 
     /**
-     * @dev Allow community managers to add beneficiaries.
+     * @dev Allow community managers to remove beneficiaries.
      */
     function removeBeneficiary(address _account) external onlyManagers {
+        require(beneficiaries[_account] == BeneficiaryState.Valid || beneficiaries[_account] == BeneficiaryState.Locked, "NOT_YET");
         beneficiaries[_account] = BeneficiaryState.Removed;
         emit BeneficiaryRemoved(_account);
     }

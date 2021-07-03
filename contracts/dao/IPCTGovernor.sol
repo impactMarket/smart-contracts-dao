@@ -185,6 +185,9 @@ contract IPCTGovernor {
         bytes memory _data,
         string memory _description
     ) external {
+        require(ipct.getPriorVotes(msg.sender, block.number - 1) > proposalThreshold,
+            "IPCTGovernor::propose: proposer votes below proposal threshold");
+
         uint proposalId = _createProposal(_target, _value, _signature, _data, _description, ProposalType.ByHolder);
     }
 
@@ -206,9 +209,6 @@ contract IPCTGovernor {
         string memory _description,
         ProposalType _proposalType
     ) internal returns (uint) {
-        require(ipct.getPriorVotes(msg.sender, block.number - 1) > proposalThreshold,
-            "IPCTGovernor::propose: proposer votes below proposal threshold");
-
         uint startBlock = block.number + votingDelay;
         uint endBlock = startBlock + votingPeriod;
 
@@ -245,9 +245,11 @@ contract IPCTGovernor {
             callData = abi.encodePacked(bytes4(keccak256(bytes(proposals[proposalId].callParams.signature))), proposals[proposalId].callParams.data);
         }
 
-        proposals[proposalId].callParams.target.call(callData);
+        (bool success,  ) = proposals[proposalId].callParams.target.call(callData);
+        require(success, "Contract execution Failed");
 
-        proposals[proposalId].executed = true;
+
+    proposals[proposalId].executed = true;
 
         emit ProposalExecuted(proposalId);
     }
@@ -266,7 +268,8 @@ contract IPCTGovernor {
             callData = abi.encodePacked(bytes4(keccak256(bytes(proposals[proposalId].callParams.signature))), proposals[proposalId].callParams.data);
         }
 
-        proposals[proposalId].callParams.target.call(callData);
+        (bool success,  ) = proposals[proposalId].callParams.target.call(callData);
+        require(success, "Contract execution Failed");
 
         proposals[proposalId].executed = true;
 
