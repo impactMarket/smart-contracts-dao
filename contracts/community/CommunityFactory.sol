@@ -46,28 +46,22 @@ contract CommunityFactory {
      * For further information regarding each parameter, see
      * *Community* smart contract constructor.
      */
-    function deployCommunity(
+    function createCommunity(
         address _firstManager,
         uint256 _claimAmount,
         uint256 _maxClaim,
         uint256 _baseInterval,
-        uint256 _incrementInterval,
-        address _previousCommunityAddress
+        uint256 _incrementInterval
     ) public onlyImpactMarket returns (address) {
-        address community = address(
-                new Community(
-                    _firstManager,
-                    _claimAmount,
-                    _maxClaim,
-                    _baseInterval,
-                    _incrementInterval,
-                    _previousCommunityAddress,
-                    cUSDAddress,
-                    msg.sender
-                )
-            );
+        address community = _deployCommunity(
+            _firstManager,
+            _claimAmount,
+            _maxClaim,
+            _baseInterval,
+            _incrementInterval,
+            address(0)
+        );
 
-        require(community != address(0), "NOT_VALID");
         communities[community] = true;
         emit CommunityAdded(
             community,
@@ -98,7 +92,7 @@ contract CommunityFactory {
         require(address(_previousCommunityAddress) != address(0), "NOT_VALID");
         ICommunity previousCommunity = ICommunity(_previousCommunityAddress);
 
-        address community = deployCommunity(
+        address community = _deployCommunity(
             _firstManager,
             previousCommunity.claimAmount(),
             previousCommunity.maxClaim(),
@@ -106,7 +100,6 @@ contract CommunityFactory {
             previousCommunity.incrementInterval(),
             _previousCommunityAddress
         );
-        require(community != address(0), "NOT_VALID");
         previousCommunity.migrateFunds(community, _firstManager);
         communities[community] = true;
 
@@ -120,5 +113,30 @@ contract CommunityFactory {
     {
         communities[_community] = false;
         emit CommunityRemoved(_community);
+    }
+
+    function _deployCommunity(
+        address _firstManager,
+        uint256 _claimAmount,
+        uint256 _maxClaim,
+        uint256 _baseInterval,
+        uint256 _incrementInterval,
+        address _previousCommunityAddress) internal returns (address) {
+
+        address community = address(
+            new Community(
+                _firstManager,
+                _claimAmount,
+                _maxClaim,
+                _baseInterval,
+                _incrementInterval,
+                _previousCommunityAddress,
+                cUSDAddress,
+                msg.sender
+            )
+        );
+        require(community != address(0), "NOT_VALID");
+
+        return community;
     }
 }
