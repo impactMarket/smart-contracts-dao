@@ -72,9 +72,7 @@ contract Community is AccessControl {
         address _cUSDAddress,
         address _impactMarketAddress
     ) public {
-        console.log("Community constructor");
-
-    require(_baseInterval > _incrementInterval, "");
+        require(_baseInterval > _incrementInterval, "");
         require(_maxClaim > _claimAmount, "");
 
         _setupRole(MANAGER_ROLE, _firstManager);
