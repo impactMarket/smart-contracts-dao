@@ -6,7 +6,7 @@ import {should} from 'chai';
 import BigNumber from 'bignumber.js';
 import {SignerWithAddress} from "@nomiclabs/hardhat-ethers/signers";
 // @ts-ignore
-import {ethers} from "hardhat";
+import { ethers, network} from "hardhat";
 import type * as ethersTypes from "ethers";
 import {log} from "util";
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -80,11 +80,91 @@ const hour = time.duration.hours(1);
 const day = time.duration.days(1);
 const week = time.duration.weeks(1);
 // const month = time.duration.days(30);
-const claimAmountTwo = bigNum(2);
-const maxClaimTen = bigNum(10);
+const claimAmountTwo = new BigNumber(bigNum(2));
+const maxClaimTen = new BigNumber(bigNum(10));
 const fiveCents = new BigNumber('50000000000000000');
 
-describe('Community - Beneficiary', () => {
+// describe('Community - Beneficiary', () => {
+//     before(async function () {
+//         await init();
+//     });
+//
+//     beforeEach(async () => {
+//         cUSDInstance = await cUSD.deploy();
+//         communityFactoryInstance = await CommunityFactory.deploy(cUSDInstance.address, adminAccount1.address);
+//
+//         const tx = await communityFactoryInstance.createCommunity(
+//             communityManagerA.address,
+//             claimAmountTwo,
+//             maxClaimTen,
+//             day.toString(),
+//             hour.toString()
+//         );
+//
+//         let receipt = await tx.wait();
+//
+//         const communityAddress = receipt.events?.filter((x: any) => {
+//             return x.event == "CommunityAdded"
+//         })[0]['args']['_communityAddress'];
+//         communityInstance = await Community.attach(communityAddress);
+//         await cUSDInstance.testFakeFundAddress(communityAddress);
+//     });
+//
+//     it('should be able to add beneficiary to community', async () => {
+//         // console.log(communityInstance.beneficiaries(beneficiaryA));
+//         (await communityInstance.beneficiaries(beneficiaryA.address)).toString().should.be.equal(BeneficiaryState.NONE);
+//         await communityInstance.connect(communityManagerA).addBeneficiary(beneficiaryA.address);
+//         (await communityInstance.beneficiaries(beneficiaryA.address)).toString().should.be.equal(BeneficiaryState.Valid);
+//     });
+//
+//     it('should give beneficiary 5 cents when adding to community', async () => {
+//         (await cUSDInstance.balanceOf(beneficiaryA.address)).toString().should.be.equal('0');
+//         await communityInstance.connect(communityManagerA).addBeneficiary(beneficiaryA.address);
+//         (await cUSDInstance.balanceOf(beneficiaryA.address)).toString().should.be.equal(fiveCents.toString());
+//     });
+//
+//     it('should be able to lock beneficiary from community', async () => {
+//         (await communityInstance.beneficiaries(beneficiaryA.address)).toString().should.be.equal(BeneficiaryState.NONE);
+//         await communityInstance.connect(communityManagerA).addBeneficiary(beneficiaryA.address);
+//         (await communityInstance.beneficiaries(beneficiaryA.address)).toString().should.be.equal(BeneficiaryState.Valid);
+//         await communityInstance.connect(communityManagerA).lockBeneficiary(beneficiaryA.address);
+//         (await communityInstance.beneficiaries(beneficiaryA.address)).toString().should.be.equal(BeneficiaryState.Locked);
+//     });
+//
+//     it('should not be able to lock an invalid beneficiary from community', async () => {
+//         (await communityInstance.beneficiaries(beneficiaryA.address)).toString().should.be.equal(BeneficiaryState.NONE);
+//         await expect(communityInstance.connect(communityManagerA).lockBeneficiary(beneficiaryA.address))
+//             .to.be.rejectedWith('NOT_YET');
+//     });
+//
+//     it('should be able to unlock locked beneficiary from community', async () => {
+//         (await communityInstance.beneficiaries(beneficiaryA.address)).toString().should.be.equal(BeneficiaryState.NONE);
+//         await communityInstance.connect(communityManagerA).addBeneficiary(beneficiaryA.address);
+//         (await communityInstance.beneficiaries(beneficiaryA.address)).toString().should.be.equal(BeneficiaryState.Valid);
+//         await communityInstance.connect(communityManagerA).lockBeneficiary(beneficiaryA.address);
+//         (await communityInstance.beneficiaries(beneficiaryA.address)).toString().should.be.equal(BeneficiaryState.Locked);
+//         await communityInstance.connect(communityManagerA).unlockBeneficiary(beneficiaryA.address);
+//         (await communityInstance.beneficiaries(beneficiaryA.address)).toString().should.be.equal(BeneficiaryState.Valid);
+//     });
+//
+//     it('should not be able to unlock a not locked beneficiary from community', async () => {
+//         (await communityInstance.beneficiaries(beneficiaryA.address)).toString().should.be.equal(BeneficiaryState.NONE);
+//         await communityInstance.connect(communityManagerA).addBeneficiary(beneficiaryA.address);
+//         (await communityInstance.beneficiaries(beneficiaryA.address)).toString().should.be.equal(BeneficiaryState.Valid);
+//         await expect(communityInstance.connect(communityManagerA).unlockBeneficiary(beneficiaryA.address))
+//             .to.be.rejectedWith("NOT_YET");
+//     });
+//
+//     it('should be able to remove beneficiary from community', async () => {
+//         (await communityInstance.beneficiaries(beneficiaryA.address)).toString().should.be.equal(BeneficiaryState.NONE);
+//         await communityInstance.connect(communityManagerA).addBeneficiary(beneficiaryA.address);
+//         (await communityInstance.beneficiaries(beneficiaryA.address)).toString().should.be.equal(BeneficiaryState.Valid);
+//         await communityInstance.connect(communityManagerA).removeBeneficiary(beneficiaryA.address);
+//         (await communityInstance.beneficiaries(beneficiaryA.address)).toString().should.be.equal(BeneficiaryState.Removed);
+//     });
+// });
+
+describe('Community - Claim', () => {
     before(async function () {
         await init();
     });
@@ -95,10 +175,10 @@ describe('Community - Beneficiary', () => {
 
         const tx = await communityFactoryInstance.createCommunity(
             communityManagerA.address,
-            claimAmountTwo,
-            maxClaimTen,
-            15180,
-            630,
+            claimAmountTwo.toString(),
+            maxClaimTen.toString(),
+            day.toString(),
+            hour.toString()
         );
 
         let receipt = await tx.wait();
@@ -108,159 +188,64 @@ describe('Community - Beneficiary', () => {
         })[0]['args']['_communityAddress'];
         communityInstance = await Community.attach(communityAddress);
         await cUSDInstance.testFakeFundAddress(communityAddress);
+        await communityInstance.connect(communityManagerA).addBeneficiary(beneficiaryA.address);
     });
 
-    it('should be able to add beneficiary to community', async () => {
-        // console.log(communityInstance.beneficiaries(beneficiaryA));
-        (await communityInstance.beneficiaries(beneficiaryA.address)).toString().should.be.equal(BeneficiaryState.NONE);
-        await communityInstance.connect(communityManagerA).addBeneficiary(beneficiaryA.address);
-        (await communityInstance.beneficiaries(beneficiaryA.address)).toString().should.be.equal(BeneficiaryState.Valid);
+    it('should not claim without belong to community', async () => {
+        await expect(communityInstance.connect(beneficiaryB).claim()).to.be.rejectedWith("NOT_BENEFICIARY");
     });
 
-    it('should give beneficiary 5 cents when adding to community', async () => {
-        (await cUSDInstance.balanceOf(beneficiaryA.address)).toString().should.be.equal('0');
-        await communityInstance.connect(communityManagerA).addBeneficiary(beneficiaryA.address);
-        (await cUSDInstance.balanceOf(beneficiaryA.address)).toString().should.be.equal(fiveCents.toString());
-    });
-
-    it('should be able to lock beneficiary from community', async () => {
-        (await communityInstance.beneficiaries(beneficiaryA.address)).toString().should.be.equal(BeneficiaryState.NONE);
-        await communityInstance.connect(communityManagerA).addBeneficiary(beneficiaryA.address);
-        (await communityInstance.beneficiaries(beneficiaryA.address)).toString().should.be.equal(BeneficiaryState.Valid);
+    it('should not claim after locked from community', async () => {
         await communityInstance.connect(communityManagerA).lockBeneficiary(beneficiaryA.address);
-        (await communityInstance.beneficiaries(beneficiaryA.address)).toString().should.be.equal(BeneficiaryState.Locked);
+        await expect(communityInstance.connect(beneficiaryA).claim()).to.be.rejectedWith("LOCKED");
     });
 
-    it('should not be able to lock an invalid beneficiary from community', async () => {
-        (await communityInstance.beneficiaries(beneficiaryA.address)).toString().should.be.equal(BeneficiaryState.NONE);
-        await expect(communityInstance.connect(communityManagerA).lockBeneficiary(beneficiaryA.address))
-            .to.be.rejectedWith('NOT_YET');
+    it('should not claim after removed from community', async () => {
+        await communityInstance.connect(communityManagerA).removeBeneficiary(beneficiaryA.address);
+        await expect(communityInstance.connect(beneficiaryA).claim()).to.be.rejectedWith("REMOVED");
     });
 
-    it('should be able to unlock locked beneficiary from community', async () => {
-        (await communityInstance.beneficiaries(beneficiaryA.address)).toString().should.be.equal(BeneficiaryState.NONE);
-        await communityInstance.connect(communityManagerA).addBeneficiary(beneficiaryA.address);
-        (await communityInstance.beneficiaries(beneficiaryA.address)).toString().should.be.equal(BeneficiaryState.Valid);
-        await communityInstance.connect(communityManagerA).lockBeneficiary(beneficiaryA.address);
-        (await communityInstance.beneficiaries(beneficiaryA.address)).toString().should.be.equal(BeneficiaryState.Locked);
-        await communityInstance.connect(communityManagerA).unlockBeneficiary(beneficiaryA.address);
-        (await communityInstance.beneficiaries(beneficiaryA.address)).toString().should.be.equal(BeneficiaryState.Valid);
+    it('should not claim if community is locked', async () => {
+        await expect(communityInstance.connect(communityManagerA).lock())
+            .to.emit(communityInstance, 'CommunityLocked')
+            .withArgs(communityManagerA.address);
+        await expect(communityInstance.connect(beneficiaryA).claim()).to.be.rejectedWith("LOCKED");
     });
 
-    it('should not be able to unlock a not locked beneficiary from community', async () => {
-        (await communityInstance.beneficiaries(beneficiaryA.address)).toString().should.be.equal(BeneficiaryState.NONE);
-        await communityInstance.connect(communityManagerA).addBeneficiary(beneficiaryA.address);
-        (await communityInstance.beneficiaries(beneficiaryA.address)).toString().should.be.equal(BeneficiaryState.Valid);
-        await expect(communityInstance.connect(communityManagerA).unlockBeneficiary(beneficiaryA.address))
-            .to.be.rejectedWith("NOT_YET");
+    it('should not claim without waiting enough', async () => {
+        const baseInterval = (await communityInstance.baseInterval()).toNumber();
+        const incrementInterval = (await communityInstance.incrementInterval()).toNumber();
+        await communityInstance.connect(beneficiaryA).claim();
+        await network.provider.send("evm_increaseTime", [baseInterval]);
+        await communityInstance.connect(beneficiaryA).claim();
+        await network.provider.send("evm_increaseTime", [5]);
+        await expect(communityInstance.connect(beneficiaryA).claim()).to.be.rejectedWith("NOT_YET");
+        await network.provider.send("evm_increaseTime", [5]);
+        await expect(communityInstance.connect(beneficiaryA).claim()).to.be.rejectedWith("NOT_YET");
     });
-//
-//     it('should be able to remove beneficiary from community', async () => {
-//         (await communityInstance.beneficiaries(beneficiaryA)).toString().should.be.equal(BeneficiaryState.NONE);
-//         await communityInstance.connect().addBeneficiary(beneficiaryA, {from: communityManagerA});
-//         (await communityInstance.beneficiaries(beneficiaryA)).toString().should.be.equal(BeneficiaryState.Valid);
-//         await communityInstance.connect().removeBeneficiary(beneficiaryA, {from: communityManagerA});
-//         (await communityInstance.beneficiaries(beneficiaryA)).toString().should.be.equal(BeneficiaryState.Removed);
-//     });
-// });
-//
-// describe('Community - Claim', () => {
-//     beforeEach(async () => {
-//         cUSDInstance = await cUSD.new();
-//         communityFactoryInstance = await ImpactMarket.new(cUSDInstance.address, [adminAccount1]);
-//         communityFactoryInstance = await CommunityFactory.new(cUSDInstance.address, communityFactoryInstance.address);
-//         await communityFactoryInstance.setCommunityFactory(communityFactoryInstance.address);
-//         const tx = await communityFactoryInstance.connect().addCommunity(
-//             communityManagerA,
-//             claimAmountTwo,
-//             maxClaimTen,
-//             day,
-//             hour,
-//             {from: adminAccount1},
-//         );
-//         const communityManagerAddress = tx.logs[1].args[0];
-//         communityInstance = await Community.at(communityManagerAddress);
-//         await cUSDInstance.connect().testFakeFundAddress(communityManagerAddress, {from: adminAccount1});
-//         await communityInstance.connect().addBeneficiary(beneficiaryA, {from: communityManagerA});
-//     });
-//
-//     it('should not claim without belong to community', async () => {
-//         await expectRevert(
-//             communityInstance.connect().claim({from: beneficiaryB}),
-//             "NOT_BENEFICIARY"
-//         );
-//     });
-//
-//     it('should not claim after locked from community', async () => {
-//         await communityInstance.connect().lockBeneficiary(beneficiaryA, {from: communityManagerA});
-//         await expectRevert(
-//             communityInstance.claim({from: beneficiaryA}),
-//             "LOCKED"
-//         );
-//     });
-//
-//     it('should not claim after removed from community', async () => {
-//         await communityInstance.connect().removeBeneficiary(beneficiaryA, {from: communityManagerA});
-//         await expectRevert(
-//             communityInstance.connect().claim({from: beneficiaryA}),
-//             "REMOVED"
-//         );
-//     });
-//
-//     it('should not claim if community is locked', async () => {
-//         const receipt = await communityInstance.connect().lock({from: communityManagerA});
-//         expectEvent(receipt, 'CommunityLocked', {
-//             _by: communityManagerA,
-//         });
-//         await expectRevert(
-//             communityInstance.connect().claim({from: beneficiaryA}),
-//             "LOCKED"
-//         );
-//     });
-//
-//     it('should not claim without waiting enough', async () => {
-//         const baseInterval = (await communityInstance.baseInterval()).toNumber();
-//         const incrementInterval = (await communityInstance.incrementInterval()).toNumber();
-//         await communityInstance.connect().claim({from: beneficiaryA});
-//         await time.increase(time.duration.seconds(baseInterval + 5));
-//         await communityInstance.connect().claim({from: beneficiaryA});
-//         await time.increase(time.duration.seconds(incrementInterval + 5));
-//         await expectRevert(
-//             communityInstance.connect().claim({from: beneficiaryA}),
-//             "NOT_YET"
-//         );
-//         await time.increase(time.duration.seconds(incrementInterval + 5));
-//         await expectRevert(
-//             communityInstance.connect().claim({from: beneficiaryA}),
-//             "NOT_YET"
-//         );
-//     });
-//
-//     it('should claim after waiting', async () => {
-//         const baseInterval = (await communityInstance.baseInterval()).toNumber();
-//         await time.increase(time.duration.seconds(baseInterval + 5));
-//         await communityInstance.connect().claim({from: beneficiaryA});
-//         (await cUSDInstance.balanceOf(beneficiaryA)).toString()
-//             .should.be.equal(claimAmountTwo.plus(fiveCents).toString());
-//     });
-//
-//     it('should not claim after max claim', async () => {
-//         const baseInterval = (await communityInstance.baseInterval()).toNumber();
-//         const incrementInterval = (await communityInstance.incrementInterval()).toNumber();
-//         const claimAmount = new BigNumber((await communityInstance.claimAmount()).toString()).div(decimals).toNumber();
-//         const maxClaimAmount = new BigNumber((await communityInstance.maxClaim()).toString()).div(decimals).toNumber();
-//         await communityInstance.connect().claim({from: beneficiaryA});
-//         for (let index = 0; index < (maxClaimAmount / claimAmount) - 1; index++) {
-//             await time.increase(time.duration.seconds(baseInterval + incrementInterval * index + 5));
-//             await communityInstance.connect().claim({from: beneficiaryA});
-//         }
-//         await time.increase(time.duration.seconds(baseInterval + incrementInterval * (maxClaimAmount / claimAmount) + 5));
-//         await expectRevert(
-//             communityInstance.connect().claim({from: beneficiaryA}),
-//             "MAX_CLAIM"
-//         );
-//     });
-// });
+
+    it('should claim after waiting', async () => {
+        const baseInterval = (await communityInstance.baseInterval()).toNumber();
+        await network.provider.send("evm_increaseTime", [baseInterval + 5]);
+        await communityInstance.connect(beneficiaryA).claim();
+        (await cUSDInstance.balanceOf(beneficiaryA.address)).toString()
+            .should.be.equal(claimAmountTwo.plus(fiveCents).toString());
+    });
+
+    it('should not claim after max claim', async () => {
+        const baseInterval = (await communityInstance.baseInterval()).toNumber();
+        const incrementInterval = (await communityInstance.incrementInterval()).toNumber();
+        const claimAmount = new BigNumber((await communityInstance.claimAmount()).toString()).div(decimals).toNumber();
+        const maxClaimAmount = new BigNumber((await communityInstance.maxClaim()).toString()).div(decimals).toNumber();
+        await communityInstance.connect(beneficiaryA).claim();
+        for (let index = 0; index < (maxClaimAmount / claimAmount) - 1; index++) {
+            await network.provider.send("evm_increaseTime", [baseInterval + incrementInterval * index + 5]);
+            await communityInstance.connect(beneficiaryA).claim();
+        }
+        await network.provider.send("evm_increaseTime", [baseInterval + incrementInterval * (maxClaimAmount / claimAmount) + 5]);
+        await expect(communityInstance.connect(beneficiaryA).claim()).to.be.rejectedWith("MAX_CLAIM");
+    });
+});
 //
 // describe('Community - Governance (1)', () => {
 //     it('should not be able to add community if missing signatures', async () => {
@@ -683,7 +668,7 @@ describe('Community - Beneficiary', () => {
 //     // wait claim time
 //     const waitClaimTime = async (instance: CommunityInstance, beneficiaryAddress: string): Promise<void> => {
 //         const waitIs = (await instance.lastInterval(beneficiaryAddress)).toNumber();
-//         await time.increase(time.duration.seconds(waitIs + 5)); // wait is + 5
+//         await network.provider.send("evm_increaseTime", [waitIs + 5]);
 //     }
 //     // claim
 //     const beneficiaryClaim = async (instance: CommunityInstance, beneficiaryAddress: string): Promise<void> => {
@@ -824,4 +809,4 @@ describe('Community - Beneficiary', () => {
 //         previousCommunityBalanceB.minus(currentCommunityBalanceB).toString().should.be
 //             .equal(new BigNumber(claimAmountB * (4 + maxClaimsPerUserB)).multipliedBy(decimals).plus(2 * fiveCents.toNumber()).toString());
 //     });
-});
+// });
