@@ -1,0 +1,32 @@
+name: Build
+
+on: [ push, pull_request ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '12.x'
+      - name: Pre-install
+        run: |
+          yarn --ignore-engines
+      - name: Run Checks
+        run: |
+          yarn prettier:write
+          yarn lint
+          yarn build
+          yarn docgen
+      - name: Run tests
+        run: |
+          yarn coverage
+      # - name: Run migration
+      #   run: |
+      #     yarn deploy
+      - name: Run check git
+        run: |
+          git diff --quiet --exit-code --cached
