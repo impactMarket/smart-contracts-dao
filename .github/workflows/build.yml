@@ -20,7 +20,7 @@ jobs:
           yarn prettier:write
           yarn lint
           yarn build
-          yarn doc
+          yarn docgen
       - name: Run tests
         run: |
           yarn coverage
