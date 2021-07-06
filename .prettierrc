@@ -1,0 +1,31 @@
+{
+  "overrides": [
+    {
+      "files": "*.sol",
+      "options": {
+        "printWidth": 100,
+        "tabWidth": 4,
+        "useTabs": false,
+        "singleQuote": false,
+        "bracketSpacing": false,
+        "explicitTypes": "always"
+      }
+    }, {
+      "files": "*.js",
+      "options": {
+        "semi": true,
+        "tabWidth": 4,
+        "useTabs": true,
+        "singleQuote": false
+      }
+    }, {
+      "files": "*.ts",
+      "options": {
+        "semi": true,
+        "tabWidth": 4,
+        "useTabs": true,
+        "singleQuote": false
+      }
+    }
+  ]
+}

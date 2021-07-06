@@ -1,4 +1,6 @@
 import { task } from "hardhat/config";
+import "solidity-coverage";
+import "hardhat-docgen";
 import "@nomiclabs/hardhat-waffle";
 
 // This is a sample Hardhat task. To learn how to create your own go to
@@ -16,5 +18,9 @@ task("accounts", "Prints the list of accounts", async (args, hre) => {
 
 export default {
   solidity: "0.8.5",
+  docgen: {
+    path: './docs',
+    clear: true,
+    runOnCompile: true,
+  }
 };
-
