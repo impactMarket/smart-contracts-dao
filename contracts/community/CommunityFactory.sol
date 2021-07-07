@@ -23,7 +23,7 @@ contract CommunityFactory {
     event CommunityRemoved(address indexed _communityAddress);
     event CommunityMigrated(
         address indexed _firstManager,
-        address indexed _communityAddress,
+        address indexed CommunityMigrated,
         address indexed _previousCommunityAddress
     );
 
@@ -35,10 +35,6 @@ contract CommunityFactory {
     modifier onlyImpactMarket() {
         require(msg.sender == impactMarketAddress, "NOT_ALLOWED");
         _;
-    }
-
-    function testSelfCall2(uint _ceva) external {
-        console.log('briliant facvtory');
     }
 
     /**
@@ -92,7 +88,7 @@ contract CommunityFactory {
         require(address(_previousCommunityAddress) != address(0), "NOT_VALID");
         ICommunity previousCommunity = ICommunity(_previousCommunityAddress);
 
-        address community = _deployCommunity(
+    address community = _deployCommunity(
             _firstManager,
             previousCommunity.claimAmount(),
             previousCommunity.maxClaim(),
@@ -100,7 +96,9 @@ contract CommunityFactory {
             previousCommunity.incrementInterval(),
             _previousCommunityAddress
         );
+
         previousCommunity.migrateFunds(community, _firstManager);
+
         communities[community] = true;
 
         emit CommunityMigrated(_firstManager, community, _previousCommunityAddress);
@@ -132,7 +130,7 @@ contract CommunityFactory {
                 _incrementInterval,
                 _previousCommunityAddress,
                 cUSDAddress,
-                msg.sender
+                address(this)
             )
         );
         require(community != address(0), "NOT_VALID");
