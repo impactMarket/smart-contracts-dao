@@ -25,7 +25,7 @@ contract Timelock {
      * @param admin_ - contract admin
      * @param delay_ - delay before successful proposal 
      **/
-    constructor(address admin_, uint delay_) public {
+    constructor(address admin_, uint delay_) {
         require(delay_ >= MINIMUM_DELAY, "Timelock::constructor: Delay must exceed minimum delay.");
         require(delay_ <= MAXIMUM_DELAY, "Timelock::constructor: Delay must not exceed maximum delay.");
 
@@ -100,7 +100,6 @@ contract Timelock {
         }
 
         // solium-disable-next-line security/no-call-value
-//        (bool success, bytes memory returnData) = target.call.value(value)(callData);
         (bool success, bytes memory returnData) = target.call{value: value}(callData);
         require(success, "Timelock::executeTransaction: Transaction execution reverted.");
 
