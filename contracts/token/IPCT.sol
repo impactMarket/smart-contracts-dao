@@ -86,7 +86,7 @@ contract IPCT {
      * @param minter_ The account with minting ability
      * @param mintingAllowedAfter_ The timestamp after which minting may occur
      */
-    constructor(address account, address minter_, uint mintingAllowedAfter_) public {
+    constructor(address account, address minter_, uint mintingAllowedAfter_) {
         require(mintingAllowedAfter_ >= block.timestamp, "IPCT::constructor: minting can only begin after deployment");
         balances[account] = uint96(totalSupply);
         emit Transfer(address(0), account, totalSupply);
