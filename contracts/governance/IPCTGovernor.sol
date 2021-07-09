@@ -145,7 +145,7 @@ contract IPCTGovernor {
      * @param _signaturesThreshold - number of admin that are required to sign a proposal in the initial phase
      * @param _ipct - address of ERC20 that claims will be distributed from
      **/
-    constructor(address _ipct, address[] memory _admins, uint _signaturesThreshold) public {
+    constructor(address _ipct, address[] memory _admins, uint _signaturesThreshold) {
         require (_admins.length >= _signaturesThreshold,
             "IPCTGovernor::constructor: signaturesThreshold must be lower than total number of admins");
 
