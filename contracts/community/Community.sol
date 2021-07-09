@@ -71,7 +71,7 @@ contract Community is AccessControl {
         address _previousCommunityContract,
         address _cUSDAddress,
         address _impactMarketAddress
-    ) public {
+    ) {
         require(_baseInterval > _incrementInterval, "");
         require(_maxClaim > _claimAmount, "");
 
