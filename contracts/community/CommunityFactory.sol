@@ -80,15 +80,12 @@ contract CommunityFactory {
         address _firstManager,
         address _previousCommunityAddress,
         address _newCommunityFactory
-    )
-    external
-    onlyImpactMarket
-    {
+    ) external onlyImpactMarket {
         communities[_previousCommunityAddress] = false;
         require(address(_previousCommunityAddress) != address(0), "NOT_VALID");
         ICommunity previousCommunity = ICommunity(_previousCommunityAddress);
 
-    address community = _deployCommunity(
+        address community = _deployCommunity(
             _firstManager,
             previousCommunity.claimAmount(),
             previousCommunity.maxClaim(),
@@ -107,8 +104,7 @@ contract CommunityFactory {
     /**
      * @dev Remove an existing community. Can be used only by an admin.
      */
-    function removeCommunity(address _community) external onlyImpactMarket
-    {
+    function removeCommunity(address _community) external onlyImpactMarket {
         communities[_community] = false;
         emit CommunityRemoved(_community);
     }
@@ -119,8 +115,8 @@ contract CommunityFactory {
         uint256 _maxClaim,
         uint256 _baseInterval,
         uint256 _incrementInterval,
-        address _previousCommunityAddress) internal returns (address) {
-
+        address _previousCommunityAddress
+    ) internal returns (address) {
         address community = address(
             new Community(
                 _firstManager,

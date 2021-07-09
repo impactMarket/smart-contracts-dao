@@ -26,113 +26,119 @@ contract IPCTGovernor {
 
     struct CallParams {
         address target;
-        uint value;
+        uint256 value;
         string signature;
         bytes data;
     }
 
     struct Proposal {
         /// @notice Unique id for looking up a proposal
-        uint id;
-
+        uint256 id;
         ProposalType proposalType;
-
         CallParams callParams;
-
         /// @notice Creator of the proposal
         address proposer;
-
         /// @notice The block at which voting begins: holders must delegate their votes prior to this block
-        uint startBlock;
-
+        uint256 startBlock;
         /// @notice The block at which voting ends: votes must be cast prior to this block
-        uint endBlock;
-
+        uint256 endBlock;
         /// @notice Current number of votes in favor of this proposal
-        uint forVotes;
-
+        uint256 forVotes;
         /// @notice Current number of votes in opposition to this proposal
-        uint againstVotes;
-
+        uint256 againstVotes;
         /// @notice Flag marking whether the proposal has been canceled
         bool canceled;
-
         /// @notice Flag marking whether the proposal has been executed
         bool executed;
-
         /// @notice Receipts of ballots for the entire set of voters
-        mapping (address => Receipt) receipts;
-
-        mapping (address => bool) signatures;
-        uint signaturesCount;
+        mapping(address => Receipt) receipts;
+        mapping(address => bool) signatures;
+        uint256 signaturesCount;
     }
 
     /// @notice Ballot receipt record for a voter
     struct Receipt {
         /// @notice Whether or not a vote has been cast
         bool hasVoted;
-
         /// @notice Whether or not the voter supports the proposal
         bool support;
-
         /// @notice The number of votes the voter had, which were cast
         uint96 votes;
     }
 
-    uint public constant MINIMUM_DELAY = 2 days;
-    uint public constant MAXIMUM_DELAY = 30 days;
+    uint256 public constant MINIMUM_DELAY = 2 days;
+    uint256 public constant MAXIMUM_DELAY = 30 days;
 
     /// @notice The number of votes in support of a proposal required in order for a quorum to be reached and for a vote to succeed
-    uint public quorumVotes = 2_500_000e18; // 2.5% of IPCT
+    uint256 public quorumVotes = 2_500_000e18; // 2.5% of IPCT
 
     /// @notice The number of votes required in order for a voter to become a proposer
-    uint public proposalThreshold = 1_000_000e18; // 1% of IPCT
+    uint256 public proposalThreshold = 1_000_000e18; // 1% of IPCT
 
     /// @notice The delay before voting on a proposal may take place, once proposed
     //    uint public votingDelay = 13140; // ~2 days in blocks (assuming 15s blocks)
-    uint public votingDelay = 10;
+    uint256 public votingDelay = 10;
 
     /// @notice The duration of voting on a proposal, in blocks
     //    uint public votingPeriod = 40_320; // ~7 days in blocks (assuming 15s blocks)
-    uint public votingPeriod = 20; // ~7 days in blocks (assuming 15s blocks)
+    uint256 public votingPeriod = 20; // ~7 days in blocks (assuming 15s blocks)
 
-    uint public delay = 172800;
+    uint256 public delay = 172800;
 
     /// @notice The address of the IPCT governance token
     IPCTInterface public ipct;
 
     /// @notice The total number of proposals
-    uint public proposalCount;
+    uint256 public proposalCount;
 
     address[] public admins;
 
-    uint public signaturesThreshold;
+    uint256 public signaturesThreshold;
 
-    mapping (address => bool) public isAdmin;
+    mapping(address => bool) public isAdmin;
 
     /// @notice The official record of all proposals ever proposed
-    mapping (uint => Proposal) public proposals;
+    mapping(uint256 => Proposal) public proposals;
 
     /// @notice The EIP-712 typehash for the contract's domain
-    bytes32 public constant DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)");
+    bytes32 public constant DOMAIN_TYPEHASH =
+        keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)");
 
     /// @notice The EIP-712 typehash for the ballot struct used by the contract
     bytes32 public constant BALLOT_TYPEHASH = keccak256("Ballot(uint256 proposalId,bool support)");
 
     /// @notice An event emitted when a new proposal is created
-    event ProposalCreated(uint id, address proposer, uint startBlock, uint endBlock, string description);
+    event ProposalCreated(
+        uint256 id,
+        address proposer,
+        uint256 startBlock,
+        uint256 endBlock,
+        string description
+    );
 
     /// @notice An event emitted when a vote has been cast on a proposal
-    event VoteCast(address voter, uint proposalId, bool support, uint votes);
+    event VoteCast(address voter, uint256 proposalId, bool support, uint256 votes);
 
     /// @notice An event emitted when a proposal has been canceled
-    event ProposalCanceled(uint id);
+    event ProposalCanceled(uint256 id);
 
     /// @notice An event emitted when a proposal has been executed in the Timelock
-    event ProposalExecuted(uint id);
+    event ProposalExecuted(uint256 id);
 
-    event CancelTransaction(bytes32 indexed txHash, address indexed target, uint value, string signature,  bytes data);
-    event ExecuteTransaction(bytes32 indexed txHash, address indexed target, uint value, string signature,  bytes data);
+    event CancelTransaction(
+        bytes32 indexed txHash,
+        address indexed target,
+        uint256 value,
+        string signature,
+        bytes data
+    );
+    event ExecuteTransaction(
+        bytes32 indexed txHash,
+        address indexed target,
+        uint256 value,
+        string signature,
+        bytes data
+    );
 
     modifier onlyAdmin() {
         require(isAdmin[msg.sender], "NOT_ADMIN");
@@ -145,9 +151,15 @@ contract IPCTGovernor {
      * @param _signaturesThreshold - number of admin that are required to sign a proposal in the initial phase
      * @param _ipct - address of ERC20 that claims will be distributed from
      **/
-    constructor(address _ipct, address[] memory _admins, uint _signaturesThreshold) {
-        require (_admins.length >= _signaturesThreshold,
-            "IPCTGovernor::constructor: signaturesThreshold must be lower than total number of admins");
+    constructor(
+        address _ipct,
+        address[] memory _admins,
+        uint256 _signaturesThreshold
+    ) {
+        require(
+            _admins.length >= _signaturesThreshold,
+            "IPCTGovernor::constructor: signaturesThreshold must be lower than total number of admins"
+        );
 
         ipct = IPCTInterface(_ipct);
         _changeAdmins(_admins, _signaturesThreshold);
@@ -155,20 +167,28 @@ contract IPCTGovernor {
 
     function updateGovernor(
         address[] memory _admins,
-        uint _signaturesThreshold,
+        uint256 _signaturesThreshold,
         address _ipct,
-        uint _delay,
-        uint _quorumVotes,
-        uint _proposalThreshold,
-        uint _votingDelay,
-        uint _votingPeriod,
+        uint256 _delay,
+        uint256 _quorumVotes,
+        uint256 _proposalThreshold,
+        uint256 _votingDelay,
+        uint256 _votingPeriod,
         string memory _description
     ) public {
-        require(_delay >= MINIMUM_DELAY, "IPCTGovernor::updateGovernor: Delay must exceed minimum delay.");
-        require(_delay <= MAXIMUM_DELAY, "IPCTGovernor::updateGovernor: Delay must not exceed maximum delay.");
+        require(
+            _delay >= MINIMUM_DELAY,
+            "IPCTGovernor::updateGovernor: Delay must exceed minimum delay."
+        );
+        require(
+            _delay <= MAXIMUM_DELAY,
+            "IPCTGovernor::updateGovernor: Delay must not exceed maximum delay."
+        );
 
-        require (_admins.length >= _signaturesThreshold,
-            "IPCTGovernor::proposeUpdateGovernor: signaturesThreshold must be lower than total number of admins");
+        require(
+            _admins.length >= _signaturesThreshold,
+            "IPCTGovernor::proposeUpdateGovernor: signaturesThreshold must be lower than total number of admins"
+        );
 
         ipct = IPCTInterface(_ipct);
         delay = _delay;
@@ -181,37 +201,53 @@ contract IPCTGovernor {
 
     function propose(
         address _target,
-        uint _value,
+        uint256 _value,
         string memory _signature,
         bytes memory _data,
         string memory _description
     ) external {
-        require(ipct.getPriorVotes(msg.sender, block.number - 1) > proposalThreshold,
-            "IPCTGovernor::propose: proposer votes below proposal threshold");
+        require(
+            ipct.getPriorVotes(msg.sender, block.number - 1) > proposalThreshold,
+            "IPCTGovernor::propose: proposer votes below proposal threshold"
+        );
 
-        uint proposalId = _createProposal(_target, _value, _signature, _data, _description, ProposalType.ByHolder);
+        uint256 proposalId = _createProposal(
+            _target,
+            _value,
+            _signature,
+            _data,
+            _description,
+            ProposalType.ByHolder
+        );
     }
 
     function proposeByAdmin(
         address _target,
-        uint _value,
+        uint256 _value,
         string memory _signature,
         bytes memory _data,
         string memory _description
     ) external onlyAdmin {
-        uint proposalId = _createProposal(_target, _value, _signature, _data, _description, ProposalType.ByAdmin);
+        uint256 proposalId = _createProposal(
+            _target,
+            _value,
+            _signature,
+            _data,
+            _description,
+            ProposalType.ByAdmin
+        );
     }
 
     function _createProposal(
         address _target,
-        uint _value,
+        uint256 _value,
         string memory _signature,
         bytes memory _data,
         string memory _description,
         ProposalType _proposalType
-    ) internal returns (uint) {
-        uint startBlock = block.number + votingDelay;
-        uint endBlock = startBlock + votingPeriod;
+    ) internal returns (uint256) {
+        uint256 startBlock = block.number + votingDelay;
+        uint256 endBlock = startBlock + votingPeriod;
 
         proposalCount++;
 
@@ -225,51 +261,33 @@ contract IPCTGovernor {
         proposals[proposalCount].proposer = msg.sender;
         proposals[proposalCount].startBlock = startBlock;
         proposals[proposalCount].endBlock = endBlock;
-//        proposals[proposalCount].forVotes = 0;
-//        proposals[proposalCount].againstVotes = 0;
-//        proposals[proposalCount].canceled = false;
-//        proposals[proposalCount].executed = false;
+        //        proposals[proposalCount].forVotes = 0;
+        //        proposals[proposalCount].againstVotes = 0;
+        //        proposals[proposalCount].canceled = false;
+        //        proposals[proposalCount].executed = false;
 
         emit ProposalCreated(proposalCount, msg.sender, startBlock, endBlock, _description);
         return proposalCount;
     }
 
-    function execute(uint proposalId) public payable {
-        require(state(proposalId) == ProposalState.Succeeded,
-            "IPCTGovernor::execute: proposal can only be executed if it is succeeded");
+    function execute(uint256 proposalId) public payable {
+        require(
+            state(proposalId) == ProposalState.Succeeded,
+            "IPCTGovernor::execute: proposal can only be executed if it is succeeded"
+        );
 
         bytes memory callData;
 
         if (bytes(proposals[proposalId].callParams.signature).length == 0) {
             callData = proposals[proposalId].callParams.data;
         } else {
-            callData = abi.encodePacked(bytes4(keccak256(bytes(proposals[proposalId].callParams.signature))), proposals[proposalId].callParams.data);
+            callData = abi.encodePacked(
+                bytes4(keccak256(bytes(proposals[proposalId].callParams.signature))),
+                proposals[proposalId].callParams.data
+            );
         }
 
-        (bool success,  ) = proposals[proposalId].callParams.target.call(callData);
-        require(success, "Contract execution Failed");
-
-
-    proposals[proposalId].executed = true;
-
-        emit ProposalExecuted(proposalId);
-    }
-
-    function executeByAdmin(uint proposalId) public payable onlyAdmin {
-        ProposalState proposalState = state(proposalId);
-        require(proposalState == ProposalState.Pending || proposalState == ProposalState.Active,
-            "IPCTGovernor::executeByAdmin: proposal can only be executed if it is pending or active");
-        require(proposals[proposalId].signaturesCount >= signaturesThreshold, "IPCTGovernor::executeByAdmin: proposal doesn't have enough signatures");
-
-        bytes memory callData;
-
-        if (bytes(proposals[proposalId].callParams.signature).length == 0) {
-            callData = proposals[proposalId].callParams.data;
-        } else {
-            callData = abi.encodePacked(bytes4(keccak256(bytes(proposals[proposalId].callParams.signature))), proposals[proposalId].callParams.data);
-        }
-
-        (bool success,  ) = proposals[proposalId].callParams.target.call(callData);
+        (bool success, ) = proposals[proposalId].callParams.target.call(callData);
         require(success, "Contract execution Failed");
 
         proposals[proposalId].executed = true;
@@ -277,24 +295,63 @@ contract IPCTGovernor {
         emit ProposalExecuted(proposalId);
     }
 
-    function cancel(uint proposalId) public {
+    function executeByAdmin(uint256 proposalId) public payable onlyAdmin {
+        ProposalState proposalState = state(proposalId);
+        require(
+            proposalState == ProposalState.Pending || proposalState == ProposalState.Active,
+            "IPCTGovernor::executeByAdmin: proposal can only be executed if it is pending or active"
+        );
+        require(
+            proposals[proposalId].signaturesCount >= signaturesThreshold,
+            "IPCTGovernor::executeByAdmin: proposal doesn't have enough signatures"
+        );
+
+        bytes memory callData;
+
+        if (bytes(proposals[proposalId].callParams.signature).length == 0) {
+            callData = proposals[proposalId].callParams.data;
+        } else {
+            callData = abi.encodePacked(
+                bytes4(keccak256(bytes(proposals[proposalId].callParams.signature))),
+                proposals[proposalId].callParams.data
+            );
+        }
+
+        (bool success, ) = proposals[proposalId].callParams.target.call(callData);
+        require(success, "Contract execution Failed");
+
+        proposals[proposalId].executed = true;
+
+        emit ProposalExecuted(proposalId);
+    }
+
+    function cancel(uint256 proposalId) public {
         ProposalState state = state(proposalId);
-        require(state != ProposalState.Executed, "IPCTGovernor::cancel: cannot cancel executed proposal");
+        require(
+            state != ProposalState.Executed,
+            "IPCTGovernor::cancel: cannot cancel executed proposal"
+        );
 
         Proposal storage proposal = proposals[proposalId];
-        require(ipct.getPriorVotes(proposal.proposer, block.number - 1) < proposalThreshold, "IPCTGovernor::cancel: proposer above threshold");
+        require(
+            ipct.getPriorVotes(proposal.proposer, block.number - 1) < proposalThreshold,
+            "IPCTGovernor::cancel: proposer above threshold"
+        );
 
         proposal.canceled = true;
 
         emit ProposalCanceled(proposalId);
     }
 
-    function getReceipt(uint proposalId, address voter) public view returns (Receipt memory) {
+    function getReceipt(uint256 proposalId, address voter) public view returns (Receipt memory) {
         return proposals[proposalId].receipts[voter];
     }
 
-    function state(uint proposalId) public view returns (ProposalState) {
-        require(proposalCount >= proposalId && proposalId > 0, "IPCTGovernor::state: invalid proposal id");
+    function state(uint256 proposalId) public view returns (ProposalState) {
+        require(
+            proposalCount >= proposalId && proposalId > 0,
+            "IPCTGovernor::state: invalid proposal id"
+        );
         Proposal storage proposal = proposals[proposalId];
 
         if (proposal.canceled) {
@@ -314,19 +371,30 @@ contract IPCTGovernor {
         }
     }
 
-    function signProposal(uint proposalId) external {
+    function signProposal(uint256 proposalId) external {
         Proposal storage proposal = proposals[proposalId];
-        require(proposal.signatures[msg.sender] == false, "IPCTGovernor::signProposal: You have already signed this proposal");
+        require(
+            proposal.signatures[msg.sender] == false,
+            "IPCTGovernor::signProposal: You have already signed this proposal"
+        );
         proposal.signatures[msg.sender] = true;
         proposal.signaturesCount++;
     }
 
-    function castVote(uint proposalId, bool support) public {
+    function castVote(uint256 proposalId, bool support) public {
         return _castVote(msg.sender, proposalId, support);
     }
 
-    function castVoteBySig(uint proposalId, bool support, uint8 v, bytes32 r, bytes32 s) public {
-        bytes32 domainSeparator = keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)), getChainId(), address(this)));
+    function castVoteBySig(
+        uint256 proposalId,
+        bool support,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) public {
+        bytes32 domainSeparator = keccak256(
+            abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)), getChainId(), address(this))
+        );
         bytes32 structHash = keccak256(abi.encode(BALLOT_TYPEHASH, proposalId, support));
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
         address signatory = ecrecover(digest, v, r, s);
@@ -334,8 +402,15 @@ contract IPCTGovernor {
         return _castVote(signatory, proposalId, support);
     }
 
-    function _castVote(address voter, uint proposalId, bool support) internal {
-        require(state(proposalId) == ProposalState.Active, "IPCTGovernor::_castVote: voting is closed");
+    function _castVote(
+        address voter,
+        uint256 proposalId,
+        bool support
+    ) internal {
+        require(
+            state(proposalId) == ProposalState.Active,
+            "IPCTGovernor::_castVote: voting is closed"
+        );
         Proposal storage proposal = proposals[proposalId];
         Receipt storage receipt = proposal.receipts[voter];
         require(receipt.hasVoted == false, "IPCTGovernor::_castVote: voter already voted");
@@ -354,17 +429,19 @@ contract IPCTGovernor {
         emit VoteCast(voter, proposalId, support, votes);
     }
 
-    function getChainId() internal view returns (uint) {
-        uint chainId;
-        assembly { chainId := chainid() }
+    function getChainId() internal view returns (uint256) {
+        uint256 chainId;
+        assembly {
+            chainId := chainid()
+        }
         return chainId;
     }
 
-    function _changeAdmins(address[] memory _newAdmins, uint _newSignaturesThreshold) internal {
-        for (uint u = 0; u < admins.length; u += 1) {
+    function _changeAdmins(address[] memory _newAdmins, uint256 _newSignaturesThreshold) internal {
+        for (uint256 u = 0; u < admins.length; u += 1) {
             isAdmin[admins[u]] = false;
         }
-        for (uint u = 0; u < _newAdmins.length; u += 1) {
+        for (uint256 u = 0; u < _newAdmins.length; u += 1) {
             isAdmin[_newAdmins[u]] = true;
         }
         admins = _newAdmins;
@@ -373,9 +450,13 @@ contract IPCTGovernor {
 }
 
 interface IPCTInterface {
-    function getPriorVotes(address account, uint blockNumber) external view returns (uint96);
+    function getPriorVotes(address account, uint256 blockNumber) external view returns (uint96);
 }
 
 interface ERC20Interface {
-    function transferFrom(address from, address to, uint amount) external;
+    function transferFrom(
+        address from,
+        address to,
+        uint256 amount
+    ) external;
 }
