@@ -42,7 +42,7 @@ let beneficiaryD: SignerWithAddress;
 let ImpactMarket: ethersTypes.ContractFactory;
 let Community: ethersTypes.ContractFactory;
 let CommunityFactory: ethersTypes.ContractFactory;
-let cUSD: ethersTypes.ContractFactory;
+let Token: ethersTypes.ContractFactory;
 
 // contract instances
 let communityFactoryInstance: ethersTypes.Contract;
@@ -73,7 +73,7 @@ async function init() {
     ImpactMarket = await ethers.getContractFactory("ImpactMarket");
     Community = await ethers.getContractFactory("Community");
     CommunityFactory = await ethers.getContractFactory("CommunityFactory");
-    cUSD = await ethers.getContractFactory("cUSD");
+    Token = await ethers.getContractFactory("Token");
 }
 
 // constants
@@ -85,7 +85,8 @@ const week = time.duration.weeks(1);
 const claimAmountTwo = new BigNumber(bigNum(2));
 const maxClaimTen = new BigNumber(bigNum(10));
 const fiveCents = new BigNumber('50000000000000000');
-const zeroAddress = '0x0000000000000000000000000000000000000000'
+const zeroAddress = '0x0000000000000000000000000000000000000000';
+const mintAmount = new BigNumber('500000000000000000000');
 
 describe('Community - Beneficiary', () => {
     before(async function () {
@@ -93,7 +94,7 @@ describe('Community - Beneficiary', () => {
     });
 
     beforeEach(async () => {
-        cUSDInstance = await cUSD.deploy();
+        cUSDInstance = await Token.deploy("cUSD", "cUSD");
         communityFactoryInstance = await CommunityFactory.deploy(cUSDInstance.address, adminAccount1.address);
 
         const tx = await communityFactoryInstance.createCommunity(
@@ -110,7 +111,7 @@ describe('Community - Beneficiary', () => {
             return x.event == "CommunityAdded"
         })[0]['args']['_communityAddress'];
         communityInstance = await Community.attach(communityAddress);
-        await cUSDInstance.testFakeFundAddress(communityAddress);
+        await cUSDInstance.mint(communityAddress, mintAmount.toString());
     });
 
     it('should be able to add beneficiary to community', async () => {
@@ -172,7 +173,7 @@ describe('Community - Claim', () => {
     });
 
     beforeEach(async () => {
-        cUSDInstance = await cUSD.deploy();
+        cUSDInstance = await Token.deploy("cUSD", "cUSD");
         communityFactoryInstance = await CommunityFactory.deploy(cUSDInstance.address, adminAccount1.address);
 
         const tx = await communityFactoryInstance.createCommunity(
@@ -189,7 +190,7 @@ describe('Community - Claim', () => {
             return x.event == "CommunityAdded"
         })[0]['args']['_communityAddress'];
         communityInstance = await Community.attach(communityAddress);
-        await cUSDInstance.testFakeFundAddress(communityAddress);
+        await cUSDInstance.mint(communityAddress, mintAmount.toString());
         await communityInstance.connect(communityManagerA).addBeneficiary(beneficiaryA.address);
     });
 
@@ -255,7 +256,7 @@ describe('Community - Governance (2)', () => {
     });
 
     beforeEach(async () => {
-        cUSDInstance = await cUSD.deploy();
+        cUSDInstance = await Token.deploy("cUSD", "cUSD");
         communityFactoryInstance = await CommunityFactory.deploy(cUSDInstance.address, adminAccount1.address);
 
         const tx = await communityFactoryInstance.createCommunity(
@@ -405,7 +406,7 @@ describe('ImpactMarket', () => {
         await init();
     });
     beforeEach(async () => {
-        cUSDInstance = await cUSD.deploy();
+        cUSDInstance = await Token.deploy("cUSD", "cUSD");
         communityFactoryInstance = await CommunityFactory.deploy(cUSDInstance.address, adminAccount1.address);
     });
 
@@ -491,7 +492,7 @@ describe('Chaos test (complete flow)', async () => {
             return x.event == "CommunityAdded"
         })[0]['args']['_communityAddress'];
         communityInstance = await Community.attach(communityAddress);
-        await cUSDInstance.testFakeFundAddress(communityAddress);
+        await cUSDInstance.mint(communityAddress, mintAmount.toString());
 
         return communityInstance;
     }
@@ -530,7 +531,7 @@ describe('Chaos test (complete flow)', async () => {
         await init();
     });
     beforeEach(async () => {
-        cUSDInstance = await cUSD.deploy();
+        cUSDInstance = await Token.deploy("cUSD", "cUSD");
         communityFactoryInstance = await CommunityFactory.deploy(cUSDInstance.address, adminAccount1.address);
     });
 
