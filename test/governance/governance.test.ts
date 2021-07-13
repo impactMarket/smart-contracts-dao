@@ -48,7 +48,7 @@
 //     CommunityFactory = await ethers.getContractFactory("CommunityFactory");
 //     IPCT = await ethers.getContractFactory("IPCT");
 //     IPCTGovernor = await ethers.getContractFactory("IPCTGovernor");
-//     TestToken = await ethers.getContractFactory("TestToken");
+//     TestToken = await ethers.getContractFactory("Token");
 //
 //     const accounts: SignerWithAddress[] =  await ethers.getSigners();
 //
@@ -64,9 +64,12 @@
 //   });
 //
 //   beforeEach(async function () {
-//     testToken1 = await TestToken.deploy("Test Token #1", "TT1", bigNum(1000000));
-//     testToken2 = await TestToken.deploy("Test Token #2", "TT2", bigNum(1000000));
-//     testToken3 = await TestToken.deploy("Test Token #3", "TT3", bigNum(1000000));
+//     testToken1 = await TestToken.deploy("Test Token #1", "TT1");
+//      await testToken1.mint(owner.address, bigNum(1000000));
+//     testToken2 = await TestToken.deploy("Test Token #2", "TT2");
+//      await testToken2.mint(owner.address, bigNum(1000000));
+//     testToken3 = await TestToken.deploy("Test Token #3", "TT3");
+//      await testToken3.mint(owner.address, bigNum(1000000));
 //
 //     token = await IPCT.deploy(owner.address, owner.address, 1723332078);
 //     // await token.deployed();

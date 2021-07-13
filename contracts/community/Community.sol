@@ -17,7 +17,12 @@ import "hardhat/console.sol";
  */
 contract Community is AccessControl {
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
-    enum BeneficiaryState {NONE, Valid, Locked, Removed} // starts by 0 (when user is not added yet)
+    enum BeneficiaryState {
+        NONE,
+        Valid,
+        Locked,
+        Removed
+    } // starts by 0 (when user is not added yet)
 
     mapping(address => uint256) public cooldown;
     mapping(address => uint256) public lastInterval;
@@ -71,7 +76,7 @@ contract Community is AccessControl {
         address _previousCommunityContract,
         address _cUSDAddress,
         address _impactMarketAddress
-    ) public {
+    ) {
         require(_baseInterval > _incrementInterval, "");
         require(_maxClaim > _claimAmount, "");
 
@@ -92,14 +97,8 @@ contract Community is AccessControl {
 
     modifier onlyValidBeneficiary() {
         require(beneficiaries[msg.sender] != BeneficiaryState.Locked, "LOCKED");
-        require(
-            beneficiaries[msg.sender] != BeneficiaryState.Removed,
-            "REMOVED"
-        );
-        require(
-            beneficiaries[msg.sender] == BeneficiaryState.Valid,
-            "NOT_BENEFICIARY"
-        );
+        require(beneficiaries[msg.sender] != BeneficiaryState.Removed, "REMOVED");
+        require(beneficiaries[msg.sender] == BeneficiaryState.Valid, "NOT_BENEFICIARY");
         _;
     }
 
@@ -166,7 +165,11 @@ contract Community is AccessControl {
      * @dev Allow community managers to remove beneficiaries.
      */
     function removeBeneficiary(address _account) external onlyManagers {
-        require(beneficiaries[_account] == BeneficiaryState.Valid || beneficiaries[_account] == BeneficiaryState.Locked, "NOT_YET");
+        require(
+            beneficiaries[_account] == BeneficiaryState.Valid ||
+                beneficiaries[_account] == BeneficiaryState.Locked,
+            "NOT_YET"
+        );
         beneficiaries[_account] = BeneficiaryState.Removed;
         emit BeneficiaryRemoved(_account);
     }
@@ -207,12 +210,7 @@ contract Community is AccessControl {
         incrementInterval = _incrementInterval;
         maxClaim = _maxClaim;
 
-        emit CommunityEdited(
-            _claimAmount,
-            _maxClaim,
-            _baseInterval,
-            _incrementInterval
-        );
+        emit CommunityEdited(_claimAmount, _maxClaim, _baseInterval, _incrementInterval);
     }
 
     /**
@@ -239,14 +237,8 @@ contract Community is AccessControl {
         onlyImpactMarket
     {
         ICommunity newCommunity = ICommunity(_newCommunity);
-        require(
-            newCommunity.hasRole(MANAGER_ROLE, _newCommunityManager) == true,
-            "NOT_ALLOWED"
-        );
-        require(
-            newCommunity.previousCommunityContract() == address(this),
-            "NOT_ALLOWED"
-        );
+        require(newCommunity.hasRole(MANAGER_ROLE, _newCommunityManager) == true, "NOT_ALLOWED");
+        require(newCommunity.previousCommunityContract() == address(this), "NOT_ALLOWED");
         uint256 balance = IERC20(cUSDAddress).balanceOf(address(this));
         bool success = IERC20(cUSDAddress).transfer(_newCommunity, balance);
         require(success, "NOT_ALLOWED");
