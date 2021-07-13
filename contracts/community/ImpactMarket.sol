@@ -41,7 +41,7 @@ contract ImpactMarket is AccessControl {
      * @dev It sets the first admin, which later can add others
      * and add/remove communities.
      */
-    constructor(address _cUSDAddress, address[] memory _signatures) public {
+    constructor(address _cUSDAddress, address[] memory _signatures) {
         require(_signatures.length > 0, "NOT_VALID");
         _setupRole(ADMIN_ROLE, address(_signatures[0]));
         _setRoleAdmin(ADMIN_ROLE, ADMIN_ROLE);
@@ -62,9 +62,7 @@ contract ImpactMarket is AccessControl {
     }
 
     modifier validateRequest(bytes32 _type, bytes memory _packedParams) {
-        bytes32 requestIdentifier = keccak256(
-            abi.encodePacked(_type, _packedParams)
-        );
+        bytes32 requestIdentifier = keccak256(abi.encodePacked(_type, _packedParams));
         address[] memory validations = pendingValidations[requestIdentifier];
         for (uint8 u = 0; u < validations.length; u += 1) {
             require(validations[u] != msg.sender, "SIGNED");
@@ -153,11 +151,7 @@ contract ImpactMarket is AccessControl {
         require(community != address(0), "NOT_VALID");
         previousCommunity.migrateFunds(community, _firstManager);
         communities[community] = true;
-        emit CommunityMigrated(
-            _firstManager,
-            community,
-            _previousCommunityAddress
-        );
+        emit CommunityMigrated(_firstManager, community, _previousCommunityAddress);
     }
 
     /**
@@ -178,10 +172,7 @@ contract ImpactMarket is AccessControl {
     function setCommunityFactory(address _communityFactory)
         external
         onlyAdmin
-        validateRequest(
-            "setCommunityFactory",
-            abi.encodePacked(_communityFactory)
-        )
+        validateRequest("setCommunityFactory", abi.encodePacked(_communityFactory))
     {
         ICommunityFactory factory = ICommunityFactory(_communityFactory);
         require(factory.impactMarketAddress() == address(this), "NOT_ALLOWED");
@@ -192,9 +183,7 @@ contract ImpactMarket is AccessControl {
     /**
      * @dev Init community factory, used only at deploy time.
      */
-    function initCommunityFactory(address _communityFactory)
-        external
-    {
+    function initCommunityFactory(address _communityFactory) external {
         require(communityFactory == address(0), "");
         communityFactory = _communityFactory;
         emit CommunityFactoryChanged(_communityFactory);
@@ -203,21 +192,21 @@ contract ImpactMarket is AccessControl {
     /**
      * @dev Not allowed.
      */
-    function grantRole(bytes32, address) public override {
+    function grantRole(bytes32, address) public pure override {
         revert("NOT_ALLOWED");
     }
 
     /**
      * @dev Not allowed.
      */
-    function revokeRole(bytes32, address) public override {
+    function revokeRole(bytes32, address) public pure override {
         revert("NOT_ALLOWED");
     }
 
     /**
      * @dev Not allowed.
      */
-    function renounceRole(bytes32, address) public override {
+    function renounceRole(bytes32, address) public pure override {
         revert("NOT_ALLOWED");
     }
 }
