@@ -18,9 +18,14 @@ task("accounts", "Prints the list of accounts", async (args, hre) => {
 
 export default {
   solidity: "0.8.5",
-  docgen: {
-    path: './docs',
-    clear: true,
-    runOnCompile: true,
-  }
+  networks: {
+    hardhat: {
+      allowUnlimitedContractSize: true
+    }
+  },
+  // docgen: {
+  //   path: './docs',
+  //   clear: true,
+  //   runOnCompile: true,
+  // }
 };
