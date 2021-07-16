@@ -2,9 +2,9 @@
 pragma solidity 0.8.5;
 
 import "@nomspace/nomspace/contracts/interfaces/INom.sol";
-import "../romulus/RomulusDelegator.sol";
+import "../governor/IPCTDelegator.sol";
 
-contract IPCTDelegator is RomulusDelegator {
+contract IPCTDelegatorMock is IPCTDelegator {
   constructor(
     address timelock_,
     address token_,
@@ -14,7 +14,7 @@ contract IPCTDelegator is RomulusDelegator {
     uint votingPeriod_,
     uint votingDelay_,
     uint proposalThreshold_
-  ) RomulusDelegator(timelock_, token_, releaseToken_, admin_, implementation_, votingPeriod_, votingDelay_, proposalThreshold_) {}
+  ) IPCTDelegator(timelock_, token_, releaseToken_, admin_, implementation_, votingPeriod_, votingDelay_, proposalThreshold_) {}
 
   function resolve(bytes32 addr) public pure override returns (address) {
     return address(uint160(uint256(addr) >> (12 * 8)));

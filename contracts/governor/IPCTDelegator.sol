@@ -1,13 +1,12 @@
-// SPDX-License-Identifier: MIT
-
-pragma solidity ^0.8.0;
+//SPDX-License-Identifier: Apache-2.0
+pragma solidity 0.8.5;
 
 import "@poofcash/poof-token/contracts/NomResolve.sol";
-import "./RomulusInterfaces.sol";
+import "./IPCTInterfaces.sol";
 
 import "hardhat/console.sol";
 
-contract RomulusDelegator is RomulusDelegatorStorage, RomulusEvents, NomResolve {
+contract IPCTDelegator is IPCTDelegatorStorage, IPCTEvents, NomResolve {
   constructor(
     address timelock_,
     address token_,
@@ -43,8 +42,8 @@ contract RomulusDelegator is RomulusDelegatorStorage, RomulusEvents, NomResolve 
    * @param implementation_ The address of the new implementation for delegation
    */
   function _setImplementation(address implementation_) public {
-    require(msg.sender == admin, "RomulusDelegator::_setImplementation: admin only");
-    require(implementation_ != address(0), "RomulusDelegator::_setImplementation: invalid implementation address");
+    require(msg.sender == admin, "IPCTDelegator::_setImplementation: admin only");
+    require(implementation_ != address(0), "IPCTDelegator::_setImplementation: invalid implementation address");
 
     address oldImplementation = implementation;
     implementation = implementation_;

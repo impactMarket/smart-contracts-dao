@@ -1,10 +1,9 @@
-// SPDX-License-Identifier: MIT
-
-pragma solidity ^0.8.0;
+//SPDX-License-Identifier: Apache-2.0
+pragma solidity 0.8.5;
 
 import "@ubeswap/governance/contracts/interfaces/IHasVotes.sol";
 
-contract RomulusEvents {
+contract IPCTEvents {
   /// @notice An event emitted when a new proposal is created
   event ProposalCreated(
     uint256 id,
@@ -54,7 +53,7 @@ contract RomulusEvents {
   event NewAdmin(address oldAdmin, address newAdmin);
 }
 
-contract RomulusDelegatorStorage {
+contract IPCTDelegatorStorage {
   /// @notice Administrator for this contract
   address public admin;
 
@@ -67,11 +66,11 @@ contract RomulusDelegatorStorage {
 
 /**
  * @title Storage for Governor Bravo Delegate
- * @notice For future upgrades, do not change RomulusDelegateStorageV1. Create a new
- * contract which implements RomulusDelegateStorageV1 and following the naming convention
- * RomulusDelegateStorageVX.
+ * @notice For future upgrades, do not change IPCTDelegateStorageV1. Create a new
+ * contract which implements IPCTDelegateStorageV1 and following the naming convention
+ * IPCTDelegateStorageVX.
  */
-contract RomulusDelegateStorageV1 is RomulusDelegatorStorage {
+contract IPCTDelegateStorageV1 is IPCTDelegatorStorage {
   /// @notice The delay before voting on a proposal may take place, once proposed, in blocks
   uint256 public votingDelay;
 

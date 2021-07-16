@@ -1,10 +1,9 @@
-// SPDX-License-Identifier: MIT
-
-pragma solidity ^0.8.0;
+//SPDX-License-Identifier: Apache-2.0
+pragma solidity 0.8.5;
 
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-contract Timelock {
+contract IPCTTimelock {
   using SafeMath for uint256;
 
   event NewAdmin(address indexed newAdmin);
