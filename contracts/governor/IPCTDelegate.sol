@@ -1,16 +1,15 @@
-// SPDX-License-Identifier: MIT
-
-pragma solidity ^0.8.0;
+//SPDX-License-Identifier: Apache-2.0
+pragma solidity 0.8.5;
 
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@ubeswap/governance/contracts/interfaces/IHasVotes.sol";
-import "./RomulusInterfaces.sol";
+import "./IPCTInterfaces.sol";
 
 import "hardhat/console.sol";
 
-contract RomulusDelegate is RomulusDelegateStorageV1, RomulusEvents, Initializable {
+contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
   /// @notice The name of this contract
-  string public constant name = "Romulus";
+  string public constant name = "IPCT";
 
   /// @notice The minimum setable proposal threshold
   uint256 public constant MIN_PROPOSAL_THRESHOLD = 1000000e18; // 1,000,000 Tokens
@@ -64,18 +63,18 @@ contract RomulusDelegate is RomulusDelegateStorageV1, RomulusEvents, Initializab
     uint256 votingDelay_,
     uint256 proposalThreshold_
   ) public initializer adminOnly {
-    require(TimelockInterface(timelock_).admin() == address(this), "Romulus::initialize: timelock admin is not assigned to RomulusDelegate");
+    require(TimelockInterface(timelock_).admin() == address(this), "IPCT::initialize: timelock admin is not assigned to IPCTDelegate");
     require(
       votingPeriod_ >= MIN_VOTING_PERIOD && votingPeriod_ <= MAX_VOTING_PERIOD,
-      "Romulus::initialize: invalid voting period"
+      "IPCT::initialize: invalid voting period"
     );
-    require(votingDelay_ >= MIN_VOTING_DELAY && votingDelay_ <= MAX_VOTING_DELAY, "Romulus::initialize: invalid voting delay");
+    require(votingDelay_ >= MIN_VOTING_DELAY && votingDelay_ <= MAX_VOTING_DELAY, "IPCT::initialize: invalid voting delay");
     require(
       proposalThreshold_ >= MIN_PROPOSAL_THRESHOLD && proposalThreshold_ <= MAX_PROPOSAL_THRESHOLD,
-      "Romulus::initialize: invalid proposal threshold"
+      "IPCT::initialize: invalid proposal threshold"
     );
     timelock = TimelockInterface(timelock_);
-    require(timelock.admin() == address(this), "Romulus::initialize: timelock admin is not assigned to RomulusDelegate");
+    require(timelock.admin() == address(this), "IPCT::initialize: timelock admin is not assigned to IPCTDelegate");
 
     admin = msg.sender;
     token = IHasVotes(token_);
@@ -134,25 +133,25 @@ contract RomulusDelegate is RomulusDelegateStorageV1, RomulusEvents, Initializab
   ) public returns (uint256) {
     require(
       getPriorVotes(msg.sender, sub256(block.number, 1)) > proposalThreshold,
-      "Romulus::propose: proposer votes below proposal threshold"
+      "IPCT::propose: proposer votes below proposal threshold"
     );
     require(
       targets.length == values.length && targets.length == signatures.length && targets.length == calldatas.length,
-      "Romulus::propose: proposal function information arity mismatch"
+      "IPCT::propose: proposal function information arity mismatch"
     );
-    require(targets.length != 0, "Romulus::propose: must provide actions");
-    require(targets.length <= proposalMaxOperations, "Romulus::propose: too many actions");
+    require(targets.length != 0, "IPCT::propose: must provide actions");
+    require(targets.length <= proposalMaxOperations, "IPCT::propose: too many actions");
 
     uint256 latestProposalId = latestProposalIds[msg.sender];
     if (latestProposalId != 0) {
       ProposalState proposersLatestProposalState = state(latestProposalId);
       require(
         proposersLatestProposalState != ProposalState.Active,
-        "Romulus::propose: one live proposal per proposer, found an already active proposal"
+        "IPCT::propose: one live proposal per proposer, found an already active proposal"
       );
       require(
         proposersLatestProposalState != ProposalState.Pending,
-        "Romulus::propose: one live proposal per proposer, found an already pending proposal"
+        "IPCT::propose: one live proposal per proposer, found an already pending proposal"
       );
     }
 
@@ -190,7 +189,7 @@ contract RomulusDelegate is RomulusDelegateStorageV1, RomulusEvents, Initializab
    * @param proposalId The id of the proposal to queue
    */
   function queue(uint256 proposalId) external {
-    require(state(proposalId) == ProposalState.Succeeded, "Romulus::queue: proposal can only be queued if it is succeeded");
+    require(state(proposalId) == ProposalState.Succeeded, "IPCT::queue: proposal can only be queued if it is succeeded");
     Proposal storage proposal = proposals[proposalId];
     uint256 eta = add256(block.timestamp, timelock.delay());
     for (uint256 i = 0; i < proposalTargets[proposalId].length; i++) {
@@ -215,7 +214,7 @@ contract RomulusDelegate is RomulusDelegateStorageV1, RomulusEvents, Initializab
   ) internal {
     require(
       !timelock.queuedTransactions(keccak256(abi.encode(target, value, signature, data, eta))),
-      "Romulus::queueOrRevertInternal: identical proposal action already queued at eta"
+      "IPCT::queueOrRevertInternal: identical proposal action already queued at eta"
     );
     timelock.queueTransaction(target, value, signature, data, eta);
   }
@@ -225,7 +224,7 @@ contract RomulusDelegate is RomulusDelegateStorageV1, RomulusEvents, Initializab
    * @param proposalId The id of the proposal to execute
    */
   function execute(uint256 proposalId) external payable {
-    require(state(proposalId) == ProposalState.Queued, "Romulus::execute: proposal can only be executed if it is queued");
+    require(state(proposalId) == ProposalState.Queued, "IPCT::execute: proposal can only be executed if it is queued");
     Proposal storage proposal = proposals[proposalId];
     proposal.executed = true;
     for (uint256 i = 0; i < proposalTargets[proposalId].length; i++) {
@@ -245,12 +244,12 @@ contract RomulusDelegate is RomulusDelegateStorageV1, RomulusEvents, Initializab
    * @param proposalId The id of the proposal to cancel
    */
   function cancel(uint256 proposalId) external {
-    require(state(proposalId) != ProposalState.Executed, "Romulus::cancel: cannot cancel executed proposal");
+    require(state(proposalId) != ProposalState.Executed, "IPCT::cancel: cannot cancel executed proposal");
 
     Proposal storage proposal = proposals[proposalId];
     require(
       msg.sender == proposal.proposer || getPriorVotes(proposal.proposer, sub256(block.number, 1)) < proposalThreshold,
-      "Romulus::cancel: proposer above threshold"
+      "IPCT::cancel: proposer above threshold"
     );
 
     proposal.canceled = true;
@@ -309,13 +308,20 @@ contract RomulusDelegate is RomulusDelegateStorageV1, RomulusEvents, Initializab
    * @return Proposal state
    */
   function state(uint256 proposalId) public view returns (ProposalState) {
-    require(proposalCount > proposalId, "Romulus::state: invalid proposal id");
+    require(proposalCount > proposalId, "IPCT::state: invalid proposal id");
     Proposal storage proposal = proposals[proposalId];
     if (proposal.canceled) {
       return ProposalState.Canceled;
     } else if (block.number <= proposal.startBlock) {
+      console.log('pending');
+      console.log(block.number);
+      console.log(proposal.startBlock);
       return ProposalState.Pending;
     } else if (block.number <= proposal.endBlock) {
+      console.log('active');
+      console.log(block.number);
+      console.log(proposal.endBlock);
+
       return ProposalState.Active;
     } else if (proposal.forVotes <= proposal.againstVotes || proposal.forVotes < quorumVotes) {
       return ProposalState.Defeated;
@@ -368,7 +374,7 @@ contract RomulusDelegate is RomulusDelegateStorageV1, RomulusEvents, Initializab
     bytes32 structHash = keccak256(abi.encode(BALLOT_TYPEHASH, proposalId, support));
     bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
     address signatory = ecrecover(digest, v, r, s);
-    require(signatory != address(0), "Romulus::castVoteBySig: invalid signature");
+    require(signatory != address(0), "IPCT::castVoteBySig: invalid signature");
     emit VoteCast(signatory, proposalId, support, castVoteInternal(signatory, proposalId, support), "");
   }
 
@@ -384,11 +390,11 @@ contract RomulusDelegate is RomulusDelegateStorageV1, RomulusEvents, Initializab
     uint256 proposalId,
     uint8 support
   ) internal returns (uint96) {
-    require(state(proposalId) == ProposalState.Active, "Romulus::castVoteInternal: voting is closed");
-    require(support <= 2, "Romulus::castVoteInternal: invalid vote type");
+    require(state(proposalId) == ProposalState.Active, "IPCT::castVoteInternal: voting is closed");
+    require(support <= 2, "IPCT::castVoteInternal: invalid vote type");
     Proposal storage proposal = proposals[proposalId];
     Receipt storage receipt = proposalReceipts[proposalId][voter];
-    require(receipt.hasVoted == false, "Romulus::castVoteInternal: voter already voted");
+    require(receipt.hasVoted == false, "IPCT::castVoteInternal: voter already voted");
     uint96 votes = getPriorVotes(voter, proposal.startBlock);
 
     if (support == 0) {
@@ -413,7 +419,7 @@ contract RomulusDelegate is RomulusDelegateStorageV1, RomulusEvents, Initializab
   function _setVotingDelay(uint256 newVotingDelay) external adminOnly {
     require(
       newVotingDelay >= MIN_VOTING_DELAY && newVotingDelay <= MAX_VOTING_DELAY,
-      "Romulus::_setVotingDelay: invalid voting delay"
+      "IPCT::_setVotingDelay: invalid voting delay"
     );
     uint256 oldVotingDelay = votingDelay;
     votingDelay = newVotingDelay;
@@ -428,7 +434,7 @@ contract RomulusDelegate is RomulusDelegateStorageV1, RomulusEvents, Initializab
   function _setVotingPeriod(uint256 newVotingPeriod) external virtual adminOnly {
     require(
       newVotingPeriod >= MIN_VOTING_PERIOD && newVotingPeriod <= MAX_VOTING_PERIOD,
-      "Romulus::_setVotingPeriod: invalid voting period"
+      "IPCT::_setVotingPeriod: invalid voting period"
     );
     uint256 oldVotingPeriod = votingPeriod;
     votingPeriod = newVotingPeriod;
@@ -444,7 +450,7 @@ contract RomulusDelegate is RomulusDelegateStorageV1, RomulusEvents, Initializab
   function _setProposalThreshold(uint256 newProposalThreshold) external adminOnly {
     require(
       newProposalThreshold >= MIN_PROPOSAL_THRESHOLD && newProposalThreshold <= MAX_PROPOSAL_THRESHOLD,
-      "Romulus::_setProposalThreshold: invalid proposal threshold"
+      "IPCT::_setProposalThreshold: invalid proposal threshold"
     );
     uint256 oldProposalThreshold = proposalThreshold;
     proposalThreshold = newProposalThreshold;
@@ -474,7 +480,7 @@ contract RomulusDelegate is RomulusDelegateStorageV1, RomulusEvents, Initializab
    */
   function _acceptAdmin() external {
     // Check caller is pendingAdmin and pendingAdmin ≠ address(0)
-    require(msg.sender == pendingAdmin && msg.sender != address(0), "Romulus:_acceptAdmin: pending admin only");
+    require(msg.sender == pendingAdmin && msg.sender != address(0), "IPCT:_acceptAdmin: pending admin only");
 
     // Save current values for inclusion in log
     address oldAdmin = admin;

@@ -64,10 +64,10 @@ describe("IPCTGovernator", function() {
   before(async function () {
     CommunityFactory = await ethers.getContractFactory("CommunityFactory");
     IPCTToken = await ethers.getContractFactory("IPCTToken");
-    IPCTDelegate = await ethers.getContractFactory("IPCTDelegate");
-    IPCTDelegator = await ethers.getContractFactory("IPCTDelegator");
-    IPCTTimelock = await ethers.getContractFactory("IPCTTimelock");
-    TestToken = await ethers.getContractFactory("Token");
+    IPCTDelegate = await ethers.getContractFactory("IPCTDelegateMock");
+    IPCTDelegator = await ethers.getContractFactory("IPCTDelegatorMock");
+    IPCTTimelock = await ethers.getContractFactory("IPCTTimelockMock");
+    TestToken = await ethers.getContractFactory("TokenMock");
 
     const accounts: SignerWithAddress[] =  await ethers.getSigners();
 
@@ -110,8 +110,10 @@ describe("IPCTGovernator", function() {
     );
 
     ipctDelegator = await IPCTDelegate.attach(ipctDelegator.address);
+    await ipctDelegator._setVotingPeriod(5)
 
-    communityFactory = await CommunityFactory.deploy(testToken1.address, ipctDelegator.address);
+
+    communityFactory = await CommunityFactory.deploy(testToken1.address, ipctTimelock.address);
 
     await ipctToken.transfer(alice.address, bigNum(1000001));
     await ipctToken.transfer(bob.address, bigNum(1000001));
@@ -122,71 +124,10 @@ describe("IPCTGovernator", function() {
     await ipctToken.connect(bob).delegate(bob.address);
     await ipctToken.connect(carol).delegate(carol.address);
 
-
-    // console.log('-----------------------------------------------');
-    // console.log('token:     ' + token.address);
-    // console.log('governance:      ' + governor.address);
+    // console.log(': ' + .address);
   });
 
-  it("should work", async function() {
-
-  });
-
-  // // signers tests
-  // it("should have correct number of signers", async function() {
-  //   expect(await governor.isAdmin(owner.address)).to.be.true;
-  //   expect(await governor.isAdmin(alice.address)).to.be.true;
-  //
-  //   await expect(governor.admins(0)).to.be.fulfilled;
-  //   await expect(governor.admins(1)).to.be.fulfilled;
-  //   await expect(governor.admins(2)).to.be.rejected;
-  // });
-  //
-  //
-  // // it("should send founds", async function() {
-  // //   console.log('********************');
-  // //
-  // //   await token.transfer(governor.address, bigNum(1234));
-  // //
-  // //   await governor.proposeSendMoney(token.address, carol.address, bigNum(1234), 'description');
-  // //
-  // //   // await governor.castVote(1, true);   evm_mine
-  // //
-  // //
-  // //   await advanceNBlocks(11);
-  // //   // await time.advanceBlockTo(parseInt(await time.latestBlock()) + 1);;
-  // //
-  // //
-  // //   await governor.castVote(1, true);
-  // //   await governor.connect(alice).castVote(1, true);
-  // //
-  // //   await advanceNBlocks(21);
-  // //
-  // //
-  // //   await governor.queue(1);
-  // //   await network.provider.send("evm_increaseTime", [1000000]);
-  // //   // await advanceNBlocks(1);
-  // //
-  // //   console.log(smallNum(await token.balanceOf(carol.address)));
-  // //
-  // //   await governor.connect(alice).execute(1);
-  // //
-  // //   console.log(smallNum(await token.balanceOf(carol.address)));
-  // //
-  // //   // console.log(await governor.proposals(1));
-  // //
-  // //
-  // //   // console.log(await governor.getActions(1));
-  // //
-  // //
-  // //   // await governor.connect(alice).propose([carol.address], [2000], ['signatures'], [12345678], 'description');
-  // //
-  // //   // console.log('//*/*/*/*/*/*/*/*/*/*/*/*/**//**//*//*/*/');
-  // //   // await token.transfer(governor.address, bigNum(1234));
-  // // });
-  // //
-  //
-  it("should create community by holders", async function() {
+  it("should create community", async function() {
     await ipctToken.transfer(ipctDelegator.address, bigNum(1234));
 
     const targets = [communityFactory.address];
@@ -198,16 +139,20 @@ describe("IPCTGovernator", function() {
 
     await ipctDelegator.propose(targets, values, signatures, calldatas, descriptions);
 
-    await advanceNBlocks(11);
+    await advanceNBlocks(1);
 
     await ipctDelegator.castVote(1, 1);
-    // await ipctDelegator.connect(alice).castVote(1, true);
-    //
-    // await advanceNBlocks(21);
-    //
-    // await network.provider.send("evm_increaseTime", [1000000]);
-    //
-    // await ipctDelegator.connect(alice).execute(1);
+    await ipctDelegator.connect(alice).castVote(1, 1);
+
+    await advanceNBlocks(6);
+
+    await network.provider.send("evm_increaseTime", [1000000]);
+
+    await ipctDelegator.connect(alice).queue(1);
+
+    await ipctDelegator.connect(alice).execute(1);
+
+    await expect(communityFactory.communities(1)).to.be.fulfilled;
   });
 
   // it("should create community by signers", async function() {

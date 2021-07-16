@@ -3,7 +3,7 @@ pragma solidity 0.8.5;
 
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-contract IPCTTimelock {
+contract IPCTTimelockMock {
   event NewAdmin(address indexed newAdmin);
   event NewPendingAdmin(address indexed newPendingAdmin);
   event NewDelay(uint256 indexed newDelay);
