@@ -10,5 +10,5 @@ interface ICommunityFactory {
         uint256 _incrementInterval,
         address _previousCommunityAddress
     ) external returns(address);
-    function impactMarketAddress() external view returns(address);
+    function communityAdminAddress() external view returns(address);
 }
