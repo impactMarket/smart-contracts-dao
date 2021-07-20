@@ -10,7 +10,7 @@ import "hardhat/console.sol";
 /**
  * @notice Welcome to the Community contract. For each community
  * there will be one contract like this being deployed by
- * ImpactMarket contract. This enable us to save tokens on the
+ * CommunityAdmin contract. This enable us to save tokens on the
  * contract itself, and avoid the problems of having everything
  * in one single contract. Each community has it's own members and
  * and managers.
@@ -35,7 +35,7 @@ contract Community is AccessControl {
     uint256 public maxClaim;
 
     address public previousCommunityContract;
-    address public impactMarketAddress;
+    address public communityAdminAddress;
     address public cUSDAddress;
     bool public locked;
 
@@ -75,7 +75,7 @@ contract Community is AccessControl {
         uint256 _incrementInterval,
         address _previousCommunityContract,
         address _cUSDAddress,
-        address _impactMarketAddress
+        address _communityAdminAddress
     ) {
         require(_baseInterval > _incrementInterval, "");
         require(_maxClaim > _claimAmount, "");
@@ -91,7 +91,7 @@ contract Community is AccessControl {
 
         previousCommunityContract = _previousCommunityContract;
         cUSDAddress = _cUSDAddress;
-        impactMarketAddress = _impactMarketAddress;
+        communityAdminAddress = _communityAdminAddress;
         locked = false;
     }
 
@@ -107,8 +107,8 @@ contract Community is AccessControl {
         _;
     }
 
-    modifier onlyImpactMarket() {
-        require(msg.sender == impactMarketAddress, "NOT_ALLOWED");
+    modifier onlyCommunityAdmin() {
+        require(msg.sender == communityAdminAddress, "NOT_ALLOWED");
         _;
     }
 
@@ -234,7 +234,7 @@ contract Community is AccessControl {
      */
     function migrateFunds(address _newCommunity, address _newCommunityManager)
         external
-        onlyImpactMarket
+        onlyCommunityAdmin
     {
         ICommunity newCommunity = ICommunity(_newCommunity);
         require(newCommunity.hasRole(MANAGER_ROLE, _newCommunityManager) == true, "NOT_ALLOWED");

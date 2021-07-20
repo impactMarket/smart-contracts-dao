@@ -1,25 +1,21 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.5;
 
-import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./interfaces/ICommunity.sol";
 import "./interfaces/ICommunityFactory.sol";
 import "./Community.sol";
 
 /**
- * @notice Welcome to ImpactMarket, the main contract. This is an
+ * @notice Welcome to CommunityAdmin, the main contract. This is an
  * administrative (for now) contract where the admins have control
  * over the list of communities. Being only able to add and
  * remove communities
  */
-contract ImpactMarket is AccessControl {
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-
-    mapping(bytes32 => address[]) public pendingValidations;
-    mapping(address => bool) public communities;
+contract CommunityAdmin {
+    address public admin;
     address public cUSDAddress;
+    mapping(address => bool) public communities;
     address public communityFactory;
-    uint256 public signaturesThreshold;
 
     event CommunityAdded(
         address indexed _communityAddress,
@@ -41,38 +37,14 @@ contract ImpactMarket is AccessControl {
      * @dev It sets the first admin, which later can add others
      * and add/remove communities.
      */
-    constructor(address _cUSDAddress, address[] memory _signatures) {
-        require(_signatures.length > 0, "NOT_VALID");
-        _setupRole(ADMIN_ROLE, address(_signatures[0]));
-        _setRoleAdmin(ADMIN_ROLE, ADMIN_ROLE);
+    constructor(address _cUSDAddress, address _admin) public {
         cUSDAddress = _cUSDAddress;
-        if (_signatures.length > 2) {
-            signaturesThreshold = _signatures.length - 1;
-        } else {
-            signaturesThreshold = _signatures.length;
-        }
-        for (uint8 u = 1; u < _signatures.length; u += 1) {
-            _setupRole(ADMIN_ROLE, address(_signatures[u]));
-        }
+        admin = _admin;
     }
 
     modifier onlyAdmin() {
-        require(hasRole(ADMIN_ROLE, msg.sender), "NOT_ADMIN");
+        require(msg.sender == admin, "NOT_ADMIN");
         _;
-    }
-
-    modifier validateRequest(bytes32 _type, bytes memory _packedParams) {
-        bytes32 requestIdentifier = keccak256(abi.encodePacked(_type, _packedParams));
-        address[] memory validations = pendingValidations[requestIdentifier];
-        for (uint8 u = 0; u < validations.length; u += 1) {
-            require(validations[u] != msg.sender, "SIGNED");
-        }
-        pendingValidations[requestIdentifier].push(msg.sender);
-        uint256 totalValidations = pendingValidations[requestIdentifier].length;
-        if (totalValidations == signaturesThreshold) {
-            delete pendingValidations[requestIdentifier];
-            _;
-        }
     }
 
     /**
@@ -87,18 +59,7 @@ contract ImpactMarket is AccessControl {
         uint256 _baseInterval,
         uint256 _incrementInterval
     )
-        external
-        onlyAdmin
-        validateRequest(
-            "addCommunity",
-            abi.encodePacked(
-                _firstManager,
-                _claimAmount,
-                _maxClaim,
-                _baseInterval,
-                _incrementInterval
-            )
-        )
+    external onlyAdmin
     {
         address community = ICommunityFactory(communityFactory).deployCommunity(
             _firstManager,
@@ -130,12 +91,7 @@ contract ImpactMarket is AccessControl {
         address _previousCommunityAddress,
         address _newCommunityFactory
     )
-        external
-        onlyAdmin
-        validateRequest(
-            "migrateCommunity",
-            abi.encodePacked(_firstManager, _previousCommunityAddress)
-        )
+    external onlyAdmin
     {
         communities[_previousCommunityAddress] = false;
         require(address(_previousCommunityAddress) != address(0), "NOT_VALID");
@@ -151,16 +107,17 @@ contract ImpactMarket is AccessControl {
         require(community != address(0), "NOT_VALID");
         previousCommunity.migrateFunds(community, _firstManager);
         communities[community] = true;
-        emit CommunityMigrated(_firstManager, community, _previousCommunityAddress);
+        emit CommunityMigrated(
+            _firstManager,
+            community,
+            _previousCommunityAddress
+        );
     }
 
     /**
      * @dev Remove an existing community. Can be used only by an admin.
      */
-    function removeCommunity(address _community)
-        external
-        onlyAdmin
-        validateRequest("removeCommunity", abi.encodePacked(_community))
+    function removeCommunity(address _community) external onlyAdmin
     {
         communities[_community] = false;
         emit CommunityRemoved(_community);
@@ -169,13 +126,10 @@ contract ImpactMarket is AccessControl {
     /**
      * @dev Set the community factory address, if the contract is valid.
      */
-    function setCommunityFactory(address _communityFactory)
-        external
-        onlyAdmin
-        validateRequest("setCommunityFactory", abi.encodePacked(_communityFactory))
+    function setCommunityFactory(address _communityFactory) external onlyAdmin
     {
         ICommunityFactory factory = ICommunityFactory(_communityFactory);
-        require(factory.impactMarketAddress() == address(this), "NOT_ALLOWED");
+        require(factory.communityAdminAddress() == address(this), "NOT_ALLOWED");
         communityFactory = _communityFactory;
         emit CommunityFactoryChanged(_communityFactory);
     }
@@ -183,30 +137,10 @@ contract ImpactMarket is AccessControl {
     /**
      * @dev Init community factory, used only at deploy time.
      */
-    function initCommunityFactory(address _communityFactory) external {
+    function initCommunityFactory(address _communityFactory) external onlyAdmin
+    {
         require(communityFactory == address(0), "");
         communityFactory = _communityFactory;
         emit CommunityFactoryChanged(_communityFactory);
-    }
-
-    /**
-     * @dev Not allowed.
-     */
-    function grantRole(bytes32, address) public pure override {
-        revert("NOT_ALLOWED");
-    }
-
-    /**
-     * @dev Not allowed.
-     */
-    function revokeRole(bytes32, address) public pure override {
-        revert("NOT_ALLOWED");
-    }
-
-    /**
-     * @dev Not allowed.
-     */
-    function renounceRole(bytes32, address) public pure override {
-        revert("NOT_ALLOWED");
     }
 }
