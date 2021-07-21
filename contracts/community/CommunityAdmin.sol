@@ -47,6 +47,11 @@ contract CommunityAdmin {
         _;
     }
 
+    function setAdmin(address _newAdmin) external onlyAdmin
+    {
+        admin = _newAdmin;
+    }
+
     /**
      * @dev Add a new community. Can be used only by an admin.
      * For further information regarding each parameter, see

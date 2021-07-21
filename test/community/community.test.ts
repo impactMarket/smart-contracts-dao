@@ -8,7 +8,6 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 // @ts-ignore
 import { ethers, network, waffle } from "hardhat";
 import type * as ethersTypes from "ethers";
-import { log } from "util";
 import { Contract } from "hardhat/internal/hardhat-network/stack-traces/model";
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const {
@@ -50,8 +49,9 @@ let CommunityAdmin: ethersTypes.ContractFactory;
 let Token: ethersTypes.ContractFactory;
 
 // contract instances
-let communityFactoryInstance: ethersTypes.Contract;
 let communityInstance: ethersTypes.Contract;
+let communityFactoryInstance: ethersTypes.Contract;
+let communityAdminInstance: ethersTypes.Contract;
 let cUSDInstance: ethersTypes.Contract;
 
 BigNumber.config({ EXPONENTIAL_AT: 25 });
@@ -77,7 +77,7 @@ async function init() {
 	Community = await ethers.getContractFactory("Community");
 	CommunityFactory = await ethers.getContractFactory("CommunityFactory");
 	CommunityAdmin = await ethers.getContractFactory("CommunityAdmin");
-	Token = await ethers.getContractFactory("TokenTest");
+	Token = await ethers.getContractFactory("TokenMock");
 }
 
 // constants
@@ -99,12 +99,12 @@ describe("Community - Beneficiary", () => {
 
 	beforeEach(async () => {
 		cUSDInstance = await Token.deploy("cUSD", "cUSD");
-		communityFactoryInstance = await CommunityFactory.deploy(
-			cUSDInstance.address,
-			adminAccount1.address
-		);
+		communityAdminInstance = await CommunityAdmin.deploy(cUSDInstance.address, adminAccount1.address);
+		communityFactoryInstance = await CommunityFactory.deploy(cUSDInstance.address, communityAdminInstance.address);
+		await communityAdminInstance.setCommunityFactory(communityFactoryInstance.address);
 
-		const tx = await communityFactoryInstance.createCommunity(
+
+		const tx = await communityAdminInstance.addCommunity(
 			communityManagerA.address,
 			claimAmountTwo.toString(),
 			maxClaimTen.toString(),
@@ -234,6 +234,7 @@ describe("Community - Beneficiary", () => {
 	});
 });
 
+
 describe("Community - Claim", () => {
 	before(async function () {
 		await init();
@@ -241,12 +242,11 @@ describe("Community - Claim", () => {
 
 	beforeEach(async () => {
 		cUSDInstance = await Token.deploy("cUSD", "cUSD");
-		communityFactoryInstance = await CommunityFactory.deploy(
-			cUSDInstance.address,
-			adminAccount1.address
-		);
+		communityAdminInstance = await CommunityAdmin.deploy(cUSDInstance.address, adminAccount1.address);
+		communityFactoryInstance = await CommunityFactory.deploy(cUSDInstance.address, communityAdminInstance.address);
+		await communityAdminInstance.setCommunityFactory(communityFactoryInstance.address);
 
-		const tx = await communityFactoryInstance.createCommunity(
+		const tx = await communityAdminInstance.addCommunity(
 			communityManagerA.address,
 			claimAmountTwo.toString(),
 			maxClaimTen.toString(),
@@ -372,12 +372,11 @@ describe("Community - Governance (2)", () => {
 
 	beforeEach(async () => {
 		cUSDInstance = await Token.deploy("cUSD", "cUSD");
-		communityFactoryInstance = await CommunityFactory.deploy(
-			cUSDInstance.address,
-			adminAccount1.address
-		);
+		communityAdminInstance = await CommunityAdmin.deploy(cUSDInstance.address, adminAccount1.address);
+		communityFactoryInstance = await CommunityFactory.deploy(cUSDInstance.address, communityAdminInstance.address);
+		await communityAdminInstance.setCommunityFactory(communityFactoryInstance.address);
 
-		const tx = await communityFactoryInstance.createCommunity(
+		const tx = await communityAdminInstance.addCommunity(
 			communityManagerA.address,
 			claimAmountTwo.toString(),
 			maxClaimTen.toString(),
@@ -399,10 +398,10 @@ describe("Community - Governance (2)", () => {
 		);
 		const newCommunityFactoryInstance = await CommunityFactory.deploy(
 			cUSDInstance.address,
-			adminAccount1.address
+			communityAdminInstance.address
 		);
 
-		const newTx = await communityFactoryInstance.migrateCommunity(
+		const newTx = await communityAdminInstance.migrateCommunity(
 			communityManagerA.address,
 			communityInstance.address,
 			newCommunityFactoryInstance.address
@@ -412,7 +411,7 @@ describe("Community - Governance (2)", () => {
 
 		const newCommunityAddress = receipt.events?.filter((x: any) => {
 			return x.event == "CommunityMigrated";
-		})[0]["args"]["CommunityMigrated"];
+		})[0]["args"]["_communityAddress"];
 
 		communityInstance = await Community.attach(newCommunityAddress);
 		const previousCommunityNewBalance = await cUSDInstance.balanceOf(
@@ -428,31 +427,31 @@ describe("Community - Governance (2)", () => {
 	});
 
 	it("should not be able to migrate from invalid community", async () => {
-		const newCommunityFactoryInstance = await CommunityFactory.deploy(
+		const newcommunityAdminInstance = await CommunityAdmin.deploy(
 			cUSDInstance.address,
 			adminAccount1.address
 		);
 		await expect(
-			communityFactoryInstance.migrateCommunity(
+			communityAdminInstance.migrateCommunity(
 				communityManagerA.address,
 				zeroAddress,
-				newCommunityFactoryInstance.address
+				newcommunityAdminInstance.address
 			)
 		).to.be.rejectedWith("NOT_VALID");
 	});
 
 	it("should not be able to migrate community if not admin", async () => {
-		const newCommunityFactoryInstance = await CommunityFactory.deploy(
+		const newcommunityAdminInstance = await CommunityAdmin.deploy(
 			cUSDInstance.address,
 			adminAccount1.address
 		);
 		await expect(
-			communityFactoryInstance.connect(adminAccount2).migrateCommunity(
+			communityAdminInstance.connect(adminAccount2).migrateCommunity(
 				communityManagerA.address,
 				cUSDInstance.address, // wrong on purpose,
-				newCommunityFactoryInstance.address
+				newcommunityAdminInstance.address
 			)
-		).to.be.rejectedWith("NOT_ALLOWED");
+		).to.be.rejectedWith("NOT_ADMIN");
 	});
 
 	it("should be able edit community if manager", async () => {
@@ -583,14 +582,13 @@ describe("CommunityAdmin", () => {
 	});
 	beforeEach(async () => {
 		cUSDInstance = await Token.deploy("cUSD", "cUSD");
-		communityFactoryInstance = await CommunityFactory.deploy(
-			cUSDInstance.address,
-			adminAccount1.address
-		);
+		communityAdminInstance = await CommunityAdmin.deploy(cUSDInstance.address, adminAccount1.address);
+		communityFactoryInstance = await CommunityFactory.deploy(cUSDInstance.address, communityAdminInstance.address);
+		await communityAdminInstance.setCommunityFactory(communityFactoryInstance.address);
 	});
 
 	it("should be able to add a community if admin", async () => {
-		const tx = await communityFactoryInstance.createCommunity(
+		const tx = await communityAdminInstance.addCommunity(
 			communityManagerA.address,
 			claimAmountTwo.toString(),
 			maxClaimTen.toString(),
@@ -617,7 +615,7 @@ describe("CommunityAdmin", () => {
 	});
 
 	it("should be able to remove a community if admin", async () => {
-		const tx = await communityFactoryInstance.createCommunity(
+		const tx = await communityAdminInstance.addCommunity(
 			communityManagerA.address,
 			claimAmountTwo.toString(),
 			maxClaimTen.toString(),
@@ -632,12 +630,12 @@ describe("CommunityAdmin", () => {
 		})[0]["args"]["_communityAddress"];
 		communityInstance = await Community.attach(communityAddress);
 
-		await communityFactoryInstance.removeCommunity(communityAddress);
+		await communityAdminInstance.removeCommunity(communityAddress);
 	});
 
 	it("should not be able to create a community with invalid values", async () => {
 		await expect(
-			communityFactoryInstance.createCommunity(
+			communityAdminInstance.addCommunity(
 				communityManagerA.address,
 				claimAmountTwo.toString(),
 				maxClaimTen.toString(),
@@ -646,7 +644,7 @@ describe("CommunityAdmin", () => {
 			)
 		).to.be.rejected;
 		await expect(
-			communityFactoryInstance.createCommunity(
+			communityAdminInstance.addCommunity(
 				communityManagerA.address,
 				maxClaimTen.toString(), // it's supposed to be wrong!
 				claimAmountTwo.toString(),
@@ -662,7 +660,7 @@ describe("Chaos test (complete flow)", async () => {
 	const addCommunity = async (
 		communityManager: SignerWithAddress
 	): Promise<ethersTypes.Contract> => {
-		const tx = await communityFactoryInstance.createCommunity(
+		const tx = await communityAdminInstance.addCommunity(
 			communityManager.address,
 			claimAmountTwo.toString(),
 			maxClaimTen.toString(),
@@ -742,10 +740,9 @@ describe("Chaos test (complete flow)", async () => {
 	});
 	beforeEach(async () => {
 		cUSDInstance = await Token.deploy("cUSD", "cUSD");
-		communityFactoryInstance = await CommunityFactory.deploy(
-			cUSDInstance.address,
-			adminAccount1.address
-		);
+		communityAdminInstance = await CommunityAdmin.deploy(cUSDInstance.address, adminAccount1.address);
+		communityFactoryInstance = await CommunityFactory.deploy(cUSDInstance.address, communityAdminInstance.address);
+		await communityAdminInstance.setCommunityFactory(communityFactoryInstance.address);
 	});
 
 	it("one beneficiary to one community", async () => {
