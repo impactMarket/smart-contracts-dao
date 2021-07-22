@@ -35,17 +35,17 @@ contract CommunityFactory {
         address _previousCommunityAddress
     ) external onlyCommunityAdmin returns (address) {
         return
-        address(
-            new Community(
-                _firstManager,
-                _claimAmount,
-                _maxClaim,
-                _baseInterval,
-                _incrementInterval,
-                _previousCommunityAddress,
-                cUSDAddress,
-                msg.sender
-            )
-        );
+            address(
+                new Community(
+                    _firstManager,
+                    _claimAmount,
+                    _maxClaim,
+                    _baseInterval,
+                    _incrementInterval,
+                    _previousCommunityAddress,
+                    cUSDAddress,
+                    msg.sender
+                )
+            );
     }
 }

@@ -47,8 +47,7 @@ contract CommunityAdmin {
         _;
     }
 
-    function setAdmin(address _newAdmin) external onlyAdmin
-    {
+    function setAdmin(address _newAdmin) external onlyAdmin {
         admin = _newAdmin;
     }
 
@@ -63,9 +62,7 @@ contract CommunityAdmin {
         uint256 _maxClaim,
         uint256 _baseInterval,
         uint256 _incrementInterval
-    )
-    external onlyAdmin
-    {
+    ) external onlyAdmin {
         address community = ICommunityFactory(communityFactory).deployCommunity(
             _firstManager,
             _claimAmount,
@@ -95,9 +92,7 @@ contract CommunityAdmin {
         address _firstManager,
         address _previousCommunityAddress,
         address _newCommunityFactory
-    )
-    external onlyAdmin
-    {
+    ) external onlyAdmin {
         communities[_previousCommunityAddress] = false;
         require(address(_previousCommunityAddress) != address(0), "NOT_VALID");
         ICommunity previousCommunity = ICommunity(_previousCommunityAddress);
@@ -112,18 +107,13 @@ contract CommunityAdmin {
         require(community != address(0), "NOT_VALID");
         previousCommunity.migrateFunds(community, _firstManager);
         communities[community] = true;
-        emit CommunityMigrated(
-            _firstManager,
-            community,
-            _previousCommunityAddress
-        );
+        emit CommunityMigrated(_firstManager, community, _previousCommunityAddress);
     }
 
     /**
      * @dev Remove an existing community. Can be used only by an admin.
      */
-    function removeCommunity(address _community) external onlyAdmin
-    {
+    function removeCommunity(address _community) external onlyAdmin {
         communities[_community] = false;
         emit CommunityRemoved(_community);
     }
@@ -131,8 +121,7 @@ contract CommunityAdmin {
     /**
      * @dev Set the community factory address, if the contract is valid.
      */
-    function setCommunityFactory(address _communityFactory) external onlyAdmin
-    {
+    function setCommunityFactory(address _communityFactory) external onlyAdmin {
         ICommunityFactory factory = ICommunityFactory(_communityFactory);
         require(factory.communityAdminAddress() == address(this), "NOT_ALLOWED");
         communityFactory = _communityFactory;
@@ -142,8 +131,7 @@ contract CommunityAdmin {
     /**
      * @dev Init community factory, used only at deploy time.
      */
-    function initCommunityFactory(address _communityFactory) external onlyAdmin
-    {
+    function initCommunityFactory(address _communityFactory) external onlyAdmin {
         require(communityFactory == address(0), "");
         communityFactory = _communityFactory;
         emit CommunityFactoryChanged(_communityFactory);
