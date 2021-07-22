@@ -99,10 +99,17 @@ describe("Community - Beneficiary", () => {
 
 	beforeEach(async () => {
 		cUSDInstance = await Token.deploy("cUSD", "cUSD");
-		communityAdminInstance = await CommunityAdmin.deploy(cUSDInstance.address, adminAccount1.address);
-		communityFactoryInstance = await CommunityFactory.deploy(cUSDInstance.address, communityAdminInstance.address);
-		await communityAdminInstance.setCommunityFactory(communityFactoryInstance.address);
-
+		communityAdminInstance = await CommunityAdmin.deploy(
+			cUSDInstance.address,
+			adminAccount1.address
+		);
+		communityFactoryInstance = await CommunityFactory.deploy(
+			cUSDInstance.address,
+			communityAdminInstance.address
+		);
+		await communityAdminInstance.setCommunityFactory(
+			communityFactoryInstance.address
+		);
 
 		const tx = await communityAdminInstance.addCommunity(
 			communityManagerA.address,
@@ -234,7 +241,6 @@ describe("Community - Beneficiary", () => {
 	});
 });
 
-
 describe("Community - Claim", () => {
 	before(async function () {
 		await init();
@@ -242,9 +248,17 @@ describe("Community - Claim", () => {
 
 	beforeEach(async () => {
 		cUSDInstance = await Token.deploy("cUSD", "cUSD");
-		communityAdminInstance = await CommunityAdmin.deploy(cUSDInstance.address, adminAccount1.address);
-		communityFactoryInstance = await CommunityFactory.deploy(cUSDInstance.address, communityAdminInstance.address);
-		await communityAdminInstance.setCommunityFactory(communityFactoryInstance.address);
+		communityAdminInstance = await CommunityAdmin.deploy(
+			cUSDInstance.address,
+			adminAccount1.address
+		);
+		communityFactoryInstance = await CommunityFactory.deploy(
+			cUSDInstance.address,
+			communityAdminInstance.address
+		);
+		await communityAdminInstance.setCommunityFactory(
+			communityFactoryInstance.address
+		);
 
 		const tx = await communityAdminInstance.addCommunity(
 			communityManagerA.address,
@@ -372,9 +386,17 @@ describe("Community - Governance (2)", () => {
 
 	beforeEach(async () => {
 		cUSDInstance = await Token.deploy("cUSD", "cUSD");
-		communityAdminInstance = await CommunityAdmin.deploy(cUSDInstance.address, adminAccount1.address);
-		communityFactoryInstance = await CommunityFactory.deploy(cUSDInstance.address, communityAdminInstance.address);
-		await communityAdminInstance.setCommunityFactory(communityFactoryInstance.address);
+		communityAdminInstance = await CommunityAdmin.deploy(
+			cUSDInstance.address,
+			adminAccount1.address
+		);
+		communityFactoryInstance = await CommunityFactory.deploy(
+			cUSDInstance.address,
+			communityAdminInstance.address
+		);
+		await communityAdminInstance.setCommunityFactory(
+			communityFactoryInstance.address
+		);
 
 		const tx = await communityAdminInstance.addCommunity(
 			communityManagerA.address,
@@ -582,9 +604,17 @@ describe("CommunityAdmin", () => {
 	});
 	beforeEach(async () => {
 		cUSDInstance = await Token.deploy("cUSD", "cUSD");
-		communityAdminInstance = await CommunityAdmin.deploy(cUSDInstance.address, adminAccount1.address);
-		communityFactoryInstance = await CommunityFactory.deploy(cUSDInstance.address, communityAdminInstance.address);
-		await communityAdminInstance.setCommunityFactory(communityFactoryInstance.address);
+		communityAdminInstance = await CommunityAdmin.deploy(
+			cUSDInstance.address,
+			adminAccount1.address
+		);
+		communityFactoryInstance = await CommunityFactory.deploy(
+			cUSDInstance.address,
+			communityAdminInstance.address
+		);
+		await communityAdminInstance.setCommunityFactory(
+			communityFactoryInstance.address
+		);
 	});
 
 	it("should be able to add a community if admin", async () => {
@@ -740,9 +770,17 @@ describe("Chaos test (complete flow)", async () => {
 	});
 	beforeEach(async () => {
 		cUSDInstance = await Token.deploy("cUSD", "cUSD");
-		communityAdminInstance = await CommunityAdmin.deploy(cUSDInstance.address, adminAccount1.address);
-		communityFactoryInstance = await CommunityFactory.deploy(cUSDInstance.address, communityAdminInstance.address);
-		await communityAdminInstance.setCommunityFactory(communityFactoryInstance.address);
+		communityAdminInstance = await CommunityAdmin.deploy(
+			cUSDInstance.address,
+			adminAccount1.address
+		);
+		communityFactoryInstance = await CommunityFactory.deploy(
+			cUSDInstance.address,
+			communityAdminInstance.address
+		);
+		await communityAdminInstance.setCommunityFactory(
+			communityFactoryInstance.address
+		);
 	});
 
 	it("one beneficiary to one community", async () => {
