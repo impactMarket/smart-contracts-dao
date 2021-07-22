@@ -62,8 +62,8 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
     uint256 votingPeriod_,
     uint256 votingDelay_,
     uint256 proposalThreshold_
-  ) public initializer adminOnly {
-    require(TimelockInterface(timelock_).admin() == address(this), "IPCT::initialize: timelock admin is not assigned to IPCTDelegate");
+  ) public initializer {
+
     require(
       votingPeriod_ >= MIN_VOTING_PERIOD && votingPeriod_ <= MAX_VOTING_PERIOD,
       "IPCT::initialize: invalid voting period"
@@ -74,7 +74,7 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
       "IPCT::initialize: invalid proposal threshold"
     );
     timelock = TimelockInterface(timelock_);
-    require(timelock.admin() == address(this), "IPCT::initialize: timelock admin is not assigned to IPCTDelegate");
+    // require(timelock.admin() == address(this), "IPCT::initialize: timelock admin is not assigned to IPCTDelegate");
 
     admin = msg.sender;
     token = IHasVotes(token_);
