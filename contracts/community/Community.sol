@@ -25,8 +25,8 @@ contract Community is AccessControl {
     } // starts by 0 (when user is not added yet)
 
     mapping(address => uint256) public cooldown;
-    mapping(address => uint256) public lastInterval;
     mapping(address => uint256) public claimed;
+    mapping(address => uint256) public claims;
     mapping(address => BeneficiaryState) public beneficiaries;
 
     uint256 public claimAmount;
@@ -136,7 +136,7 @@ contract Community is AccessControl {
         beneficiaries[_account] = BeneficiaryState.Valid;
         // solhint-disable-next-line not-rely-on-time
         cooldown[_account] = block.timestamp;
-        lastInterval[_account] = uint256(baseInterval - incrementInterval);
+        claims[_account] = 0;
         // send 5 cents when adding a new beneficiary
         bool success = IERC20(cUSDAddress).transfer(_account, 50000000000000000);
         require(success, "NOT_ALLOWED");
@@ -178,19 +178,26 @@ contract Community is AccessControl {
      * @dev Allow beneficiaries to claim.
      */
     function claim() external onlyValidBeneficiary {
+
         require(!locked, "LOCKED");
         // solhint-disable-next-line not-rely-on-time
         require(cooldown[msg.sender] <= block.timestamp, "NOT_YET");
         require((claimed[msg.sender] + claimAmount) <= maxClaim, "MAX_CLAIM");
         claimed[msg.sender] = claimed[msg.sender] + claimAmount;
-        lastInterval[msg.sender] = lastInterval[msg.sender] + incrementInterval;
-        cooldown[msg.sender] = uint256(
-            // solhint-disable-next-line not-rely-on-time
-            block.timestamp + lastInterval[msg.sender]
-        );
+
+        claims[msg.sender] += 1;
+        cooldown[msg.sender] = uint256(block.timestamp + lastInterval(msg.sender));
+
         emit BeneficiaryClaim(msg.sender, claimAmount);
         bool success = IERC20(cUSDAddress).transfer(msg.sender, claimAmount);
         require(success, "NOT_ALLOWED");
+    }
+
+    function lastInterval(address _beneficiary) public view returns (uint256) {
+        if (claims[_beneficiary] == 0) {
+            return 0;
+        }
+        return baseInterval + (claims[_beneficiary] - 1) * incrementInterval;
     }
 
     /**

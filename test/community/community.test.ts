@@ -266,6 +266,29 @@ describe("Community - Claim", () => {
 			.addBeneficiary(beneficiaryA.address);
 	});
 
+	it("should return correct lastInterval values", async () => {
+		const baseInterval = (await communityInstance.baseInterval()).toNumber();
+		const incrementInterval = (await communityInstance.incrementInterval()).toNumber();
+
+		expect(await communityInstance.lastInterval(beneficiaryA.address)).to.be.equal(0);
+		await communityInstance.connect(beneficiaryA).claim();
+		expect(await communityInstance.lastInterval(beneficiaryA.address)).to.be.equal(baseInterval);
+		await network.provider.send("evm_increaseTime", [baseInterval]);
+		await communityInstance.connect(beneficiaryA).claim();
+		expect(await communityInstance.lastInterval(beneficiaryA.address)).to.be.equal(baseInterval + incrementInterval);
+		await network.provider.send("evm_increaseTime", [incrementInterval]);
+		await expect(communityInstance.connect(beneficiaryA).claim()).to.be.rejectedWith("NOT_YET");
+		expect(await communityInstance.lastInterval(beneficiaryA.address)).to.be.equal(baseInterval + incrementInterval);
+		await network.provider.send("evm_increaseTime", [baseInterval + incrementInterval]);
+		await expect(communityInstance.connect(beneficiaryA).claim()).to.be.fulfilled;
+		expect(await communityInstance.lastInterval(beneficiaryA.address)).to.be.equal(baseInterval + 2 * incrementInterval);
+		await network.provider.send("evm_increaseTime", [baseInterval + incrementInterval]);
+		await expect(communityInstance.connect(beneficiaryA).claim()).to.be.rejectedWith("NOT_YET");
+		expect(await communityInstance.lastInterval(beneficiaryA.address)).to.be.equal(baseInterval + 2 * incrementInterval);
+		await network.provider.send("evm_increaseTime", [baseInterval + 2 * incrementInterval]);
+		await expect(communityInstance.connect(beneficiaryA).claim()).to.be.fulfilled;
+	});
+
 	it("should not claim without belong to community", async () => {
 		await expect(
 			communityInstance.connect(beneficiaryB).claim()
@@ -300,23 +323,21 @@ describe("Community - Claim", () => {
 	});
 
 	it("should not claim without waiting enough", async () => {
-		const baseInterval = (
-			await communityInstance.baseInterval()
-		).toNumber();
-		const incrementInterval = (
-			await communityInstance.incrementInterval()
-		).toNumber();
+		const baseInterval = (await communityInstance.baseInterval()).toNumber();
+		const incrementInterval = (await communityInstance.incrementInterval()).toNumber();
+		console.log('baseInterval ' + baseInterval);
+		console.log('incrementInterval ' + incrementInterval);
 		await communityInstance.connect(beneficiaryA).claim();
 		await network.provider.send("evm_increaseTime", [baseInterval]);
 		await communityInstance.connect(beneficiaryA).claim();
-		await network.provider.send("evm_increaseTime", [5]);
-		await expect(
-			communityInstance.connect(beneficiaryA).claim()
-		).to.be.rejectedWith("NOT_YET");
-		await network.provider.send("evm_increaseTime", [5]);
-		await expect(
-			communityInstance.connect(beneficiaryA).claim()
-		).to.be.rejectedWith("NOT_YET");
+		await network.provider.send("evm_increaseTime", [incrementInterval]);
+		await expect(communityInstance.connect(beneficiaryA).claim()).to.be.rejectedWith("NOT_YET");
+		await network.provider.send("evm_increaseTime", [baseInterval + incrementInterval]);
+		await expect(communityInstance.connect(beneficiaryA).claim()).to.be.fulfilled;
+		await network.provider.send("evm_increaseTime", [baseInterval + incrementInterval]);
+		await expect(communityInstance.connect(beneficiaryA).claim()).to.be.rejectedWith("NOT_YET");
+		await network.provider.send("evm_increaseTime", [baseInterval + 2 * incrementInterval]);
+		await expect(communityInstance.connect(beneficiaryA).claim()).to.be.fulfilled;
 	});
 
 	it("should claim after waiting", async () => {
