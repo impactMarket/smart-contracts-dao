@@ -9,6 +9,7 @@
     "test": "npx hardhat test",
     "coverage": "npx hardhat coverage",
     "docgen": "npx hardhat docgen",
+    "deploy": "npx hardhat deploy",
     "deploy:alfajores": "npx hardhat --network alfajores deploy",
     "deploy:baklava": "npx hardhat --network baklava deploy",
     "deploy:mainnet": "npx hardhat --network mainnet deploy",
