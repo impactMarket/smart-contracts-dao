@@ -2,8 +2,8 @@
 pragma solidity 0.8.5;
 
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import "@ubeswap/governance/contracts/interfaces/IHasVotes.sol";
-import "./IPCTInterfaces.sol";
+import "./interfaces/IPCTDelegateStorageV1.sol";
+import "./interfaces/IPCTEvents.sol";
 
 import "hardhat/console.sol";
 
@@ -338,33 +338,30 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
             console.log(block.number);
             console.log(proposal.endBlock);
 
-            return ProposalState.Active;
-        } else if (proposal.forVotes <= proposal.againstVotes || proposal.forVotes < quorumVotes) {
-            return ProposalState.Defeated;
-        } else if (proposal.eta == 0) {
-            return ProposalState.Succeeded;
-        } else if (proposal.executed) {
-            return ProposalState.Executed;
-        } else if (block.timestamp >= add256(proposal.eta, timelock.GRACE_PERIOD())) {
-            return ProposalState.Expired;
-        } else {
-            return ProposalState.Queued;
-        }
-    }
-
-    /**
-     * @notice Cast a vote for a proposal
-     * @param proposalId The id of the proposal to vote on
-     * @param support The support value for the vote. 0=against, 1=for, 2=abstain
-     */
-    function castVote(uint256 proposalId, uint8 support) external {
-        emit VoteCast(
-            msg.sender,
-            proposalId,
-            support,
-            castVoteInternal(msg.sender, proposalId, support),
-            ""
-        );
+  /**
+   * @notice Gets the state of a proposal
+   * @param proposalId The id of the proposal
+   * @return Proposal state
+   */
+  function state(uint256 proposalId) public view returns (ProposalState) {
+    require(proposalCount > proposalId, "IPCT::state: invalid proposal id");
+    Proposal storage proposal = proposals[proposalId];
+    if (proposal.canceled) {
+      return ProposalState.Canceled;
+    } else if (block.number <= proposal.startBlock) {
+      return ProposalState.Pending;
+    } else if (block.number <= proposal.endBlock) {
+      return ProposalState.Active;
+    } else if (proposal.forVotes <= proposal.againstVotes || proposal.forVotes < quorumVotes) {
+      return ProposalState.Defeated;
+    } else if (proposal.eta == 0) {
+      return ProposalState.Succeeded;
+    } else if (proposal.executed) {
+      return ProposalState.Executed;
+    } else if (block.timestamp >= add256(proposal.eta, timelock.GRACE_PERIOD())) {
+      return ProposalState.Expired;
+    } else {
+      return ProposalState.Queued;
     }
 
     /**
