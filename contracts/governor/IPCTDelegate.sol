@@ -47,45 +47,35 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
         _;
     }
 
-    /**
-     * @notice Used to initialize the contract during delegator contructor
-     * @param timelock_ The address of the Timelock
-     * @param token_ The address of the voting token
-     * @param releaseToken_ The address of the "Release" voting token. If none, specify the zero address.
-     * @param votingPeriod_ The initial voting period
-     * @param votingDelay_ The initial voting delay
-     * @param proposalThreshold_ The initial proposal threshold
-     */
-    function initialize(
-        address timelock_,
-        address token_,
-        address releaseToken_,
-        uint256 votingPeriod_,
-        uint256 votingDelay_,
-        uint256 proposalThreshold_
-    ) public initializer {
-        require(
-            votingPeriod_ >= MIN_VOTING_PERIOD && votingPeriod_ <= MAX_VOTING_PERIOD,
-            "IPCT::initialize: invalid voting period"
-        );
-        require(
-            votingDelay_ >= MIN_VOTING_DELAY && votingDelay_ <= MAX_VOTING_DELAY,
-            "IPCT::initialize: invalid voting delay"
-        );
-        require(
-            proposalThreshold_ >= MIN_PROPOSAL_THRESHOLD &&
-                proposalThreshold_ <= MAX_PROPOSAL_THRESHOLD,
-            "IPCT::initialize: invalid proposal threshold"
-        );
-        timelock = TimelockInterface(timelock_);
-        // require(timelock.admin() == address(this), "IPCT::initialize: timelock admin is not assigned to IPCTDelegate");
-
-        admin = msg.sender;
-        token = IHasVotes(token_);
-        releaseToken = IHasVotes(releaseToken_);
-        votingPeriod = votingPeriod_;
-        votingDelay = votingDelay_;
-        proposalThreshold = proposalThreshold_;
+  /**
+   * @notice Used to initialize the contract during delegator contructor
+   * @param timelock_ The address of the Timelock
+   * @param token_ The address of the voting token
+   * @param releaseToken_ The address of the "Release" voting token. If none, specify the zero address.
+   * @param votingPeriod_ The initial voting period
+   * @param votingDelay_ The initial voting delay
+   * @param proposalThreshold_ The initial proposal threshold
+   */
+  function initialize(
+    address timelock_,
+    address token_,
+    address releaseToken_,
+    uint256 votingPeriod_,
+    uint256 votingDelay_,
+    uint256 proposalThreshold_
+  ) public initializer adminOnly {
+    require(TimelockInterface(timelock_).admin() == address(this), "IPCT::initialize: timelock admin is not assigned to IPCTDelegate");
+    require(
+      votingPeriod_ >= MIN_VOTING_PERIOD && votingPeriod_ <= MAX_VOTING_PERIOD,
+      "IPCT::initialize: invalid voting period"
+    );
+    require(votingDelay_ >= MIN_VOTING_DELAY && votingDelay_ <= MAX_VOTING_DELAY, "IPCT::initialize: invalid voting delay");
+    require(
+      proposalThreshold_ >= MIN_PROPOSAL_THRESHOLD && proposalThreshold_ <= MAX_PROPOSAL_THRESHOLD,
+      "IPCT::initialize: invalid proposal threshold"
+    );
+    timelock = TimelockInterface(timelock_);
+    require(timelock.admin() == address(this), "IPCT::initialize: timelock admin is not assigned to IPCTDelegate");
 
         // Create dummy proposal
         Proposal memory dummyProposal = Proposal({
