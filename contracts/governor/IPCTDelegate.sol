@@ -75,7 +75,6 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
       "IPCT::initialize: invalid proposal threshold"
     );
     timelock = TimelockInterface(timelock_);
-    require(timelock.admin() == address(this), "IPCT::initialize: timelock admin is not assigned to IPCTDelegate");
 
         // Create dummy proposal
         Proposal memory dummyProposal = Proposal({
@@ -318,25 +317,27 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
         return proposalReceipts[proposalId][voter];
     }
 
-    /**
-     * @notice Gets the state of a proposal
-     * @param proposalId The id of the proposal
-     * @return Proposal state
-     */
-    function state(uint256 proposalId) public view returns (ProposalState) {
-        require(proposalCount > proposalId, "IPCT::state: invalid proposal id");
-        Proposal storage proposal = proposals[proposalId];
-        if (proposal.canceled) {
-            return ProposalState.Canceled;
-        } else if (block.number <= proposal.startBlock) {
-            console.log("pending");
-            console.log(block.number);
-            console.log(proposal.startBlock);
-            return ProposalState.Pending;
-        } else if (block.number <= proposal.endBlock) {
-            console.log("active");
-            console.log(block.number);
-            console.log(proposal.endBlock);
+    // /**
+    //  * @notice Gets the state of a proposal
+    //  * @param proposalId The id of the proposal
+    //  * @return Proposal state
+    //  */
+    // function state(uint256 proposalId) public view returns (ProposalState) {
+    //     require(proposalCount > proposalId, "IPCT::state: invalid proposal id");
+    //     Proposal storage proposal = proposals[proposalId];
+    //     if (proposal.canceled) {
+    //         return ProposalState.Canceled;
+    //     } else if (block.number <= proposal.startBlock) {
+    //         console.log("pending");
+    //         console.log(block.number);
+    //         console.log(proposal.startBlock);
+    //         return ProposalState.Pending;
+    //     } else if (block.number <= proposal.endBlock) {
+    //         console.log("active");
+    //         console.log(block.number);
+    //         console.log(proposal.endBlock);
+    //     }
+    // }
 
   /**
    * @notice Gets the state of a proposal
@@ -363,6 +364,7 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
     } else {
       return ProposalState.Queued;
     }
+  }
 
     /**
      * @notice Cast a vote for a proposal with a reason
