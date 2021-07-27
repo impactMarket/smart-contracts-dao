@@ -2,8 +2,8 @@
 pragma solidity 0.8.5;
 
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import "@ubeswap/governance/contracts/interfaces/IHasVotes.sol";
-import "./IPCTInterfaces.sol";
+import "./interfaces/IPCTDelegateStorageV1.sol";
+import "./interfaces/IPCTEvents.sol";
 
 import "hardhat/console.sol";
 
@@ -313,15 +313,8 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
     if (proposal.canceled) {
       return ProposalState.Canceled;
     } else if (block.number <= proposal.startBlock) {
-      console.log('pending');
-      console.log(block.number);
-      console.log(proposal.startBlock);
       return ProposalState.Pending;
     } else if (block.number <= proposal.endBlock) {
-      console.log('active');
-      console.log(block.number);
-      console.log(proposal.endBlock);
-
       return ProposalState.Active;
     } else if (proposal.forVotes <= proposal.againstVotes || proposal.forVotes < quorumVotes) {
       return ProposalState.Defeated;
