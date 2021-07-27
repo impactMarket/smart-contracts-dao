@@ -1,24 +1,24 @@
 //SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.5;
 
-import "@poofcash/poof-token/contracts/NomResolve.sol";
-import "./IPCTInterfaces.sol";
+import "./interfaces/IPCTDelegatorStorage.sol";
+import "./interfaces/IPCTEvents.sol";
 
 import "hardhat/console.sol";
 
-contract IPCTDelegator is IPCTDelegatorStorage, IPCTEvents, NomResolve {
-    constructor(
-        address timelock_,
-        address token_,
-        address releaseToken_,
-        address admin_,
-        address implementation_,
-        uint256 votingPeriod_,
-        uint256 votingDelay_,
-        uint256 proposalThreshold_
-    ) {
-        // Admin set to msg.sender for initialization
-        admin = msg.sender;
+contract IPCTDelegator is IPCTDelegatorStorage, IPCTEvents {
+  constructor(
+    address timelock_,
+    address token_,
+    address releaseToken_,
+    address admin_,
+    address implementation_,
+    uint votingPeriod_,
+    uint votingDelay_,
+    uint proposalThreshold_
+  ) {
+    // Admin set to msg.sender for initialization
+    admin = msg.sender;
 
         delegateTo(
             implementation_,

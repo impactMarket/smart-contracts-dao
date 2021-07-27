@@ -36,7 +36,7 @@
     "@nomiclabs/hardhat-waffle": "^2.0.1",
     "@openzeppelin/contracts": "^4.1.0",
     "@openzeppelin/test-helpers": "^0.5.11",
-    "@poofcash/poof-token": "^1.0.6",
+    "@ubeswap/governance": "git+https://github.com/Ubeswap/ubeswap-governance.git",
     "@types/chai": "^4.2.19",
     "@types/chai-as-promised": "^7.1.4",
     "@types/mocha": "^8.2.2",
