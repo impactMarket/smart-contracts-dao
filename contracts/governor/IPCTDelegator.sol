@@ -1,12 +1,12 @@
 //SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.5;
 
-import "@poofcash/poof-token/contracts/NomResolve.sol";
-import "./IPCTInterfaces.sol";
+import "./interfaces/IPCTDelegatorStorage.sol";
+import "./interfaces/IPCTEvents.sol";
 
 import "hardhat/console.sol";
 
-contract IPCTDelegator is IPCTDelegatorStorage, IPCTEvents, NomResolve {
+contract IPCTDelegator is IPCTDelegatorStorage, IPCTEvents {
     constructor(
         address timelock_,
         address token_,

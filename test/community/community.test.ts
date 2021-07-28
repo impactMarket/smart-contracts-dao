@@ -8,7 +8,8 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 // @ts-ignore
 import { ethers, network, waffle } from "hardhat";
 import type * as ethersTypes from "ethers";
-import { Contract } from "hardhat/internal/hardhat-network/stack-traces/model";
+import { DeployFunction } from "hardhat-deploy/types";
+
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const {
 	expectRevert,
@@ -280,6 +281,57 @@ describe("Community - Claim", () => {
 			.addBeneficiary(beneficiaryA.address);
 	});
 
+	it("should return correct lastInterval values", async () => {
+		const baseInterval = (
+			await communityInstance.baseInterval()
+		).toNumber();
+		const incrementInterval = (
+			await communityInstance.incrementInterval()
+		).toNumber();
+
+		expect(
+			await communityInstance.lastInterval(beneficiaryA.address)
+		).to.be.equal(0);
+		await communityInstance.connect(beneficiaryA).claim();
+		expect(
+			await communityInstance.lastInterval(beneficiaryA.address)
+		).to.be.equal(baseInterval);
+		await network.provider.send("evm_increaseTime", [baseInterval]);
+		await communityInstance.connect(beneficiaryA).claim();
+		expect(
+			await communityInstance.lastInterval(beneficiaryA.address)
+		).to.be.equal(baseInterval + incrementInterval);
+		await network.provider.send("evm_increaseTime", [incrementInterval]);
+		await expect(
+			communityInstance.connect(beneficiaryA).claim()
+		).to.be.rejectedWith("NOT_YET");
+		expect(
+			await communityInstance.lastInterval(beneficiaryA.address)
+		).to.be.equal(baseInterval + incrementInterval);
+		await network.provider.send("evm_increaseTime", [
+			baseInterval + incrementInterval,
+		]);
+		await expect(communityInstance.connect(beneficiaryA).claim()).to.be
+			.fulfilled;
+		expect(
+			await communityInstance.lastInterval(beneficiaryA.address)
+		).to.be.equal(baseInterval + 2 * incrementInterval);
+		await network.provider.send("evm_increaseTime", [
+			baseInterval + incrementInterval,
+		]);
+		await expect(
+			communityInstance.connect(beneficiaryA).claim()
+		).to.be.rejectedWith("NOT_YET");
+		expect(
+			await communityInstance.lastInterval(beneficiaryA.address)
+		).to.be.equal(baseInterval + 2 * incrementInterval);
+		await network.provider.send("evm_increaseTime", [
+			baseInterval + 2 * incrementInterval,
+		]);
+		await expect(communityInstance.connect(beneficiaryA).claim()).to.be
+			.fulfilled;
+	});
+
 	it("should not claim without belong to community", async () => {
 		await expect(
 			communityInstance.connect(beneficiaryB).claim()
@@ -323,14 +375,26 @@ describe("Community - Claim", () => {
 		await communityInstance.connect(beneficiaryA).claim();
 		await network.provider.send("evm_increaseTime", [baseInterval]);
 		await communityInstance.connect(beneficiaryA).claim();
-		await network.provider.send("evm_increaseTime", [5]);
+		await network.provider.send("evm_increaseTime", [incrementInterval]);
 		await expect(
 			communityInstance.connect(beneficiaryA).claim()
 		).to.be.rejectedWith("NOT_YET");
-		await network.provider.send("evm_increaseTime", [5]);
+		await network.provider.send("evm_increaseTime", [
+			baseInterval + incrementInterval,
+		]);
+		await expect(communityInstance.connect(beneficiaryA).claim()).to.be
+			.fulfilled;
+		await network.provider.send("evm_increaseTime", [
+			baseInterval + incrementInterval,
+		]);
 		await expect(
 			communityInstance.connect(beneficiaryA).claim()
 		).to.be.rejectedWith("NOT_YET");
+		await network.provider.send("evm_increaseTime", [
+			baseInterval + 2 * incrementInterval,
+		]);
+		await expect(communityInstance.connect(beneficiaryA).claim()).to.be
+			.fulfilled;
 	});
 
 	it("should claim after waiting", async () => {
@@ -759,10 +823,10 @@ describe("Chaos test (complete flow)", async () => {
 			.plus(await instance.claimAmount())
 			.toString()
 			.should.be.equal(currentBalance.toString());
-		previousLastInterval
-			.plus(await instance.incrementInterval())
-			.toString()
-			.should.be.equal(currentLastInterval.toString());
+		// previousLastInterval
+		// 	.plus(await instance.incrementInterval())
+		// 	.toString()
+		// 	.should.be.equal(currentLastInterval.toString());
 	};
 
 	before(async function () {
