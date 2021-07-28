@@ -15,4 +15,3 @@ contract IPCTDelegatorMock is IPCTDelegator {
     uint proposalThreshold_
   ) IPCTDelegator(timelock_, token_, releaseToken_, admin_, implementation_, votingPeriod_, votingDelay_, proposalThreshold_) {}
 }
-
