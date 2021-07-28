@@ -2,8 +2,8 @@
 pragma solidity 0.8.5;
 
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import "@ubeswap/governance/contracts/interfaces/IHasVotes.sol";
-import "./IPCTInterfaces.sol";
+import "./interfaces/IPCTDelegateStorageV1.sol";
+import "./interfaces/IPCTEvents.sol";
 
 import "hardhat/console.sol";
 
@@ -63,7 +63,11 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
         uint256 votingPeriod_,
         uint256 votingDelay_,
         uint256 proposalThreshold_
-    ) public initializer {
+    ) public initializer adminOnly {
+        require(
+            TimelockInterface(timelock_).admin() == address(this),
+            "IPCT::initialize: timelock admin is not assigned to IPCTDelegate"
+        );
         require(
             votingPeriod_ >= MIN_VOTING_PERIOD && votingPeriod_ <= MAX_VOTING_PERIOD,
             "IPCT::initialize: invalid voting period"
@@ -78,7 +82,10 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
             "IPCT::initialize: invalid proposal threshold"
         );
         timelock = TimelockInterface(timelock_);
-        // require(timelock.admin() == address(this), "IPCT::initialize: timelock admin is not assigned to IPCTDelegate");
+        require(
+            timelock.admin() == address(this),
+            "IPCT::initialize: timelock admin is not assigned to IPCTDelegate"
+        );
 
         admin = msg.sender;
         token = IHasVotes(token_);
@@ -339,15 +346,8 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
         if (proposal.canceled) {
             return ProposalState.Canceled;
         } else if (block.number <= proposal.startBlock) {
-            console.log("pending");
-            console.log(block.number);
-            console.log(proposal.startBlock);
             return ProposalState.Pending;
         } else if (block.number <= proposal.endBlock) {
-            console.log("active");
-            console.log(block.number);
-            console.log(proposal.endBlock);
-
             return ProposalState.Active;
         } else if (proposal.forVotes <= proposal.againstVotes || proposal.forVotes < quorumVotes) {
             return ProposalState.Defeated;
