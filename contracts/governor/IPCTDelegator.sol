@@ -7,18 +7,18 @@ import "./interfaces/IPCTEvents.sol";
 import "hardhat/console.sol";
 
 contract IPCTDelegator is IPCTDelegatorStorage, IPCTEvents {
-  constructor(
-    address timelock_,
-    address token_,
-    address releaseToken_,
-    address admin_,
-    address implementation_,
-    uint votingPeriod_,
-    uint votingDelay_,
-    uint proposalThreshold_
-  ) {
-    // Admin set to msg.sender for initialization
-    admin = msg.sender;
+    constructor(
+        address timelock_,
+        address token_,
+        address releaseToken_,
+        address admin_,
+        address implementation_,
+        uint256 votingPeriod_,
+        uint256 votingDelay_,
+        uint256 proposalThreshold_
+    ) {
+        // Admin set to msg.sender for initialization
+        admin = msg.sender;
 
         delegateTo(
             implementation_,

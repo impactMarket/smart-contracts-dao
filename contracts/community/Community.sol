@@ -178,7 +178,6 @@ contract Community is AccessControl {
      * @dev Allow beneficiaries to claim.
      */
     function claim() external onlyValidBeneficiary {
-
         require(!locked, "LOCKED");
         // solhint-disable-next-line not-rely-on-time
         require(cooldown[msg.sender] <= block.timestamp, "NOT_YET");

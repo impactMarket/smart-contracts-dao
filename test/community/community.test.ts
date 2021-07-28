@@ -8,7 +8,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 // @ts-ignore
 import { ethers, network, waffle } from "hardhat";
 import type * as ethersTypes from "ethers";
-import {DeployFunction} from 'hardhat-deploy/types';
+import { DeployFunction } from "hardhat-deploy/types";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const {
@@ -100,10 +100,17 @@ describe("Community - Beneficiary", () => {
 
 	beforeEach(async () => {
 		cUSDInstance = await Token.deploy("cUSD", "cUSD");
-		communityAdminInstance = await CommunityAdmin.deploy(cUSDInstance.address, adminAccount1.address);
-		communityFactoryInstance = await CommunityFactory.deploy(cUSDInstance.address, communityAdminInstance.address);
-		await communityAdminInstance.setCommunityFactory(communityFactoryInstance.address);
-
+		communityAdminInstance = await CommunityAdmin.deploy(
+			cUSDInstance.address,
+			adminAccount1.address
+		);
+		communityFactoryInstance = await CommunityFactory.deploy(
+			cUSDInstance.address,
+			communityAdminInstance.address
+		);
+		await communityAdminInstance.setCommunityFactory(
+			communityFactoryInstance.address
+		);
 
 		const tx = await communityAdminInstance.addCommunity(
 			communityManagerA.address,
@@ -235,7 +242,6 @@ describe("Community - Beneficiary", () => {
 	});
 });
 
-
 describe("Community - Claim", () => {
 	before(async function () {
 		await init();
@@ -243,9 +249,17 @@ describe("Community - Claim", () => {
 
 	beforeEach(async () => {
 		cUSDInstance = await Token.deploy("cUSD", "cUSD");
-		communityAdminInstance = await CommunityAdmin.deploy(cUSDInstance.address, adminAccount1.address);
-		communityFactoryInstance = await CommunityFactory.deploy(cUSDInstance.address, communityAdminInstance.address);
-		await communityAdminInstance.setCommunityFactory(communityFactoryInstance.address);
+		communityAdminInstance = await CommunityAdmin.deploy(
+			cUSDInstance.address,
+			adminAccount1.address
+		);
+		communityFactoryInstance = await CommunityFactory.deploy(
+			cUSDInstance.address,
+			communityAdminInstance.address
+		);
+		await communityAdminInstance.setCommunityFactory(
+			communityFactoryInstance.address
+		);
 
 		const tx = await communityAdminInstance.addCommunity(
 			communityManagerA.address,
@@ -268,26 +282,54 @@ describe("Community - Claim", () => {
 	});
 
 	it("should return correct lastInterval values", async () => {
-		const baseInterval = (await communityInstance.baseInterval()).toNumber();
-		const incrementInterval = (await communityInstance.incrementInterval()).toNumber();
+		const baseInterval = (
+			await communityInstance.baseInterval()
+		).toNumber();
+		const incrementInterval = (
+			await communityInstance.incrementInterval()
+		).toNumber();
 
-		expect(await communityInstance.lastInterval(beneficiaryA.address)).to.be.equal(0);
+		expect(
+			await communityInstance.lastInterval(beneficiaryA.address)
+		).to.be.equal(0);
 		await communityInstance.connect(beneficiaryA).claim();
-		expect(await communityInstance.lastInterval(beneficiaryA.address)).to.be.equal(baseInterval);
+		expect(
+			await communityInstance.lastInterval(beneficiaryA.address)
+		).to.be.equal(baseInterval);
 		await network.provider.send("evm_increaseTime", [baseInterval]);
 		await communityInstance.connect(beneficiaryA).claim();
-		expect(await communityInstance.lastInterval(beneficiaryA.address)).to.be.equal(baseInterval + incrementInterval);
+		expect(
+			await communityInstance.lastInterval(beneficiaryA.address)
+		).to.be.equal(baseInterval + incrementInterval);
 		await network.provider.send("evm_increaseTime", [incrementInterval]);
-		await expect(communityInstance.connect(beneficiaryA).claim()).to.be.rejectedWith("NOT_YET");
-		expect(await communityInstance.lastInterval(beneficiaryA.address)).to.be.equal(baseInterval + incrementInterval);
-		await network.provider.send("evm_increaseTime", [baseInterval + incrementInterval]);
-		await expect(communityInstance.connect(beneficiaryA).claim()).to.be.fulfilled;
-		expect(await communityInstance.lastInterval(beneficiaryA.address)).to.be.equal(baseInterval + 2 * incrementInterval);
-		await network.provider.send("evm_increaseTime", [baseInterval + incrementInterval]);
-		await expect(communityInstance.connect(beneficiaryA).claim()).to.be.rejectedWith("NOT_YET");
-		expect(await communityInstance.lastInterval(beneficiaryA.address)).to.be.equal(baseInterval + 2 * incrementInterval);
-		await network.provider.send("evm_increaseTime", [baseInterval + 2 * incrementInterval]);
-		await expect(communityInstance.connect(beneficiaryA).claim()).to.be.fulfilled;
+		await expect(
+			communityInstance.connect(beneficiaryA).claim()
+		).to.be.rejectedWith("NOT_YET");
+		expect(
+			await communityInstance.lastInterval(beneficiaryA.address)
+		).to.be.equal(baseInterval + incrementInterval);
+		await network.provider.send("evm_increaseTime", [
+			baseInterval + incrementInterval,
+		]);
+		await expect(communityInstance.connect(beneficiaryA).claim()).to.be
+			.fulfilled;
+		expect(
+			await communityInstance.lastInterval(beneficiaryA.address)
+		).to.be.equal(baseInterval + 2 * incrementInterval);
+		await network.provider.send("evm_increaseTime", [
+			baseInterval + incrementInterval,
+		]);
+		await expect(
+			communityInstance.connect(beneficiaryA).claim()
+		).to.be.rejectedWith("NOT_YET");
+		expect(
+			await communityInstance.lastInterval(beneficiaryA.address)
+		).to.be.equal(baseInterval + 2 * incrementInterval);
+		await network.provider.send("evm_increaseTime", [
+			baseInterval + 2 * incrementInterval,
+		]);
+		await expect(communityInstance.connect(beneficiaryA).claim()).to.be
+			.fulfilled;
 	});
 
 	it("should not claim without belong to community", async () => {
@@ -324,19 +366,35 @@ describe("Community - Claim", () => {
 	});
 
 	it("should not claim without waiting enough", async () => {
-		const baseInterval = (await communityInstance.baseInterval()).toNumber();
-		const incrementInterval = (await communityInstance.incrementInterval()).toNumber();
+		const baseInterval = (
+			await communityInstance.baseInterval()
+		).toNumber();
+		const incrementInterval = (
+			await communityInstance.incrementInterval()
+		).toNumber();
 		await communityInstance.connect(beneficiaryA).claim();
 		await network.provider.send("evm_increaseTime", [baseInterval]);
 		await communityInstance.connect(beneficiaryA).claim();
 		await network.provider.send("evm_increaseTime", [incrementInterval]);
-		await expect(communityInstance.connect(beneficiaryA).claim()).to.be.rejectedWith("NOT_YET");
-		await network.provider.send("evm_increaseTime", [baseInterval + incrementInterval]);
-		await expect(communityInstance.connect(beneficiaryA).claim()).to.be.fulfilled;
-		await network.provider.send("evm_increaseTime", [baseInterval + incrementInterval]);
-		await expect(communityInstance.connect(beneficiaryA).claim()).to.be.rejectedWith("NOT_YET");
-		await network.provider.send("evm_increaseTime", [baseInterval + 2 * incrementInterval]);
-		await expect(communityInstance.connect(beneficiaryA).claim()).to.be.fulfilled;
+		await expect(
+			communityInstance.connect(beneficiaryA).claim()
+		).to.be.rejectedWith("NOT_YET");
+		await network.provider.send("evm_increaseTime", [
+			baseInterval + incrementInterval,
+		]);
+		await expect(communityInstance.connect(beneficiaryA).claim()).to.be
+			.fulfilled;
+		await network.provider.send("evm_increaseTime", [
+			baseInterval + incrementInterval,
+		]);
+		await expect(
+			communityInstance.connect(beneficiaryA).claim()
+		).to.be.rejectedWith("NOT_YET");
+		await network.provider.send("evm_increaseTime", [
+			baseInterval + 2 * incrementInterval,
+		]);
+		await expect(communityInstance.connect(beneficiaryA).claim()).to.be
+			.fulfilled;
 	});
 
 	it("should claim after waiting", async () => {
@@ -392,9 +450,17 @@ describe("Community - Governance (2)", () => {
 
 	beforeEach(async () => {
 		cUSDInstance = await Token.deploy("cUSD", "cUSD");
-		communityAdminInstance = await CommunityAdmin.deploy(cUSDInstance.address, adminAccount1.address);
-		communityFactoryInstance = await CommunityFactory.deploy(cUSDInstance.address, communityAdminInstance.address);
-		await communityAdminInstance.setCommunityFactory(communityFactoryInstance.address);
+		communityAdminInstance = await CommunityAdmin.deploy(
+			cUSDInstance.address,
+			adminAccount1.address
+		);
+		communityFactoryInstance = await CommunityFactory.deploy(
+			cUSDInstance.address,
+			communityAdminInstance.address
+		);
+		await communityAdminInstance.setCommunityFactory(
+			communityFactoryInstance.address
+		);
 
 		const tx = await communityAdminInstance.addCommunity(
 			communityManagerA.address,
@@ -602,9 +668,17 @@ describe("CommunityAdmin", () => {
 	});
 	beforeEach(async () => {
 		cUSDInstance = await Token.deploy("cUSD", "cUSD");
-		communityAdminInstance = await CommunityAdmin.deploy(cUSDInstance.address, adminAccount1.address);
-		communityFactoryInstance = await CommunityFactory.deploy(cUSDInstance.address, communityAdminInstance.address);
-		await communityAdminInstance.setCommunityFactory(communityFactoryInstance.address);
+		communityAdminInstance = await CommunityAdmin.deploy(
+			cUSDInstance.address,
+			adminAccount1.address
+		);
+		communityFactoryInstance = await CommunityFactory.deploy(
+			cUSDInstance.address,
+			communityAdminInstance.address
+		);
+		await communityAdminInstance.setCommunityFactory(
+			communityFactoryInstance.address
+		);
 	});
 
 	it("should be able to add a community if admin", async () => {
