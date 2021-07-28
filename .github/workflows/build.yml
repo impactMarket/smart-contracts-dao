@@ -1,32 +1,60 @@
+
 name: Build
 
 on: [ push, pull_request ]
 
 jobs:
+  
   build:
 
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-node@v1
+
+      - uses: actions/setup-node@v2
         with:
-          node-version: '12.x'
+          node-version: '16'
+      
       - name: Pre-install
-        run: |
-          yarn --ignore-engines
+        run: yarn --ignore-engines --network-concurrency 1
+      
       - name: Run Checks
         run: |
           yarn prettier:write
           yarn lint
           yarn build
           yarn docgen
-      - name: Run tests
+      
+      - name: Run Coverage
+        run: yarn coverage
+
+      - name: Setup Git Config
         run: |
-          yarn coverage
-      # - name: Run migration
-      #   run: |
-      #     yarn deploy
-      - name: Run check git
+          git config user.name "GitHub Actions Bot"
+          git config user.email "<>"
+
+      - name: Deploy Alfajores
+        if: github.ref == 'refs/heads/alfajores'
+        run: |
+          yarn deploy:alfajores
+          git commit -am "GitHub Actions - Check in new artifacts"
+          git push origin alfajores
+      
+      - name: Deploy Baklava
+        if: github.ref == 'refs/heads/baklava'
+        run: |
+          yarn deploy:baklava
+          git commit -am "GitHub Actions - Check in new artifacts"
+          git push origin baklava
+      
+      - name: Deploy Mainnet
+        if: github.ref == 'refs/heads/master'
+        run: |
+          yarn deploy:mainnet
+          git commit -am "GitHub Actions - Check in new artifacts"
+          git push origin master
+
+      - name: Run Check Git
         run: |
           git diff --quiet --exit-code --cached

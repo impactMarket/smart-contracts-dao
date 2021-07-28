@@ -760,9 +760,17 @@ describe("Chaos test (complete flow)", async () => {
 	});
 	beforeEach(async () => {
 		cUSDInstance = await Token.deploy("cUSD", "cUSD");
-		communityAdminInstance = await CommunityAdmin.deploy(cUSDInstance.address, adminAccount1.address);
-		communityFactoryInstance = await CommunityFactory.deploy(cUSDInstance.address, communityAdminInstance.address);
-		await communityAdminInstance.setCommunityFactory(communityFactoryInstance.address);
+		communityAdminInstance = await CommunityAdmin.deploy(
+			cUSDInstance.address,
+			adminAccount1.address
+		);
+		communityFactoryInstance = await CommunityFactory.deploy(
+			cUSDInstance.address,
+			communityAdminInstance.address
+		);
+		await communityAdminInstance.setCommunityFactory(
+			communityFactoryInstance.address
+		);
 	});
 
 	it("one beneficiary to one community", async () => {
