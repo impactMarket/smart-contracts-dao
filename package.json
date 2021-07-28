@@ -18,7 +18,8 @@
     "lint": "yarn lint:sol",
     "lint:sol": "solhint contracts/**/*.sol contracts/*.sol",
     "snyk-protect": "snyk protect",
-    "prepare": "npm run snyk-protect"
+    "prepare": "npm run snyk-protect",
+    "postinstall": "husky install"
   },
   "repository": {
     "type": "git",
@@ -36,11 +37,11 @@
     "@nomiclabs/hardhat-waffle": "^2.0.1",
     "@openzeppelin/contracts": "^4.1.0",
     "@openzeppelin/test-helpers": "^0.5.11",
-    "@ubeswap/governance": "git+https://github.com/Ubeswap/ubeswap-governance.git",
     "@types/chai": "^4.2.19",
     "@types/chai-as-promised": "^7.1.4",
     "@types/mocha": "^8.2.2",
     "@types/node": "^16.0.0",
+    "@ubeswap/governance": "git+https://github.com/Ubeswap/ubeswap-governance.git",
     "chai-as-promised": "^7.1.1",
     "dotenv": "^10.0.0",
     "ethereum-waffle": "^3.3.0",
@@ -48,6 +49,7 @@
     "hardhat": "^2.3.3",
     "hardhat-deploy": "^0.8.11",
     "hardhat-docgen": "^1.1.1",
+    "husky": "^7.0.1",
     "prettier": "^2.3.2",
     "prettier-plugin-solidity": "^1.0.0-beta.13",
     "snyk": "^1.654.0",
