@@ -24,6 +24,9 @@ contract IPCTDelegateStorageV1 is IPCTDelegatorStorage {
     /// @notice The total number of proposals
     uint256 public proposalCount;
 
+    /// @notice The number of votes in support of a proposal required in order for a quorum to be reached and for a vote to succeed
+    uint256 public quorumVotes;
+
     /// @notice The address of the Governance Timelock
     TimelockInterface public timelock;
 
