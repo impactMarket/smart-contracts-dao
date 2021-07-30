@@ -5,7 +5,7 @@ pragma solidity 0.8.5;
  * @dev Interface of the ERC20 standard as defined in the EIP.
  */
 interface ICommunityAdmin {
-    function hasRole(bytes32 role, address account) external view returns (bool);
+    function fundCommunity() external;
 }
 
 

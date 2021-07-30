@@ -33,7 +33,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const IPCTDelegator = await deployments.get("IPCTDelegator");
 	const communityAdminResult = await deploy("CommunityAdmin", {
 		from: deployer,
-		args: [cUSDToken, IPCTDelegator.address],
+		args: [cUSDToken, IPCTDelegator.address], //edi: should be timelock address; first must set community factory
 		log: true,
 		// gasLimit: 13000000,
 	});

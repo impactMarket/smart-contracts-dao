@@ -4,6 +4,7 @@ pragma solidity 0.8.5;
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/ICommunity.sol";
+import "./interfaces/ICommunityAdmin.sol";
 
 import "hardhat/console.sol";
 
@@ -21,7 +22,8 @@ contract Community is AccessControl {
         NONE,
         Valid,
         Locked,
-        Removed
+        Removed,
+        MaxClaimed
     } // starts by 0 (when user is not added yet)
 
     mapping(address => uint256) public cooldown;
@@ -33,6 +35,7 @@ contract Community is AccessControl {
     uint256 public baseInterval;
     uint256 public incrementInterval;
     uint256 public maxClaim;
+    uint256 public validBeneficiaries;
 
     address public previousCommunityContract;
     address public communityAdminAddress;
@@ -133,7 +136,7 @@ contract Community is AccessControl {
      */
     function addBeneficiary(address _account) external onlyManagers {
         require(beneficiaries[_account] == BeneficiaryState.NONE, "NOT_YET");
-        beneficiaries[_account] = BeneficiaryState.Valid;
+        changeBeneficiaryState(_account, BeneficiaryState.Valid);
         // solhint-disable-next-line not-rely-on-time
         cooldown[_account] = block.timestamp;
         claims[_account] = 0;
@@ -148,7 +151,7 @@ contract Community is AccessControl {
      */
     function lockBeneficiary(address _account) external onlyManagers {
         require(beneficiaries[_account] == BeneficiaryState.Valid, "NOT_YET");
-        beneficiaries[_account] = BeneficiaryState.Locked;
+        changeBeneficiaryState(_account, BeneficiaryState.Locked);
         emit BeneficiaryLocked(_account);
     }
 
@@ -157,7 +160,7 @@ contract Community is AccessControl {
      */
     function unlockBeneficiary(address _account) external onlyManagers {
         require(beneficiaries[_account] == BeneficiaryState.Locked, "NOT_YET");
-        beneficiaries[_account] = BeneficiaryState.Valid;
+        changeBeneficiaryState(_account, BeneficiaryState.Valid);
         emit BeneficiaryUnlocked(_account);
     }
 
@@ -170,7 +173,7 @@ contract Community is AccessControl {
                 beneficiaries[_account] == BeneficiaryState.Locked,
             "NOT_YET"
         );
-        beneficiaries[_account] = BeneficiaryState.Removed;
+        changeBeneficiaryState(_account, BeneficiaryState.Removed);
         emit BeneficiaryRemoved(_account);
     }
 
@@ -235,6 +238,12 @@ contract Community is AccessControl {
         emit CommunityUnlocked(msg.sender);
     }
 
+    function requestFundsFromTreasury() external onlyManagers {
+        uint256 balance = IERC20(cUSDAddress).balanceOf(address(this));
+        ICommunityAdmin communityAdminInstance = ICommunityAdmin(communityAdminAddress);
+        communityAdminInstance.fundCommunity();
+    }
+
     /**
      * Migrate funds in current community to new one.
      */
@@ -249,5 +258,19 @@ contract Community is AccessControl {
         bool success = IERC20(cUSDAddress).transfer(_newCommunity, balance);
         require(success, "NOT_ALLOWED");
         emit MigratedFunds(_newCommunity, balance);
+    }
+
+    function changeBeneficiaryState(address beneficiary, BeneficiaryState _newState) internal {
+        if (beneficiaries[beneficiary] == _newState) {
+            return;
+        }
+
+        beneficiaries[beneficiary] = _newState;
+
+        if (_newState == BeneficiaryState.Valid) {
+            validBeneficiaries++;
+        } else {
+            validBeneficiaries--;
+        }
     }
 }

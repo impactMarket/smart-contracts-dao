@@ -47,12 +47,14 @@ let beneficiaryD: SignerWithAddress;
 let Community: ethersTypes.ContractFactory;
 let CommunityFactory: ethersTypes.ContractFactory;
 let CommunityAdmin: ethersTypes.ContractFactory;
+let Treasury: ethersTypes.ContractFactory;
 let Token: ethersTypes.ContractFactory;
 
 // contract instances
 let communityInstance: ethersTypes.Contract;
 let communityFactoryInstance: ethersTypes.Contract;
 let communityAdminInstance: ethersTypes.Contract;
+let treasuryInstance: ethersTypes.Contract;
 let cUSDInstance: ethersTypes.Contract;
 
 BigNumber.config({ EXPONENTIAL_AT: 25 });
@@ -78,6 +80,7 @@ async function init() {
 	Community = await ethers.getContractFactory("Community");
 	CommunityFactory = await ethers.getContractFactory("CommunityFactory");
 	CommunityAdmin = await ethers.getContractFactory("CommunityAdmin");
+	Treasury = await ethers.getContractFactory("Treasury");
 	Token = await ethers.getContractFactory("TokenMock");
 }
 
@@ -93,6 +96,7 @@ const fiveCents = new BigNumber("50000000000000000");
 const zeroAddress = "0x0000000000000000000000000000000000000000";
 const mintAmount = new BigNumber("500000000000000000000");
 
+/*
 describe("Community - Beneficiary", () => {
 	before(async function () {
 		await init();
@@ -100,9 +104,11 @@ describe("Community - Beneficiary", () => {
 
 	beforeEach(async () => {
 		cUSDInstance = await Token.deploy("cUSD", "cUSD");
+        treasuryInstance = await Treasury.deploy();
 		communityAdminInstance = await CommunityAdmin.deploy(
 			cUSDInstance.address,
-			adminAccount1.address
+			adminAccount1.address,
+            treasuryInstance.address
 		);
 		communityFactoryInstance = await CommunityFactory.deploy(
 			cUSDInstance.address,
@@ -249,9 +255,11 @@ describe("Community - Claim", () => {
 
 	beforeEach(async () => {
 		cUSDInstance = await Token.deploy("cUSD", "cUSD");
+		treasuryInstance = await Treasury.deploy();
 		communityAdminInstance = await CommunityAdmin.deploy(
 			cUSDInstance.address,
-			adminAccount1.address
+			adminAccount1.address,
+			treasuryInstance.address
 		);
 		communityFactoryInstance = await CommunityFactory.deploy(
 			cUSDInstance.address,
@@ -450,9 +458,11 @@ describe("Community - Governance (2)", () => {
 
 	beforeEach(async () => {
 		cUSDInstance = await Token.deploy("cUSD", "cUSD");
+		treasuryInstance = await Treasury.deploy();
 		communityAdminInstance = await CommunityAdmin.deploy(
 			cUSDInstance.address,
-			adminAccount1.address
+			adminAccount1.address,
+			treasuryInstance.address
 		);
 		communityFactoryInstance = await CommunityFactory.deploy(
 			cUSDInstance.address,
@@ -515,7 +525,8 @@ describe("Community - Governance (2)", () => {
 	it("should not be able to migrate from invalid community", async () => {
 		const newcommunityAdminInstance = await CommunityAdmin.deploy(
 			cUSDInstance.address,
-			adminAccount1.address
+			adminAccount1.address,
+			treasuryInstance.address
 		);
 		await expect(
 			communityAdminInstance.migrateCommunity(
@@ -529,7 +540,8 @@ describe("Community - Governance (2)", () => {
 	it("should not be able to migrate community if not admin", async () => {
 		const newcommunityAdminInstance = await CommunityAdmin.deploy(
 			cUSDInstance.address,
-			adminAccount1.address
+			adminAccount1.address,
+			treasuryInstance.address
 		);
 		await expect(
 			communityAdminInstance.connect(adminAccount2).migrateCommunity(
@@ -667,10 +679,11 @@ describe("CommunityAdmin", () => {
 		await init();
 	});
 	beforeEach(async () => {
-		cUSDInstance = await Token.deploy("cUSD", "cUSD");
+		treasuryInstance = await Treasury.deploy();
 		communityAdminInstance = await CommunityAdmin.deploy(
 			cUSDInstance.address,
-			adminAccount1.address
+			adminAccount1.address,
+			treasuryInstance.address
 		);
 		communityFactoryInstance = await CommunityFactory.deploy(
 			cUSDInstance.address,
@@ -834,9 +847,11 @@ describe("Chaos test (complete flow)", async () => {
 	});
 	beforeEach(async () => {
 		cUSDInstance = await Token.deploy("cUSD", "cUSD");
+		treasuryInstance = await Treasury.deploy();
 		communityAdminInstance = await CommunityAdmin.deploy(
 			cUSDInstance.address,
-			adminAccount1.address
+			adminAccount1.address,
+			treasuryInstance.address
 		);
 		communityFactoryInstance = await CommunityFactory.deploy(
 			cUSDInstance.address,
@@ -1066,5 +1081,53 @@ describe("Chaos test (complete flow)", async () => {
 					.plus(2 * fiveCents.toNumber())
 					.toString()
 			);
+	});
+});
+ */
+
+describe("Community - getFunds", () => {
+	before(async function () {
+		await init();
+	});
+
+	beforeEach(async () => {
+		cUSDInstance = await Token.deploy("cUSD", "cUSD");
+		treasuryInstance = await Treasury.deploy();
+		communityAdminInstance = await CommunityAdmin.deploy(
+			cUSDInstance.address,
+			adminAccount1.address,
+			treasuryInstance.address
+		);
+		communityFactoryInstance = await CommunityFactory.deploy(
+			cUSDInstance.address,
+			communityAdminInstance.address
+		);
+		await communityAdminInstance.setCommunityFactory(
+			communityFactoryInstance.address
+		);
+
+		const tx = await communityAdminInstance.addCommunity(
+			communityManagerA.address,
+			claimAmountTwo.toString(),
+			maxClaimTen.toString(),
+			day.toString(),
+			hour.toString()
+		);
+
+		let receipt = await tx.wait();
+
+		const communityAddress = receipt.events?.filter((x: any) => {
+			return x.event == "CommunityAdded";
+		})[0]["args"]["_communityAddress"];
+		communityInstance = await Community.attach(communityAddress);
+		await cUSDInstance.mint(communityAddress, mintAmount.toString());
+	});
+
+	it("should be able to get funds", async () => {
+		await expect(
+			communityInstance
+				.connect(communityManagerA)
+				.requestFundsFromTreasury()
+		).to.be.fulfilled;
 	});
 });
