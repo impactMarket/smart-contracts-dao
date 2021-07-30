@@ -5,6 +5,8 @@ import "./interfaces/ICommunity.sol";
 import "./interfaces/ICommunityFactory.sol";
 import "./Community.sol";
 
+import "hardhat/console.sol";
+
 /**
  * @notice Welcome to CommunityAdmin, the main contract. This is an
  * administrative (for now) contract where the admins have control
@@ -14,6 +16,7 @@ import "./Community.sol";
 contract CommunityAdmin {
     address public admin;
     address public cUSDAddress;
+    address public treasuryAddress;
     mapping(address => bool) public communities;
     address public communityFactory;
 
@@ -37,9 +40,14 @@ contract CommunityAdmin {
      * @dev It sets the first admin, which later can add others
      * and add/remove communities.
      */
-    constructor(address _cUSDAddress, address _admin) public {
+    constructor(
+        address _cUSDAddress,
+        address _admin,
+        address _treasuryAddress
+    ) public {
         cUSDAddress = _cUSDAddress;
         admin = _admin;
+        treasuryAddress = _treasuryAddress;
     }
 
     modifier onlyAdmin() {
@@ -47,8 +55,17 @@ contract CommunityAdmin {
         _;
     }
 
+    modifier onlyCommunities() {
+        require(communities[msg.sender] == true, "NOT_COMMUNITY");
+        _;
+    }
+
     function setAdmin(address _newAdmin) external onlyAdmin {
         admin = _newAdmin;
+    }
+
+    function setTreasuryAddress(address _newTreasuryAddress) external onlyAdmin {
+        treasuryAddress = _newTreasuryAddress;
     }
 
     /**
@@ -135,5 +152,13 @@ contract CommunityAdmin {
         require(communityFactory == address(0), "");
         communityFactory = _communityFactory;
         emit CommunityFactoryChanged(_communityFactory);
+    }
+
+    function fundCommunity() external onlyCommunities {
+        ICommunity community = ICommunity(msg.sender);
+        uint256 balance = IERC20(cUSDAddress).balanceOf(msg.sender);
+        //        uint256 need = community.
+        //        require ()
+        console.log("fundCommunity");
     }
 }
