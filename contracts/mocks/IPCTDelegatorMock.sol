@@ -12,7 +12,8 @@ contract IPCTDelegatorMock is IPCTDelegator {
         address implementation_,
         uint256 votingPeriod_,
         uint256 votingDelay_,
-        uint256 proposalThreshold_
+        uint256 proposalThreshold_,
+        uint256 quorumVotes_
     )
         IPCTDelegator(
             timelock_,
@@ -22,7 +23,8 @@ contract IPCTDelegatorMock is IPCTDelegator {
             implementation_,
             votingPeriod_,
             votingDelay_,
-            proposalThreshold_
+            proposalThreshold_,
+            quorumVotes_
         )
     {}
 }

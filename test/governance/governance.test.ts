@@ -113,7 +113,8 @@ describe("IPCTGovernator", function () {
 			ipctDelegate.address,
 			17280,
 			1,
-			bigNum(1000000)
+			bigNum(1000000),
+			bigNum(4000000)
 		);
 
 		ipctDelegator = await IPCTDelegate.attach(ipctDelegator.address);

@@ -7,6 +7,7 @@ const TWO_DAYS_SECONDS = 2 * 24 * 60 * 60; // 2 days
 const VOTING_PERIOD_BLOCKS = 17280; // about 1 day
 const VOTING_DELAY_BLOCKS = 17280 * 2; // about 2 days
 const PROPOSAL_THRESHOLD: BigNumberish = parseEther("1000000"); // one million units
+const QUORUM_VOTES: BigNumberish = parseEther("4000000"); // four million units
 
 async function getContractAddress(
 	hre: HardhatRuntimeEnvironment,
@@ -49,6 +50,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 			VOTING_PERIOD_BLOCKS,
 			VOTING_DELAY_BLOCKS,
 			PROPOSAL_THRESHOLD,
+			QUORUM_VOTES,
 		],
 		log: true,
 		// gasLimit: 13000000,
