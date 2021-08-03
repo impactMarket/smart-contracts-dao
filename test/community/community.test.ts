@@ -89,6 +89,7 @@ const decimals = new BigNumber(10).pow(18);
 const hour = time.duration.hours(1);
 const day = time.duration.days(1);
 const week = time.duration.weeks(1);
+const month = time.duration.days(30);
 // const month = time.duration.days(30);
 const claimAmountTwo = new BigNumber(bigNum(2));
 const maxClaimTen = new BigNumber(bigNum(10));
@@ -1092,12 +1093,17 @@ describe("Community - getFunds", () => {
 
 	beforeEach(async () => {
 		cUSDInstance = await Token.deploy("cUSD", "cUSD");
-		treasuryInstance = await Treasury.deploy();
 		communityAdminInstance = await CommunityAdmin.deploy(
 			cUSDInstance.address,
 			adminAccount1.address,
-			treasuryInstance.address
+			month.toString()
 		);
+		treasuryInstance = await Treasury.deploy(
+			cUSDInstance.address,
+			adminAccount1.address,
+			communityAdminInstance.address
+		);
+		communityAdminInstance.setTreasury(treasuryInstance.address);
 		communityFactoryInstance = await CommunityFactory.deploy(
 			cUSDInstance.address,
 			communityAdminInstance.address

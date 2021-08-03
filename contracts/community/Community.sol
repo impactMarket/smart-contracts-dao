@@ -36,6 +36,7 @@ contract Community is AccessControl {
     uint256 public incrementInterval;
     uint256 public maxClaim;
     uint256 public validBeneficiaries;
+    uint256 public validBeneficiariesClaims;
 
     address public previousCommunityContract;
     address public communityAdminAddress;
@@ -188,6 +189,7 @@ contract Community is AccessControl {
         claimed[msg.sender] = claimed[msg.sender] + claimAmount;
 
         claims[msg.sender] += 1;
+        validBeneficiariesClaims++;
         cooldown[msg.sender] = uint256(block.timestamp + lastInterval(msg.sender));
 
         emit BeneficiaryClaim(msg.sender, claimAmount);
@@ -269,8 +271,10 @@ contract Community is AccessControl {
 
         if (_newState == BeneficiaryState.Valid) {
             validBeneficiaries++;
+            validBeneficiariesClaims += claims[beneficiary];
         } else {
             validBeneficiaries--;
+            validBeneficiariesClaims -= claims[beneficiary];
         }
     }
 }

@@ -4,6 +4,7 @@ pragma solidity 0.8.5;
 import "./interfaces/ICommunity.sol";
 import "./interfaces/ICommunityFactory.sol";
 import "./Community.sol";
+import "../token/interfaces/ITreasury.sol";
 
 import "hardhat/console.sol";
 
@@ -19,6 +20,7 @@ contract CommunityAdmin {
     address public treasuryAddress;
     mapping(address => bool) public communities;
     address public communityFactory;
+    uint256 public allowanceInterval;
 
     event CommunityAdded(
         address indexed _communityAddress,
@@ -43,11 +45,11 @@ contract CommunityAdmin {
     constructor(
         address _cUSDAddress,
         address _admin,
-        address _treasuryAddress
+        uint256 _allowanceInterval
     ) public {
         cUSDAddress = _cUSDAddress;
         admin = _admin;
-        treasuryAddress = _treasuryAddress;
+        allowanceInterval = _allowanceInterval;
     }
 
     modifier onlyAdmin() {
@@ -64,8 +66,12 @@ contract CommunityAdmin {
         admin = _newAdmin;
     }
 
-    function setTreasuryAddress(address _newTreasuryAddress) external onlyAdmin {
+    function setTreasury(address _newTreasuryAddress) external onlyAdmin {
         treasuryAddress = _newTreasuryAddress;
+    }
+
+    function setAllowanceInterval(uint256 _allowanceInterval) external onlyAdmin {
+        allowanceInterval = _allowanceInterval;
     }
 
     /**
@@ -155,10 +161,18 @@ contract CommunityAdmin {
     }
 
     function fundCommunity() external onlyCommunities {
+        console.log("comm admin fundCommunity");
         ICommunity community = ICommunity(msg.sender);
         uint256 balance = IERC20(cUSDAddress).balanceOf(msg.sender);
-        //        uint256 need = community.
-        //        require ()
-        console.log("fundCommunity");
+        uint256 validBeneficiaries = community.validBeneficiaries();
+        uint256 averageClaimInterval = community.baseInterval() +
+            community.validBeneficiariesClaims() /
+            validBeneficiaries;
+        uint256 allowance = (allowanceInterval * validBeneficiaries * community.claimAmount()) /
+            averageClaimInterval;
+
+        console.log("allowance ", allowance);
+
+        ITreasury(treasuryAddress).transferToCommunity(msg.sender, allowance);
     }
 }

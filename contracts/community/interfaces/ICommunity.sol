@@ -9,4 +9,6 @@ interface ICommunity {
     function previousCommunityContract() external view returns(address);
     function hasRole(bytes32 role, address account) external view returns(bool);
     function migrateFunds(address _newCommunity, address _newCommunityManager) external;
+    function validBeneficiaries() external view returns(uint);
+    function validBeneficiariesClaims() external view returns(uint);
 }
