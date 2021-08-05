@@ -6,6 +6,7 @@ pragma solidity 0.8.5;
  */
 interface ICommunityAdmin {
     function fundCommunity() external;
+    function calculateCommunityTrancheAmount(address _community) external returns (uint256);
 }
 
 

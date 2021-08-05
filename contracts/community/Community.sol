@@ -30,13 +30,15 @@ contract Community is AccessControl {
     mapping(address => uint256) public claimed;
     mapping(address => uint256) public claims;
     mapping(address => BeneficiaryState) public beneficiaries;
+    address[] public beneficiariesList;
 
     uint256 public claimAmount;
     uint256 public baseInterval;
     uint256 public incrementInterval;
     uint256 public maxClaim;
-    uint256 public validBeneficiaries;
-    uint256 public validBeneficiariesClaims;
+    uint256 public validBeneficiaryCount;
+    uint256 public governanceDonations;
+    uint256 public privateDonations;
 
     address public previousCommunityContract;
     address public communityAdminAddress;
@@ -141,6 +143,7 @@ contract Community is AccessControl {
         // solhint-disable-next-line not-rely-on-time
         cooldown[_account] = block.timestamp;
         claims[_account] = 0;
+        beneficiariesList.push(_account);
         // send 5 cents when adding a new beneficiary
         bool success = IERC20(cUSDAddress).transfer(_account, 50000000000000000);
         require(success, "NOT_ALLOWED");
@@ -189,7 +192,6 @@ contract Community is AccessControl {
         claimed[msg.sender] = claimed[msg.sender] + claimAmount;
 
         claims[msg.sender] += 1;
-        validBeneficiariesClaims++;
         cooldown[msg.sender] = uint256(block.timestamp + lastInterval(msg.sender));
 
         emit BeneficiaryClaim(msg.sender, claimAmount);
@@ -240,8 +242,7 @@ contract Community is AccessControl {
         emit CommunityUnlocked(msg.sender);
     }
 
-    function requestFundsFromTreasury() external onlyManagers {
-        uint256 balance = IERC20(cUSDAddress).balanceOf(address(this));
+    function requestFunds() external onlyManagers {
         ICommunityAdmin communityAdminInstance = ICommunityAdmin(communityAdminAddress);
         communityAdminInstance.fundCommunity();
     }
@@ -269,12 +270,6 @@ contract Community is AccessControl {
 
         beneficiaries[beneficiary] = _newState;
 
-        if (_newState == BeneficiaryState.Valid) {
-            validBeneficiaries++;
-            validBeneficiariesClaims += claims[beneficiary];
-        } else {
-            validBeneficiaries--;
-            validBeneficiariesClaims -= claims[beneficiary];
-        }
+        (_newState == BeneficiaryState.Valid) ? validBeneficiaryCount++ : validBeneficiaryCount--;
     }
 }

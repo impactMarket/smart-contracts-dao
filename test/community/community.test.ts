@@ -90,12 +90,13 @@ const hour = time.duration.hours(1);
 const day = time.duration.days(1);
 const week = time.duration.weeks(1);
 const month = time.duration.days(30);
-// const month = time.duration.days(30);
 const claimAmountTwo = new BigNumber(bigNum(2));
 const maxClaimTen = new BigNumber(bigNum(10));
 const fiveCents = new BigNumber("50000000000000000");
 const zeroAddress = "0x0000000000000000000000000000000000000000";
 const mintAmount = new BigNumber("500000000000000000000");
+const communityMinTranche = bigNum(100);
+const communityMaxTranche = bigNum(5000);
 
 /*
 describe("Community - Beneficiary", () => {
@@ -1096,7 +1097,8 @@ describe("Community - getFunds", () => {
 		communityAdminInstance = await CommunityAdmin.deploy(
 			cUSDInstance.address,
 			adminAccount1.address,
-			month.toString()
+			communityMinTranche,
+			communityMaxTranche
 		);
 		treasuryInstance = await Treasury.deploy(
 			cUSDInstance.address,
@@ -1126,14 +1128,15 @@ describe("Community - getFunds", () => {
 			return x.event == "CommunityAdded";
 		})[0]["args"]["_communityAddress"];
 		communityInstance = await Community.attach(communityAddress);
-		await cUSDInstance.mint(communityAddress, mintAmount.toString());
+		await cUSDInstance.mint(
+			treasuryInstance.address,
+			mintAmount.toString()
+		);
 	});
 
 	it("should be able to get funds", async () => {
 		await expect(
-			communityInstance
-				.connect(communityManagerA)
-				.requestFundsFromTreasury()
+			communityInstance.connect(communityManagerA).requestFunds()
 		).to.be.fulfilled;
 	});
 });

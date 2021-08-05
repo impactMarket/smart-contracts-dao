@@ -21,12 +21,12 @@ contract Treasury {
     }
 
     modifier onlyAdmin() {
-        require(msg.sender == admin, "NOT_ADMIN");
+        require(msg.sender == admin, "Treasury: NOT_ADMIN");
         _;
     }
 
     modifier onlyCommunityAdmin() {
-        require(msg.sender == communityAdmin, "NOT_ALLOWED");
+        require(msg.sender == communityAdmin, "Treasury: NOT_COMMUNITY_ADMIN");
         _;
     }
 
@@ -38,9 +38,11 @@ contract Treasury {
         communityAdmin = _communityAdmin;
     }
 
-    function transferToCommunity(address _community, uint256 _amount) external onlyCommunityAdmin {
-        console.log("treasury: transferToCommunity");
-        bool success = IERC20(cUSDAddress).transfer(_community, _amount);
-        require(success, "NOT_ALLOWED");
+    function transferToCommunity(address _communityAddress, uint256 _amount)
+        external
+        onlyCommunityAdmin
+    {
+        bool success = IERC20(cUSDAddress).transfer(_communityAddress, _amount);
+        require(success, "CommunityAdmin::fundCommunity: Something went wrong");
     }
 }

@@ -18,9 +18,12 @@ contract CommunityAdmin {
     address public admin;
     address public cUSDAddress;
     address public treasuryAddress;
-    mapping(address => bool) public communities;
     address public communityFactory;
-    uint256 public allowanceInterval;
+
+    mapping(address => bool) public communities;
+    address[] public communitiesList;
+    uint256 public communityMinTranche;
+    uint256 public communityMaxTranche;
 
     event CommunityAdded(
         address indexed _communityAddress,
@@ -37,6 +40,8 @@ contract CommunityAdmin {
         address indexed _previousCommunityAddress
     );
     event CommunityFactoryChanged(address indexed _newCommunityFactory);
+    event CommunityMinTrancheChanged(uint256 indexed _newCommunityMinTranche);
+    event CommunityMaxTrancheChanged(uint256 indexed _newCommunitMaxTranche);
 
     /**
      * @dev It sets the first admin, which later can add others
@@ -45,20 +50,22 @@ contract CommunityAdmin {
     constructor(
         address _cUSDAddress,
         address _admin,
-        uint256 _allowanceInterval
+        uint256 _communityMinTranche,
+        uint256 _communityMaxTranche
     ) public {
         cUSDAddress = _cUSDAddress;
         admin = _admin;
-        allowanceInterval = _allowanceInterval;
+        communityMinTranche = _communityMinTranche;
+        communityMaxTranche = _communityMaxTranche;
     }
 
     modifier onlyAdmin() {
-        require(msg.sender == admin, "NOT_ADMIN");
+        require(msg.sender == admin, "CommunityAdmin: NOT_ADMIN");
         _;
     }
 
     modifier onlyCommunities() {
-        require(communities[msg.sender] == true, "NOT_COMMUNITY");
+        require(communities[msg.sender] == true, "CommunityAdmin: NOT_COMMUNITY");
         _;
     }
 
@@ -70,8 +77,20 @@ contract CommunityAdmin {
         treasuryAddress = _newTreasuryAddress;
     }
 
-    function setAllowanceInterval(uint256 _allowanceInterval) external onlyAdmin {
-        allowanceInterval = _allowanceInterval;
+    /**
+     * @dev Set the community min tranche
+     */
+    function setCommunityMinTranche(uint256 _newCommunityMinTranche) external onlyAdmin {
+        communityMinTranche = _newCommunityMinTranche;
+        emit CommunityMinTrancheChanged(_newCommunityMinTranche);
+    }
+
+    /**
+     * @dev Set the community max tranche
+     */
+    function setCommunityMaxTranche(uint256 _newCommunityMaxTranche) external onlyAdmin {
+        communityMaxTranche = _newCommunityMaxTranche;
+        emit CommunityMaxTrancheChanged(_newCommunityMaxTranche);
     }
 
     /**
@@ -94,8 +113,9 @@ contract CommunityAdmin {
             _incrementInterval,
             address(0)
         );
-        require(community != address(0), "NOT_VALID");
+        require(community != address(0), "CommunityAdmin::addCommunity: NOT_VALID");
         communities[community] = true;
+        communitiesList.push(community);
         emit CommunityAdded(
             community,
             _firstManager,
@@ -117,7 +137,10 @@ contract CommunityAdmin {
         address _newCommunityFactory
     ) external onlyAdmin {
         communities[_previousCommunityAddress] = false;
-        require(address(_previousCommunityAddress) != address(0), "NOT_VALID");
+        require(
+            address(_previousCommunityAddress) != address(0),
+            "CommunityAdmin::migrateCommunity: NOT_VALID"
+        );
         ICommunity previousCommunity = ICommunity(_previousCommunityAddress);
         address community = ICommunityFactory(_newCommunityFactory).deployCommunity(
             _firstManager,
@@ -127,7 +150,7 @@ contract CommunityAdmin {
             previousCommunity.incrementInterval(),
             _previousCommunityAddress
         );
-        require(community != address(0), "NOT_VALID");
+        require(community != address(0), "CommunityAdmin::migrateCommunity: NOT_VALID");
         previousCommunity.migrateFunds(community, _firstManager);
         communities[community] = true;
         emit CommunityMigrated(_firstManager, community, _previousCommunityAddress);
@@ -146,7 +169,10 @@ contract CommunityAdmin {
      */
     function setCommunityFactory(address _communityFactory) external onlyAdmin {
         ICommunityFactory factory = ICommunityFactory(_communityFactory);
-        require(factory.communityAdminAddress() == address(this), "NOT_ALLOWED");
+        require(
+            factory.communityAdminAddress() == address(this),
+            "CommunityAdmin::setCommunityFactory: NOT_ALLOWED"
+        );
         communityFactory = _communityFactory;
         emit CommunityFactoryChanged(_communityFactory);
     }
@@ -161,18 +187,32 @@ contract CommunityAdmin {
     }
 
     function fundCommunity() external onlyCommunities {
-        console.log("comm admin fundCommunity");
-        ICommunity community = ICommunity(msg.sender);
-        uint256 balance = IERC20(cUSDAddress).balanceOf(msg.sender);
-        uint256 validBeneficiaries = community.validBeneficiaries();
-        uint256 averageClaimInterval = community.baseInterval() +
-            community.validBeneficiariesClaims() /
-            validBeneficiaries;
-        uint256 allowance = (allowanceInterval * validBeneficiaries * community.claimAmount()) /
-            averageClaimInterval;
+        require(
+            IERC20(cUSDAddress).balanceOf(msg.sender) <= communityMinTranche,
+            "CommunityAdmin::fundCommunity: you have enough funds"
+        );
+        uint256 trancheAmount = calculateCommunityTrancheAmount(msg.sender);
 
-        console.log("allowance ", allowance);
+        ITreasury(treasuryAddress).transferToCommunity(msg.sender, trancheAmount);
+    }
 
-        ITreasury(treasuryAddress).transferToCommunity(msg.sender, allowance);
+    function calculateCommunityTrancheAmount(address _community) public returns (uint256) {
+        ICommunity community = ICommunity(_community);
+        uint256 validBeneficiaries = community.validBeneficiaryCount();
+        uint256 claimAmount = community.claimAmount();
+        uint256 governanceDonations = community.governanceDonations();
+        uint256 privateDonations = community.privateDonations();
+
+        //I multiplied some variables with 1000 and then I divided the result in order to have much more precision
+        uint256 trancheAmount = (validBeneficiaries * 10**21) / claimAmount;
+        uint256 bonusFactor = (governanceDonations > 0)
+            ? ((governanceDonations + privateDonations) * 1000) / governanceDonations
+            : 1000;
+        trancheAmount = (trancheAmount * bonusFactor) / 1000000;
+
+        trancheAmount = (trancheAmount > communityMinTranche) ? trancheAmount : communityMinTranche;
+        trancheAmount = (trancheAmount < communityMaxTranche) ? trancheAmount : communityMaxTranche;
+
+        return trancheAmount;
     }
 }
