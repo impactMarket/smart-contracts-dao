@@ -53,6 +53,10 @@ contract CommunityAdmin {
         uint256 _communityMinTranche,
         uint256 _communityMaxTranche
     ) public {
+        require(
+            _communityMinTranche < _communityMaxTranche,
+            "CommunityAdmin::constructor: communityMinTranche should be less then communityMaxTranche"
+        );
         cUSDAddress = _cUSDAddress;
         admin = _admin;
         communityMinTranche = _communityMinTranche;
@@ -81,6 +85,10 @@ contract CommunityAdmin {
      * @dev Set the community min tranche
      */
     function setCommunityMinTranche(uint256 _newCommunityMinTranche) external onlyAdmin {
+        require(
+            _newCommunityMinTranche < communityMaxTranche,
+            "CommunityAdmin::setCommunityMinTranche: New communityMinTranche should be less then communityMaxTranche"
+        );
         communityMinTranche = _newCommunityMinTranche;
         emit CommunityMinTrancheChanged(_newCommunityMinTranche);
     }
@@ -89,6 +97,10 @@ contract CommunityAdmin {
      * @dev Set the community max tranche
      */
     function setCommunityMaxTranche(uint256 _newCommunityMaxTranche) external onlyAdmin {
+        require(
+            communityMinTranche < _newCommunityMaxTranche,
+            "CommunityAdmin::setCommunityMaxTranche: New communityMaxTranche should be greater then communityMinTranche"
+        );
         communityMaxTranche = _newCommunityMaxTranche;
         emit CommunityMaxTrancheChanged(_newCommunityMaxTranche);
     }
