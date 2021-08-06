@@ -1105,11 +1105,13 @@ describe("Community - getFunds", () => {
 			adminAccount1.address,
 			communityAdminInstance.address
 		);
-		communityAdminInstance.setTreasury(treasuryInstance.address);
 		communityFactoryInstance = await CommunityFactory.deploy(
 			cUSDInstance.address,
 			communityAdminInstance.address
 		);
+
+		await communityAdminInstance.setTreasury(treasuryInstance.address);
+
 		await communityAdminInstance.setCommunityFactory(
 			communityFactoryInstance.address
 		);
@@ -1134,9 +1136,126 @@ describe("Community - getFunds", () => {
 		);
 	});
 
-	it("should be able to get funds", async () => {
+	it("should be able to get funds if manager", async () => {
 		await expect(
 			communityInstance.connect(communityManagerA).requestFunds()
 		).to.be.fulfilled;
+	});
+
+	it("should not be able to get funds if not manager", async () => {
+		await expect(
+			communityInstance.connect(beneficiaryA).requestFunds()
+		).to.be.rejectedWith("Community: NOT_MANAGER");
+	});
+
+	it("should not be able to change communityMinTranche if not admin", async () => {
+		await expect(
+			communityAdminInstance
+				.connect(communityManagerA)
+				.setCommunityMinTranche(bigNum(123))
+		).to.be.rejectedWith("CommunityAdmin: NOT_ADMIN");
+	});
+
+	it("should be able to change communityMinTranche if admin", async () => {
+		await expect(
+			communityAdminInstance
+				.connect(adminAccount1)
+				.setCommunityMinTranche(bigNum(123))
+		).to.be.fulfilled;
+
+		expect(await communityAdminInstance.communityMinTranche()).to.be.equal(
+			bigNum(123)
+		);
+	});
+
+	it("should not be able to change communityMaxTranche if not admin", async () => {
+		await expect(
+			communityAdminInstance
+				.connect(communityManagerA)
+				.setCommunityMaxTranche(bigNum(123))
+		).to.be.rejectedWith("CommunityAdmin: NOT_ADMIN");
+	});
+
+	it("should be able to change communityMaxTranche if admin", async () => {
+		await expect(
+			communityAdminInstance
+				.connect(adminAccount1)
+				.setCommunityMaxTranche(bigNum(1234))
+		).to.be.fulfilled;
+
+		expect(await communityAdminInstance.communityMaxTranche()).to.be.equal(
+			bigNum(1234)
+		);
+	});
+
+	it("should not be able to change set communityMinTranche greater than communityMaxTranche", async () => {
+		await expect(
+			communityAdminInstance
+				.connect(adminAccount1)
+				.setCommunityMinTranche(bigNum(50))
+		).to.be.fulfilled;
+
+		await expect(
+			communityAdminInstance
+				.connect(adminAccount1)
+				.setCommunityMaxTranche(bigNum(100))
+		).to.be.fulfilled;
+
+		await expect(
+			communityAdminInstance
+				.connect(adminAccount1)
+				.setCommunityMinTranche(bigNum(200))
+		).to.be.rejectedWith(
+			"CommunityAdmin::setCommunityMinTranche: New communityMinTranche should be less then communityMaxTranche"
+		);
+
+		expect(await communityAdminInstance.communityMinTranche()).to.be.equal(
+			bigNum(50)
+		);
+		expect(await communityAdminInstance.communityMaxTranche()).to.be.equal(
+			bigNum(100)
+		);
+	});
+
+	it("should not be able to change set communityMaxTranche less than communityMinTranche", async () => {
+		await expect(
+			communityAdminInstance
+				.connect(adminAccount1)
+				.setCommunityMinTranche(bigNum(50))
+		).to.be.fulfilled;
+
+		await expect(
+			communityAdminInstance
+				.connect(adminAccount1)
+				.setCommunityMaxTranche(bigNum(100))
+		).to.be.fulfilled;
+
+		await expect(
+			communityAdminInstance
+				.connect(adminAccount1)
+				.setCommunityMaxTranche(bigNum(25))
+		).to.be.rejectedWith(
+			"CommunityAdmin::setCommunityMaxTranche: New communityMaxTranche should be greater then communityMinTranche"
+		);
+
+		expect(await communityAdminInstance.communityMinTranche()).to.be.equal(
+			bigNum(50)
+		);
+		expect(await communityAdminInstance.communityMaxTranche()).to.be.equal(
+			bigNum(100)
+		);
+	});
+
+	it("should not be able to deploy CommunityAdmin with communityMaxTranche less than communityMinTranche", async () => {
+		await expect(
+			CommunityAdmin.deploy(
+				cUSDInstance.address,
+				adminAccount1.address,
+				communityMaxTranche,
+				communityMinTranche
+			)
+		).to.be.rejectedWith(
+			"CommunityAdmin::constructor: communityMinTranche should be less then communityMaxTranche"
+		);
 	});
 });
