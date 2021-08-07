@@ -10,6 +10,8 @@ import { ethers, network, waffle } from "hardhat";
 import type * as ethersTypes from "ethers";
 import { DeployFunction } from "hardhat-deploy/types";
 
+const { deployments } = require("hardhat");
+
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const {
 	expectRevert,
@@ -98,7 +100,6 @@ const mintAmount = new BigNumber("500000000000000000000");
 const communityMinTranche = bigNum(100);
 const communityMaxTranche = bigNum(5000);
 
-/*
 describe("Community - Beneficiary", () => {
 	before(async function () {
 		await init();
@@ -106,16 +107,23 @@ describe("Community - Beneficiary", () => {
 
 	beforeEach(async () => {
 		cUSDInstance = await Token.deploy("cUSD", "cUSD");
-        treasuryInstance = await Treasury.deploy();
 		communityAdminInstance = await CommunityAdmin.deploy(
 			cUSDInstance.address,
 			adminAccount1.address,
-            treasuryInstance.address
+			communityMinTranche,
+			communityMaxTranche
+		);
+		treasuryInstance = await Treasury.deploy(
+			cUSDInstance.address,
+			adminAccount1.address,
+			communityAdminInstance.address
 		);
 		communityFactoryInstance = await CommunityFactory.deploy(
 			cUSDInstance.address,
 			communityAdminInstance.address
 		);
+
+		await communityAdminInstance.setTreasury(treasuryInstance.address);
 		await communityAdminInstance.setCommunityFactory(
 			communityFactoryInstance.address
 		);
@@ -257,16 +265,23 @@ describe("Community - Claim", () => {
 
 	beforeEach(async () => {
 		cUSDInstance = await Token.deploy("cUSD", "cUSD");
-		treasuryInstance = await Treasury.deploy();
 		communityAdminInstance = await CommunityAdmin.deploy(
 			cUSDInstance.address,
 			adminAccount1.address,
-			treasuryInstance.address
+			communityMinTranche,
+			communityMaxTranche
+		);
+		treasuryInstance = await Treasury.deploy(
+			cUSDInstance.address,
+			adminAccount1.address,
+			communityAdminInstance.address
 		);
 		communityFactoryInstance = await CommunityFactory.deploy(
 			cUSDInstance.address,
 			communityAdminInstance.address
 		);
+
+		await communityAdminInstance.setTreasury(treasuryInstance.address);
 		await communityAdminInstance.setCommunityFactory(
 			communityFactoryInstance.address
 		);
@@ -460,16 +475,23 @@ describe("Community - Governance (2)", () => {
 
 	beforeEach(async () => {
 		cUSDInstance = await Token.deploy("cUSD", "cUSD");
-		treasuryInstance = await Treasury.deploy();
 		communityAdminInstance = await CommunityAdmin.deploy(
 			cUSDInstance.address,
 			adminAccount1.address,
-			treasuryInstance.address
+			communityMinTranche,
+			communityMaxTranche
+		);
+		treasuryInstance = await Treasury.deploy(
+			cUSDInstance.address,
+			adminAccount1.address,
+			communityAdminInstance.address
 		);
 		communityFactoryInstance = await CommunityFactory.deploy(
 			cUSDInstance.address,
 			communityAdminInstance.address
 		);
+
+		await communityAdminInstance.setTreasury(treasuryInstance.address);
 		await communityAdminInstance.setCommunityFactory(
 			communityFactoryInstance.address
 		);
@@ -528,7 +550,8 @@ describe("Community - Governance (2)", () => {
 		const newcommunityAdminInstance = await CommunityAdmin.deploy(
 			cUSDInstance.address,
 			adminAccount1.address,
-			treasuryInstance.address
+			communityMinTranche,
+			communityMaxTranche
 		);
 		await expect(
 			communityAdminInstance.migrateCommunity(
@@ -543,7 +566,8 @@ describe("Community - Governance (2)", () => {
 		const newcommunityAdminInstance = await CommunityAdmin.deploy(
 			cUSDInstance.address,
 			adminAccount1.address,
-			treasuryInstance.address
+			communityMinTranche,
+			communityMaxTranche
 		);
 		await expect(
 			communityAdminInstance.connect(adminAccount2).migrateCommunity(
@@ -681,16 +705,24 @@ describe("CommunityAdmin", () => {
 		await init();
 	});
 	beforeEach(async () => {
-		treasuryInstance = await Treasury.deploy();
+		cUSDInstance = await Token.deploy("cUSD", "cUSD");
 		communityAdminInstance = await CommunityAdmin.deploy(
 			cUSDInstance.address,
 			adminAccount1.address,
-			treasuryInstance.address
+			communityMinTranche,
+			communityMaxTranche
+		);
+		treasuryInstance = await Treasury.deploy(
+			cUSDInstance.address,
+			adminAccount1.address,
+			communityAdminInstance.address
 		);
 		communityFactoryInstance = await CommunityFactory.deploy(
 			cUSDInstance.address,
 			communityAdminInstance.address
 		);
+
+		await communityAdminInstance.setTreasury(treasuryInstance.address);
 		await communityAdminInstance.setCommunityFactory(
 			communityFactoryInstance.address
 		);
@@ -849,16 +881,23 @@ describe("Chaos test (complete flow)", async () => {
 	});
 	beforeEach(async () => {
 		cUSDInstance = await Token.deploy("cUSD", "cUSD");
-		treasuryInstance = await Treasury.deploy();
 		communityAdminInstance = await CommunityAdmin.deploy(
 			cUSDInstance.address,
 			adminAccount1.address,
-			treasuryInstance.address
+			communityMinTranche,
+			communityMaxTranche
+		);
+		treasuryInstance = await Treasury.deploy(
+			cUSDInstance.address,
+			adminAccount1.address,
+			communityAdminInstance.address
 		);
 		communityFactoryInstance = await CommunityFactory.deploy(
 			cUSDInstance.address,
 			communityAdminInstance.address
 		);
+
+		await communityAdminInstance.setTreasury(treasuryInstance.address);
 		await communityAdminInstance.setCommunityFactory(
 			communityFactoryInstance.address
 		);
@@ -1085,7 +1124,6 @@ describe("Chaos test (complete flow)", async () => {
 			);
 	});
 });
- */
 
 describe("Community - getFunds", () => {
 	before(async function () {
@@ -1093,6 +1131,13 @@ describe("Community - getFunds", () => {
 	});
 
 	beforeEach(async () => {
+		// await deployments.fixture(['TokenMock']);
+		// const cUSDDeployment = await deployments.get('TokenMock');
+		// cUSDInstance = await ethers.getContractAt('TokenMock', adminAccount1.address);
+		// console.log(cUSDInstance.address);
+		// console.log(await cUSDInstance.balanceOf(adminAccount1.address));
+		// console.log(await cUSDInstance.mint(adminAccount1.address, mintAmount.toString()));
+
 		cUSDInstance = await Token.deploy("cUSD", "cUSD");
 		communityAdminInstance = await CommunityAdmin.deploy(
 			cUSDInstance.address,
