@@ -205,6 +205,7 @@ contract CommunityAdmin {
         );
         uint256 trancheAmount = calculateCommunityTrancheAmount(msg.sender);
 
+        console.log("fundCommunity");
         ITreasury(treasuryAddress).transferToCommunity(msg.sender, trancheAmount);
     }
 
