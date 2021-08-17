@@ -29,6 +29,7 @@ async function getContractAddress(
 }
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
+	// @ts-ignore
 	const { deployments, getNamedAccounts } = hre;
 	const { deploy } = deployments;
 	const { deployer } = await getNamedAccounts();
@@ -52,21 +53,18 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 			PROPOSAL_THRESHOLD,
 			QUORUM_VOTES,
 		],
-		log: true,
-		// gasLimit: 13000000,
+		log: true
 	});
 
 	const timelockResult = await deploy("IPCTTimelock", {
 		from: deployer,
 		args: [delegatorAddress, TWO_DAYS_SECONDS],
-		log: true,
-		// gasLimit: 13000000,
+		log: true
 	});
 
 	const delegateResult = await deploy("IPCTDelegate", {
 		from: deployer,
-		log: true,
-		// gasLimit: 13000000,
+		log: true
 	});
 };
 
