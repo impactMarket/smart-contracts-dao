@@ -18,6 +18,9 @@ import "hardhat/console.sol";
  */
 contract Community is AccessControl {
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
+
+    uint256 public constant DEFAULT_AMOUNT = 5e16;
+
     enum BeneficiaryState {
         NONE,
         Valid,
@@ -102,9 +105,10 @@ contract Community is AccessControl {
     }
 
     modifier onlyValidBeneficiary() {
-        require(beneficiaries[msg.sender] != BeneficiaryState.Locked, "Community: LOCKED");
-        require(beneficiaries[msg.sender] != BeneficiaryState.Removed, "Community: REMOVED");
-        require(beneficiaries[msg.sender] == BeneficiaryState.Valid, "Community: NOT_BENEFICIARY");
+        require(
+            beneficiaries[msg.sender] == BeneficiaryState.Valid,
+            "Community: NOT_VALID_BENEFICIARY"
+        );
         _;
     }
 
@@ -147,8 +151,8 @@ contract Community is AccessControl {
         cooldown[_account] = block.timestamp;
         claims[_account] = 0;
         beneficiariesList.push(_account);
-        // send 5 cents when adding a new beneficiary
-        bool success = IERC20(cUSDAddress).transfer(_account, 50000000000000000);
+        // send default amount when adding a new beneficiary
+        bool success = IERC20(cUSDAddress).transfer(_account, DEFAULT_AMOUNT);
         require(success, "Community::addBeneficiary: NOT_ALLOWED");
         emit BeneficiaryAdded(_account);
     }
@@ -203,9 +207,9 @@ contract Community is AccessControl {
         claims[msg.sender] += 1;
         cooldown[msg.sender] = uint256(block.timestamp + lastInterval(msg.sender));
 
-        emit BeneficiaryClaim(msg.sender, claimAmount);
         bool success = IERC20(cUSDAddress).transfer(msg.sender, claimAmount);
         require(success, "Community::claim: NOT_ALLOWED");
+        emit BeneficiaryClaim(msg.sender, claimAmount);
     }
 
     function lastInterval(address _beneficiary) public view returns (uint256) {
