@@ -1,8 +1,8 @@
 
 // @ts-ignore
 import {deployments, ethers, getNamedAccounts } from "hardhat";
-import {expect} from "./chai-setup";
-import { advanceTimeAndBlockNTimes } from "./TimeTravel";
+import {expect} from "./utils/chai-setup";
+import { advanceTimeAndBlockNTimes } from "./utils/TimeTravel";
 
 const EPOCH_SIZE = 17280;
 
