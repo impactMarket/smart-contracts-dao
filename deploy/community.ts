@@ -37,12 +37,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	const communityAdminResult = await deploy("CommunityAdmin", {
 		from: deployer,
-		args: [
-			cUSDToken,
-			deployer,
-			COMMUNITY_MIN_TRANCHE,
-			COMMUNITY_MAX_TRANCHE,
-		],
+		args: [cUSDToken, COMMUNITY_MIN_TRANCHE, COMMUNITY_MAX_TRANCHE],
 		log: true,
 		// gasLimit: 13000000,
 	});
@@ -70,7 +65,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	await CommunityAdminContract.setCommunityFactory(
 		communityFactoryResult.address
 	);
-	await CommunityAdminContract.setAdmin(IPCTTimelock.address);
+	await CommunityAdminContract.transferOwnership(IPCTTimelock.address);
 	await TreasuryContract.setCommunityAdmin(communityAdminResult.address);
 	await TreasuryContract.setAdmin(IPCTTimelock.address);
 };

@@ -128,7 +128,6 @@ describe("IPCTGovernator", function () {
 
 		communityAdmin = await CommunityAdmin.deploy(
 			testToken1.address,
-			owner.address,
 			communityMinTranche,
 			communityMaxTranche
 		);
@@ -144,7 +143,7 @@ describe("IPCTGovernator", function () {
 		);
 
 		await communityAdmin.setCommunityFactory(communityFactory.address);
-		await communityAdmin.setAdmin(ipctTimelock.address);
+		await communityAdmin.transferOwnership(ipctTimelock.address);
 
 		await ipctToken.transfer(alice.address, bigNum(1000001));
 		await ipctToken.transfer(bob.address, bigNum(1000001));
