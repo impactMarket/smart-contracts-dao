@@ -24,7 +24,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		const cUSDResult = await deploy("TokenMock", {
 			from: deployer,
 			args: ["cUSD", "cUSD"],
-			log: true
+			log: true,
 		});
 		cUSDToken = cUSDResult.address;
 	}
@@ -32,7 +32,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	await deploy("Treasury", {
 		from: deployer,
 		args: [cUSDToken, deployer, ZERO_ADDRESS],
-		log: true
+		log: true,
 	});
 };
 

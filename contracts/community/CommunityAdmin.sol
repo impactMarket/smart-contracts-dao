@@ -21,7 +21,6 @@ contract CommunityAdmin is Ownable {
     address public communityFactory;
 
     mapping(address => bool) public communities;
-    address[] public communitiesList;
     uint256 public communityMinTranche;
     uint256 public communityMaxTranche;
 
@@ -116,7 +115,6 @@ contract CommunityAdmin is Ownable {
         );
         require(community != address(0), "CommunityAdmin::addCommunity: NOT_VALID");
         communities[community] = true;
-        communitiesList.push(community);
         emit CommunityAdded(
             community,
             _firstManager,

@@ -33,7 +33,6 @@ contract Community is AccessControl {
     mapping(address => uint256) public claimed;
     mapping(address => uint256) public claims;
     mapping(address => BeneficiaryState) public beneficiaries;
-    address[] public beneficiariesList;
 
     uint256 public claimAmount;
     uint256 public baseInterval;
@@ -150,7 +149,6 @@ contract Community is AccessControl {
         // solhint-disable-next-line not-rely-on-time
         cooldown[_account] = block.timestamp;
         claims[_account] = 0;
-        beneficiariesList.push(_account);
         // send default amount when adding a new beneficiary
         bool success = IERC20(cUSDAddress).transfer(_account, DEFAULT_AMOUNT);
         require(success, "Community::addBeneficiary: NOT_ALLOWED");
