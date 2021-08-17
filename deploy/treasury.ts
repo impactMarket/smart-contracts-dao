@@ -1,12 +1,11 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
-import { zeroOutAddresses } from "hardhat/internal/hardhat-network/stack-traces/library-utils";
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
+	// @ts-ignore
 	const { deployments, getNamedAccounts, getChainId } = hre;
-
 	const { deploy } = deployments;
 	const { deployer } = await getNamedAccounts();
 	const chainID = await getChainId();
@@ -25,19 +24,15 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		const cUSDResult = await deploy("TokenMock", {
 			from: deployer,
 			args: ["cUSD", "cUSD"],
-			log: true,
-			// gasLimit: 13000000,
+			log: true
 		});
 		cUSDToken = cUSDResult.address;
 	}
 
-	const IPCTTimelock = await deployments.get("IPCTTimelock");
-
 	await deploy("Treasury", {
 		from: deployer,
 		args: [cUSDToken, deployer, ZERO_ADDRESS],
-		log: true,
-		// gasLimit: 13000000,
+		log: true
 	});
 };
 
