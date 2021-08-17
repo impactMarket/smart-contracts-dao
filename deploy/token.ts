@@ -10,7 +10,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	await deploy("IPCTToken", {
 		from: deployer,
 		args: [deployer],
-		log: true
+		log: true,
 	});
 };
 

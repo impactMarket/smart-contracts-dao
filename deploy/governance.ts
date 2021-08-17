@@ -34,11 +34,22 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const { deploy } = deployments;
 	const { deployer } = await getNamedAccounts();
 
-	const delegatorAddress = await getContractAddress(hre, deployer, 0);
+	const delegateAddress = await getContractAddress(hre, deployer, 0);
 	const timelockAddress = await getContractAddress(hre, deployer, 1);
-	const delegateAddress = await getContractAddress(hre, deployer, 2);
+	const delegatorAddress = await getContractAddress(hre, deployer, 2);
 
 	const Token = await deployments.get("IPCTToken");
+
+	const delegateResult = await deploy("IPCTDelegate", {
+		from: deployer,
+		log: true,
+	});
+
+	const timelockResult = await deploy("IPCTTimelock", {
+		from: deployer,
+		args: [delegatorAddress, TWO_DAYS_SECONDS],
+		log: true,
+	});
 
 	const delegatorResult = await deploy("IPCTDelegator", {
 		from: deployer,
@@ -46,25 +57,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 			timelockAddress,
 			Token.address,
 			Token.address,
-			deployer,
+			timelockAddress,
 			delegateAddress,
 			VOTING_PERIOD_BLOCKS,
 			VOTING_DELAY_BLOCKS,
 			PROPOSAL_THRESHOLD,
 			QUORUM_VOTES,
 		],
-		log: true
-	});
-
-	const timelockResult = await deploy("IPCTTimelock", {
-		from: deployer,
-		args: [delegatorAddress, TWO_DAYS_SECONDS],
-		log: true
-	});
-
-	const delegateResult = await deploy("IPCTDelegate", {
-		from: deployer,
-		log: true
+		log: true,
 	});
 };
 
