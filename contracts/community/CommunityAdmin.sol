@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.5;
 
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/ICommunity.sol";
 import "./interfaces/ICommunityFactory.sol";
 import "./Community.sol";
@@ -14,8 +15,7 @@ import "hardhat/console.sol";
  * over the list of communities. Being only able to add and
  * remove communities
  */
-contract CommunityAdmin {
-    address public admin;
+contract CommunityAdmin is Ownable {
     address public cUSDAddress;
     address public treasuryAddress;
     address public communityFactory;
@@ -49,7 +49,6 @@ contract CommunityAdmin {
      */
     constructor(
         address _cUSDAddress,
-        address _admin,
         uint256 _communityMinTranche,
         uint256 _communityMaxTranche
     ) public {
@@ -58,14 +57,8 @@ contract CommunityAdmin {
             "CommunityAdmin::constructor: communityMinTranche should be less then communityMaxTranche"
         );
         cUSDAddress = _cUSDAddress;
-        admin = _admin;
         communityMinTranche = _communityMinTranche;
         communityMaxTranche = _communityMaxTranche;
-    }
-
-    modifier onlyAdmin() {
-        require(msg.sender == admin, "CommunityAdmin: NOT_ADMIN");
-        _;
     }
 
     modifier onlyCommunities() {
@@ -73,18 +66,14 @@ contract CommunityAdmin {
         _;
     }
 
-    function setAdmin(address _newAdmin) external onlyAdmin {
-        admin = _newAdmin;
-    }
-
-    function setTreasury(address _newTreasuryAddress) external onlyAdmin {
+    function setTreasury(address _newTreasuryAddress) external onlyOwner {
         treasuryAddress = _newTreasuryAddress;
     }
 
     /**
      * @dev Set the community min tranche
      */
-    function setCommunityMinTranche(uint256 _newCommunityMinTranche) external onlyAdmin {
+    function setCommunityMinTranche(uint256 _newCommunityMinTranche) external onlyOwner {
         require(
             _newCommunityMinTranche < communityMaxTranche,
             "CommunityAdmin::setCommunityMinTranche: New communityMinTranche should be less then communityMaxTranche"
@@ -96,7 +85,7 @@ contract CommunityAdmin {
     /**
      * @dev Set the community max tranche
      */
-    function setCommunityMaxTranche(uint256 _newCommunityMaxTranche) external onlyAdmin {
+    function setCommunityMaxTranche(uint256 _newCommunityMaxTranche) external onlyOwner {
         require(
             communityMinTranche < _newCommunityMaxTranche,
             "CommunityAdmin::setCommunityMaxTranche: New communityMaxTranche should be greater then communityMinTranche"
@@ -116,7 +105,7 @@ contract CommunityAdmin {
         uint256 _maxClaim,
         uint256 _baseInterval,
         uint256 _incrementInterval
-    ) external onlyAdmin {
+    ) external onlyOwner {
         address community = ICommunityFactory(communityFactory).deployCommunity(
             _firstManager,
             _claimAmount,
@@ -147,7 +136,7 @@ contract CommunityAdmin {
         address _firstManager,
         address _previousCommunityAddress,
         address _newCommunityFactory
-    ) external onlyAdmin {
+    ) external onlyOwner {
         communities[_previousCommunityAddress] = false;
         require(
             address(_previousCommunityAddress) != address(0),
@@ -171,7 +160,7 @@ contract CommunityAdmin {
     /**
      * @dev Remove an existing community. Can be used only by an admin.
      */
-    function removeCommunity(address _community) external onlyAdmin {
+    function removeCommunity(address _community) external onlyOwner {
         communities[_community] = false;
         emit CommunityRemoved(_community);
     }
@@ -179,7 +168,7 @@ contract CommunityAdmin {
     /**
      * @dev Set the community factory address, if the contract is valid.
      */
-    function setCommunityFactory(address _communityFactory) external onlyAdmin {
+    function setCommunityFactory(address _communityFactory) external onlyOwner {
         ICommunityFactory factory = ICommunityFactory(_communityFactory);
         require(
             factory.communityAdminAddress() == address(this),
@@ -192,7 +181,7 @@ contract CommunityAdmin {
     /**
      * @dev Init community factory, used only at deploy time.
      */
-    function initCommunityFactory(address _communityFactory) external onlyAdmin {
+    function initCommunityFactory(address _communityFactory) external onlyOwner {
         require(communityFactory == address(0), "");
         communityFactory = _communityFactory;
         emit CommunityFactoryChanged(_communityFactory);
