@@ -109,7 +109,6 @@ describe("Community - Beneficiary", () => {
 		cUSDInstance = await Token.deploy("cUSD", "cUSD");
 		communityAdminInstance = await CommunityAdmin.deploy(
 			cUSDInstance.address,
-			adminAccount1.address,
 			communityMinTranche,
 			communityMaxTranche
 		);
@@ -267,7 +266,6 @@ describe("Community - Claim", () => {
 		cUSDInstance = await Token.deploy("cUSD", "cUSD");
 		communityAdminInstance = await CommunityAdmin.deploy(
 			cUSDInstance.address,
-			adminAccount1.address,
 			communityMinTranche,
 			communityMaxTranche
 		);
@@ -360,7 +358,7 @@ describe("Community - Claim", () => {
 	it("should not claim without belong to community", async () => {
 		await expect(
 			communityInstance.connect(beneficiaryB).claim()
-		).to.be.rejectedWith("NOT_BENEFICIARY");
+		).to.be.rejectedWith("NOT_VALID_BENEFICIARY");
 	});
 
 	it("should not claim after locked from community", async () => {
@@ -369,7 +367,7 @@ describe("Community - Claim", () => {
 			.lockBeneficiary(beneficiaryA.address);
 		await expect(
 			communityInstance.connect(beneficiaryA).claim()
-		).to.be.rejectedWith("LOCKED");
+		).to.be.rejectedWith("Community: NOT_VALID_BENEFICIARY");
 	});
 
 	it("should not claim after removed from community", async () => {
@@ -378,7 +376,7 @@ describe("Community - Claim", () => {
 			.removeBeneficiary(beneficiaryA.address);
 		await expect(
 			communityInstance.connect(beneficiaryA).claim()
-		).to.be.rejectedWith("REMOVED");
+		).to.be.rejectedWith("Community: NOT_VALID_BENEFICIARY");
 	});
 
 	it("should not claim if community is locked", async () => {
@@ -477,7 +475,6 @@ describe("Community - Governance (2)", () => {
 		cUSDInstance = await Token.deploy("cUSD", "cUSD");
 		communityAdminInstance = await CommunityAdmin.deploy(
 			cUSDInstance.address,
-			adminAccount1.address,
 			communityMinTranche,
 			communityMaxTranche
 		);
@@ -549,7 +546,6 @@ describe("Community - Governance (2)", () => {
 	it("should not be able to migrate from invalid community", async () => {
 		const newcommunityAdminInstance = await CommunityAdmin.deploy(
 			cUSDInstance.address,
-			adminAccount1.address,
 			communityMinTranche,
 			communityMaxTranche
 		);
@@ -565,7 +561,6 @@ describe("Community - Governance (2)", () => {
 	it("should not be able to migrate community if not admin", async () => {
 		const newcommunityAdminInstance = await CommunityAdmin.deploy(
 			cUSDInstance.address,
-			adminAccount1.address,
 			communityMinTranche,
 			communityMaxTranche
 		);
@@ -575,7 +570,7 @@ describe("Community - Governance (2)", () => {
 				cUSDInstance.address, // wrong on purpose,
 				newcommunityAdminInstance.address
 			)
-		).to.be.rejectedWith("NOT_ADMIN");
+		).to.be.rejectedWith("Ownable: caller is not the owner");
 	});
 
 	it("should be able edit community if manager", async () => {
@@ -708,7 +703,6 @@ describe("CommunityAdmin", () => {
 		cUSDInstance = await Token.deploy("cUSD", "cUSD");
 		communityAdminInstance = await CommunityAdmin.deploy(
 			cUSDInstance.address,
-			adminAccount1.address,
 			communityMinTranche,
 			communityMaxTranche
 		);
@@ -883,7 +877,6 @@ describe("Chaos test (complete flow)", async () => {
 		cUSDInstance = await Token.deploy("cUSD", "cUSD");
 		communityAdminInstance = await CommunityAdmin.deploy(
 			cUSDInstance.address,
-			adminAccount1.address,
 			communityMinTranche,
 			communityMaxTranche
 		);
@@ -1141,7 +1134,6 @@ describe("Community - getFunds", () => {
 		cUSDInstance = await Token.deploy("cUSD", "cUSD");
 		communityAdminInstance = await CommunityAdmin.deploy(
 			cUSDInstance.address,
-			adminAccount1.address,
 			communityMinTranche,
 			communityMaxTranche
 		);
@@ -1198,7 +1190,7 @@ describe("Community - getFunds", () => {
 			communityAdminInstance
 				.connect(communityManagerA)
 				.setCommunityMinTranche(bigNum(123))
-		).to.be.rejectedWith("CommunityAdmin: NOT_ADMIN");
+		).to.be.rejectedWith("Ownable: caller is not the owner");
 	});
 
 	it("should be able to change communityMinTranche if admin", async () => {
@@ -1218,7 +1210,7 @@ describe("Community - getFunds", () => {
 			communityAdminInstance
 				.connect(communityManagerA)
 				.setCommunityMaxTranche(bigNum(123))
-		).to.be.rejectedWith("CommunityAdmin: NOT_ADMIN");
+		).to.be.rejectedWith("Ownable: caller is not the owner");
 	});
 
 	it("should be able to change communityMaxTranche if admin", async () => {
@@ -1295,7 +1287,6 @@ describe("Community - getFunds", () => {
 		await expect(
 			CommunityAdmin.deploy(
 				cUSDInstance.address,
-				adminAccount1.address,
 				communityMaxTranche,
 				communityMinTranche
 			)
