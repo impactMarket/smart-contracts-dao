@@ -29,8 +29,13 @@ export async function advanceTimeAndBlock() {
 	await advanceBlock();
 }
 
-export async function advanceTimeAndBlockNTimes(n: number, epochSize: number) {
-	console.log(`Time travelling ${n} blocks with epoch size ${epochSize}`);
+export async function advanceTimeAndBlockNTimes(
+	n: number,
+	rewardPeriodSize: number
+) {
+	console.log(
+		`Time travelling ${n} blocks with reward period ${rewardPeriodSize}`
+	);
 	for (let i = 0; i < n; i++) {
 		const newBlock = await advanceTimeAndBlock();
 	}

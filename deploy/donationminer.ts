@@ -34,7 +34,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	await deploy("DonationMiner", {
 		from: deployer,
-		args: [cUSDToken, Token.address, 100, 1, 1, Treasury.address],
+		args: [cUSDToken, Token.address, 100, 10, 2, 1, Treasury.address],
 		log: true,
 	});
 };

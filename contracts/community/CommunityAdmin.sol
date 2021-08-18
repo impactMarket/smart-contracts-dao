@@ -192,7 +192,6 @@ contract CommunityAdmin is Ownable {
         );
         uint256 trancheAmount = calculateCommunityTrancheAmount(msg.sender);
 
-        console.log("fundCommunity");
         ITreasury(treasuryAddress).transferToCommunity(msg.sender, trancheAmount);
     }
 
