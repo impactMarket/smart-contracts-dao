@@ -4,7 +4,8 @@ import {deployments, ethers, getNamedAccounts } from "hardhat";
 import {expect} from "./utils/chai-setup";
 import { advanceTimeAndBlockNTimes } from "./utils/TimeTravel";
 
-const EPOCH_SIZE = 17280;
+const REWARD_PERIOD_SIZE = 10;
+const STARTING_REWARD_PER_BLOCK = 100;
 
 const initialize = deployments.createFixture(async ({deployments, getNamedAccounts, ethers}, options) => {
     
@@ -56,72 +57,183 @@ const initialize = deployments.createFixture(async ({deployments, getNamedAccoun
 );
 
 describe('Donation Miner', () => {
+    it('Should approve and donate 100 cUSD from user1', async function () {
+        const { cUSD, IPCT, DonationMiner, signers } = await initialize();
 
-    it('Should approve and donate 100 cUSD from user1', async function () {      
+        const user1Donation = 200;
 
-        const { cUSD, DonationMiner, signers } = await initialize();      
-        
         // Approve from user1
-        await cUSD.contract.connect(signers[1]).approve(DonationMiner.deployed.address, 200);
-        console.log("Approved");
+        await cUSD.contract.connect(signers[1]).approve(DonationMiner.deployed.address, user1Donation);
 
-        // Confirm approval
-        const allowance = await cUSD.contract.allowance(signers[1].getAddress(), DonationMiner.deployed.address);
-        console.log(`Allowance is ${allowance}`);
+        await DonationMiner.contract.connect(signers[1]).donate(user1Donation);
 
-        // Donate from user1 twice so the second time updates the pool
-        await DonationMiner.contract.connect(signers[1]).donate(100);
-        await DonationMiner.contract.connect(signers[1]).donate(100);
-
-        // Advance 3 blocks
-        await advanceTimeAndBlockNTimes(3, EPOCH_SIZE);        
-
-        // Check their pending rewards
-        const pendingRewards = await DonationMiner.contract.estimateClaimableReward(signers[1].getAddress());
-        console.log(`Pending rewards = ${pendingRewards}`);
-        
-        // Expect 500 tokens: 100 tokens per block, and now five blocks have passed after donating twice
-        expect(pendingRewards).to.equal("500"); 
-
-        // Check their cUSD balance
         const userBalance = await cUSD.contract.balanceOf(signers[1].getAddress());
         expect(userBalance).to.equal("800");
     });
 
-    it('Should approve and donate 100 cUSD from user1, advance time and claim their reward', async function () {      
+    it('Should approve and donate 100 cUSD from user1, advance time and claim their reward', async function () {
 
-        const { cUSD, IPCT, DonationMiner, signers } = await initialize();      
-        
+        const { cUSD, IPCT, DonationMiner, signers } = await initialize();
+
+        const user1Donation = 100;
+        const user1ExpectedReward = 1000;
+
         // Approve from user1
-        await cUSD.contract.connect(signers[1]).approve(DonationMiner.deployed.address, 200);
-        console.log("Approved");
+        await cUSD.contract.connect(signers[1]).approve(DonationMiner.deployed.address, user1Donation);
 
-        // Confirm approval
-        const allowance = await cUSD.contract.allowance(signers[1].getAddress(), DonationMiner.deployed.address);
-        console.log(`Allowance is ${allowance}`);
-
-        // Donate from user1 twice so the second time updates the pool
-        await DonationMiner.contract.connect(signers[1]).donate(100);
-        await DonationMiner.contract.connect(signers[1]).donate(100);
+        await DonationMiner.contract.connect(signers[1]).donate(user1Donation);
 
         // Advance 3 blocks
-        await advanceTimeAndBlockNTimes(3, EPOCH_SIZE);        
+        await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE, REWARD_PERIOD_SIZE);
 
-        // Check their pending rewards
-        const pendingRewards = await DonationMiner.contract.estimateClaimableReward(signers[1].getAddress());
-        console.log(`Pending rewards = ${pendingRewards}`);
+        // Claim the rewards
+        await DonationMiner.contract.connect(signers[1]).claimRewards();
+
+        // Check their IPCT balance
+        expect(await IPCT.contract.balanceOf(signers[1].getAddress())).to.equal(user1ExpectedReward);
+
+        console.log(`User1 donated ${user1Donation} cUSD and claimed: ${user1ExpectedReward} IPCT`);
+    });
+
+    it('Should not be able to claim before the end of the reward period', async function () {
+
+        const { cUSD, IPCT, DonationMiner, signers } = await initialize();
+
+        const user1Donation = 100;
+        const user1ExpectedReward = 0;
+
+        // Approve from user1
+        await cUSD.contract.connect(signers[1]).approve(DonationMiner.deployed.address, user1Donation);
+
+        await DonationMiner.contract.connect(signers[1]).donate(user1Donation);
+
+        // Claim the rewards
+        await DonationMiner.contract.connect(signers[1]).claimRewards();
+
+        // Check their IPCT balance
+        expect(await IPCT.contract.balanceOf(signers[1].getAddress())).to.equal(user1ExpectedReward);
+
+        console.log(`User1 donated ${user1Donation} cUSD and claimed: ${user1ExpectedReward} IPCT`);
+    });
+
+    it('Should not claim reward in the same reward period, multiple donors', async function () {
+        const { cUSD, IPCT, DonationMiner, signers } = await initialize();
+
+        const user1Donation = 100;
+        const user2Donation = 100;
+        const user1ExpectedReward = 0;
+        const user2ExpectedReward = 0;
+
+        // Approve from user1
+        await cUSD.contract.connect(signers[1]).approve(DonationMiner.deployed.address, user1Donation);
+        await cUSD.contract.connect(signers[2]).approve(DonationMiner.deployed.address, user2Donation);
+
+        await DonationMiner.contract.connect(signers[1]).donate(user1Donation);
+        await DonationMiner.contract.connect(signers[2]).donate(user2Donation);
+
+        // Advance 3 blocks
+        await advanceTimeAndBlockNTimes(3, REWARD_PERIOD_SIZE);
 
         // Claim their rewards
         await DonationMiner.contract.connect(signers[1]).claimRewards();
-        console.log('Claimed rewards!');
-        
+        await DonationMiner.contract.connect(signers[2]).claimRewards();
+
         // Check their IPCT balance
-        const rewardBalance = await IPCT.contract.balanceOf(signers[1].getAddress());
-        expect(rewardBalance).to.equal("600");        
-        
-        // Check their cUSD balance
-        const userBalance = await cUSD.contract.balanceOf(signers[1].getAddress());
-        expect(userBalance).to.equal("800");
+        expect(await IPCT.contract.balanceOf(signers[1].getAddress())).to.equal(user1ExpectedReward);
+        expect(await IPCT.contract.balanceOf(signers[2].getAddress())).to.equal(user2ExpectedReward);
+
+        console.log(`User1 donated ${user1Donation} cUSD and claimed: ${user1ExpectedReward} IPCT`);
+        console.log(`User1 donated ${user2Donation} cUSD and claimed: ${user2ExpectedReward} IPCT`);
     });
 
+    it('Should claim reward after reward period, multiple donors #1', async function () {
+        const { cUSD, IPCT, DonationMiner, signers } = await initialize();
+
+        const user1Donation = 100;
+        const user2Donation = 100;
+        const user1ExpectedReward = 500;
+        const user2ExpectedReward = 500;
+
+        // Approve from user1
+        await cUSD.contract.connect(signers[1]).approve(DonationMiner.deployed.address, user1Donation);
+        await cUSD.contract.connect(signers[2]).approve(DonationMiner.deployed.address, user2Donation);
+
+        await DonationMiner.contract.connect(signers[1]).donate(user1Donation);
+        await DonationMiner.contract.connect(signers[2]).donate(user2Donation);
+
+        // Advance 3 blocks
+        await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE, REWARD_PERIOD_SIZE);
+
+        // Claim their rewards
+        await DonationMiner.contract.connect(signers[1]).claimRewards();
+        await DonationMiner.contract.connect(signers[2]).claimRewards();
+
+        // Check their IPCT balance
+        expect(await IPCT.contract.balanceOf(signers[1].getAddress())).to.equal(user1ExpectedReward);
+        expect(await IPCT.contract.balanceOf(signers[2].getAddress())).to.equal(user2ExpectedReward);
+
+        console.log(`User1 donated ${user1Donation} cUSD and claimed: ${user1ExpectedReward} IPCT`);
+        console.log(`User1 donated ${user2Donation} cUSD and claimed: ${user2ExpectedReward} IPCT`);
+    });
+
+    it('Should claim reward after reward period, multiple donors #2', async function () {
+        const { cUSD, IPCT, DonationMiner, signers } = await initialize();
+
+        const user1Donation = 100;
+        const user2Donation = 200;
+        const user1ExpectedReward = 333;
+        const user2ExpectedReward = 667;
+
+        // Approve from user1
+        await cUSD.contract.connect(signers[1]).approve(DonationMiner.deployed.address, user1Donation);
+        await cUSD.contract.connect(signers[2]).approve(DonationMiner.deployed.address, user2Donation);
+
+        await DonationMiner.contract.connect(signers[1]).donate(user1Donation);
+        await DonationMiner.contract.connect(signers[2]).donate(user2Donation);
+
+        // Advance 3 blocks
+        await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE, REWARD_PERIOD_SIZE);
+
+        // Claim their rewards
+        await DonationMiner.contract.connect(signers[1]).claimRewards();
+        await DonationMiner.contract.connect(signers[2]).claimRewards();
+
+        // Check their IPCT balance
+        expect(await IPCT.contract.balanceOf(signers[1].getAddress())).to.equal(user1ExpectedReward);
+        expect(await IPCT.contract.balanceOf(signers[2].getAddress())).to.equal(user2ExpectedReward);
+
+        console.log(`User1 donated ${user1Donation} cUSD and claimed: ${user1ExpectedReward} IPCT`);
+        console.log(`User1 donated ${user2Donation} cUSD and claimed: ${user2ExpectedReward} IPCT`);
+    });
+
+    it('Should claim reward after reward period, multiple donors #3', async function () {
+
+        const { cUSD, IPCT, DonationMiner, signers } = await initialize();
+
+        const user1Donation = 300;
+        const user2Donation = 100;
+        const user1ExpectedReward = 750;
+        const user2ExpectedReward = 250;
+
+        // Approve from user1
+        await cUSD.contract.connect(signers[1]).approve(DonationMiner.deployed.address, user1Donation);
+        await cUSD.contract.connect(signers[2]).approve(DonationMiner.deployed.address, user2Donation);
+
+        await DonationMiner.contract.connect(signers[1]).donate(user1Donation);
+        await DonationMiner.contract.connect(signers[2]).donate(user2Donation);
+
+        // Advance 3 blocks
+        await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE, REWARD_PERIOD_SIZE);
+
+        // Claim their rewards
+        await DonationMiner.contract.connect(signers[1]).claimRewards();
+        await DonationMiner.contract.connect(signers[2]).claimRewards();
+
+        // Check their IPCT balance
+        expect(await IPCT.contract.balanceOf(signers[1].getAddress())).to.equal(user1ExpectedReward);
+        expect(await IPCT.contract.balanceOf(signers[2].getAddress())).to.equal(user2ExpectedReward);
+
+        console.log(`User1 donated ${user1Donation} cUSD and claimed: ${user1ExpectedReward} IPCT`);
+        console.log(`User1 donated ${user2Donation} cUSD and claimed: ${user2ExpectedReward} IPCT`);
+    });
 });
