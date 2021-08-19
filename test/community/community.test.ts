@@ -10,6 +10,8 @@ import { ethers, network, waffle } from "hardhat";
 import type * as ethersTypes from "ethers";
 import { DeployFunction } from "hardhat-deploy/types";
 
+const { deployments } = require("hardhat");
+
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const {
 	expectRevert,
@@ -47,12 +49,14 @@ let beneficiaryD: SignerWithAddress;
 let Community: ethersTypes.ContractFactory;
 let CommunityFactory: ethersTypes.ContractFactory;
 let CommunityAdmin: ethersTypes.ContractFactory;
+let Treasury: ethersTypes.ContractFactory;
 let Token: ethersTypes.ContractFactory;
 
 // contract instances
 let communityInstance: ethersTypes.Contract;
 let communityFactoryInstance: ethersTypes.Contract;
 let communityAdminInstance: ethersTypes.Contract;
+let treasuryInstance: ethersTypes.Contract;
 let cUSDInstance: ethersTypes.Contract;
 
 BigNumber.config({ EXPONENTIAL_AT: 25 });
@@ -78,6 +82,7 @@ async function init() {
 	Community = await ethers.getContractFactory("Community");
 	CommunityFactory = await ethers.getContractFactory("CommunityFactory");
 	CommunityAdmin = await ethers.getContractFactory("CommunityAdmin");
+	Treasury = await ethers.getContractFactory("Treasury");
 	Token = await ethers.getContractFactory("TokenMock");
 }
 
@@ -86,12 +91,14 @@ const decimals = new BigNumber(10).pow(18);
 const hour = time.duration.hours(1);
 const day = time.duration.days(1);
 const week = time.duration.weeks(1);
-// const month = time.duration.days(30);
+const month = time.duration.days(30);
 const claimAmountTwo = new BigNumber(bigNum(2));
 const maxClaimTen = new BigNumber(bigNum(10));
 const fiveCents = new BigNumber("50000000000000000");
 const zeroAddress = "0x0000000000000000000000000000000000000000";
 const mintAmount = new BigNumber("500000000000000000000");
+const communityMinTranche = bigNum(100);
+const communityMaxTranche = bigNum(5000);
 
 describe("Community - Beneficiary", () => {
 	before(async function () {
@@ -102,12 +109,20 @@ describe("Community - Beneficiary", () => {
 		cUSDInstance = await Token.deploy("cUSD", "cUSD");
 		communityAdminInstance = await CommunityAdmin.deploy(
 			cUSDInstance.address,
-			adminAccount1.address
+			communityMinTranche,
+			communityMaxTranche
+		);
+		treasuryInstance = await Treasury.deploy(
+			cUSDInstance.address,
+			adminAccount1.address,
+			communityAdminInstance.address
 		);
 		communityFactoryInstance = await CommunityFactory.deploy(
 			cUSDInstance.address,
 			communityAdminInstance.address
 		);
+
+		await communityAdminInstance.setTreasury(treasuryInstance.address);
 		await communityAdminInstance.setCommunityFactory(
 			communityFactoryInstance.address
 		);
@@ -251,12 +266,20 @@ describe("Community - Claim", () => {
 		cUSDInstance = await Token.deploy("cUSD", "cUSD");
 		communityAdminInstance = await CommunityAdmin.deploy(
 			cUSDInstance.address,
-			adminAccount1.address
+			communityMinTranche,
+			communityMaxTranche
+		);
+		treasuryInstance = await Treasury.deploy(
+			cUSDInstance.address,
+			adminAccount1.address,
+			communityAdminInstance.address
 		);
 		communityFactoryInstance = await CommunityFactory.deploy(
 			cUSDInstance.address,
 			communityAdminInstance.address
 		);
+
+		await communityAdminInstance.setTreasury(treasuryInstance.address);
 		await communityAdminInstance.setCommunityFactory(
 			communityFactoryInstance.address
 		);
@@ -335,7 +358,7 @@ describe("Community - Claim", () => {
 	it("should not claim without belong to community", async () => {
 		await expect(
 			communityInstance.connect(beneficiaryB).claim()
-		).to.be.rejectedWith("NOT_BENEFICIARY");
+		).to.be.rejectedWith("NOT_VALID_BENEFICIARY");
 	});
 
 	it("should not claim after locked from community", async () => {
@@ -344,7 +367,7 @@ describe("Community - Claim", () => {
 			.lockBeneficiary(beneficiaryA.address);
 		await expect(
 			communityInstance.connect(beneficiaryA).claim()
-		).to.be.rejectedWith("LOCKED");
+		).to.be.rejectedWith("Community: NOT_VALID_BENEFICIARY");
 	});
 
 	it("should not claim after removed from community", async () => {
@@ -353,7 +376,7 @@ describe("Community - Claim", () => {
 			.removeBeneficiary(beneficiaryA.address);
 		await expect(
 			communityInstance.connect(beneficiaryA).claim()
-		).to.be.rejectedWith("REMOVED");
+		).to.be.rejectedWith("Community: NOT_VALID_BENEFICIARY");
 	});
 
 	it("should not claim if community is locked", async () => {
@@ -452,12 +475,20 @@ describe("Community - Governance (2)", () => {
 		cUSDInstance = await Token.deploy("cUSD", "cUSD");
 		communityAdminInstance = await CommunityAdmin.deploy(
 			cUSDInstance.address,
-			adminAccount1.address
+			communityMinTranche,
+			communityMaxTranche
+		);
+		treasuryInstance = await Treasury.deploy(
+			cUSDInstance.address,
+			adminAccount1.address,
+			communityAdminInstance.address
 		);
 		communityFactoryInstance = await CommunityFactory.deploy(
 			cUSDInstance.address,
 			communityAdminInstance.address
 		);
+
+		await communityAdminInstance.setTreasury(treasuryInstance.address);
 		await communityAdminInstance.setCommunityFactory(
 			communityFactoryInstance.address
 		);
@@ -515,7 +546,8 @@ describe("Community - Governance (2)", () => {
 	it("should not be able to migrate from invalid community", async () => {
 		const newcommunityAdminInstance = await CommunityAdmin.deploy(
 			cUSDInstance.address,
-			adminAccount1.address
+			communityMinTranche,
+			communityMaxTranche
 		);
 		await expect(
 			communityAdminInstance.migrateCommunity(
@@ -529,7 +561,8 @@ describe("Community - Governance (2)", () => {
 	it("should not be able to migrate community if not admin", async () => {
 		const newcommunityAdminInstance = await CommunityAdmin.deploy(
 			cUSDInstance.address,
-			adminAccount1.address
+			communityMinTranche,
+			communityMaxTranche
 		);
 		await expect(
 			communityAdminInstance.connect(adminAccount2).migrateCommunity(
@@ -537,7 +570,7 @@ describe("Community - Governance (2)", () => {
 				cUSDInstance.address, // wrong on purpose,
 				newcommunityAdminInstance.address
 			)
-		).to.be.rejectedWith("NOT_ADMIN");
+		).to.be.rejectedWith("Ownable: caller is not the owner");
 	});
 
 	it("should be able edit community if manager", async () => {
@@ -670,12 +703,20 @@ describe("CommunityAdmin", () => {
 		cUSDInstance = await Token.deploy("cUSD", "cUSD");
 		communityAdminInstance = await CommunityAdmin.deploy(
 			cUSDInstance.address,
-			adminAccount1.address
+			communityMinTranche,
+			communityMaxTranche
+		);
+		treasuryInstance = await Treasury.deploy(
+			cUSDInstance.address,
+			adminAccount1.address,
+			communityAdminInstance.address
 		);
 		communityFactoryInstance = await CommunityFactory.deploy(
 			cUSDInstance.address,
 			communityAdminInstance.address
 		);
+
+		await communityAdminInstance.setTreasury(treasuryInstance.address);
 		await communityAdminInstance.setCommunityFactory(
 			communityFactoryInstance.address
 		);
@@ -836,12 +877,20 @@ describe("Chaos test (complete flow)", async () => {
 		cUSDInstance = await Token.deploy("cUSD", "cUSD");
 		communityAdminInstance = await CommunityAdmin.deploy(
 			cUSDInstance.address,
-			adminAccount1.address
+			communityMinTranche,
+			communityMaxTranche
+		);
+		treasuryInstance = await Treasury.deploy(
+			cUSDInstance.address,
+			adminAccount1.address,
+			communityAdminInstance.address
 		);
 		communityFactoryInstance = await CommunityFactory.deploy(
 			cUSDInstance.address,
 			communityAdminInstance.address
 		);
+
+		await communityAdminInstance.setTreasury(treasuryInstance.address);
 		await communityAdminInstance.setCommunityFactory(
 			communityFactoryInstance.address
 		);
@@ -1066,5 +1115,183 @@ describe("Chaos test (complete flow)", async () => {
 					.plus(2 * fiveCents.toNumber())
 					.toString()
 			);
+	});
+});
+
+describe("Community - getFunds", () => {
+	before(async function () {
+		await init();
+	});
+
+	beforeEach(async () => {
+		// await deployments.fixture(['TokenMock']);
+		// const cUSDDeployment = await deployments.get('TokenMock');
+		// cUSDInstance = await ethers.getContractAt('TokenMock', adminAccount1.address);
+		// console.log(cUSDInstance.address);
+		// console.log(await cUSDInstance.balanceOf(adminAccount1.address));
+		// console.log(await cUSDInstance.mint(adminAccount1.address, mintAmount.toString()));
+
+		cUSDInstance = await Token.deploy("cUSD", "cUSD");
+		communityAdminInstance = await CommunityAdmin.deploy(
+			cUSDInstance.address,
+			communityMinTranche,
+			communityMaxTranche
+		);
+		treasuryInstance = await Treasury.deploy(
+			cUSDInstance.address,
+			adminAccount1.address,
+			communityAdminInstance.address
+		);
+		communityFactoryInstance = await CommunityFactory.deploy(
+			cUSDInstance.address,
+			communityAdminInstance.address
+		);
+
+		await communityAdminInstance.setTreasury(treasuryInstance.address);
+
+		await communityAdminInstance.setCommunityFactory(
+			communityFactoryInstance.address
+		);
+
+		const tx = await communityAdminInstance.addCommunity(
+			communityManagerA.address,
+			claimAmountTwo.toString(),
+			maxClaimTen.toString(),
+			day.toString(),
+			hour.toString()
+		);
+
+		let receipt = await tx.wait();
+
+		const communityAddress = receipt.events?.filter((x: any) => {
+			return x.event == "CommunityAdded";
+		})[0]["args"]["_communityAddress"];
+		communityInstance = await Community.attach(communityAddress);
+		await cUSDInstance.mint(
+			treasuryInstance.address,
+			mintAmount.toString()
+		);
+	});
+
+	it("should be able to get funds if manager", async () => {
+		await expect(
+			communityInstance.connect(communityManagerA).requestFunds()
+		).to.be.fulfilled;
+	});
+
+	it("should not be able to get funds if not manager", async () => {
+		await expect(
+			communityInstance.connect(beneficiaryA).requestFunds()
+		).to.be.rejectedWith("Community: NOT_MANAGER");
+	});
+
+	it("should not be able to change communityMinTranche if not admin", async () => {
+		await expect(
+			communityAdminInstance
+				.connect(communityManagerA)
+				.setCommunityMinTranche(bigNum(123))
+		).to.be.rejectedWith("Ownable: caller is not the owner");
+	});
+
+	it("should be able to change communityMinTranche if admin", async () => {
+		await expect(
+			communityAdminInstance
+				.connect(adminAccount1)
+				.setCommunityMinTranche(bigNum(123))
+		).to.be.fulfilled;
+
+		expect(await communityAdminInstance.communityMinTranche()).to.be.equal(
+			bigNum(123)
+		);
+	});
+
+	it("should not be able to change communityMaxTranche if not admin", async () => {
+		await expect(
+			communityAdminInstance
+				.connect(communityManagerA)
+				.setCommunityMaxTranche(bigNum(123))
+		).to.be.rejectedWith("Ownable: caller is not the owner");
+	});
+
+	it("should be able to change communityMaxTranche if admin", async () => {
+		await expect(
+			communityAdminInstance
+				.connect(adminAccount1)
+				.setCommunityMaxTranche(bigNum(1234))
+		).to.be.fulfilled;
+
+		expect(await communityAdminInstance.communityMaxTranche()).to.be.equal(
+			bigNum(1234)
+		);
+	});
+
+	it("should not be able to change set communityMinTranche greater than communityMaxTranche", async () => {
+		await expect(
+			communityAdminInstance
+				.connect(adminAccount1)
+				.setCommunityMinTranche(bigNum(50))
+		).to.be.fulfilled;
+
+		await expect(
+			communityAdminInstance
+				.connect(adminAccount1)
+				.setCommunityMaxTranche(bigNum(100))
+		).to.be.fulfilled;
+
+		await expect(
+			communityAdminInstance
+				.connect(adminAccount1)
+				.setCommunityMinTranche(bigNum(200))
+		).to.be.rejectedWith(
+			"CommunityAdmin::setCommunityMinTranche: New communityMinTranche should be less then communityMaxTranche"
+		);
+
+		expect(await communityAdminInstance.communityMinTranche()).to.be.equal(
+			bigNum(50)
+		);
+		expect(await communityAdminInstance.communityMaxTranche()).to.be.equal(
+			bigNum(100)
+		);
+	});
+
+	it("should not be able to change set communityMaxTranche less than communityMinTranche", async () => {
+		await expect(
+			communityAdminInstance
+				.connect(adminAccount1)
+				.setCommunityMinTranche(bigNum(50))
+		).to.be.fulfilled;
+
+		await expect(
+			communityAdminInstance
+				.connect(adminAccount1)
+				.setCommunityMaxTranche(bigNum(100))
+		).to.be.fulfilled;
+
+		await expect(
+			communityAdminInstance
+				.connect(adminAccount1)
+				.setCommunityMaxTranche(bigNum(25))
+		).to.be.rejectedWith(
+			"CommunityAdmin::setCommunityMaxTranche: New communityMaxTranche should be greater then communityMinTranche"
+		);
+
+		expect(await communityAdminInstance.communityMinTranche()).to.be.equal(
+			bigNum(50)
+		);
+		expect(await communityAdminInstance.communityMaxTranche()).to.be.equal(
+			bigNum(100)
+		);
+	});
+
+	it("should not be able to deploy CommunityAdmin with communityMaxTranche less than communityMinTranche", async () => {
+		await expect(
+			CommunityAdmin.deploy(
+				cUSDInstance.address,
+				communityMaxTranche,
+				communityMinTranche
+			)
+		).to.be.rejectedWith(
+			"CommunityAdmin::constructor: communityMinTranche should be less then communityMaxTranche"
+		);
 	});
 });

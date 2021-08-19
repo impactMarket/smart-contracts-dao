@@ -7,7 +7,8 @@
     "clean": "npx hardhat clean",
     "build": "npx hardhat compile",
     "test": "npx hardhat test",
-    "coverage": "npx hardhat coverage",
+    "patch-coverage": "cp test/utils/nomiclabs.utils.js.patch node_modules/solidity-coverage/plugins/resources/nomiclabs.utils.js",
+    "coverage": "yarn patch-coverage && npx hardhat coverage",
     "docgen": "npx hardhat docgen",
     "deploy": "npx hardhat deploy",
     "deploy:alfajores": "npx hardhat --network alfajores deploy",
@@ -43,11 +44,13 @@
     "@types/node": "^16.0.0",
     "@ubeswap/governance": "git+https://github.com/Ubeswap/ubeswap-governance.git",
     "chai-as-promised": "^7.1.1",
+    "chai-ethers": "^0.0.1",
     "dotenv": "^10.0.0",
     "ethereum-waffle": "^3.3.0",
     "ethers": "^5.4.1",
     "hardhat": "^2.3.3",
     "hardhat-deploy": "^0.8.11",
+    "hardhat-deploy-ethers": "^0.3.0-beta.10",
     "hardhat-docgen": "^1.1.1",
     "husky": "^7.0.1",
     "prettier": "^2.3.2",
@@ -58,5 +61,9 @@
     "ts-node": "^10.0.0",
     "typescript": "^4.3.5"
   },
-  "snyk": true
+  "snyk": true,
+  "dependencies": {
+    "@eth-optimism/smock": "^1.1.10",
+    "@nomiclabs/ethereumjs-vm": "^4.2.2"
+  }
 }

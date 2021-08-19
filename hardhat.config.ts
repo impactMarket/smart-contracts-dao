@@ -71,6 +71,15 @@ export default {
   namedAccounts: {
     deployer: {
       default: 0
+    },
+    user1: {
+      default: 1
+    },
+    user2: {
+      default: 2
+    },
+    user3: {
+      default: 3
     }
   }
   // docgen: {

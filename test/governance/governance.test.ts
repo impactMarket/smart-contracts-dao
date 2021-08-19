@@ -22,6 +22,9 @@ const zeroAddress = "0x0000000000000000000000000000000000000000";
 const expect = chai.expect;
 const provider = waffle.provider;
 
+const communityMinTranche = bigNum(100);
+const communityMaxTranche = bigNum(5000);
+
 // Contracts
 let IPCTToken: ethersTypes.ContractFactory;
 let IPCTDelegate: ethersTypes.ContractFactory;
@@ -29,6 +32,7 @@ let IPCTDelegator: ethersTypes.ContractFactory;
 let IPCTTimelock: ethersTypes.ContractFactory;
 let CommunityFactory: ethersTypes.ContractFactory;
 let CommunityAdmin: ethersTypes.ContractFactory;
+let Treasury: ethersTypes.ContractFactory;
 let TestToken: ethersTypes.ContractFactory;
 
 //users
@@ -44,6 +48,7 @@ let ipctDelegator: ethersTypes.Contract;
 let ipctTimelock: ethersTypes.Contract;
 let communityFactory: ethersTypes.Contract;
 let communityAdmin: ethersTypes.Contract;
+let treasury: ethersTypes.Contract;
 let testToken1: ethersTypes.Contract;
 let testToken2: ethersTypes.Contract;
 let testToken3: ethersTypes.Contract;
@@ -70,6 +75,7 @@ describe("IPCTGovernator", function () {
 	before(async function () {
 		CommunityFactory = await ethers.getContractFactory("CommunityFactory");
 		CommunityAdmin = await ethers.getContractFactory("CommunityAdmin");
+		Treasury = await ethers.getContractFactory("Treasury");
 		IPCTToken = await ethers.getContractFactory("IPCTToken");
 		IPCTDelegate = await ethers.getContractFactory("IPCTDelegateMock");
 		IPCTDelegator = await ethers.getContractFactory("IPCTDelegatorMock");
@@ -113,7 +119,8 @@ describe("IPCTGovernator", function () {
 			ipctDelegate.address,
 			17280,
 			1,
-			bigNum(1000000)
+			bigNum(1000000),
+			bigNum(4000000)
 		);
 
 		ipctDelegator = await IPCTDelegate.attach(ipctDelegator.address);
@@ -121,14 +128,22 @@ describe("IPCTGovernator", function () {
 
 		communityAdmin = await CommunityAdmin.deploy(
 			testToken1.address,
-			owner.address
+			communityMinTranche,
+			communityMaxTranche
 		);
 		communityFactory = await CommunityFactory.deploy(
 			testToken1.address,
 			communityAdmin.address
 		);
+
+		treasury = await Treasury.deploy(
+			testToken1.address,
+			owner.address,
+			communityAdmin.address
+		);
+
 		await communityAdmin.setCommunityFactory(communityFactory.address);
-		await communityAdmin.setAdmin(ipctTimelock.address);
+		await communityAdmin.transferOwnership(ipctTimelock.address);
 
 		await ipctToken.transfer(alice.address, bigNum(1000001));
 		await ipctToken.transfer(bob.address, bigNum(1000001));

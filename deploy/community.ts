@@ -1,10 +1,15 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
+import { BigNumberish } from "ethers";
+import { parseEther } from "@ethersproject/units";
+// const {ethers} = require('hardhat');
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+const COMMUNITY_MIN_TRANCHE: BigNumberish = parseEther("100");
+const COMMUNITY_MAX_TRANCHE: BigNumberish = parseEther("5000");
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
-	const { deployments, getNamedAccounts, getChainId } = hre;
+	const { deployments, getNamedAccounts, getChainId, ethers } = hre;
 
 	const { deploy } = deployments;
 	const { deployer } = await getNamedAccounts();
@@ -30,22 +35,41 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		cUSDToken = cUSDResult.address;
 	}
 
-	const IPCTDelegator = await deployments.get("IPCTDelegator");
 	const communityAdminResult = await deploy("CommunityAdmin", {
 		from: deployer,
-		args: [cUSDToken, IPCTDelegator.address],
+		args: [cUSDToken, COMMUNITY_MIN_TRANCHE, COMMUNITY_MAX_TRANCHE],
 		log: true,
 		// gasLimit: 13000000,
 	});
 
-	await deploy("CommunityFactory", {
+	const communityFactoryResult = await deploy("CommunityFactory", {
 		from: deployer,
 		args: [cUSDToken, communityAdminResult.address],
 		log: true,
 		// gasLimit: 13000000,
 	});
+
+	const Treasury = await deployments.get("Treasury");
+	const IPCTTimelock = await deployments.get("IPCTTimelock");
+
+	const TreasuryContract = await ethers.getContractAt(
+		"Treasury",
+		Treasury.address
+	);
+	const CommunityAdminContract = await ethers.getContractAt(
+		"CommunityAdmin",
+		communityAdminResult.address
+	);
+
+	await CommunityAdminContract.setTreasury(Treasury.address);
+	await CommunityAdminContract.setCommunityFactory(
+		communityFactoryResult.address
+	);
+	await CommunityAdminContract.transferOwnership(IPCTTimelock.address);
+	await TreasuryContract.setCommunityAdmin(communityAdminResult.address);
+	await TreasuryContract.setAdmin(IPCTTimelock.address);
 };
 
-func.dependencies = ["Governance"];
+func.dependencies = ["Governance", "Treasury"];
 func.tags = ["Community"];
 export default func;

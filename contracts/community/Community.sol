@@ -4,6 +4,7 @@ pragma solidity 0.8.5;
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/ICommunity.sol";
+import "./interfaces/ICommunityAdmin.sol";
 
 import "hardhat/console.sol";
 
@@ -17,11 +18,15 @@ import "hardhat/console.sol";
  */
 contract Community is AccessControl {
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
+
+    uint256 public constant DEFAULT_AMOUNT = 5e16;
+
     enum BeneficiaryState {
         NONE,
         Valid,
         Locked,
-        Removed
+        Removed,
+        MaxClaimed
     } // starts by 0 (when user is not added yet)
 
     mapping(address => uint256) public cooldown;
@@ -33,6 +38,9 @@ contract Community is AccessControl {
     uint256 public baseInterval;
     uint256 public incrementInterval;
     uint256 public maxClaim;
+    uint256 public validBeneficiaryCount;
+    uint256 public governanceDonations;
+    uint256 public privateDonations;
 
     address public previousCommunityContract;
     address public communityAdminAddress;
@@ -96,19 +104,20 @@ contract Community is AccessControl {
     }
 
     modifier onlyValidBeneficiary() {
-        require(beneficiaries[msg.sender] != BeneficiaryState.Locked, "LOCKED");
-        require(beneficiaries[msg.sender] != BeneficiaryState.Removed, "REMOVED");
-        require(beneficiaries[msg.sender] == BeneficiaryState.Valid, "NOT_BENEFICIARY");
+        require(
+            beneficiaries[msg.sender] == BeneficiaryState.Valid,
+            "Community: NOT_VALID_BENEFICIARY"
+        );
         _;
     }
 
     modifier onlyManagers() {
-        require(hasRole(MANAGER_ROLE, msg.sender), "NOT_MANAGER");
+        require(hasRole(MANAGER_ROLE, msg.sender), "Community: NOT_MANAGER");
         _;
     }
 
     modifier onlyCommunityAdmin() {
-        require(msg.sender == communityAdminAddress, "NOT_ALLOWED");
+        require(msg.sender == communityAdminAddress, "Community: NOT_ALLOWED");
         _;
     }
 
@@ -132,14 +141,17 @@ contract Community is AccessControl {
      * @dev Allow community managers to add beneficiaries.
      */
     function addBeneficiary(address _account) external onlyManagers {
-        require(beneficiaries[_account] == BeneficiaryState.NONE, "NOT_YET");
-        beneficiaries[_account] = BeneficiaryState.Valid;
+        require(
+            beneficiaries[_account] == BeneficiaryState.NONE,
+            "Community::addBeneficiary: NOT_YET"
+        );
+        changeBeneficiaryState(_account, BeneficiaryState.Valid);
         // solhint-disable-next-line not-rely-on-time
         cooldown[_account] = block.timestamp;
         claims[_account] = 0;
-        // send 5 cents when adding a new beneficiary
-        bool success = IERC20(cUSDAddress).transfer(_account, 50000000000000000);
-        require(success, "NOT_ALLOWED");
+        // send default amount when adding a new beneficiary
+        bool success = IERC20(cUSDAddress).transfer(_account, DEFAULT_AMOUNT);
+        require(success, "Community::addBeneficiary: NOT_ALLOWED");
         emit BeneficiaryAdded(_account);
     }
 
@@ -147,8 +159,11 @@ contract Community is AccessControl {
      * @dev Allow community managers to lock beneficiaries.
      */
     function lockBeneficiary(address _account) external onlyManagers {
-        require(beneficiaries[_account] == BeneficiaryState.Valid, "NOT_YET");
-        beneficiaries[_account] = BeneficiaryState.Locked;
+        require(
+            beneficiaries[_account] == BeneficiaryState.Valid,
+            "Community::lockBeneficiary: NOT_YET"
+        );
+        changeBeneficiaryState(_account, BeneficiaryState.Locked);
         emit BeneficiaryLocked(_account);
     }
 
@@ -156,8 +171,11 @@ contract Community is AccessControl {
      * @dev Allow community managers to unlock locked beneficiaries.
      */
     function unlockBeneficiary(address _account) external onlyManagers {
-        require(beneficiaries[_account] == BeneficiaryState.Locked, "NOT_YET");
-        beneficiaries[_account] = BeneficiaryState.Valid;
+        require(
+            beneficiaries[_account] == BeneficiaryState.Locked,
+            "Community::unlockBeneficiary: NOT_YET"
+        );
+        changeBeneficiaryState(_account, BeneficiaryState.Valid);
         emit BeneficiaryUnlocked(_account);
     }
 
@@ -168,9 +186,9 @@ contract Community is AccessControl {
         require(
             beneficiaries[_account] == BeneficiaryState.Valid ||
                 beneficiaries[_account] == BeneficiaryState.Locked,
-            "NOT_YET"
+            "Community::removeBeneficiary: NOT_YET"
         );
-        beneficiaries[_account] = BeneficiaryState.Removed;
+        changeBeneficiaryState(_account, BeneficiaryState.Removed);
         emit BeneficiaryRemoved(_account);
     }
 
@@ -180,16 +198,16 @@ contract Community is AccessControl {
     function claim() external onlyValidBeneficiary {
         require(!locked, "LOCKED");
         // solhint-disable-next-line not-rely-on-time
-        require(cooldown[msg.sender] <= block.timestamp, "NOT_YET");
-        require((claimed[msg.sender] + claimAmount) <= maxClaim, "MAX_CLAIM");
+        require(cooldown[msg.sender] <= block.timestamp, "Community::claim: NOT_YET");
+        require((claimed[msg.sender] + claimAmount) <= maxClaim, "Community::claim: MAX_CLAIM");
         claimed[msg.sender] = claimed[msg.sender] + claimAmount;
 
         claims[msg.sender] += 1;
         cooldown[msg.sender] = uint256(block.timestamp + lastInterval(msg.sender));
 
-        emit BeneficiaryClaim(msg.sender, claimAmount);
         bool success = IERC20(cUSDAddress).transfer(msg.sender, claimAmount);
-        require(success, "NOT_ALLOWED");
+        require(success, "Community::claim: NOT_ALLOWED");
+        emit BeneficiaryClaim(msg.sender, claimAmount);
     }
 
     function lastInterval(address _beneficiary) public view returns (uint256) {
@@ -235,6 +253,11 @@ contract Community is AccessControl {
         emit CommunityUnlocked(msg.sender);
     }
 
+    function requestFunds() external onlyManagers {
+        ICommunityAdmin communityAdminInstance = ICommunityAdmin(communityAdminAddress);
+        communityAdminInstance.fundCommunity();
+    }
+
     /**
      * Migrate funds in current community to new one.
      */
@@ -243,11 +266,27 @@ contract Community is AccessControl {
         onlyCommunityAdmin
     {
         ICommunity newCommunity = ICommunity(_newCommunity);
-        require(newCommunity.hasRole(MANAGER_ROLE, _newCommunityManager) == true, "NOT_ALLOWED");
-        require(newCommunity.previousCommunityContract() == address(this), "NOT_ALLOWED");
+        require(
+            newCommunity.hasRole(MANAGER_ROLE, _newCommunityManager) == true,
+            "Community::migrateFunds: NOT_ALLOWED"
+        );
+        require(
+            newCommunity.previousCommunityContract() == address(this),
+            "Community::migrateFunds: NOT_ALLOWED"
+        );
         uint256 balance = IERC20(cUSDAddress).balanceOf(address(this));
         bool success = IERC20(cUSDAddress).transfer(_newCommunity, balance);
-        require(success, "NOT_ALLOWED");
+        require(success, "Community::migrateFunds: NOT_ALLOWED");
         emit MigratedFunds(_newCommunity, balance);
+    }
+
+    function changeBeneficiaryState(address beneficiary, BeneficiaryState _newState) internal {
+        if (beneficiaries[beneficiary] == _newState) {
+            return;
+        }
+
+        beneficiaries[beneficiary] = _newState;
+
+        (_newState == BeneficiaryState.Valid) ? validBeneficiaryCount++ : validBeneficiaryCount--;
     }
 }
