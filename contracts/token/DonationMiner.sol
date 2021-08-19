@@ -28,16 +28,12 @@ contract DonationMiner is Ownable, Pausable, ReentrancyGuard {
     struct RewardPeriodUserInfo {
         uint256 donationAmount; // How many cUSD tokens the user has provided this rewardPeriod.
         uint256 claimedDonationAmount; // Amount of cUSD tokens  for which the reward was requested by user
-        uint256 rewardDebt; // Mining reward owed for this rewardPeriod    //to be deleted
-        uint256 rewardCredited; // Mining reward claimed for this rewardPeriod  //to be deleted
     }
 
     struct RewardPeriodReward {
-        uint256 accRewardPerShare; // Accumulated reward per share, times 1e12. See below.
         uint256 rewardPerBlock; // Reward tokens created per block.
         uint256 startBlock; // The block number at which reward distribution starts.
         uint256 endBlock; // The block number at which reward distribution ends.
-        uint256 rewardPeriodSpan; // The number of rewardPeriods to look back and ratio your contribution.
         uint256 donations; // Total of donations for this rewardPeriod.
         uint256 claimedDonations; // Amount of cUSD tokens  for which the reward was requested by all users
         uint256 ipctClaimed; // Amount of cUSD tokens  for which the reward was requested by all users
@@ -90,11 +86,9 @@ contract DonationMiner is Ownable, Pausable, ReentrancyGuard {
         uint256 startBlockForRewardPeriod = _getStartBlockForRewardPeriod(_startingRewardPeriod);
 
         RewardPeriodReward storage beginningRewardPeriod = rewards[_startingRewardPeriod];
-        beginningRewardPeriod.accRewardPerShare = 0;
         beginningRewardPeriod.rewardPerBlock = _startingRewardPerBlock;
         beginningRewardPeriod.startBlock = startBlockForRewardPeriod;
         beginningRewardPeriod.endBlock = _getEndBlockForRewardPeriod(_startingRewardPeriod);
-        beginningRewardPeriod.rewardPeriodSpan = _startingRewardPeriodRatioSpan; //to be deleted
         beginningRewardPeriod.donations = 0;
     }
 
@@ -174,7 +168,7 @@ contract DonationMiner is Ownable, Pausable, ReentrancyGuard {
 
         // Iterate all pending rewardPeriods for a user and add up their rewards
         while (claimFromRewardPeriod < currentRewardPeriod) {
-            claimAmount = claimAmount + _calculateReward(msg.sender, claimFromRewardPeriod);
+            claimAmount = claimAmount + _computeReward(msg.sender, claimFromRewardPeriod);
             claimFromRewardPeriod++;
         }
 
@@ -190,42 +184,32 @@ contract DonationMiner is Ownable, Pausable, ReentrancyGuard {
         emit RewardClaim(msg.sender, claimAmount);
     }
 
-    //    /**
-    //     * @dev View function to see pending rewards on frontend.
-    //     * @param _user Address of a specific user.
-    //     * @return Pending rewards.
-    //     */
-    //    function estimateClaimableReward(address _user)
-    //        external
-    //        view
-    //        whenStarted
-    //        whenNotPaused
-    //        returns (uint256)
-    //    {
-    //        uint256 claimAmount;
-    //        uint256 currentRewardPeriod = _getCurrentRewardPeriod();
-    //        uint256 claimFromRewardPeriod = Math.max(1, userLastClaimedRewardPeriod[msg.sender]);
-    //
-    //        // Iterate all pending rewardPeriods for a user and add up their rewards
-    //        while (claimFromRewardPeriod <= currentRewardPeriod) {
-    //            uint256 tmpAccRewardPerShare = rewards[claimFromRewardPeriod].accRewardPerShare;
-    //            uint256 donations = rewards[claimFromRewardPeriod].donations;
-    //
-    //            if (donations > 0) {
-    //                uint256 endBlock = Math.min(block.number, rewards[claimFromRewardPeriod].endBlock);
-    //                uint256 blockCount = endBlock - rewards[claimFromRewardPeriod].lastRewardBlock;
-    //                uint256 newRewards = blockCount * rewards[claimFromRewardPeriod].rewardPerBlock;
-    //                tmpAccRewardPerShare = tmpAccRewardPerShare + ((newRewards * 1e12) / donations);
-    //            }
-    //            claimAmount =
-    //                claimAmount +
-    //                (((rewards[claimFromRewardPeriod].rewardPeriodUsers[_user].donationAmount *
-    //                    tmpAccRewardPerShare) / 1e12) -
-    //                    rewards[claimFromRewardPeriod].rewardPeriodUsers[_user].rewardCredited);
-    //            claimFromRewardPeriod++;
-    //        }
-    //        return claimAmount;
-    //    }
+    /**
+     * @dev View function to see pending rewards on frontend.
+     * @param _user Address of a specific user.
+     * @return Pending rewards.
+     */
+    function estimateClaimableReward(address _user)
+        external
+        view
+        whenStarted
+        whenNotPaused
+        returns (uint256)
+    {
+        uint256 claimAmount;
+        uint256 currentRewardPeriod = _getCurrentRewardPeriod();
+        uint256 claimFromRewardPeriod = Math.max(1, userLastClaimedRewardPeriod[msg.sender]);
+        uint256 userAmountToClaim;
+        uint256 userReward;
+
+        // Iterate all pending rewardPeriods for a user and add up their rewards
+        while (claimFromRewardPeriod <= currentRewardPeriod) {
+            (userAmountToClaim, userReward) = _calculateReward(_user, claimFromRewardPeriod);
+            claimAmount = claimAmount + userReward;
+            claimFromRewardPeriod++;
+        }
+        return claimAmount;
+    }
 
     /**
      * @dev Calculate claimable rewards for an rewardPeriod, for a user
@@ -233,7 +217,11 @@ contract DonationMiner is Ownable, Pausable, ReentrancyGuard {
      * @param _rewardPeriod RewardPeriod to claim rewards for
      * @return uint256 Amount to claim for this rewardPeriod
      */
-    function _calculateReward(address _user, uint256 _rewardPeriod) internal returns (uint256) {
+    function _calculateReward(address _user, uint256 _rewardPeriod)
+        internal
+        view
+        returns (uint256, uint256)
+    {
         RewardPeriodReward storage period = rewards[_rewardPeriod];
         RewardPeriodUserInfo storage rewardPeriodUser = period.rewardPeriodUsers[_user];
 
@@ -241,11 +229,8 @@ contract DonationMiner is Ownable, Pausable, ReentrancyGuard {
             rewardPeriodUser.claimedDonationAmount;
 
         if (userAmountToClaim == 0) {
-            return 0;
+            return (0, 0);
         }
-
-        // Update aggregate statistics for this rewardPeriod
-        _updateRewardPeriod(_rewardPeriod);
 
         uint256 periodLastMinedBlock = (block.number > period.endBlock)
             ? period.endBlock
@@ -265,6 +250,28 @@ contract DonationMiner is Ownable, Pausable, ReentrancyGuard {
         //        console.log("period.donations", period.donations);
         //        console.log("period.claimedDonations", period.claimedDonations);
         //        console.log("userReward", userReward);
+
+        return (userAmountToClaim, userReward);
+    }
+
+    /**
+     * @dev Calculate claimable rewards for an rewardPeriod, for a user
+     * @param _user User to claim for
+     * @param _rewardPeriod RewardPeriod to claim rewards for
+     * @return uint256 Amount to claim for this rewardPeriod
+     */
+    function _computeReward(address _user, uint256 _rewardPeriod) internal returns (uint256) {
+        // Update aggregate statistics for this rewardPeriod
+        _updateRewardPeriod(_rewardPeriod);
+
+        (uint256 userAmountToClaim, uint256 userReward) = _calculateReward(_user, _rewardPeriod);
+
+        if (userReward == 0) {
+            return 0;
+        }
+
+        RewardPeriodReward storage period = rewards[_rewardPeriod];
+        RewardPeriodUserInfo storage rewardPeriodUser = period.rewardPeriodUsers[_user];
 
         period.ipctClaimed = period.ipctClaimed + userReward;
         period.claimedDonations = period.claimedDonations + userAmountToClaim;
