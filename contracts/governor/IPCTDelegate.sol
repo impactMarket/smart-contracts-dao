@@ -29,9 +29,6 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
     /// @notice The max setable voting delay
     uint256 public constant MAX_VOTING_DELAY = 120960; // About 1 week
 
-    /// @notice The number of votes in support of a proposal required in order for a quorum to be reached and for a vote to succeed
-    uint256 public constant quorumVotes = 4000000e18; // 4,000,000 Tokens
-
     /// @notice The maximum number of actions that can be included in a proposal
     uint256 public constant proposalMaxOperations = 10; // 10 actions
 
@@ -55,6 +52,7 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
      * @param votingPeriod_ The initial voting period
      * @param votingDelay_ The initial voting delay
      * @param proposalThreshold_ The initial proposal threshold
+     * @param quorumVotes_ The initial quorum votes
      */
     function initialize(
         address timelock_,
@@ -62,7 +60,8 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
         address releaseToken_,
         uint256 votingPeriod_,
         uint256 votingDelay_,
-        uint256 proposalThreshold_
+        uint256 proposalThreshold_,
+        uint256 quorumVotes_
     ) public initializer adminOnly {
         require(
             TimelockInterface(timelock_).admin() == address(this),
@@ -81,6 +80,7 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
                 proposalThreshold_ <= MAX_PROPOSAL_THRESHOLD,
             "IPCT::initialize: invalid proposal threshold"
         );
+        require(quorumVotes_ >= proposalThreshold_, "IPCT::initialize: invalid quorum votes");
         timelock = TimelockInterface(timelock_);
         require(
             timelock.admin() == address(this),
@@ -93,6 +93,7 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
         votingPeriod = votingPeriod_;
         votingDelay = votingDelay_;
         proposalThreshold = proposalThreshold_;
+        quorumVotes = quorumVotes_;
 
         // Create dummy proposal
         Proposal memory dummyProposal = Proposal({
@@ -474,6 +475,19 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
         votingDelay = newVotingDelay;
 
         emit VotingDelaySet(oldVotingDelay, votingDelay);
+    }
+
+    /**
+     * @notice Admin function for setting the quorum votes
+     * @param newQuorumVotes new quorum votes
+     */
+    function _setQuorumVotes(uint256 newQuorumVotes) external adminOnly {
+        require(newQuorumVotes >= proposalThreshold, "IPCT::_setQuorumVotes: invalid quorum votes");
+
+        uint256 oldQuorumVotes = votingDelay;
+        quorumVotes = newQuorumVotes;
+
+        emit QuorumVotesSet(oldQuorumVotes, newQuorumVotes);
     }
 
     /**

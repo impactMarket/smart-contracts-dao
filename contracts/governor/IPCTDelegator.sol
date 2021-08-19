@@ -15,7 +15,8 @@ contract IPCTDelegator is IPCTDelegatorStorage, IPCTEvents {
         address implementation_,
         uint256 votingPeriod_,
         uint256 votingDelay_,
-        uint256 proposalThreshold_
+        uint256 proposalThreshold_,
+        uint256 quorumVotes_
     ) {
         // Admin set to msg.sender for initialization
         admin = msg.sender;
@@ -23,13 +24,14 @@ contract IPCTDelegator is IPCTDelegatorStorage, IPCTEvents {
         delegateTo(
             implementation_,
             abi.encodeWithSignature(
-                "initialize(address,address,address,uint256,uint256,uint256)",
+                "initialize(address,address,address,uint256,uint256,uint256,uint256)",
                 timelock_,
                 token_,
                 releaseToken_,
                 votingPeriod_,
                 votingDelay_,
-                proposalThreshold_
+                proposalThreshold_,
+                quorumVotes_
             )
         );
         _setImplementation(implementation_);

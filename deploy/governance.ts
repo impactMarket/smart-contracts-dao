@@ -7,6 +7,7 @@ const TWO_DAYS_SECONDS = 2 * 24 * 60 * 60; // 2 days
 const VOTING_PERIOD_BLOCKS = 17280; // about 1 day
 const VOTING_DELAY_BLOCKS = 17280 * 2; // about 2 days
 const PROPOSAL_THRESHOLD: BigNumberish = parseEther("1000000"); // one million units
+const QUORUM_VOTES: BigNumberish = parseEther("4000000"); // four million units
 
 async function getContractAddress(
 	hre: HardhatRuntimeEnvironment,
@@ -28,15 +29,27 @@ async function getContractAddress(
 }
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
+	// @ts-ignore
 	const { deployments, getNamedAccounts } = hre;
 	const { deploy } = deployments;
 	const { deployer } = await getNamedAccounts();
 
-	const delegatorAddress = await getContractAddress(hre, deployer, 0);
+	const delegateAddress = await getContractAddress(hre, deployer, 0);
 	const timelockAddress = await getContractAddress(hre, deployer, 1);
-	const delegateAddress = await getContractAddress(hre, deployer, 2);
+	const delegatorAddress = await getContractAddress(hre, deployer, 2);
 
 	const Token = await deployments.get("IPCTToken");
+
+	const delegateResult = await deploy("IPCTDelegate", {
+		from: deployer,
+		log: true,
+	});
+
+	const timelockResult = await deploy("IPCTTimelock", {
+		from: deployer,
+		args: [delegatorAddress, TWO_DAYS_SECONDS],
+		log: true,
+	});
 
 	const delegatorResult = await deploy("IPCTDelegator", {
 		from: deployer,
@@ -44,27 +57,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 			timelockAddress,
 			Token.address,
 			Token.address,
-			deployer,
+			timelockAddress,
 			delegateAddress,
 			VOTING_PERIOD_BLOCKS,
 			VOTING_DELAY_BLOCKS,
 			PROPOSAL_THRESHOLD,
+			QUORUM_VOTES,
 		],
 		log: true,
-		// gasLimit: 13000000,
-	});
-
-	const timelockResult = await deploy("IPCTTimelock", {
-		from: deployer,
-		args: [delegatorAddress, TWO_DAYS_SECONDS],
-		log: true,
-		// gasLimit: 13000000,
-	});
-
-	const delegateResult = await deploy("IPCTDelegate", {
-		from: deployer,
-		log: true,
-		// gasLimit: 13000000,
 	});
 };
 

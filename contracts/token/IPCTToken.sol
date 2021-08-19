@@ -5,7 +5,7 @@ import "@ubeswap/governance/contracts/voting/TransferrableVotingToken.sol";
 
 contract IPCTToken is TransferrableVotingToken {
     /// @notice The maximum supply of IPCT Tokens.
-    uint96 public constant MAX_SUPPLY = 100_000_000e18;
+    uint96 public constant MAX_SUPPLY = 10_000_000_000e18;
 
     /**
      * @notice Construct a new IPCT token
