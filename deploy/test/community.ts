@@ -30,7 +30,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	});
 
 	const Treasury = await deployments.get("Treasury");
-	const IPCTTimelock = await deployments.get("IPCTTimelock");
+	const IPCTTimelock = await deployments.get("IPCTTimelockMock");
 
 	const TreasuryContract = await ethers.getContractAt(
 		"Treasury",
