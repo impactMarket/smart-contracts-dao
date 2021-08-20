@@ -68,6 +68,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	});
 };
 
-func.dependencies = ["Token"];
-func.tags = ["Governance", "Prod"];
+func.dependencies = ["TokenTest"];
+func.tags = ["GovernanceTest", "Test"];
 export default func;
