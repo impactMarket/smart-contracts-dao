@@ -28,9 +28,8 @@ const provider = waffle.provider;
 const communityMinTranche = bigNum(100);
 const communityMaxTranche = bigNum(5000);
 
-const VOTING_PERIOD_BLOCKS = 17280; // about 1 day
+const VOTING_PERIOD_BLOCKS = 10; // about 1 day
 const VOTING_DELAY_BLOCKS = 10; // about 2 days
-const EPOCH_SIZE = 17280;
 
 // Contracts
 let IPCTToken: ethersTypes.ContractFactory;
@@ -99,13 +98,17 @@ describe("IPCTGovernator", function () {
 			ipctTokenDeployment.address
 		);
 
-		const ipctTimelockDeployment = await deployments.get("IPCTTimelock");
+		const ipctTimelockDeployment = await deployments.get(
+			"IPCTTimelockMock"
+		);
 		ipctTimelock = await ethers.getContractAt(
 			"IPCTTimelock",
 			ipctTimelockDeployment.address
 		);
 
-		const ipctDelegatorDeployment = await deployments.get("IPCTDelegator");
+		const ipctDelegatorDeployment = await deployments.get(
+			"IPCTDelegatorMock"
+		);
 		ipctDelegator = await ethers.getContractAt(
 			"IPCTDelegator",
 			ipctDelegatorDeployment.address
