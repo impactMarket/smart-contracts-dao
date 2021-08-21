@@ -4,10 +4,10 @@ import { parseEther } from "@ethersproject/units";
 import { BigNumberish } from "ethers";
 
 const TWO_DAYS_SECONDS = 2 * 24 * 60 * 60; // 2 days
-const VOTING_PERIOD_BLOCKS = 17280; // about 1 day
-const VOTING_DELAY_BLOCKS = 17280 * 2; // about 2 days
-const PROPOSAL_THRESHOLD: BigNumberish = parseEther("1000000"); // one million units
-const QUORUM_VOTES: BigNumberish = parseEther("4000000"); // four million units
+const VOTING_PERIOD_BLOCKS = 17280;
+const VOTING_DELAY_BLOCKS = 720; // about 1 hour
+const PROPOSAL_THRESHOLD: BigNumberish = parseEther("100000000"); // 100 millions units (1%)
+const QUORUM_VOTES: BigNumberish = parseEther("400000000"); // 400 millions units (4%)
 
 async function getContractAddress(
 	hre: HardhatRuntimeEnvironment,
@@ -30,7 +30,7 @@ async function getContractAddress(
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// @ts-ignore
-	const { deployments, getNamedAccounts } = hre;
+	const { deployments, getNamedAccounts, ethers } = hre;
 	const { deploy } = deployments;
 	const { deployer } = await getNamedAccounts();
 
@@ -45,13 +45,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		log: true,
 	});
 
-	const timelockResult = await deploy("IPCTTimelockMock", {
+	const timelockResult = await deploy("IPCTTimelock", {
 		from: deployer,
 		args: [delegatorAddress, TWO_DAYS_SECONDS],
 		log: true,
 	});
 
-	const delegatorResult = await deploy("IPCTDelegatorMock", {
+	const delegatorResult = await deploy("IPCTDelegator", {
 		from: deployer,
 		args: [
 			timelockAddress,
@@ -66,6 +66,16 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		],
 		log: true,
 	});
+
+	//for testing
+	let DelegateContract = await ethers.getContractAt(
+		"IPCTDelegate",
+		delegateResult.address
+	);
+	const DelegatorContract = await DelegateContract.attach(
+		delegateResult.address
+	);
+	await DelegatorContract._setVotingPeriod(5);
 };
 
 func.dependencies = ["TokenTest"];
