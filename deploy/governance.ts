@@ -6,8 +6,8 @@ import { BigNumberish } from "ethers";
 const TWO_DAYS_SECONDS = 2 * 24 * 60 * 60; // 2 days
 const VOTING_PERIOD_BLOCKS = 17280; // about 1 day
 const VOTING_DELAY_BLOCKS = 17280 * 2; // about 2 days
-const PROPOSAL_THRESHOLD: BigNumberish = parseEther("1000000"); // one million units
-const QUORUM_VOTES: BigNumberish = parseEther("4000000"); // four million units
+const PROPOSAL_THRESHOLD: BigNumberish = parseEther("100000000"); // 100 millions units (1%)
+const QUORUM_VOTES: BigNumberish = parseEther("400000000"); // 400 millions units (4%)s
 
 async function getContractAddress(
 	hre: HardhatRuntimeEnvironment,

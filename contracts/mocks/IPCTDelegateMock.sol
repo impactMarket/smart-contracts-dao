@@ -14,4 +14,15 @@ contract IPCTDelegateMock is IPCTDelegate {
 
         emit VotingPeriodSet(oldVotingPeriod, votingPeriod);
     }
+
+    /**
+     * @notice Admin function for setting the voting delay
+     * @param newVotingDelay new voting delay, in blocks
+     */
+    function _setVotingDelay(uint256 newVotingDelay) external override {
+        uint256 oldVotingDelay = votingDelay;
+        votingDelay = newVotingDelay;
+
+        emit VotingDelaySet(oldVotingDelay, votingDelay);
+    }
 }
