@@ -66,6 +66,19 @@ let cUSDInstance: ethersTypes.Contract;
 BigNumber.config({ EXPONENTIAL_AT: 25 });
 
 const bigNum = (num: number) => num + "0".repeat(18);
+// constants
+const decimals = new BigNumber(10).pow(18);
+const hour = time.duration.hours(1);
+const day = time.duration.days(1);
+const week = time.duration.weeks(1);
+const month = time.duration.days(30);
+const claimAmountTwo = new BigNumber(bigNum(2));
+const maxClaimTen = new BigNumber(bigNum(10));
+const fiveCents = new BigNumber("50000000000000000");
+const zeroAddress = "0x0000000000000000000000000000000000000000";
+const mintAmount = new BigNumber("500000000000000000000");
+const communityMinTranche = bigNum(100);
+const communityMaxTranche = bigNum(5000);
 
 async function init() {
 	const accounts: SignerWithAddress[] = await ethers.getSigners();
@@ -90,63 +103,65 @@ async function init() {
 	Token = await ethers.getContractFactory("TokenMock");
 }
 
-// constants
-const decimals = new BigNumber(10).pow(18);
-const hour = time.duration.hours(1);
-const day = time.duration.days(1);
-const week = time.duration.weeks(1);
-const month = time.duration.days(30);
-const claimAmountTwo = new BigNumber(bigNum(2));
-const maxClaimTen = new BigNumber(bigNum(10));
-const fiveCents = new BigNumber("50000000000000000");
-const zeroAddress = "0x0000000000000000000000000000000000000000";
-const mintAmount = new BigNumber("500000000000000000000");
-const communityMinTranche = bigNum(100);
-const communityMaxTranche = bigNum(5000);
+async function deploy() {
+	await deployments.fixture("Test", { fallbackToGlobal: false });
 
-/*
+	const cUSD = await deployments.get("TokenMock");
+	cUSDInstance = await ethers.getContractAt("TokenMock", cUSD.address);
+
+	const IPCTTimelock = await deployments.get("IPCTTimelock");
+	const IPCTTimelockInstance = await ethers.getContractAt(
+		"IPCTTimelock",
+		IPCTTimelock.address
+	);
+
+	const communityAdmin = await deployments.get("CommunityAdminMock");
+	communityAdminInstance = await ethers.getContractAt(
+		"CommunityAdminMock",
+		communityAdmin.address
+	);
+
+	const treasury = await deployments.get("Treasury");
+	treasuryInstance = await ethers.getContractAt("Treasury", treasury.address);
+
+	const communityFactory = await deployments.get("CommunityFactory");
+	communityFactoryInstance = await ethers.getContractAt(
+		"CommunityFactory",
+		communityFactory.address
+	);
+
+	//for testing
+	await communityAdminInstance.transferOwnership(adminAccount1.address);
+	//end for testing
+
+	const tx = await communityAdminInstance.addCommunity(
+		communityManagerA.address,
+		claimAmountTwo.toString(),
+		maxClaimTen.toString(),
+		day.toString(),
+		hour.toString()
+	);
+
+	let receipt = await tx.wait();
+
+	const communityAddress = receipt.events?.filter((x: any) => {
+		return x.event == "CommunityAdded";
+	})[0]["args"]["_communityAddress"];
+	communityInstance = await Community.attach(communityAddress);
+}
+
 describe("Community - Beneficiary", () => {
 	before(async function () {
 		await init();
 	});
 
 	beforeEach(async () => {
-		cUSDInstance = await Token.deploy("cUSD", "cUSD");
-		communityAdminInstance = await CommunityAdmin.deploy(
-			cUSDInstance.address,
-			communityMinTranche,
-			communityMaxTranche
-		);
-		treasuryInstance = await Treasury.deploy(
-			cUSDInstance.address,
-			adminAccount1.address,
-			communityAdminInstance.address
-		);
-		communityFactoryInstance = await CommunityFactory.deploy(
-			cUSDInstance.address,
-			communityAdminInstance.address
-		);
+		await deploy();
 
-		await communityAdminInstance.setTreasury(treasuryInstance.address);
-		await communityAdminInstance.setCommunityFactory(
-			communityFactoryInstance.address
+		await cUSDInstance.mint(
+			communityInstance.address,
+			mintAmount.toString()
 		);
-
-		const tx = await communityAdminInstance.addCommunity(
-			communityManagerA.address,
-			claimAmountTwo.toString(),
-			maxClaimTen.toString(),
-			day.toString(),
-			hour.toString()
-		);
-
-		let receipt = await tx.wait();
-
-		const communityAddress = receipt.events?.filter((x: any) => {
-			return x.event == "CommunityAdded";
-		})[0]["args"]["_communityAddress"];
-		communityInstance = await Community.attach(communityAddress);
-		await cUSDInstance.mint(communityAddress, mintAmount.toString());
 	});
 
 	it("should be able to add beneficiary to community", async () => {
@@ -268,42 +283,13 @@ describe("Community - Claim", () => {
 	});
 
 	beforeEach(async () => {
-		cUSDInstance = await Token.deploy("cUSD", "cUSD");
-		communityAdminInstance = await CommunityAdmin.deploy(
-			cUSDInstance.address,
-			communityMinTranche,
-			communityMaxTranche
-		);
-		treasuryInstance = await Treasury.deploy(
-			cUSDInstance.address,
-			adminAccount1.address,
-			communityAdminInstance.address
-		);
-		communityFactoryInstance = await CommunityFactory.deploy(
-			cUSDInstance.address,
-			communityAdminInstance.address
+		await deploy();
+
+		await cUSDInstance.mint(
+			communityInstance.address,
+			mintAmount.toString()
 		);
 
-		await communityAdminInstance.setTreasury(treasuryInstance.address);
-		await communityAdminInstance.setCommunityFactory(
-			communityFactoryInstance.address
-		);
-
-		const tx = await communityAdminInstance.addCommunity(
-			communityManagerA.address,
-			claimAmountTwo.toString(),
-			maxClaimTen.toString(),
-			day.toString(),
-			hour.toString()
-		);
-
-		let receipt = await tx.wait();
-
-		const communityAddress = receipt.events?.filter((x: any) => {
-			return x.event == "CommunityAdded";
-		})[0]["args"]["_communityAddress"];
-		communityInstance = await Community.attach(communityAddress);
-		await cUSDInstance.mint(communityAddress, mintAmount.toString());
 		await communityInstance
 			.connect(communityManagerA)
 			.addBeneficiary(beneficiaryA.address);
@@ -477,41 +463,7 @@ describe("Community - Governance (2)", () => {
 	});
 
 	beforeEach(async () => {
-		cUSDInstance = await Token.deploy("cUSD", "cUSD");
-		communityAdminInstance = await CommunityAdmin.deploy(
-			cUSDInstance.address,
-			communityMinTranche,
-			communityMaxTranche
-		);
-		treasuryInstance = await Treasury.deploy(
-			cUSDInstance.address,
-			adminAccount1.address,
-			communityAdminInstance.address
-		);
-		communityFactoryInstance = await CommunityFactory.deploy(
-			cUSDInstance.address,
-			communityAdminInstance.address
-		);
-
-		await communityAdminInstance.setTreasury(treasuryInstance.address);
-		await communityAdminInstance.setCommunityFactory(
-			communityFactoryInstance.address
-		);
-
-		const tx = await communityAdminInstance.addCommunity(
-			communityManagerA.address,
-			claimAmountTwo.toString(),
-			maxClaimTen.toString(),
-			day.toString(),
-			hour.toString()
-		);
-
-		let receipt = await tx.wait();
-
-		const communityAddress = receipt.events?.filter((x: any) => {
-			return x.event == "CommunityAdded";
-		})[0]["args"]["_communityAddress"];
-		communityInstance = await Community.attach(communityAddress);
+		await deploy();
 	});
 
 	it("should be able to migrate funds from community if CommunityAdmin", async () => {
@@ -1122,7 +1074,6 @@ describe("Chaos test (complete flow)", async () => {
 			);
 	});
 });
-*/
 
 describe("Community - getFunds", () => {
 	before(async function () {
@@ -1130,53 +1081,7 @@ describe("Community - getFunds", () => {
 	});
 
 	beforeEach(async () => {
-		await deployments.fixture("Test", { fallbackToGlobal: false });
-
-		const cUSD = await deployments.get("TokenMock");
-		cUSDInstance = await ethers.getContractAt("TokenMock", cUSD.address);
-
-		const IPCTTimelock = await deployments.get("IPCTTimelock");
-		const IPCTTimelockInstance = await ethers.getContractAt(
-			"IPCTTimelock",
-			IPCTTimelock.address
-		);
-
-		const communityAdmin = await deployments.get("CommunityAdminMock");
-		communityAdminInstance = await ethers.getContractAt(
-			"CommunityAdminMock",
-			communityAdmin.address
-		);
-
-		const treasury = await deployments.get("Treasury");
-		treasuryInstance = await ethers.getContractAt(
-			"Treasury",
-			treasury.address
-		);
-
-		const communityFactory = await deployments.get("CommunityFactory");
-		communityFactoryInstance = await ethers.getContractAt(
-			"CommunityFactory",
-			communityFactory.address
-		);
-
-		//for testing
-		await communityAdminInstance.transferOwnership(adminAccount1.address);
-		//end for testing
-
-		const tx = await communityAdminInstance.addCommunity(
-			communityManagerA.address,
-			claimAmountTwo.toString(),
-			maxClaimTen.toString(),
-			day.toString(),
-			hour.toString()
-		);
-
-		let receipt = await tx.wait();
-
-		const communityAddress = receipt.events?.filter((x: any) => {
-			return x.event == "CommunityAdded";
-		})[0]["args"]["_communityAddress"];
-		communityInstance = await Community.attach(communityAddress);
+		await deploy();
 		await cUSDInstance.mint(
 			treasuryInstance.address,
 			mintAmount.toString()
