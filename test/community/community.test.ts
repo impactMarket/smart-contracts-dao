@@ -15,6 +15,7 @@ import {
 } from "hardhat";
 import type * as ethersTypes from "ethers";
 import { DeployFunction } from "hardhat-deploy/types";
+import { parseEther } from "@ethersproject/units";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const {

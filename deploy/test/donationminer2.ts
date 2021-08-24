@@ -13,14 +13,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const Token = await deployments.get("IPCTToken");
 	const Treasury = await deployments.get("Treasury");
 
-	await deploy("DonationMiner", {
+	await deploy("DonationMiner2", {
 		from: deployer,
 		args: [
 			cUSD.address,
 			Token.address,
 			parseEther("100"),
 			14,
-			1,
+			14,
 			1,
 			Treasury.address,
 		],
@@ -30,4 +30,4 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 export default func;
 func.dependencies = ["TreasuryTest", "cUSDTest"];
-func.tags = ["DonationMinerTest", "Test"];
+func.tags = ["DonationMinerTest2", "Test"];

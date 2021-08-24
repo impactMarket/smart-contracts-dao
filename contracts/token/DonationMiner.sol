@@ -112,7 +112,7 @@ contract DonationMiner is Ownable, Pausable, ReentrancyGuard {
         view
         returns (uint256)
     {
-        return _rewardPeriod < 10 ? 100 : 90;
+        return 100e18;
     }
 
     /**
