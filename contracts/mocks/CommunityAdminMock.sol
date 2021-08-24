@@ -22,7 +22,6 @@ contract CommunityAdminMock is CommunityAdmin {
      * Can only be called by the current owner.
      */
     function transferOwnership(address newOwner) public override {
-        console.log("transferOwnership mock");
         require(newOwner != address(0), "Ownable: new owner is the zero address");
         address oldOwner = _owner;
         _owner = newOwner;
