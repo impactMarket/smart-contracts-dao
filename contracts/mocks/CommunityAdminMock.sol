@@ -1,7 +1,6 @@
 //SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.5;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "../community/CommunityAdmin.sol";
 
 import "hardhat/console.sol";
