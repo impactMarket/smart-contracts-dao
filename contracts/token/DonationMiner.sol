@@ -107,9 +107,9 @@ contract DonationMiner is Ownable, Pausable, ReentrancyGuard {
         return rewardPeriod * blocksInRewardPeriod;
     }
 
-    function _getRewardPerBlockByRewardPeriod(uint256 _rewardPeriod)
+    function _getRewardPerBlockByRewardPeriod()
         internal
-        view
+        pure
         returns (uint256)
     {
         return 100e18;
