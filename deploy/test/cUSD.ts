@@ -7,12 +7,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const { deploy } = deployments;
 	const { deployer } = await getNamedAccounts();
 
-	await deploy("IPCTToken", {
+	await deploy("TokenMock", {
 		from: deployer,
-		args: [deployer],
+		args: ["cUSD", "cUSD"],
 		log: true,
 	});
 };
 
 export default func;
-func.tags = ["Token", "Prod"];
+func.tags = ["cUSDTest", "Test"];

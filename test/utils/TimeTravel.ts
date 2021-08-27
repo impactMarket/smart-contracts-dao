@@ -29,9 +29,29 @@ export async function advanceTimeAndBlock() {
 	await advanceBlock();
 }
 
-export async function advanceTimeAndBlockNTimes(n: number, epochSize: number) {
-	console.log(`Time travelling ${n} blocks with epoch size ${epochSize}`);
+export async function advanceTimeAndBlockNTimes(
+	n: number,
+	rewardPeriodSize: number
+) {
 	for (let i = 0; i < n; i++) {
 		const newBlock = await advanceTimeAndBlock();
 	}
+}
+
+export async function advanceBlockNTimes(n: number) {
+	for (let i = 0; i < n; i++) {
+		const newBlock = await advanceBlock();
+	}
+}
+
+export async function advanceNSeconds(n: number) {
+	return new Promise((resolve, reject) => {
+		try {
+			const result = network.provider.send("evm_increaseTime", [n]);
+
+			return resolve(result);
+		} catch (err) {
+			return reject(err);
+		}
+	});
 }
