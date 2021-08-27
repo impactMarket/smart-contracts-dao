@@ -6,6 +6,7 @@
     "avoid-sha3": "warn",
     "not-rely-on-time": "warn",
     "no-empty-blocks": "off",
+    "func-visibility": ["warn",{"ignoreConstructors":true}],
     "mark-callable-contracts": "off",
     "comprehensive-interface": "warn",
     "compiler-version": [
