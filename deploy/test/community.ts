@@ -41,9 +41,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		communityAdminResult.address
 	);
 
-	console.log(await IPCTTimelock.address);
-	console.log(await CommunityAdminContract.owner());
-
 	await CommunityAdminContract.setTreasury(Treasury.address);
 	await CommunityAdminContract.setCommunityFactory(
 		communityFactoryResult.address

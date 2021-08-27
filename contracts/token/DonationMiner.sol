@@ -1,187 +1,142 @@
 //SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.5;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
+import "./interfaces/ITreasury.sol";
 
 import "hardhat/console.sol";
 
 contract DonationMiner is Ownable, Pausable, ReentrancyGuard {
     using SafeERC20 for IERC20;
-    using Math for uint256;
-    using EnumerableSet for EnumerableSet.UintSet;
 
-    event RewardClaim(address indexed user, uint256 amount);
-    event Donation(address indexed user, uint256 amount);
+    event RewardClaimed(address indexed user, uint256 amount);
+    event DonationAdded(address indexed user, uint256 amount);
 
     IERC20 public immutable cUSD;
     IERC20 public immutable IPCT;
-    address public treasuryAddress;
-    uint256 public blocksInRewardPeriod;
-    uint256 public startingRewardPeriod;
+    ITreasury public treasury;
+    uint256 public rewardPeriodSize;
+    uint256 public startingBlock;
+    uint256 public rewardPerBlock;
 
-    struct RewardPeriodUserInfo {
-        uint256 donationAmount; // How many cUSD tokens the user has provided this rewardPeriod.
-        uint256 claimedDonationAmount; // Amount of cUSD tokens  for which the reward was requested by user
-    }
-
-    struct RewardPeriodReward {
-        uint256 rewardPerBlock; // Reward tokens created per block.
+    struct RewardPeriod {
+        uint256 reward; // Reward tokens created per block.
+        uint256 bonusReward; // Reward tokens from previous periods.
         uint256 startBlock; // The block number at which reward distribution starts.
         uint256 endBlock; // The block number at which reward distribution ends.
         uint256 donations; // Total of donations for this rewardPeriod.
-        uint256 claimedDonations; // Amount of cUSD tokens  for which the reward was requested by all users
-        uint256 ipctClaimed; // Amount of cUSD tokens  for which the reward was requested by all users
-        mapping(address => RewardPeriodUserInfo) rewardPeriodUsers;
     }
 
-    mapping(uint256 => RewardPeriodReward) private rewards;
-    mapping(address => uint256) private userLastClaimedRewardPeriod;
-
-    /**
-     * @notice Enforces values > 0 only
-     */
-    modifier greaterThanZero(uint256 _value) {
-        require(_value > 0, "ERR_ZERO_VALUE");
-        _;
+    struct Donation {
+        uint256 rewardPeriodNumber;
+        uint256 amount;
     }
+
+    struct User {
+        uint256 donationsCount;
+        uint256 lastClaim;
+        mapping(uint256 => Donation) donations;
+    }
+
+    mapping(uint256 => RewardPeriod) public rewardPeriods;
+    mapping(address => User) public users;
+
+    uint256 public rewardPeriodCount;
 
     /**
      * @notice Enforces beginning rewardPeriod has started
      */
     modifier whenStarted() {
-        require(_getCurrentRewardPeriod() >= startingRewardPeriod, "ERR_NOT_STARTED");
+        require(block.number >= startingBlock, "DonationMiner: ERR_NOT_STARTED");
         _;
     }
 
     constructor(
         IERC20 _cUSD,
         IERC20 _IPCT,
-        uint256 _startingRewardPerBlock,
-        uint256 _blocksInRewardPeriod,
-        uint256 _startingRewardPeriod,
-        uint256 _startingRewardPeriodRatioSpan,
-        address _treasuryAddress
+        ITreasury _treasury,
+        uint256 _rewardPerBlock,
+        uint256 _rewardPeriodSize,
+        uint256 _startingBlock
     ) {
-        require(address(_cUSD) != address(0), "_cUSD address not set!");
-        require(address(_IPCT) != address(0), "_IPCT address not set!");
-        require(address(_treasuryAddress) != address(0), "_treasuryAddress not set!");
-
-        require(_startingRewardPerBlock != 0, "_startingRewardPerBlock not set!");
-        require(_startingRewardPeriod != 0, "_startingRewardPeriod not set!");
-        // require(_startingRewardPeriod > _getCurrentRewardPeriod(), "_startingRewardPeriod must be in future!");
-        require(_startingRewardPeriodRatioSpan != 0, "_startingRewardPeriodRatioSpan not set!");
+        require(address(_cUSD) != address(0), "DonationMiner::constructor: _cUSD address not set!");
+        require(address(_IPCT) != address(0), "DonationMiner::constructor: _IPCT address not set!");
+        require(address(_treasury) != address(0), "DonationMiner::constructor: _treasury not set!");
+        require(_rewardPerBlock != 0, "DonationMiner::constructor: _rewardPerBlock not set!");
+        require(_startingBlock != 0, "DonationMiner::constructor: _startingRewardPeriod not set!");
 
         cUSD = _cUSD;
         IPCT = _IPCT;
-        treasuryAddress = _treasuryAddress;
-        startingRewardPeriod = _startingRewardPeriod;
-        blocksInRewardPeriod = _blocksInRewardPeriod;
+        treasury = _treasury;
+        startingBlock = _startingBlock;
+        rewardPeriodSize = _rewardPeriodSize;
+        rewardPerBlock = _rewardPerBlock;
 
-        uint256 startBlockForRewardPeriod = _getStartBlockForRewardPeriod(_startingRewardPeriod);
-
-        RewardPeriodReward storage beginningRewardPeriod = rewards[_startingRewardPeriod];
-        beginningRewardPeriod.rewardPerBlock = _startingRewardPerBlock;
-        beginningRewardPeriod.startBlock = startBlockForRewardPeriod;
-        beginningRewardPeriod.endBlock = _getEndBlockForRewardPeriod(_startingRewardPeriod);
-        beginningRewardPeriod.donations = 0;
+        rewardPeriods[0].endBlock = _startingBlock - 1;
     }
 
-    function _getCurrentRewardPeriod() internal view returns (uint256) {
-        return
-            block.number < blocksInRewardPeriod
-                ? 0
-                : (block.number - (block.number % blocksInRewardPeriod)) / blocksInRewardPeriod;
-    }
-
-    function _getEndBlockForRewardPeriod(uint256 rewardPeriod) internal view returns (uint256) {
-        return _getStartBlockForRewardPeriod(rewardPeriod + 1) - 1;
-    }
-
-    function _getStartBlockForRewardPeriod(uint256 rewardPeriod) internal view returns (uint256) {
-        return rewardPeriod * blocksInRewardPeriod;
-    }
-
-    function _getRewardPerBlockByRewardPeriod(uint256 _rewardPeriod)
-        internal
-        view
-        returns (uint256)
-    {
-        return 100e18;
-    }
-
-    /**
-     * @dev Update reward variables of the given rewardPeriod
-     */
-    function _updateRewardPeriod(uint256 _rewardPeriod) internal {
-        RewardPeriodReward storage currentReward = rewards[_rewardPeriod];
-
-        if (currentReward.endBlock != 0) {
-            return;
-        }
-
-        currentReward.startBlock = _getStartBlockForRewardPeriod(_rewardPeriod);
-        currentReward.endBlock = _getEndBlockForRewardPeriod(_rewardPeriod);
-        currentReward.rewardPerBlock = _getRewardPerBlockByRewardPeriod(_rewardPeriod);
+    function setRewardPeriodSize(uint256 _rewardPeriodSize) external onlyOwner {
+        rewardPeriodSize = _rewardPeriodSize;
     }
 
     /**
      * @dev Deposit cUSD tokens to the donation mining contract
      * @param _amount Amount of cUSD tokens to deposit.
      */
-    function donate(uint256 _amount)
-        external
-        greaterThanZero(_amount)
-        whenNotPaused
-        whenStarted
-        nonReentrant
-    {
-        // Get data for current rewardPeriod
-        uint256 currentRewardPeriod = _getCurrentRewardPeriod();
-        RewardPeriodReward storage currentReward = rewards[currentRewardPeriod];
-        RewardPeriodUserInfo storage currentUser = currentReward.rewardPeriodUsers[msg.sender];
-
-        // Update aggregated calculations
-        _updateRewardPeriod(currentRewardPeriod);
+    function donate(uint256 _amount) external whenNotPaused whenStarted nonReentrant {
+        _createRewardPeriods();
 
         // Transfer the cUSD from the user to the treasury
-        cUSD.safeTransferFrom(address(msg.sender), address(treasuryAddress), _amount);
+        cUSD.safeTransferFrom(msg.sender, address(treasury), _amount);
 
-        currentUser.donationAmount = currentUser.donationAmount + _amount;
-        currentReward.donations = currentReward.donations + _amount;
+        RewardPeriod storage currentPeriod = rewardPeriods[rewardPeriodCount];
+        currentPeriod.donations = currentPeriod.donations + _amount;
 
-        emit Donation(msg.sender, _amount);
+        User storage user = users[msg.sender];
+        user.donationsCount++;
+
+        Donation storage donation = user.donations[user.donationsCount];
+        donation.rewardPeriodNumber = rewardPeriodCount;
+        donation.amount = _amount;
+
+        emit DonationAdded(msg.sender, _amount);
     }
 
     /**
      * @dev Calculate and claim all pending rewards for a user
      */
     function claimRewards() external whenNotPaused whenStarted nonReentrant {
+        User storage user = users[msg.sender];
         uint256 claimAmount;
-        uint256 currentRewardPeriod = _getCurrentRewardPeriod();
-        uint256 claimFromRewardPeriod = userLastClaimedRewardPeriod[msg.sender];
 
-        // Iterate all pending rewardPeriods for a user and add up their rewards
-        while (claimFromRewardPeriod < currentRewardPeriod) {
-            claimAmount = claimAmount + _computeReward(msg.sender, claimFromRewardPeriod);
-            claimFromRewardPeriod++;
+        while (user.lastClaim < user.donationsCount) {
+            user.lastClaim++;
+            Donation storage donation = user.donations[user.lastClaim];
+            RewardPeriod storage rewardPeriod = rewardPeriods[donation.rewardPeriodNumber];
+
+            if (rewardPeriod.endBlock >= block.number) {
+                user.lastClaim--;
+                break;
+            }
+            claimAmount +=
+                ((rewardPeriod.reward + rewardPeriod.bonusReward) * donation.amount) /
+                rewardPeriod.donations;
         }
-
-        // Check we have enough IPCT to transfer
-        require(IPCT.balanceOf(address(this)) >= claimAmount, "ERR_REWARD_TOKEN_BALANCE");
-
-        // Update their last claimed rewardPeriod
-        userLastClaimedRewardPeriod[msg.sender] = currentRewardPeriod;
 
         if (claimAmount > 0) {
+            require(
+                IPCT.balanceOf(address(this)) >= claimAmount,
+                "DonationMiner::claimRewards: ERR_REWARD_TOKEN_BALANCE"
+            );
             IPCT.safeTransfer(msg.sender, claimAmount);
         }
-        emit RewardClaim(msg.sender, claimAmount);
+
+        emit RewardClaimed(msg.sender, claimAmount);
     }
 
     /**
@@ -196,93 +151,49 @@ contract DonationMiner is Ownable, Pausable, ReentrancyGuard {
         whenNotPaused
         returns (uint256)
     {
-        uint256 claimAmount;
-        uint256 currentRewardPeriod = _getCurrentRewardPeriod();
-        uint256 claimFromRewardPeriod = Math.max(1, userLastClaimedRewardPeriod[msg.sender]);
-        uint256 userAmountToClaim;
-        uint256 userReward;
+        User storage user = users[_user];
+        uint256 toClaim = user.lastClaim + 1;
 
-        // Iterate all pending rewardPeriods for a user and add up their rewards
-        while (claimFromRewardPeriod <= currentRewardPeriod) {
-            (userAmountToClaim, userReward) = _calculateReward(_user, claimFromRewardPeriod);
-            claimAmount = claimAmount + userReward;
-            claimFromRewardPeriod++;
+        uint256 claimAmount;
+
+        while (toClaim <= user.donationsCount) {
+            Donation storage donation = user.donations[toClaim];
+            RewardPeriod storage rewardPeriod = rewardPeriods[donation.rewardPeriodNumber];
+
+            claimAmount +=
+                ((rewardPeriod.reward + rewardPeriod.bonusReward) * donation.amount) /
+                rewardPeriod.donations;
+            toClaim++;
         }
+
         return claimAmount;
     }
 
-    /**
-     * @dev Calculate claimable rewards for an rewardPeriod, for a user
-     * @param _user User to claim for
-     * @param _rewardPeriod RewardPeriod to claim rewards for
-     * @return uint256 Amount to claim for this rewardPeriod
-     */
-    function _calculateReward(address _user, uint256 _rewardPeriod)
+    function _calculateReward(uint256 _startBlock, uint256 _endBlock)
         internal
         view
-        returns (uint256, uint256)
+        returns (uint256)
     {
-        RewardPeriodReward storage period = rewards[_rewardPeriod];
-        RewardPeriodUserInfo storage rewardPeriodUser = period.rewardPeriodUsers[_user];
-
-        uint256 userAmountToClaim = rewardPeriodUser.donationAmount -
-            rewardPeriodUser.claimedDonationAmount;
-
-        if (userAmountToClaim == 0) {
-            return (0, 0);
-        }
-
-        uint256 periodLastMinedBlock = (block.number > period.endBlock)
-            ? period.endBlock
-            : block.number;
-        uint256 blocksMined = periodLastMinedBlock - period.startBlock + 1;
-        uint256 periodReward = blocksMined * period.rewardPerBlock;
-
-        uint256 userReward = ((periodReward - period.ipctClaimed) * userAmountToClaim) /
-            (period.donations - period.claimedDonations);
-
-        //        console.log("*****************************************************************************");
-        //        console.log("rewardPeriodUser.donationAmount", rewardPeriodUser.donationAmount);
-        //        console.log("rewardPeriodUser.claimedDonationAmount", rewardPeriodUser.claimedDonationAmount);
-        //        console.log("userAmountToClaim", userAmountToClaim);
-        //        console.log("periodReward", periodReward);
-        //        console.log("period.ipctClaimed", period.ipctClaimed);
-        //        console.log("period.donations", period.donations);
-        //        console.log("period.claimedDonations", period.claimedDonations);
-        //        console.log("userReward", userReward);
-
-        return (userAmountToClaim, userReward);
+        return (_endBlock - _startBlock) * rewardPerBlock;
     }
 
     /**
-     * @dev Calculate claimable rewards for an rewardPeriod, for a user
-     * @param _user User to claim for
-     * @param _rewardPeriod RewardPeriod to claim rewards for
-     * @return uint256 Amount to claim for this rewardPeriod
+     * @dev Create all reward periods from the past
      */
-    function _computeReward(address _user, uint256 _rewardPeriod) internal returns (uint256) {
-        // Update aggregate statistics for this rewardPeriod
-        _updateRewardPeriod(_rewardPeriod);
+    function _createRewardPeriods() internal {
+        RewardPeriod storage lastPeriod = rewardPeriods[rewardPeriodCount];
 
-        (uint256 userAmountToClaim, uint256 userReward) = _calculateReward(_user, _rewardPeriod);
+        while (lastPeriod.endBlock < block.number) {
+            rewardPeriodCount++;
+            RewardPeriod storage newPeriod = rewardPeriods[rewardPeriodCount];
+            newPeriod.startBlock = lastPeriod.endBlock + 1;
+            newPeriod.endBlock = newPeriod.startBlock + rewardPeriodSize;
+            newPeriod.reward = _calculateReward(newPeriod.startBlock, newPeriod.endBlock);
+            if (lastPeriod.donations == 0) {
+                newPeriod.bonusReward = lastPeriod.reward + lastPeriod.bonusReward;
+            }
 
-        if (userReward == 0) {
-            return 0;
+            lastPeriod = newPeriod;
         }
-
-        RewardPeriodReward storage period = rewards[_rewardPeriod];
-        RewardPeriodUserInfo storage rewardPeriodUser = period.rewardPeriodUsers[_user];
-
-        period.ipctClaimed = period.ipctClaimed + userReward;
-        period.claimedDonations = period.claimedDonations + userAmountToClaim;
-        rewardPeriodUser.claimedDonationAmount =
-            rewardPeriodUser.claimedDonationAmount +
-            userAmountToClaim;
-
-        //        console.log("period.ipctClaimed", period.ipctClaimed);
-        //        console.log("period.donations", period.donations);
-        //        console.log("rewardPeriodUser.claimedDonationAmount", rewardPeriodUser.claimedDonationAmount);
-
-        return userReward;
     }
 }
