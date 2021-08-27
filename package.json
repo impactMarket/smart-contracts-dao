@@ -63,7 +63,6 @@
   },
   "snyk": true,
   "dependencies": {
-    "@eth-optimism/smock": "^1.1.10",
     "@nomiclabs/ethereumjs-vm": "^4.2.2"
   }
 }

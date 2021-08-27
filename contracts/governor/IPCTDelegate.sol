@@ -12,10 +12,10 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
     string public constant name = "IPCT";
 
     /// @notice The minimum setable proposal threshold
-    uint256 public constant MIN_PROPOSAL_THRESHOLD = 1000000e18; // 1,000,000 Tokens
+    uint256 public constant MIN_PROPOSAL_THRESHOLD = 100_000_000e18; // 100,000,000 Tokens
 
     /// @notice The maximum setable proposal threshold
-    uint256 public constant MAX_PROPOSAL_THRESHOLD = 5000000e18; // 5,000,000 Tokens
+    uint256 public constant MAX_PROPOSAL_THRESHOLD = 500_000_000e18; // 500,000,000 Tokens
 
     /// @notice The minimum setable voting period
     uint256 public constant MIN_VOTING_PERIOD = 17280; // About 24 hours
@@ -344,6 +344,7 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
     function state(uint256 proposalId) public view returns (ProposalState) {
         require(proposalCount > proposalId, "IPCT::state: invalid proposal id");
         Proposal storage proposal = proposals[proposalId];
+
         if (proposal.canceled) {
             return ProposalState.Canceled;
         } else if (block.number <= proposal.startBlock) {
@@ -466,7 +467,7 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
      * @notice Admin function for setting the voting delay
      * @param newVotingDelay new voting delay, in blocks
      */
-    function _setVotingDelay(uint256 newVotingDelay) external adminOnly {
+    function _setVotingDelay(uint256 newVotingDelay) external virtual adminOnly {
         require(
             newVotingDelay >= MIN_VOTING_DELAY && newVotingDelay <= MAX_VOTING_DELAY,
             "IPCT::_setVotingDelay: invalid voting delay"
