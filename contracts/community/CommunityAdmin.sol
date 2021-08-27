@@ -195,7 +195,7 @@ contract CommunityAdmin is Ownable {
         ITreasury(treasuryAddress).transferToCommunity(msg.sender, trancheAmount);
     }
 
-    function calculateCommunityTrancheAmount(address _community) public returns (uint256) {
+    function calculateCommunityTrancheAmount(address _community) public view returns (uint256) {
         ICommunity community = ICommunity(_community);
         uint256 validBeneficiaries = community.validBeneficiaryCount();
         uint256 claimAmount = community.claimAmount();
