@@ -50,7 +50,7 @@ contract CommunityAdmin is Ownable {
         address _cUSDAddress,
         uint256 _communityMinTranche,
         uint256 _communityMaxTranche
-    ) public {
+    ) {
         require(
             _communityMinTranche < _communityMaxTranche,
             "CommunityAdmin::constructor: communityMinTranche should be less then communityMaxTranche"
