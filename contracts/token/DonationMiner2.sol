@@ -34,7 +34,7 @@ contract DonationMiner2 is Ownable, Pausable, ReentrancyGuard {
         bool isClaimed;
     }
     mapping(uint256 => Donation) private donations;
-    uint256 donationsCount;
+    uint256 private donationsCount;
 
     struct Claim {
         address donor;
@@ -42,7 +42,7 @@ contract DonationMiner2 is Ownable, Pausable, ReentrancyGuard {
         uint256 reward;
     }
     mapping(uint256 => Claim) private claims;
-    uint256 claimsCount;
+    uint256 private claimsCount;
 
     /**
      * @notice Enforces values > 0 only
