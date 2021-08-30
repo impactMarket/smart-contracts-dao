@@ -9,7 +9,7 @@ import "hardhat/console.sol";
 
 contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
     /// @notice The name of this contract
-    string public constant name = "IPCT";
+    string public constant NAME = "IPCT";
 
     /// @notice The minimum setable proposal threshold
     uint256 public constant MIN_PROPOSAL_THRESHOLD = 100_000_000e18; // 100,000,000 Tokens
@@ -30,7 +30,7 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
     uint256 public constant MAX_VOTING_DELAY = 120960; // About 1 week
 
     /// @notice The maximum number of actions that can be included in a proposal
-    uint256 public constant proposalMaxOperations = 10; // 10 actions
+    uint256 public constant PROPOSAL_MAX_OPERATIONS = 10; // 10 actions
 
     /// @notice The EIP-712 typehash for the contract's domain
     bytes32 public constant DOMAIN_TYPEHASH =
@@ -153,7 +153,7 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
             "IPCT::propose: proposal function information arity mismatch"
         );
         require(targets.length != 0, "IPCT::propose: must provide actions");
-        require(targets.length <= proposalMaxOperations, "IPCT::propose: too many actions");
+        require(targets.length <= PROPOSAL_MAX_OPERATIONS, "IPCT::propose: too many actions");
 
         uint256 latestProposalId = latestProposalIds[msg.sender];
         if (latestProposalId != 0) {
@@ -411,7 +411,7 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
         bytes32 s
     ) external {
         bytes32 domainSeparator = keccak256(
-            abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)), getChainIdInternal(), address(this))
+            abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(NAME)), getChainIdInternal(), address(this))
         );
         bytes32 structHash = keccak256(abi.encode(BALLOT_TYPEHASH, proposalId, support));
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));

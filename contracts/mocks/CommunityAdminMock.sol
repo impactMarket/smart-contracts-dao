@@ -12,7 +12,7 @@ contract CommunityAdminMock is CommunityAdmin {
         address _cUSDAddress,
         uint256 _communityMinTranche,
         uint256 _communityMaxTranche
-    ) public CommunityAdmin(_cUSDAddress, _communityMinTranche, _communityMaxTranche) {
+    ) CommunityAdmin(_cUSDAddress, _communityMinTranche, _communityMaxTranche) {
         _owner = msg.sender;
     }
 
