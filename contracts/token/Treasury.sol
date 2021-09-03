@@ -2,20 +2,24 @@
 pragma solidity 0.8.5;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "hardhat/console.sol";
+import "../community/interfaces/ICommunityAdmin.sol";
 
 contract Treasury {
-    address public cUSDAddress;
+    using SafeERC20 for IERC20;
+
     address public admin;
-    address public communityAdmin;
+    IERC20 public cUSD;
+    ICommunityAdmin public communityAdmin;
 
     constructor(
-        address _cUSDAddress,
+        IERC20 _cUSD,
         address _admin,
-        address _communityAdmin
+        ICommunityAdmin _communityAdmin
     ) public {
-        cUSDAddress = _cUSDAddress;
+        cUSD = _cUSD;
         admin = _admin;
         communityAdmin = _communityAdmin;
     }
@@ -26,7 +30,15 @@ contract Treasury {
     }
 
     modifier onlyCommunityAdmin() {
-        require(msg.sender == communityAdmin, "Treasury: NOT_COMMUNITY_ADMIN");
+        require(msg.sender == address(communityAdmin), "Treasury: NOT_COMMUNITY_ADMIN");
+        _;
+    }
+
+    modifier onlyCommunityAdminOrAdmin() {
+        require(
+            msg.sender == address(communityAdmin) || msg.sender == admin,
+            "Treasury: NOT_COMMUNITY_ADMIN AND NOT_COMMUNITY_ADMIN"
+        );
         _;
     }
 
@@ -34,15 +46,15 @@ contract Treasury {
         admin = _newAdmin;
     }
 
-    function setCommunityAdmin(address _communityAdmin) external onlyAdmin {
+    function setCommunityAdmin(ICommunityAdmin _communityAdmin) external onlyAdmin {
         communityAdmin = _communityAdmin;
     }
 
-    function transferToCommunity(address _communityAddress, uint256 _amount)
-        external
-        onlyCommunityAdmin
-    {
-        bool success = IERC20(cUSDAddress).transfer(_communityAddress, _amount);
-        require(success, "CommunityAdmin::fundCommunity: Something went wrong");
+    function transfer(
+        IERC20 _token,
+        address _to,
+        uint256 _amount
+    ) external onlyCommunityAdminOrAdmin {
+        _token.safeTransfer(_to, _amount);
     }
 }

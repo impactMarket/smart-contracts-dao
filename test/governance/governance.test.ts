@@ -60,11 +60,6 @@ describe("IPCTGovernator", function () {
 	beforeEach(async function () {
 		await deployments.fixture("Test", { fallbackToGlobal: false });
 
-		// const cUSDDeployment = await deployments.get("TokenMock");
-		// cUSD = await ethers.getContractAt("TokenMock", cUSDDeployment.address);
-		//
-		// await cUSD.mint(owner.address, parseEther('1000000'));
-
 		const ipctTokenDeployment = await deployments.get("IPCTToken");
 		ipctToken = await ethers.getContractAt(
 			"IPCTToken",
@@ -106,6 +101,11 @@ describe("IPCTGovernator", function () {
 			"Treasury",
 			treasuryDeployment.address
 		);
+
+		const cUSDDeployment = await deployments.get("TokenMock");
+		cUSD = await ethers.getContractAt("TokenMock", cUSDDeployment.address);
+
+		await cUSD.mint(treasury.address, parseEther("1000"));
 
 		await ipctDelegator._setVotingPeriod(VOTING_PERIOD_BLOCKS);
 		await ipctDelegator._setVotingDelay(VOTING_PERIOD_BLOCKS);
