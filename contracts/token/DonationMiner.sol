@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "./interfaces/ITreasury.sol";
+import "../community/interfaces/ICommunity.sol";
 
 import "hardhat/console.sol";
 
@@ -93,6 +94,33 @@ contract DonationMiner is Ownable, Pausable, ReentrancyGuard {
 
         // Transfer the cUSD from the user to the treasury
         cUSD.safeTransferFrom(msg.sender, address(treasury), _amount);
+
+        RewardPeriod storage currentPeriod = rewardPeriods[rewardPeriodCount];
+        currentPeriod.donations = currentPeriod.donations + _amount;
+
+        User storage user = users[msg.sender];
+        user.donationsCount++;
+
+        Donation storage donation = user.donations[user.donationsCount];
+        donation.rewardPeriodNumber = rewardPeriodCount;
+        donation.amount = _amount;
+
+        emit DonationAdded(msg.sender, _amount);
+    }
+
+    /**
+     * @dev Deposit cUSD tokens to the donation mining contract
+     * @param _amount Amount of cUSD tokens to deposit.
+     */
+    function donateToCommunity(ICommunity _community, uint256 _amount)
+        external
+        whenNotPaused
+        whenStarted
+        nonReentrant
+    {
+        _createRewardPeriods();
+
+        _community.donate(msg.sender, _amount);
 
         RewardPeriod storage currentPeriod = rewardPeriods[rewardPeriodCount];
         currentPeriod.donations = currentPeriod.donations + _amount;

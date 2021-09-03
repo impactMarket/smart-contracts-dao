@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.5;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./Community.sol";
 import "./interfaces/ICommunityAdmin.sol";
 
@@ -8,16 +9,16 @@ import "./interfaces/ICommunityAdmin.sol";
  * @notice Welcome to CommunityFactory
  */
 contract CommunityFactory {
-    address public cUSDAddress;
-    address public communityAdminAddress;
+    IERC20 public cUSD;
+    ICommunityAdmin public communityAdmin;
 
-    constructor(address _cUSDAddress, address _communityAdminAddress) public {
-        cUSDAddress = _cUSDAddress;
-        communityAdminAddress = _communityAdminAddress;
+    constructor(IERC20 _cUSD, ICommunityAdmin _communityAdmin) public {
+        cUSD = _cUSD;
+        communityAdmin = _communityAdmin;
     }
 
     modifier onlyCommunityAdmin() {
-        require(msg.sender == communityAdminAddress, "NOT_ALLOWED");
+        require(msg.sender == address(communityAdmin), "NOT_ALLOWED");
         _;
     }
 
@@ -32,7 +33,7 @@ contract CommunityFactory {
         uint256 _maxClaim,
         uint256 _baseInterval,
         uint256 _incrementInterval,
-        address _previousCommunityAddress
+        ICommunity _previousCommunity
     ) external onlyCommunityAdmin returns (address) {
         return
             address(
@@ -42,9 +43,9 @@ contract CommunityFactory {
                     _maxClaim,
                     _baseInterval,
                     _incrementInterval,
-                    _previousCommunityAddress,
-                    cUSDAddress,
-                    msg.sender
+                    _previousCommunity,
+                    cUSD,
+                    ICommunityAdmin(msg.sender)
                 )
             );
     }
