@@ -22,9 +22,7 @@ async function getContractAddress(
 		from: deployer,
 		nonce: nonce,
 	});
-	console.log(
-		`Next contract address for deployer ${deployer} at nonce ${nonce} (offset ${offset}) is ${nextAddress}`
-	);
+
 	return nextAddress;
 }
 

@@ -3,6 +3,7 @@ pragma solidity 0.8.5;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/ICommunity.sol";
 import "./interfaces/ICommunityAdmin.sol";
 
@@ -17,6 +18,8 @@ import "hardhat/console.sol";
  * and managers.
  */
 contract Community is AccessControl {
+    using SafeERC20 for IERC20;
+
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
 
     uint256 public constant DEFAULT_AMOUNT = 5e16;
@@ -39,12 +42,12 @@ contract Community is AccessControl {
     uint256 public incrementInterval;
     uint256 public maxClaim;
     uint256 public validBeneficiaryCount;
-    uint256 public governanceDonations;
-    uint256 public privateDonations;
+    uint256 public treasuryFunds;
+    uint256 public privateFunds;
 
-    address public previousCommunityContract;
-    address public communityAdminAddress;
-    address public cUSDAddress;
+    ICommunity public previousCommunity;
+    ICommunityAdmin public communityAdmin;
+    IERC20 public cUSD;
     bool public locked;
 
     event ManagerAdded(address indexed _account);
@@ -72,8 +75,8 @@ contract Community is AccessControl {
      * @param _maxClaim Limit that a beneficiary can claim at once.
      * @param _baseInterval Base interval to start claiming.
      * @param _incrementInterval Increment interval used in each claim.
-     * @param _previousCommunityContract previous smart contract address of community.
-     * @param _cUSDAddress cUSD smart contract address.
+     * @param _previousCommunity previous smart contract address of community.
+     * @param _cUSD cUSD smart contract address.
      */
     constructor(
         address _firstManager,
@@ -81,9 +84,9 @@ contract Community is AccessControl {
         uint256 _maxClaim,
         uint256 _baseInterval,
         uint256 _incrementInterval,
-        address _previousCommunityContract,
-        address _cUSDAddress,
-        address _communityAdminAddress
+        ICommunity _previousCommunity,
+        IERC20 _cUSD,
+        ICommunityAdmin _communityAdmin
     ) {
         require(_baseInterval > _incrementInterval, "");
         require(_maxClaim > _claimAmount, "");
@@ -97,9 +100,9 @@ contract Community is AccessControl {
         incrementInterval = _incrementInterval;
         maxClaim = _maxClaim;
 
-        previousCommunityContract = _previousCommunityContract;
-        cUSDAddress = _cUSDAddress;
-        communityAdminAddress = _communityAdminAddress;
+        previousCommunity = _previousCommunity;
+        cUSD = _cUSD;
+        communityAdmin = _communityAdmin;
         locked = false;
     }
 
@@ -117,7 +120,7 @@ contract Community is AccessControl {
     }
 
     modifier onlyCommunityAdmin() {
-        require(msg.sender == communityAdminAddress, "Community: NOT_ALLOWED");
+        require(msg.sender == address(communityAdmin), "Community: NOT_ALLOWED");
         _;
     }
 
@@ -150,7 +153,7 @@ contract Community is AccessControl {
         cooldown[_account] = block.timestamp;
         claims[_account] = 0;
         // send default amount when adding a new beneficiary
-        bool success = IERC20(cUSDAddress).transfer(_account, DEFAULT_AMOUNT);
+        bool success = cUSD.transfer(_account, DEFAULT_AMOUNT);
         require(success, "Community::addBeneficiary: NOT_ALLOWED");
         emit BeneficiaryAdded(_account);
     }
@@ -205,7 +208,7 @@ contract Community is AccessControl {
         claims[msg.sender] += 1;
         cooldown[msg.sender] = uint256(block.timestamp + lastInterval(msg.sender));
 
-        bool success = IERC20(cUSDAddress).transfer(msg.sender, claimAmount);
+        bool success = cUSD.transfer(msg.sender, claimAmount);
         require(success, "Community::claim: NOT_ALLOWED");
         emit BeneficiaryClaim(msg.sender, claimAmount);
     }
@@ -254,38 +257,53 @@ contract Community is AccessControl {
     }
 
     function requestFunds() external onlyManagers {
-        ICommunityAdmin communityAdminInstance = ICommunityAdmin(communityAdminAddress);
-        communityAdminInstance.fundCommunity();
+        communityAdmin.fundCommunity();
     }
 
     /**
      * Migrate funds in current community to new one.
      */
-    function migrateFunds(address _newCommunity, address _newCommunityManager)
+    function migrateFunds(ICommunity _newCommunity, address _newCommunityManager)
         external
         onlyCommunityAdmin
     {
-        ICommunity newCommunity = ICommunity(_newCommunity);
         require(
-            newCommunity.hasRole(MANAGER_ROLE, _newCommunityManager) == true,
+            _newCommunity.hasRole(MANAGER_ROLE, _newCommunityManager) == true,
             "Community::migrateFunds: NOT_ALLOWED"
         );
         require(
-            newCommunity.previousCommunityContract() == address(this),
+            _newCommunity.previousCommunity() == address(this),
             "Community::migrateFunds: NOT_ALLOWED"
         );
-        uint256 balance = IERC20(cUSDAddress).balanceOf(address(this));
-        bool success = IERC20(cUSDAddress).transfer(_newCommunity, balance);
+        uint256 balance = cUSD.balanceOf(address(this));
+        bool success = cUSD.transfer(address(_newCommunity), balance);
         require(success, "Community::migrateFunds: NOT_ALLOWED");
-        emit MigratedFunds(_newCommunity, balance);
+        emit MigratedFunds(address(_newCommunity), balance);
     }
 
-    function changeBeneficiaryState(address beneficiary, BeneficiaryState _newState) internal {
-        if (beneficiaries[beneficiary] == _newState) {
+    function donate(address _sender, uint256 _amount) external {
+        cUSD.safeTransferFrom(_sender, address(this), _amount);
+        privateFunds += _amount;
+    }
+
+    function addTreasuryFunds(uint256 _amount) external onlyCommunityAdmin {
+        treasuryFunds += _amount;
+    }
+
+    function transferFunds(
+        IERC20 _erc20,
+        address _to,
+        uint256 _amount
+    ) external onlyCommunityAdmin {
+        _erc20.safeTransfer(_to, _amount);
+    }
+
+    function changeBeneficiaryState(address _beneficiary, BeneficiaryState _newState) internal {
+        if (beneficiaries[_beneficiary] == _newState) {
             return;
         }
 
-        beneficiaries[beneficiary] = _newState;
+        beneficiaries[_beneficiary] = _newState;
 
         (_newState == BeneficiaryState.Valid) ? validBeneficiaryCount++ : validBeneficiaryCount--;
     }
