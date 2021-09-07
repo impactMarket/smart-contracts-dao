@@ -4,22 +4,31 @@ pragma solidity 0.8.5;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./Community.sol";
 import "./interfaces/ICommunityAdmin.sol";
+import "./interfaces/ICommunityFactory.sol";
 
 /**
  * @notice Welcome to CommunityFactory
  */
-contract CommunityFactory {
-    IERC20 public cUSD;
-    ICommunityAdmin public communityAdmin;
+contract CommunityFactory is ICommunityFactory {
+    IERC20 private _cUSD;
+    ICommunityAdmin private _communityAdmin;
 
-    constructor(IERC20 _cUSD, ICommunityAdmin _communityAdmin) public {
-        cUSD = _cUSD;
-        communityAdmin = _communityAdmin;
+    constructor(IERC20 cUSD_, ICommunityAdmin communityAdmin_) {
+        _cUSD = cUSD_;
+        _communityAdmin = communityAdmin_;
     }
 
     modifier onlyCommunityAdmin() {
-        require(msg.sender == address(communityAdmin), "NOT_ALLOWED");
+        require(msg.sender == address(_communityAdmin), "NOT_ALLOWED");
         _;
+    }
+
+    function cUSD() external view override returns (IERC20) {
+        return _cUSD;
+    }
+
+    function communityAdmin() external view override returns (ICommunityAdmin) {
+        return _communityAdmin;
     }
 
     /**
@@ -34,7 +43,7 @@ contract CommunityFactory {
         uint256 _baseInterval,
         uint256 _incrementInterval,
         ICommunity _previousCommunity
-    ) external onlyCommunityAdmin returns (address) {
+    ) external override onlyCommunityAdmin returns (address) {
         return
             address(
                 new Community(
@@ -44,7 +53,7 @@ contract CommunityFactory {
                     _baseInterval,
                     _incrementInterval,
                     _previousCommunity,
-                    cUSD,
+                    _cUSD,
                     ICommunityAdmin(msg.sender)
                 )
             );

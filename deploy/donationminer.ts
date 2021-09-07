@@ -1,44 +1,44 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
+import {parseEther} from "@ethersproject/units";
+import {getCUSDAddress}  from "./cUSD";
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// @ts-ignore
-	const { deployments, getNamedAccounts, getChainId } = hre;
+	const { deployments, getNamedAccounts, getChainId, ethers } = hre;
 	const { deploy } = deployments;
 	const { deployer } = await getNamedAccounts();
 	const chainID = await getChainId();
 
-	let cUSDToken =
-		chainID === "44787"
-			? "0x874069fa1eb16d44d622f2e0ca25eea172369bc1"
-			: chainID === "62320"
-			? "0x62492a644a588fd904270bed06ad52b9abfea1ae"
-			: chainID === "42220"
-			? "0x765de816845861e75a25fca122bb6898b8b1282a"
-			: ZERO_ADDRESS;
-
-	if (cUSDToken === ZERO_ADDRESS) {
-		// If no real network specified, create our own cUSD Token
-		const cUSDResult = await deploy("TokenMock", {
-			from: deployer,
-			args: ["cUSD", "cUSD"],
-			log: true,
-		});
-		cUSDToken = cUSDResult.address;
-	}
+	// const cUSDAddress = await func1(await hre);
 
 	const Token = await deployments.get("IPCTToken");
 	const Treasury = await deployments.get("Treasury");
+	const IPCTTimelock = await deployments.get("IPCTTimelock");
 
-	await deploy("DonationMiner", {
+	const DonationMinerResult = await deploy("DonationMiner", {
 		from: deployer,
-		args: [cUSDToken, Token.address, 100, 10, 2, 1, Treasury.address],
+		args: [
+			getCUSDAddress(),
+			Token.address,
+			Treasury.address,
+			parseEther("100"),
+			14,
+			30,
+		],
 		log: true,
 	});
+
+	const DonationMiner = await ethers.getContractAt(
+		"DonationMiner",
+		DonationMinerResult.address
+	);
+
+	await DonationMiner.transferOwnership(IPCTTimelock.address);
 };
 
 export default func;
-func.dependencies = ["Treasury"];
+func.dependencies = ["Governance", "Treasury", "cUSD"];
 func.tags = ["DonationMiner", "Prod"];

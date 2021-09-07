@@ -1,6 +1,7 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { parseEther } from "@ethersproject/units";
+import { getCUSDAddress } from "./cUSD";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// @ts-ignore
@@ -9,8 +10,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const { deploy } = deployments;
 	const { deployer } = await getNamedAccounts();
 
-	const cUSD = await deployments.get("TokenMock");
-
 	const Token = await deployments.get("IPCTToken");
 	const Treasury = await deployments.get("Treasury");
 	const IPCTTimelock = await deployments.get("IPCTTimelock");
@@ -18,7 +17,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const DonationMinerResult = await deploy("DonationMiner", {
 		from: deployer,
 		args: [
-			cUSD.address,
+			getCUSDAddress(),
 			Token.address,
 			Treasury.address,
 			parseEther("100"),

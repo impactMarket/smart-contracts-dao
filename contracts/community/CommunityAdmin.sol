@@ -17,16 +17,16 @@ import "hardhat/console.sol";
  * over the list of communities. Being only able to add and
  * remove communities
  */
-contract CommunityAdmin is Ownable {
+contract CommunityAdmin is ICommunityAdmin, Ownable {
     using SafeERC20 for IERC20;
 
-    IERC20 public cUSD;
-    ITreasury public treasury;
-    ICommunityFactory public communityFactory;
+    IERC20 private _cUSD;
+    ITreasury private _treasury;
+    ICommunityFactory private _communityFactory;
 
-    mapping(address => bool) public communities;
-    uint256 public communityMinTranche;
-    uint256 public communityMaxTranche;
+    mapping(address => bool) private _communities;
+    uint256 private _communityMinTranche;
+    uint256 private _communityMaxTranche;
 
     event CommunityAdded(
         address indexed _communityAddress,
@@ -51,50 +51,74 @@ contract CommunityAdmin is Ownable {
      * and add/remove communities.
      */
     constructor(
-        IERC20 _cUSD,
-        uint256 _communityMinTranche,
-        uint256 _communityMaxTranche
+        IERC20 cUSD_,
+        uint256 communityMinTranche_,
+        uint256 communityMaxTranche_
     ) {
         require(
-            _communityMinTranche < _communityMaxTranche,
+            communityMinTranche_ < communityMaxTranche_,
             "CommunityAdmin::constructor: communityMinTranche should be less then communityMaxTranche"
         );
-        cUSD = _cUSD;
-        communityMinTranche = _communityMinTranche;
-        communityMaxTranche = _communityMaxTranche;
+        _cUSD = cUSD_;
+        _communityMinTranche = communityMinTranche_;
+        _communityMaxTranche = communityMaxTranche_;
     }
 
     modifier onlyCommunities() {
-        require(communities[msg.sender] == true, "CommunityAdmin: NOT_COMMUNITY");
+        require(_communities[msg.sender] == true, "CommunityAdmin: NOT_COMMUNITY");
         _;
     }
 
-    function setTreasury(ITreasury _newTreasury) external onlyOwner {
-        treasury = _newTreasury;
+    function cUSD() external view override returns (IERC20) {
+        return _cUSD;
+    }
+
+    function treasury() external view override returns (ITreasury) {
+        return _treasury;
+    }
+
+    function communityFactory() external view override returns (ICommunityFactory) {
+        return _communityFactory;
+    }
+
+    function communities(address community_) external view override returns (bool) {
+        return _communities[community_];
+    }
+
+    function communityMinTranche() external view override returns (uint256) {
+        return _communityMinTranche;
+    }
+
+    function communityMaxTranche() external view override returns (uint256) {
+        return _communityMaxTranche;
+    }
+
+    function setTreasury(ITreasury newTreasury_) external override onlyOwner {
+        _treasury = newTreasury_;
     }
 
     /**
      * @dev Set the community min tranche
      */
-    function setCommunityMinTranche(uint256 _newCommunityMinTranche) external onlyOwner {
+    function setCommunityMinTranche(uint256 newCommunityMinTranche_) external override onlyOwner {
         require(
-            _newCommunityMinTranche < communityMaxTranche,
+            newCommunityMinTranche_ < _communityMaxTranche,
             "CommunityAdmin::setCommunityMinTranche: New communityMinTranche should be less then communityMaxTranche"
         );
-        communityMinTranche = _newCommunityMinTranche;
-        emit CommunityMinTrancheChanged(_newCommunityMinTranche);
+        _communityMinTranche = newCommunityMinTranche_;
+        emit CommunityMinTrancheChanged(newCommunityMinTranche_);
     }
 
     /**
      * @dev Set the community max tranche
      */
-    function setCommunityMaxTranche(uint256 _newCommunityMaxTranche) external onlyOwner {
+    function setCommunityMaxTranche(uint256 newCommunityMaxTranche_) external override onlyOwner {
         require(
-            communityMinTranche < _newCommunityMaxTranche,
+            _communityMinTranche < newCommunityMaxTranche_,
             "CommunityAdmin::setCommunityMaxTranche: New communityMaxTranche should be greater then communityMinTranche"
         );
-        communityMaxTranche = _newCommunityMaxTranche;
-        emit CommunityMaxTrancheChanged(_newCommunityMaxTranche);
+        _communityMaxTranche = newCommunityMaxTranche_;
+        emit CommunityMaxTrancheChanged(newCommunityMaxTranche_);
     }
 
     /**
@@ -103,32 +127,32 @@ contract CommunityAdmin is Ownable {
      * *Community* smart contract constructor.
      */
     function addCommunity(
-        address _firstManager,
-        uint256 _claimAmount,
-        uint256 _maxClaim,
-        uint256 _baseInterval,
-        uint256 _incrementInterval
-    ) external onlyOwner {
-        address communityAddress = communityFactory.deployCommunity(
-            _firstManager,
-            _claimAmount,
-            _maxClaim,
-            _baseInterval,
-            _incrementInterval,
+        address firstManager_,
+        uint256 claimAmount_,
+        uint256 maxClaim_,
+        uint256 baseInterval_,
+        uint256 incrementInterval_
+    ) external override onlyOwner {
+        address communityAddress = _communityFactory.deployCommunity(
+            firstManager_,
+            claimAmount_,
+            maxClaim_,
+            baseInterval_,
+            incrementInterval_,
             ICommunity(address(0))
         );
         require(communityAddress != address(0), "CommunityAdmin::addCommunity: NOT_VALID");
-        communities[communityAddress] = true;
+        _communities[communityAddress] = true;
         emit CommunityAdded(
             communityAddress,
-            _firstManager,
-            _claimAmount,
-            _maxClaim,
-            _baseInterval,
-            _incrementInterval
+            firstManager_,
+            claimAmount_,
+            maxClaim_,
+            baseInterval_,
+            incrementInterval_
         );
 
-        transferToCommunity(ICommunity(communityAddress), communityMinTranche);
+        transferToCommunity(ICommunity(communityAddress), _communityMinTranche);
     }
 
     /**
@@ -137,66 +161,66 @@ contract CommunityAdmin is Ownable {
      * *Community* smart contract constructor.
      */
     function migrateCommunity(
-        address _firstManager,
-        ICommunity _previousCommunity,
-        ICommunityFactory _newCommunityFactory
-    ) external onlyOwner {
-        communities[address(_previousCommunity)] = false;
+        address firstManager_,
+        ICommunity previousCommunity_,
+        ICommunityFactory newCommunityFactory_
+    ) external override onlyOwner {
+        _communities[address(previousCommunity_)] = false;
         require(
-            address(_previousCommunity) != address(0),
+            address(previousCommunity_) != address(0),
             "CommunityAdmin::migrateCommunity: NOT_VALID"
         );
         ICommunity community = ICommunity(
-            _newCommunityFactory.deployCommunity(
-                _firstManager,
-                _previousCommunity.claimAmount(),
-                _previousCommunity.maxClaim(),
-                _previousCommunity.baseInterval(),
-                _previousCommunity.incrementInterval(),
-                _previousCommunity
+            newCommunityFactory_.deployCommunity(
+                firstManager_,
+                previousCommunity_.claimAmount(),
+                previousCommunity_.maxClaim(),
+                previousCommunity_.baseInterval(),
+                previousCommunity_.incrementInterval(),
+                previousCommunity_
             )
         );
         require(address(community) != address(0), "CommunityAdmin::migrateCommunity: NOT_VALID");
-        _previousCommunity.migrateFunds(community, _firstManager);
-        communities[address(community)] = true;
-        emit CommunityMigrated(_firstManager, address(community), address(_previousCommunity));
+        previousCommunity_.migrateFunds(community, firstManager_);
+        _communities[address(community)] = true;
+        emit CommunityMigrated(firstManager_, address(community), address(previousCommunity_));
     }
 
     /**
      * @dev Remove an existing community. Can be used only by an admin.
      */
-    function removeCommunity(ICommunity _community) external onlyOwner {
-        communities[address(_community)] = false;
-        emit CommunityRemoved(address(_community));
+    function removeCommunity(ICommunity community_) external override onlyOwner {
+        _communities[address(community_)] = false;
+        emit CommunityRemoved(address(community_));
     }
 
     /**
      * @dev Set the community factory address, if the contract is valid.
      */
-    function setCommunityFactory(ICommunityFactory _communityFactory) external onlyOwner {
+    function setCommunityFactory(ICommunityFactory communityFactory_) external override onlyOwner {
         require(
-            _communityFactory.communityAdmin() == address(this),
+            address(communityFactory_.communityAdmin()) == address(this),
             "CommunityAdmin::setCommunityFactory: NOT_ALLOWED"
         );
-        communityFactory = _communityFactory;
-        emit CommunityFactoryChanged(address(_communityFactory));
+        _communityFactory = communityFactory_;
+        emit CommunityFactoryChanged(address(communityFactory_));
     }
 
     /**
      * @dev Init community factory, used only at deploy time.
      */
-    function initCommunityFactory(ICommunityFactory _communityFactory) external onlyOwner {
+    function initCommunityFactory(ICommunityFactory communityFactory_) external override onlyOwner {
         require(
-            address(_communityFactory) == address(0),
+            address(communityFactory_) == address(0),
             "CommunityAdmin::initCommunityFactory: NOT_VALID"
         );
-        communityFactory = _communityFactory;
-        emit CommunityFactoryChanged(address(_communityFactory));
+        _communityFactory = communityFactory_;
+        emit CommunityFactoryChanged(address(communityFactory_));
     }
 
-    function fundCommunity() external onlyCommunities {
+    function fundCommunity() external override onlyCommunities {
         require(
-            cUSD.balanceOf(msg.sender) <= communityMinTranche,
+            _cUSD.balanceOf(msg.sender) <= _communityMinTranche,
             "CommunityAdmin::fundCommunity: this community has enough funds"
         );
         uint256 trancheAmount = calculateCommunityTrancheAmount(ICommunity(msg.sender));
@@ -204,42 +228,51 @@ contract CommunityAdmin is Ownable {
         transferToCommunity(ICommunity(msg.sender), trancheAmount);
     }
 
-    function calculateCommunityTrancheAmount(ICommunity _community) public view returns (uint256) {
-        uint256 validBeneficiaries = _community.validBeneficiaryCount();
-        uint256 claimAmount = _community.claimAmount();
-        uint256 treasuryFunds = _community.treasuryFunds();
-        uint256 privateFunds = _community.privateFunds();
+    function calculateCommunityTrancheAmount(ICommunity community_)
+        public
+        view
+        override
+        returns (uint256)
+    {
+        uint256 validBeneficiaries = community_.validBeneficiaryCount();
+        uint256 claimAmount = community_.claimAmount();
+        uint256 treasuryFunds = community_.treasuryFunds();
+        uint256 privateFunds = community_.privateFunds();
 
         uint256 trancheAmount;
         trancheAmount =
             (10e36 * validBeneficiaries * (treasuryFunds + privateFunds)) /
             (claimAmount * treasuryFunds);
 
-        trancheAmount = (trancheAmount > communityMinTranche) ? trancheAmount : communityMinTranche;
-        trancheAmount = (trancheAmount < communityMaxTranche) ? trancheAmount : communityMaxTranche;
+        trancheAmount = (trancheAmount > _communityMinTranche)
+            ? trancheAmount
+            : _communityMinTranche;
+        trancheAmount = (trancheAmount < _communityMaxTranche)
+            ? trancheAmount
+            : _communityMaxTranche;
 
         return trancheAmount;
     }
 
     function transfer(
-        IERC20 _erc20,
-        address _to,
-        uint256 _amount
-    ) external onlyOwner {
-        _erc20.safeTransfer(_to, _amount);
+        IERC20 erc20_,
+        address to_,
+        uint256 amount_
+    ) external override onlyOwner {
+        erc20_.safeTransfer(to_, amount_);
     }
 
     function transferFromCommunity(
-        ICommunity _community,
-        IERC20 _erc20,
-        address _to,
-        uint256 _amount
-    ) external onlyOwner {
-        _community.transferFunds(_erc20, _to, _amount);
+        ICommunity community_,
+        IERC20 erc20_,
+        address to_,
+        uint256 amount_
+    ) external override onlyOwner {
+        community_.transferFunds(erc20_, to_, amount_);
     }
 
-    function transferToCommunity(ICommunity _community, uint256 _amount) internal {
-        treasury.transfer(cUSD, address(_community), _amount);
-        _community.addTreasuryFunds(_amount);
+    function transferToCommunity(ICommunity community_, uint256 amount_) internal {
+        _treasury.transfer(_cUSD, address(community_), amount_);
+        community_.addTreasuryFunds(amount_);
     }
 }

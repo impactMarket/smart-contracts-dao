@@ -5,7 +5,9 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../community/interfaces/ICommunityAdmin.sol";
 
 interface ITreasury {
-    function admin() external;
+    function owner() external view returns (address);
+    function transferOwnership(address newOwner) external;
+    function communityAdmin() external view returns (ICommunityAdmin);
     function setAdmin(address newAdmin) external;
     function setCommunityAdmin(ICommunityAdmin communityAdmin) external;
     function transfer(IERC20 token, address to, uint256 amount) external;
