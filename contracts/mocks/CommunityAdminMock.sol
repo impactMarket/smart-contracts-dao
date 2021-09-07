@@ -9,10 +9,10 @@ contract CommunityAdminMock is CommunityAdmin {
     address private _owner;
 
     constructor(
-        address _cUSDAddress,
+        IERC20 _cUSD,
         uint256 _communityMinTranche,
         uint256 _communityMaxTranche
-    ) CommunityAdmin(_cUSDAddress, _communityMinTranche, _communityMaxTranche) {
+    ) CommunityAdmin(_cUSD, _communityMinTranche, _communityMaxTranche) {
         _owner = msg.sender;
     }
 

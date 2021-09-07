@@ -15,7 +15,7 @@ import {
 } from "hardhat";
 import type * as ethersTypes from "ethers";
 import { DeployFunction } from "hardhat-deploy/types";
-import { parseEther } from "@ethersproject/units";
+import { parseEther, formatEther } from "@ethersproject/units";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const {
@@ -64,22 +64,18 @@ let communityAdminInstance: ethersTypes.Contract;
 let treasuryInstance: ethersTypes.Contract;
 let cUSDInstance: ethersTypes.Contract;
 
-BigNumber.config({ EXPONENTIAL_AT: 25 });
-
-const bigNum = (num: number) => num + "0".repeat(18);
 // constants
-const decimals = new BigNumber(10).pow(18);
 const hour = time.duration.hours(1);
 const day = time.duration.days(1);
 const week = time.duration.weeks(1);
 const month = time.duration.days(30);
-const claimAmountTwo = new BigNumber(bigNum(2));
-const maxClaimTen = new BigNumber(bigNum(10));
-const fiveCents = new BigNumber("50000000000000000");
+const claimAmountTwo = parseEther("2");
+const maxClaimTen = parseEther("10");
+const fiveCents = parseEther("0.05");
 const zeroAddress = "0x0000000000000000000000000000000000000000";
-const mintAmount = new BigNumber("500000000000000000000");
-const communityMinTranche = bigNum(100);
-const communityMaxTranche = bigNum(5000);
+const mintAmount = parseEther("500");
+const communityMinTranche = parseEther("100");
+const communityMaxTranche = parseEther("5000");
 
 async function init() {
 	const accounts: SignerWithAddress[] = await ethers.getSigners();
@@ -134,7 +130,9 @@ async function deploy() {
 	//for testing
 	await communityAdminInstance.transferOwnership(adminAccount1.address);
 	//end for testing
+}
 
+async function addDefaultCommunity() {
 	const tx = await communityAdminInstance.addCommunity(
 		communityManagerA.address,
 		claimAmountTwo.toString(),
@@ -160,9 +158,11 @@ describe("Community - Beneficiary", () => {
 		await deploy();
 
 		await cUSDInstance.mint(
-			communityInstance.address,
+			treasuryInstance.address,
 			mintAmount.toString()
 		);
+
+		await addDefaultCommunity();
 	});
 
 	it("should be able to add beneficiary to community", async () => {
@@ -287,9 +287,11 @@ describe("Community - Claim", () => {
 		await deploy();
 
 		await cUSDInstance.mint(
-			communityInstance.address,
+			treasuryInstance.address,
 			mintAmount.toString()
 		);
+
+		await addDefaultCommunity();
 
 		await communityInstance
 			.connect(communityManagerA)
@@ -418,9 +420,9 @@ describe("Community - Claim", () => {
 		).toNumber();
 		await network.provider.send("evm_increaseTime", [baseInterval + 5]);
 		await communityInstance.connect(beneficiaryA).claim();
-		(await cUSDInstance.balanceOf(beneficiaryA.address))
-			.toString()
-			.should.be.equal(claimAmountTwo.plus(fiveCents).toString());
+		(await cUSDInstance.balanceOf(beneficiaryA.address)).should.be.equal(
+			claimAmountTwo.add(fiveCents)
+		);
 	});
 
 	it("should not claim after max claim", async () => {
@@ -430,27 +432,18 @@ describe("Community - Claim", () => {
 		const incrementInterval = (
 			await communityInstance.incrementInterval()
 		).toNumber();
-		const claimAmount = new BigNumber(
-			(await communityInstance.claimAmount()).toString()
-		)
-			.div(decimals)
-			.toNumber();
-		const maxClaimAmount = new BigNumber(
-			(await communityInstance.maxClaim()).toString()
-		)
-			.div(decimals)
-			.toNumber();
+		const claimAmount = await communityInstance.claimAmount();
+		const maxClaimAmount = await communityInstance.maxClaim();
 		await communityInstance.connect(beneficiaryA).claim();
-		for (let index = 0; index < maxClaimAmount / claimAmount - 1; index++) {
+		const maxClaimsPerUser = maxClaimAmount.div(claimAmount).toNumber();
+		for (let index = 0; index < maxClaimsPerUser - 1; index++) {
 			await network.provider.send("evm_increaseTime", [
 				baseInterval + incrementInterval * index + 5,
 			]);
 			await communityInstance.connect(beneficiaryA).claim();
 		}
 		await network.provider.send("evm_increaseTime", [
-			baseInterval +
-				incrementInterval * (maxClaimAmount / claimAmount) +
-				5,
+			baseInterval + incrementInterval * maxClaimsPerUser + 5,
 		]);
 		await expect(
 			communityInstance.connect(beneficiaryA).claim()
@@ -465,6 +458,13 @@ describe("Community - Governance (2)", () => {
 
 	beforeEach(async () => {
 		await deploy();
+
+		await cUSDInstance.mint(
+			treasuryInstance.address,
+			mintAmount.toString()
+		);
+
+		await addDefaultCommunity();
 	});
 
 	it("should be able to migrate funds from community if CommunityAdmin", async () => {
@@ -495,10 +495,10 @@ describe("Community - Governance (2)", () => {
 		const newCommunityNewBalance = await cUSDInstance.balanceOf(
 			newCommunityAddress
 		);
-		previousCommunityPreviousBalance
-			.toString()
-			.should.be.equal(newCommunityNewBalance.toString());
-		previousCommunityNewBalance.toString().should.be.equal("0");
+		previousCommunityPreviousBalance.should.be.equal(
+			newCommunityNewBalance
+		);
+		previousCommunityNewBalance.should.be.equal(parseEther("100"));
 	});
 
 	it("should not be able to migrate from invalid community", async () => {
@@ -531,10 +531,10 @@ describe("Community - Governance (2)", () => {
 		).to.be.rejectedWith("Ownable: caller is not the owner");
 	});
 
-	it("should be able edit community if manager", async () => {
-		(await communityInstance.incrementInterval())
-			.toString()
-			.should.be.equal(hour.toString());
+	it("should be able to edit community if manager", async () => {
+		(await communityInstance.incrementInterval()).should.be.equal(
+			hour.toString()
+		);
 		await communityInstance
 			.connect(communityManagerA)
 			.edit(
@@ -543,9 +543,9 @@ describe("Community - Governance (2)", () => {
 				week.toString(),
 				day.toString()
 			);
-		(await communityInstance.incrementInterval())
-			.toString()
-			.should.be.equal(day.toString());
+		(await communityInstance.incrementInterval()).should.be.equal(
+			day.toString()
+		);
 	});
 
 	it("should not be able edit community if not manager", async () => {
@@ -681,6 +681,11 @@ describe("CommunityAdmin", () => {
 	});
 
 	it("should be able to add a community if admin", async () => {
+		await cUSDInstance.mint(
+			treasuryInstance.address,
+			mintAmount.toString()
+		);
+
 		const tx = await communityAdminInstance.addCommunity(
 			communityManagerA.address,
 			claimAmountTwo.toString(),
@@ -702,12 +707,15 @@ describe("CommunityAdmin", () => {
 		(await communityInstance.incrementInterval())
 			.toString()
 			.should.be.equal("3600");
-		(await communityInstance.maxClaim())
-			.toString()
-			.should.be.equal(maxClaimTen.toString());
+		(await communityInstance.maxClaim()).should.be.equal(maxClaimTen);
 	});
 
 	it("should be able to remove a community if admin", async () => {
+		await cUSDInstance.mint(
+			treasuryInstance.address,
+			mintAmount.toString()
+		);
+
 		const tx = await communityAdminInstance.addCommunity(
 			communityManagerA.address,
 			claimAmountTwo.toString(),
@@ -805,27 +813,16 @@ describe("Chaos test (complete flow)", async () => {
 		instance: ethersTypes.Contract,
 		beneficiaryAddress: SignerWithAddress
 	): Promise<void> => {
-		const previousBalance = new BigNumber(
-			await cUSDInstance.balanceOf(beneficiaryAddress.address)
-		);
-		const previousLastInterval = new BigNumber(
-			await instance.lastInterval(beneficiaryAddress.address)
+		const previousBalance = await cUSDInstance.balanceOf(
+			beneficiaryAddress.address
 		);
 		await instance.connect(beneficiaryAddress).claim();
-		const currentBalance = new BigNumber(
-			await cUSDInstance.balanceOf(beneficiaryAddress.address)
-		);
-		const currentLastInterval = new BigNumber(
-			await instance.lastInterval(beneficiaryAddress.address)
+		const currentBalance = await cUSDInstance.balanceOf(
+			beneficiaryAddress.address
 		);
 		previousBalance
-			.plus(await instance.claimAmount())
-			.toString()
-			.should.be.equal(currentBalance.toString());
-		// previousLastInterval
-		// 	.plus(await instance.incrementInterval())
-		// 	.toString()
-		// 	.should.be.equal(currentLastInterval.toString());
+			.add(await instance.claimAmount())
+			.should.be.equal(currentBalance);
 	};
 
 	before(async function () {
@@ -855,6 +852,10 @@ describe("Chaos test (complete flow)", async () => {
 	});
 
 	it("one beneficiary to one community", async () => {
+		await cUSDInstance.mint(
+			treasuryInstance.address,
+			mintAmount.toString()
+		);
 		const communityInstanceA = await addCommunity(communityManagerA);
 		await addBeneficiary(
 			communityInstanceA,
@@ -871,11 +872,13 @@ describe("Chaos test (complete flow)", async () => {
 	});
 
 	it("many beneficiaries to one community", async () => {
+		await cUSDInstance.mint(
+			treasuryInstance.address,
+			mintAmount.toString()
+		);
 		const communityInstanceA = await addCommunity(communityManagerA);
-		const previousCommunityBalance = new BigNumber(
-			(
-				await cUSDInstance.balanceOf(communityInstanceA.address)
-			).toString()
+		const previousCommunityBalance = await cUSDInstance.balanceOf(
+			communityInstanceA.address
 		);
 		await addBeneficiary(
 			communityInstanceA,
@@ -906,17 +909,9 @@ describe("Chaos test (complete flow)", async () => {
 		await waitClaimTime(communityInstanceA, beneficiaryB);
 		await beneficiaryClaim(communityInstanceA, beneficiaryB);
 		// beneficiary C claims it all
-		const claimAmount = new BigNumber(
-			(await communityInstanceA.claimAmount()).toString()
-		)
-			.div(decimals)
-			.toNumber();
-		const maxClaimAmount = new BigNumber(
-			(await communityInstanceA.maxClaim()).toString()
-		)
-			.div(decimals)
-			.toNumber();
-		const maxClaimsPerUser = maxClaimAmount / claimAmount;
+		const claimAmount = await communityInstanceA.claimAmount();
+		const maxClaimAmount = await communityInstanceA.maxClaim();
+		const maxClaimsPerUser = maxClaimAmount.div(claimAmount).toNumber();
 		for (let index = 0; index < maxClaimsPerUser; index++) {
 			await waitClaimTime(communityInstanceA, beneficiaryC);
 			await beneficiaryClaim(communityInstanceA, beneficiaryC);
@@ -932,35 +927,30 @@ describe("Chaos test (complete flow)", async () => {
 		await expect(
 			beneficiaryClaim(communityInstanceA, beneficiaryC)
 		).to.be.rejectedWith("MAX_CLAIM");
-		const currentCommunityBalance = new BigNumber(
-			(
-				await cUSDInstance.balanceOf(communityInstanceA.address)
-			).toString()
+		const currentCommunityBalance = await cUSDInstance.balanceOf(
+			communityInstanceA.address
 		);
+
 		previousCommunityBalance
-			.minus(currentCommunityBalance)
-			.toString()
+			.sub(currentCommunityBalance)
 			.should.be.equal(
-				new BigNumber(claimAmount * (5 + maxClaimsPerUser))
-					.multipliedBy(decimals)
-					.plus(4 * fiveCents.toNumber())
-					.toString()
+				claimAmount.mul(5 + maxClaimsPerUser).add(fiveCents.mul(4))
 			);
 	});
 
 	it("many beneficiaries to many communities", async () => {
+		await cUSDInstance.mint(
+			treasuryInstance.address,
+			mintAmount.toString()
+		);
 		// community A
 		const communityInstanceA = await addCommunity(communityManagerA);
 		const communityInstanceB = await addCommunity(communityManagerB);
-		const previousCommunityBalanceA = new BigNumber(
-			(
-				await cUSDInstance.balanceOf(communityInstanceA.address)
-			).toString()
+		const previousCommunityBalanceA = await cUSDInstance.balanceOf(
+			communityInstanceA.address
 		);
-		const previousCommunityBalanceB = new BigNumber(
-			(
-				await cUSDInstance.balanceOf(communityInstanceB.address)
-			).toString()
+		const previousCommunityBalanceB = await cUSDInstance.balanceOf(
+			communityInstanceB.address
 		);
 		//
 		await addBeneficiary(
@@ -990,33 +980,17 @@ describe("Chaos test (complete flow)", async () => {
 		await waitClaimTime(communityInstanceA, beneficiaryA);
 		await beneficiaryClaim(communityInstanceA, beneficiaryA);
 		// beneficiary B claims it all
-		const claimAmountA = new BigNumber(
-			(await communityInstanceA.claimAmount()).toString()
-		)
-			.div(decimals)
-			.toNumber();
-		const maxClaimAmountA = new BigNumber(
-			(await communityInstanceA.maxClaim()).toString()
-		)
-			.div(decimals)
-			.toNumber();
-		const maxClaimsPerUserA = maxClaimAmountA / claimAmountA;
+		const claimAmountA = await communityInstanceA.claimAmount();
+		const maxClaimAmountA = await communityInstanceA.maxClaim();
+		const maxClaimsPerUserA = maxClaimAmountA.div(claimAmountA).toNumber();
 		for (let index = 0; index < maxClaimsPerUserA; index++) {
 			await waitClaimTime(communityInstanceA, beneficiaryB);
 			await beneficiaryClaim(communityInstanceA, beneficiaryB);
 		}
 		// beneficiary C claims it all
-		const claimAmountB = new BigNumber(
-			(await communityInstanceB.claimAmount()).toString()
-		)
-			.div(decimals)
-			.toNumber();
-		const maxClaimAmountB = new BigNumber(
-			(await communityInstanceB.maxClaim()).toString()
-		)
-			.div(decimals)
-			.toNumber();
-		const maxClaimsPerUserB = maxClaimAmountB / claimAmountB;
+		const claimAmountB = await communityInstanceB.claimAmount();
+		const maxClaimAmountB = await communityInstanceB.maxClaim();
+		const maxClaimsPerUserB = maxClaimAmountB.div(claimAmountB).toNumber();
 		for (let index = 0; index < maxClaimsPerUserB; index++) {
 			await waitClaimTime(communityInstanceB, beneficiaryC);
 			await beneficiaryClaim(communityInstanceB, beneficiaryC);
@@ -1045,33 +1019,21 @@ describe("Chaos test (complete flow)", async () => {
 		await waitClaimTime(communityInstanceB, beneficiaryD);
 		await beneficiaryClaim(communityInstanceB, beneficiaryD);
 		// balances
-		const currentCommunityBalanceA = new BigNumber(
-			(
-				await cUSDInstance.balanceOf(communityInstanceA.address)
-			).toString()
+		const currentCommunityBalanceA = await cUSDInstance.balanceOf(
+			communityInstanceA.address
 		);
 		previousCommunityBalanceA
-			.minus(currentCommunityBalanceA)
-			.toString()
+			.sub(currentCommunityBalanceA)
 			.should.be.equal(
-				new BigNumber(claimAmountA * (3 + maxClaimsPerUserA))
-					.multipliedBy(decimals)
-					.plus(2 * fiveCents.toNumber())
-					.toString()
+				claimAmountA.mul(3 + maxClaimsPerUserA).add(fiveCents.mul(2))
 			);
-		const currentCommunityBalanceB = new BigNumber(
-			(
-				await cUSDInstance.balanceOf(communityInstanceB.address)
-			).toString()
+		const currentCommunityBalanceB = await cUSDInstance.balanceOf(
+			communityInstanceB.address
 		);
 		previousCommunityBalanceB
-			.minus(currentCommunityBalanceB)
-			.toString()
+			.sub(currentCommunityBalanceB)
 			.should.be.equal(
-				new BigNumber(claimAmountB * (4 + maxClaimsPerUserB))
-					.multipliedBy(decimals)
-					.plus(2 * fiveCents.toNumber())
-					.toString()
+				claimAmountB.mul(4 + maxClaimsPerUserB).add(fiveCents.mul(2))
 			);
 	});
 });
@@ -1087,6 +1049,8 @@ describe("Community - getFunds", () => {
 			treasuryInstance.address,
 			mintAmount.toString()
 		);
+
+		await addDefaultCommunity();
 	});
 
 	it("should be able to get funds if manager", async () => {
@@ -1105,7 +1069,7 @@ describe("Community - getFunds", () => {
 		await expect(
 			communityAdminInstance
 				.connect(communityManagerA)
-				.setCommunityMinTranche(bigNum(123))
+				.setCommunityMinTranche(parseEther("123"))
 		).to.be.rejectedWith("Ownable: caller is not the owner");
 	});
 
@@ -1113,11 +1077,11 @@ describe("Community - getFunds", () => {
 		await expect(
 			communityAdminInstance
 				.connect(adminAccount1)
-				.setCommunityMinTranche(bigNum(123))
+				.setCommunityMinTranche(parseEther("123"))
 		).to.be.fulfilled;
 
 		expect(await communityAdminInstance.communityMinTranche()).to.be.equal(
-			bigNum(123)
+			parseEther("123")
 		);
 	});
 
@@ -1125,7 +1089,7 @@ describe("Community - getFunds", () => {
 		await expect(
 			communityAdminInstance
 				.connect(communityManagerA)
-				.setCommunityMaxTranche(bigNum(123))
+				.setCommunityMaxTranche(parseEther("123"))
 		).to.be.rejectedWith("Ownable: caller is not the owner");
 	});
 
@@ -1133,69 +1097,69 @@ describe("Community - getFunds", () => {
 		await expect(
 			communityAdminInstance
 				.connect(adminAccount1)
-				.setCommunityMaxTranche(bigNum(1234))
+				.setCommunityMaxTranche(parseEther("1234"))
 		).to.be.fulfilled;
 
 		expect(await communityAdminInstance.communityMaxTranche()).to.be.equal(
-			bigNum(1234)
+			parseEther("1234")
 		);
 	});
 
-	it("should not be able to change set communityMinTranche greater than communityMaxTranche", async () => {
+	it("should not be able to set communityMinTranche greater than communityMaxTranche", async () => {
 		await expect(
 			communityAdminInstance
 				.connect(adminAccount1)
-				.setCommunityMinTranche(bigNum(50))
+				.setCommunityMinTranche(parseEther("50"))
 		).to.be.fulfilled;
 
 		await expect(
 			communityAdminInstance
 				.connect(adminAccount1)
-				.setCommunityMaxTranche(bigNum(100))
+				.setCommunityMaxTranche(parseEther("100"))
 		).to.be.fulfilled;
 
 		await expect(
 			communityAdminInstance
 				.connect(adminAccount1)
-				.setCommunityMinTranche(bigNum(200))
+				.setCommunityMinTranche(parseEther("200"))
 		).to.be.rejectedWith(
 			"CommunityAdmin::setCommunityMinTranche: New communityMinTranche should be less then communityMaxTranche"
 		);
 
 		expect(await communityAdminInstance.communityMinTranche()).to.be.equal(
-			bigNum(50)
+			parseEther("50")
 		);
 		expect(await communityAdminInstance.communityMaxTranche()).to.be.equal(
-			bigNum(100)
+			parseEther("100")
 		);
 	});
 
-	it("should not be able to change set communityMaxTranche less than communityMinTranche", async () => {
+	it("should not be able to set communityMaxTranche less than communityMinTranche", async () => {
 		await expect(
 			communityAdminInstance
 				.connect(adminAccount1)
-				.setCommunityMinTranche(bigNum(50))
+				.setCommunityMinTranche(parseEther("50"))
 		).to.be.fulfilled;
 
 		await expect(
 			communityAdminInstance
 				.connect(adminAccount1)
-				.setCommunityMaxTranche(bigNum(100))
+				.setCommunityMaxTranche(parseEther("100"))
 		).to.be.fulfilled;
 
 		await expect(
 			communityAdminInstance
 				.connect(adminAccount1)
-				.setCommunityMaxTranche(bigNum(25))
+				.setCommunityMaxTranche(parseEther("25"))
 		).to.be.rejectedWith(
 			"CommunityAdmin::setCommunityMaxTranche: New communityMaxTranche should be greater then communityMinTranche"
 		);
 
 		expect(await communityAdminInstance.communityMinTranche()).to.be.equal(
-			bigNum(50)
+			parseEther("50")
 		);
 		expect(await communityAdminInstance.communityMaxTranche()).to.be.equal(
-			bigNum(100)
+			parseEther("100")
 		);
 	});
 
@@ -1209,5 +1173,114 @@ describe("Community - getFunds", () => {
 		).to.be.rejectedWith(
 			"CommunityAdmin::constructor: communityMinTranche should be less then communityMaxTranche"
 		);
+	});
+
+	it("should transfer funds to community", async () => {
+		expect(
+			await cUSDInstance.balanceOf(communityInstance.address)
+		).to.be.equal(communityMinTranche);
+		await expect(
+			communityInstance.connect(communityManagerA).requestFunds()
+		).to.be.fulfilled;
+		expect(
+			await cUSDInstance.balanceOf(communityInstance.address)
+		).to.be.equal(communityMinTranche.mul(2));
+	});
+
+	it("should be able to donate directly in the community", async () => {
+		const user1Donation = 1;
+
+		await cUSDInstance.mint(adminAccount1.address, user1Donation);
+		expect(
+			await cUSDInstance.balanceOf(communityInstance.address)
+		).to.be.equal(communityMinTranche);
+
+		await cUSDInstance.approve(communityInstance.address, user1Donation);
+		await communityInstance.donate(adminAccount1.address, user1Donation);
+
+		expect(
+			await cUSDInstance.balanceOf(communityInstance.address)
+		).to.be.equal(communityMinTranche.add(user1Donation));
+		expect(await communityInstance.treasuryFunds()).to.be.equal(
+			communityMinTranche
+		);
+		expect(await communityInstance.privateFunds()).to.be.equal(
+			user1Donation
+		);
+	});
+
+	it("should not be able to requestFunds if you have more then communityMinTranche", async () => {
+		const user1Donation = 1;
+
+		await cUSDInstance.mint(adminAccount1.address, parseEther("100"));
+		expect(
+			await cUSDInstance.balanceOf(communityInstance.address)
+		).to.be.equal(communityMinTranche);
+
+		await cUSDInstance.approve(communityInstance.address, user1Donation);
+		await communityInstance.donate(adminAccount1.address, user1Donation);
+
+		expect(
+			await cUSDInstance.balanceOf(communityInstance.address)
+		).to.be.equal(communityMinTranche.add(user1Donation));
+
+		await expect(
+			communityInstance.connect(communityManagerA).requestFunds()
+		).to.be.rejectedWith(
+			"CommunityAdmin::fundCommunity: this community has enough funds"
+		);
+		expect(
+			await cUSDInstance.balanceOf(communityInstance.address)
+		).to.be.equal(communityMinTranche.add(user1Donation));
+	});
+
+	it("should be able to transfer funds if admin", async () => {
+		const userInitialBalance = await cUSDInstance.balanceOf(
+			adminAccount1.address
+		);
+		const communityInitialBalance = await cUSDInstance.balanceOf(
+			communityInstance.address
+		);
+		await expect(
+			communityAdminInstance.transferFromCommunity(
+				communityInstance.address,
+				cUSDInstance.address,
+				adminAccount1.address,
+				communityInitialBalance
+			)
+		).to.be.fulfilled;
+		expect(
+			await cUSDInstance.balanceOf(communityInstance.address)
+		).to.be.equal("0");
+		expect(await cUSDInstance.balanceOf(adminAccount1.address)).to.be.equal(
+			userInitialBalance.add(communityInitialBalance)
+		);
+	});
+
+	it("should be able get more funds if have private donations", async () => {
+		const user1Donation = parseEther("5000");
+
+		await communityInstance
+			.connect(communityManagerA)
+			.addBeneficiary(beneficiaryA.address);
+
+		await cUSDInstance.mint(adminAccount1.address, user1Donation);
+		await cUSDInstance.approve(communityInstance.address, user1Donation);
+		await communityInstance.donate(adminAccount1.address, user1Donation);
+
+		await communityAdminInstance.transferFromCommunity(
+			communityInstance.address,
+			cUSDInstance.address,
+			adminAccount1.address,
+			user1Donation
+		);
+
+		await expect(
+			communityInstance.connect(communityManagerA).requestFunds()
+		).to.be.fulfilled;
+
+		expect(
+			await cUSDInstance.balanceOf(communityInstance.address)
+		).to.be.equal(parseEther("354.95"));
 	});
 });
