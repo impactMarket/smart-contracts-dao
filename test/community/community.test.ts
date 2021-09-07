@@ -106,12 +106,6 @@ async function deploy() {
 	const cUSD = await deployments.get("TokenMock");
 	cUSDInstance = await ethers.getContractAt("TokenMock", cUSD.address);
 
-	const IPCTTimelock = await deployments.get("IPCTTimelock");
-	const IPCTTimelockInstance = await ethers.getContractAt(
-		"IPCTTimelock",
-		IPCTTimelock.address
-	);
-
 	const communityAdmin = await deployments.get("CommunityAdminMock");
 	communityAdminInstance = await ethers.getContractAt(
 		"CommunityAdminMock",
@@ -658,26 +652,7 @@ describe("CommunityAdmin", () => {
 		await init();
 	});
 	beforeEach(async () => {
-		cUSDInstance = await Token.deploy("cUSD", "cUSD");
-		communityAdminInstance = await CommunityAdmin.deploy(
-			cUSDInstance.address,
-			communityMinTranche,
-			communityMaxTranche
-		);
-		treasuryInstance = await Treasury.deploy(
-			cUSDInstance.address,
-			adminAccount1.address,
-			communityAdminInstance.address
-		);
-		communityFactoryInstance = await CommunityFactory.deploy(
-			cUSDInstance.address,
-			communityAdminInstance.address
-		);
-
-		await communityAdminInstance.setTreasury(treasuryInstance.address);
-		await communityAdminInstance.setCommunityFactory(
-			communityFactoryInstance.address
-		);
+		await deploy();
 	});
 
 	it("should be able to add a community if admin", async () => {
@@ -829,26 +804,7 @@ describe("Chaos test (complete flow)", async () => {
 		await init();
 	});
 	beforeEach(async () => {
-		cUSDInstance = await Token.deploy("cUSD", "cUSD");
-		communityAdminInstance = await CommunityAdmin.deploy(
-			cUSDInstance.address,
-			communityMinTranche,
-			communityMaxTranche
-		);
-		treasuryInstance = await Treasury.deploy(
-			cUSDInstance.address,
-			adminAccount1.address,
-			communityAdminInstance.address
-		);
-		communityFactoryInstance = await CommunityFactory.deploy(
-			cUSDInstance.address,
-			communityAdminInstance.address
-		);
-
-		await communityAdminInstance.setTreasury(treasuryInstance.address);
-		await communityAdminInstance.setCommunityFactory(
-			communityFactoryInstance.address
-		);
+		await deploy();
 	});
 
 	it("one beneficiary to one community", async () => {

@@ -11,8 +11,9 @@ import "./interfaces/ITreasury.sol";
 import "../community/interfaces/ICommunity.sol";
 
 import "hardhat/console.sol";
+import "./interfaces/IDonationMiner.sol";
 
-contract DonationMiner is Ownable, Pausable, ReentrancyGuard {
+contract DonationMiner is IDonationMiner, Ownable, Pausable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     event RewardClaimed(address indexed user, uint256 amount);
@@ -24,25 +25,6 @@ contract DonationMiner is Ownable, Pausable, ReentrancyGuard {
     uint256 public rewardPeriodSize;
     uint256 public startingBlock;
     uint256 public rewardPerBlock;
-
-    struct RewardPeriod {
-        uint256 reward; // Reward tokens created per block.
-        uint256 bonusReward; // Reward tokens from previous periods.
-        uint256 startBlock; // The block number at which reward distribution starts.
-        uint256 endBlock; // The block number at which reward distribution ends.
-        uint256 donations; // Total of donations for this rewardPeriod.
-    }
-
-    struct Donation {
-        uint256 rewardPeriodNumber;
-        uint256 amount;
-    }
-
-    struct User {
-        uint256 donationsCount;
-        uint256 lastClaim;
-        mapping(uint256 => Donation) donations;
-    }
 
     mapping(uint256 => RewardPeriod) public rewardPeriods;
     mapping(address => User) public users;
