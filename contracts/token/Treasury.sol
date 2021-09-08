@@ -8,39 +8,47 @@ import "../community/interfaces/ICommunityAdmin.sol";
 
 import "hardhat/console.sol";
 
-contract Treasury is Ownable {
+contract Treasury is ITreasury, Ownable {
     using SafeERC20 for IERC20;
 
-    IERC20 public cUSD;
-    ICommunityAdmin public communityAdmin;
+    IERC20 private _cUSD;
+    ICommunityAdmin private _communityAdmin;
 
-    constructor(IERC20 _cUSD, ICommunityAdmin _communityAdmin) public {
-        cUSD = _cUSD;
-        communityAdmin = _communityAdmin;
+    constructor(IERC20 cUSD_, ICommunityAdmin communityAdmin_) public {
+        _cUSD = cUSD_;
+        _communityAdmin = communityAdmin_;
     }
 
     modifier onlyCommunityAdmin() {
-        require(msg.sender == address(communityAdmin), "Treasury: NOT_COMMUNITY_ADMIN");
+        require(msg.sender == address(_communityAdmin), "Treasury: NOT_COMMUNITY_ADMIN");
         _;
     }
 
     modifier onlyCommunityAdminOrOwner() {
         require(
-            msg.sender == address(communityAdmin) || msg.sender == owner(),
+            msg.sender == address(_communityAdmin) || msg.sender == owner(),
             "Treasury: NOT_COMMUNITY_ADMIN AND NOT_OWNER"
         );
         _;
     }
 
-    function setCommunityAdmin(ICommunityAdmin _communityAdmin) external onlyOwner {
-        communityAdmin = _communityAdmin;
+    function cUSD() external view override returns (IERC20) {
+        return _cUSD;
+    }
+
+    function communityAdmin() external view override returns (ICommunityAdmin) {
+        return _communityAdmin;
+    }
+
+    function setCommunityAdmin(ICommunityAdmin communityAdmin_) external override onlyOwner {
+        _communityAdmin = communityAdmin_;
     }
 
     function transfer(
-        IERC20 _token,
-        address _to,
-        uint256 _amount
-    ) external onlyCommunityAdminOrOwner {
-        _token.safeTransfer(_to, _amount);
+        IERC20 token_,
+        address to_,
+        uint256 amount_
+    ) external override onlyCommunityAdminOrOwner {
+        token_.safeTransfer(to_, amount_);
     }
 }
