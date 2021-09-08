@@ -11,7 +11,7 @@ interface IDonationMiner {
         uint256 bonusReward; // Reward tokens from previous periods.
         uint256 startBlock; // The block number at which reward distribution starts.
         uint256 endBlock; // The block number at which reward distribution ends.
-        uint256 donations; // Total of donations for this rewardPeriod.
+        uint256 donationsAmount; // Total of donations for this rewardPeriod.
     }
 
     struct Donation {
@@ -19,19 +19,26 @@ interface IDonationMiner {
         uint256 amount;
     }
 
-    struct User {
+    struct Donor {
         uint256 donationsCount;
         uint256 lastClaim;
         mapping(uint256 => Donation) donations;
     }
 
-//    function owner() external view returns (address);
-//    function transferOwnership(address newOwner) external;
-//    function cUSD() external view returns (IERC20);
-//    function IPCT() external view returns (IERC20);
-//    function treasury() external view returns (ITreasury);
-//    function rewardPeriodSize() external view returns (uint256);
-//    function startingBlock() external view returns (address);
-//    function rewardPerBlock() external view returns (address);
-//    function rewardPeriodCount() external view returns (uint256);
+    function cUSD() external view returns (IERC20);
+    function IPCT() external view returns (IERC20);
+    function treasury() external view returns (ITreasury);
+    function rewardPeriodSize() external view returns (uint256);
+    function startingBlock() external view returns (uint256);
+    function rewardPerBlock() external view returns (uint256);
+    function rewardPeriodCount() external view returns (uint256);
+    function rewardPeriods(uint256 period) external view returns (uint256 reward, uint256 bonusReward, uint256 startBlock, uint256 endBlock, uint256 donationsAmount);
+    function donors(address donor) external view returns (uint256 donationsCount, uint256 lastClaim);
+    function donations(address donor, uint256 donationId) external view returns (uint256 rewardPeriodNumber, uint256 amount);
+
+    function setRewardPeriodSize(uint256 rewardPeriodSize) external;
+    function donate(uint256 amount) external;
+    function donateToCommunity(ICommunity community, uint256 amount) external;
+    function claimRewards() external;
+    function estimateClaimableReward(address donor) external view returns (uint256);
 }
