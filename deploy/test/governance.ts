@@ -22,7 +22,6 @@ async function getContractAddress(
 		from: deployer,
 		nonce: nonce,
 	});
-
 	return nextAddress;
 }
 
@@ -64,16 +63,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		],
 		log: true,
 	});
-
-	//for testing
-	let DelegateContract = await ethers.getContractAt(
-		"IPCTDelegate",
-		delegateResult.address
-	);
-	const DelegatorContract = await DelegateContract.attach(
-		delegateResult.address
-	);
-	await DelegatorContract._setVotingPeriod(5);
 };
 
 func.dependencies = ["TokenTest"];

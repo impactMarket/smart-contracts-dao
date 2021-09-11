@@ -6,7 +6,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./ICommunityAdmin.sol";
 
 interface ICommunityFactory {
-    function cUSD() external view returns(IERC20);
     function communityAdmin() external view returns(ICommunityAdmin);
     function deployCommunity(
         address firstManager,

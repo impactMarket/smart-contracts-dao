@@ -4,7 +4,6 @@ import { BigNumberish } from "ethers";
 import { parseEther } from "@ethersproject/units";
 import {getCUSDAddress}  from "./cUSD";
 
-const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 const COMMUNITY_MIN_TRANCHE: BigNumberish = parseEther("100");
 const COMMUNITY_MAX_TRANCHE: BigNumberish = parseEther("5000");
 
@@ -13,8 +12,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	const { deploy } = deployments;
 	const { deployer } = await getNamedAccounts();
-	const chainID = await getChainId();
-
 
 	const communityAdminResult = await deploy("CommunityAdmin", {
 		from: deployer,
@@ -25,7 +22,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	const communityFactoryResult = await deploy("CommunityFactory", {
 		from: deployer,
-		args: [getCUSDAddress(), communityAdminResult.address],
+		args: [communityAdminResult.address],
 		log: true,
 		// gasLimit: 13000000,
 	});
