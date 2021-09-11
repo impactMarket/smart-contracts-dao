@@ -1,6 +1,5 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
-import {getCUSDAddress}  from "./cUSD";
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
@@ -12,7 +11,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	await deploy("Treasury", {
 		from: deployer,
-		args: [getCUSDAddress(), ZERO_ADDRESS],
+		args: [ZERO_ADDRESS],
 		log: true,
 	});
 };

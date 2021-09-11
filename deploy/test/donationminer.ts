@@ -6,12 +6,11 @@ import { getCUSDAddress } from "./cUSD";
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// @ts-ignore
 	const { deployments, getNamedAccounts, ethers } = hre;
-
 	const { deploy } = deployments;
 	const { deployer } = await getNamedAccounts();
 
 	const Token = await deployments.get("IPCTToken");
-	const Treasury = await deployments.get("Treasury");
+	const Treasury = await deployments.get("TreasuryMock");
 	const IPCTTimelock = await deployments.get("IPCTTimelock");
 
 	const DonationMinerResult = await deploy("DonationMiner", {

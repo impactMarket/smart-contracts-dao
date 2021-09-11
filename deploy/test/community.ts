@@ -22,12 +22,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	const communityFactoryResult = await deploy("CommunityFactory", {
 		from: deployer,
-		args: [getCUSDAddress(), communityAdminResult.address],
+		args: [communityAdminResult.address],
 		log: true,
 		// gasLimit: 13000000,
 	});
 
-	const Treasury = await deployments.get("Treasury");
+	const Treasury = await deployments.get("TreasuryMock");
 	const IPCTTimelock = await deployments.get("IPCTTimelock");
 
 	const TreasuryContract = await ethers.getContractAt(
@@ -45,7 +45,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	);
 
 	await CommunityAdminContract.transferOwnership(IPCTTimelock.address);
-
 	await TreasuryContract.setCommunityAdmin(communityAdminResult.address);
 	await TreasuryContract.transferOwnership(IPCTTimelock.address);
 };

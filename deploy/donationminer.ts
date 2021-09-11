@@ -10,9 +10,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const { deployments, getNamedAccounts, getChainId, ethers } = hre;
 	const { deploy } = deployments;
 	const { deployer } = await getNamedAccounts();
-	const chainID = await getChainId();
-
-	// const cUSDAddress = await func1(await hre);
 
 	const Token = await deployments.get("IPCTToken");
 	const Treasury = await deployments.get("Treasury");

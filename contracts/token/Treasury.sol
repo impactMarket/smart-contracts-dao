@@ -2,7 +2,6 @@
 pragma solidity 0.8.5;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../community/interfaces/ICommunityAdmin.sol";
 
@@ -11,11 +10,9 @@ import "hardhat/console.sol";
 contract Treasury is ITreasury, Ownable {
     using SafeERC20 for IERC20;
 
-    IERC20 private _cUSD;
     ICommunityAdmin private _communityAdmin;
 
-    constructor(IERC20 cUSD_, ICommunityAdmin communityAdmin_) public {
-        _cUSD = cUSD_;
+    constructor(ICommunityAdmin communityAdmin_) public {
         _communityAdmin = communityAdmin_;
     }
 
@@ -30,10 +27,6 @@ contract Treasury is ITreasury, Ownable {
             "Treasury: NOT_COMMUNITY_ADMIN AND NOT_OWNER"
         );
         _;
-    }
-
-    function cUSD() external view override returns (IERC20) {
-        return _cUSD;
     }
 
     function communityAdmin() external view override returns (ICommunityAdmin) {

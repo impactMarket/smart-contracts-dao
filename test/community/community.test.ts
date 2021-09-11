@@ -54,8 +54,6 @@ let beneficiaryD: SignerWithAddress;
 let Community: ethersTypes.ContractFactory;
 let CommunityFactory: ethersTypes.ContractFactory;
 let CommunityAdmin: ethersTypes.ContractFactory;
-let Treasury: ethersTypes.ContractFactory;
-let Token: ethersTypes.ContractFactory;
 
 // contract instances
 let communityInstance: ethersTypes.Contract;
@@ -95,9 +93,7 @@ async function init() {
 
 	Community = await ethers.getContractFactory("Community");
 	CommunityFactory = await ethers.getContractFactory("CommunityFactory");
-	CommunityAdmin = await ethers.getContractFactory("CommunityAdmin");
-	Treasury = await ethers.getContractFactory("Treasury");
-	Token = await ethers.getContractFactory("TokenMock");
+	CommunityAdmin = await ethers.getContractFactory("CommunityAdminMock");
 }
 
 async function deploy() {
@@ -112,8 +108,11 @@ async function deploy() {
 		communityAdmin.address
 	);
 
-	const treasury = await deployments.get("Treasury");
-	treasuryInstance = await ethers.getContractAt("Treasury", treasury.address);
+	const treasury = await deployments.get("TreasuryMock");
+	treasuryInstance = await ethers.getContractAt(
+		"TreasuryMock",
+		treasury.address
+	);
 
 	const communityFactory = await deployments.get("CommunityFactory");
 	communityFactoryInstance = await ethers.getContractAt(
@@ -466,7 +465,6 @@ describe("Community - Governance (2)", () => {
 			communityInstance.address
 		);
 		const newCommunityFactoryInstance = await CommunityFactory.deploy(
-			cUSDInstance.address,
 			communityAdminInstance.address
 		);
 

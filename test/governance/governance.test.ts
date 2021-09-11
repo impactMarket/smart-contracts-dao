@@ -79,6 +79,7 @@ describe("IPCTGovernator", function () {
 		);
 
 		ipctDelegator = await IPCTDelegate.attach(ipctDelegator.address);
+		ipctDelegator._setVotingPeriod(5);
 
 		const communityAdminDeployment = await deployments.get(
 			"CommunityAdminMock"
@@ -96,9 +97,9 @@ describe("IPCTGovernator", function () {
 			communityFactoryDeployment.address
 		);
 
-		const treasuryDeployment = await deployments.get("Treasury");
+		const treasuryDeployment = await deployments.get("TreasuryMock");
 		treasury = await ethers.getContractAt(
-			"Treasury",
+			"TreasuryMock",
 			treasuryDeployment.address
 		);
 

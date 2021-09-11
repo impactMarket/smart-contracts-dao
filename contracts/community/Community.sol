@@ -2,6 +2,7 @@
 pragma solidity 0.8.5;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/ICommunity.sol";
@@ -17,7 +18,7 @@ import "hardhat/console.sol";
  * in one single contract. Each community has it's own members and
  * and managers.
  */
-contract Community is ICommunity, AccessControl {
+contract Community is ICommunity, AccessControl, Ownable {
     using SafeERC20 for IERC20;
 
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
@@ -39,7 +40,6 @@ contract Community is ICommunity, AccessControl {
 
     ICommunity private _previousCommunity;
     ICommunityAdmin private _communityAdmin;
-    IERC20 private _cUSD;
     bool private _locked;
 
     event ManagerAdded(address indexed _account);
@@ -68,7 +68,6 @@ contract Community is ICommunity, AccessControl {
      * @param baseInterval_ Base interval to start claiming.
      * @param incrementInterval_ Increment interval used in each claim.
      * @param previousCommunity_ previous smart contract address of community.
-     * @param cUSD_ cUSD smart contract address.
      */
     constructor(
         address firstManager_,
@@ -77,7 +76,6 @@ contract Community is ICommunity, AccessControl {
         uint256 baseInterval_,
         uint256 incrementInterval_,
         ICommunity previousCommunity_,
-        IERC20 cUSD_,
         ICommunityAdmin communityAdmin_
     ) {
         require(baseInterval_ > incrementInterval_, "");
@@ -92,9 +90,10 @@ contract Community is ICommunity, AccessControl {
         _incrementInterval = incrementInterval_;
         _maxClaim = maxClaim_;
         _previousCommunity = previousCommunity_;
-        _cUSD = cUSD_;
         _communityAdmin = communityAdmin_;
         _locked = false;
+
+        transferOwnership(address(communityAdmin_));
     }
 
     modifier onlyValidBeneficiary() {
@@ -107,11 +106,6 @@ contract Community is ICommunity, AccessControl {
 
     modifier onlyManagers() {
         require(hasRole(MANAGER_ROLE, msg.sender), "Community: NOT_MANAGER");
-        _;
-    }
-
-    modifier onlyCommunityAdmin() {
-        require(msg.sender == address(_communityAdmin), "Community: NOT_ALLOWED");
         _;
     }
 
@@ -151,8 +145,8 @@ contract Community is ICommunity, AccessControl {
         return _communityAdmin;
     }
 
-    function cUSD() external view override returns (IERC20) {
-        return _cUSD;
+    function cUSD() public view override returns (IERC20) {
+        return _communityAdmin.cUSD();
     }
 
     function locked() external view override returns (bool) {
@@ -204,7 +198,7 @@ contract Community is ICommunity, AccessControl {
         _cooldown[account_] = block.timestamp;
         _claims[account_] = 0;
         // send default amount when adding a new beneficiary
-        bool success = _cUSD.transfer(account_, DEFAULT_AMOUNT);
+        bool success = cUSD().transfer(account_, DEFAULT_AMOUNT);
         require(success, "Community::addBeneficiary: NOT_ALLOWED");
         emit BeneficiaryAdded(account_);
     }
@@ -259,7 +253,7 @@ contract Community is ICommunity, AccessControl {
         _claims[msg.sender] += 1;
         _cooldown[msg.sender] = uint256(block.timestamp + lastInterval(msg.sender));
 
-        bool success = _cUSD.transfer(msg.sender, _claimAmount);
+        bool success = cUSD().transfer(msg.sender, _claimAmount);
         require(success, "Community::claim: NOT_ALLOWED");
         emit BeneficiaryClaim(msg.sender, _claimAmount);
     }
@@ -317,25 +311,25 @@ contract Community is ICommunity, AccessControl {
     function migrateFunds(ICommunity newCommunity_, address newCommunityManager_)
         external
         override
-        onlyCommunityAdmin
+        onlyOwner
     {
         require(
             newCommunity_.hasRole(MANAGER_ROLE, newCommunityManager_) == true,
             "Community::migrateFunds: NOT_ALLOWED"
         );
         require(newCommunity_.previousCommunity() == this, "Community::migrateFunds: NOT_ALLOWED");
-        uint256 balance = _cUSD.balanceOf(address(this));
-        bool success = _cUSD.transfer(address(newCommunity_), balance);
+        uint256 balance = cUSD().balanceOf(address(this));
+        bool success = cUSD().transfer(address(newCommunity_), balance);
         require(success, "Community::migrateFunds: NOT_ALLOWED");
         emit MigratedFunds(address(newCommunity_), balance);
     }
 
     function donate(address sender_, uint256 amount_) external override {
-        _cUSD.safeTransferFrom(sender_, address(this), amount_);
+        cUSD().safeTransferFrom(sender_, address(this), amount_);
         _privateFunds += amount_;
     }
 
-    function addTreasuryFunds(uint256 _amount) external override onlyCommunityAdmin {
+    function addTreasuryFunds(uint256 _amount) external override onlyOwner {
         _treasuryFunds += _amount;
     }
 
@@ -343,7 +337,7 @@ contract Community is ICommunity, AccessControl {
         IERC20 erc20_,
         address to_,
         uint256 amount_
-    ) external override onlyCommunityAdmin {
+    ) external override onlyOwner {
         erc20_.safeTransfer(to_, amount_);
     }
 
