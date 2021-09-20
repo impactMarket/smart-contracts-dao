@@ -20,7 +20,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		// gasLimit: 13000000,
 	});
 
-	const communityFactoryResult = await deploy("CommunityFactory", {
+	const communityAdminHelperResult = await deploy("CommunityAdminHelper", {
 		from: deployer,
 		args: [communityAdminResult.address],
 		log: true,
@@ -40,8 +40,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	);
 
 	await CommunityAdminContract.setTreasury(Treasury.address);
-	await CommunityAdminContract.setCommunityFactory(
-		communityFactoryResult.address
+	await CommunityAdminContract.setCommunityAdminHelper(
+		communityAdminHelperResult.address
 	);
 
 	await CommunityAdminContract.transferOwnership(IPCTTimelock.address);

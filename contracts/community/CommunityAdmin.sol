@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/ICommunity.sol";
-import "./interfaces/ICommunityFactory.sol";
+import "./interfaces/ICommunityAdminHelper.sol";
 import "./Community.sol";
 import "../token/interfaces/ITreasury.sol";
 
@@ -22,7 +22,7 @@ contract CommunityAdmin is ICommunityAdmin, Ownable {
 
     IERC20 private _cUSD;
     ITreasury private _treasury;
-    ICommunityFactory private _communityFactory;
+    ICommunityAdminHelper private _communityAdminHelper;
 
     mapping(address => bool) private _communities;
     uint256 private _communityMinTranche;
@@ -42,7 +42,7 @@ contract CommunityAdmin is ICommunityAdmin, Ownable {
         address indexed _communityAddress,
         address indexed _previousCommunityAddress
     );
-    event CommunityFactoryChanged(address indexed _newCommunityFactory);
+    event CommunityAdminHelperChanged(address indexed _newCommunityAdminHelper);
     event CommunityMinTrancheChanged(uint256 indexed _newCommunityMinTranche);
     event CommunityMaxTrancheChanged(uint256 indexed _newCommunitMaxTranche);
 
@@ -77,8 +77,8 @@ contract CommunityAdmin is ICommunityAdmin, Ownable {
         return _treasury;
     }
 
-    function communityFactory() external view override returns (ICommunityFactory) {
-        return _communityFactory;
+    function communityAdminHelper() external view override returns (ICommunityAdminHelper) {
+        return _communityAdminHelper;
     }
 
     function communities(address community_) external view override returns (bool) {
@@ -133,7 +133,7 @@ contract CommunityAdmin is ICommunityAdmin, Ownable {
         uint256 baseInterval_,
         uint256 incrementInterval_
     ) external override onlyOwner {
-        address communityAddress = _communityFactory.deployCommunity(
+        address communityAddress = _communityAdminHelper.deployCommunity(
             firstManager_,
             claimAmount_,
             maxClaim_,
@@ -163,7 +163,7 @@ contract CommunityAdmin is ICommunityAdmin, Ownable {
     function migrateCommunity(
         address firstManager_,
         ICommunity previousCommunity_,
-        ICommunityFactory newCommunityFactory_
+        ICommunityAdminHelper newCommunityAdminHelper_
     ) external override onlyOwner {
         _communities[address(previousCommunity_)] = false;
         require(
@@ -171,7 +171,7 @@ contract CommunityAdmin is ICommunityAdmin, Ownable {
             "CommunityAdmin::migrateCommunity: NOT_VALID"
         );
         ICommunity community = ICommunity(
-            newCommunityFactory_.deployCommunity(
+            newCommunityAdminHelper_.deployCommunity(
                 firstManager_,
                 previousCommunity_.claimAmount(),
                 previousCommunity_.maxClaim(),
@@ -197,25 +197,33 @@ contract CommunityAdmin is ICommunityAdmin, Ownable {
     /**
      * @dev Set the community factory address, if the contract is valid.
      */
-    function setCommunityFactory(ICommunityFactory communityFactory_) external override onlyOwner {
+    function setCommunityAdminHelper(ICommunityAdminHelper communityAdminHelper_)
+        external
+        override
+        onlyOwner
+    {
         require(
-            address(communityFactory_.communityAdmin()) == address(this),
-            "CommunityAdmin::setCommunityFactory: NOT_ALLOWED"
+            address(communityAdminHelper_.communityAdmin()) == address(this),
+            "CommunityAdmin::setCommunityAdminHelper: NOT_ALLOWED"
         );
-        _communityFactory = communityFactory_;
-        emit CommunityFactoryChanged(address(communityFactory_));
+        _communityAdminHelper = communityAdminHelper_;
+        emit CommunityAdminHelperChanged(address(communityAdminHelper_));
     }
 
     /**
      * @dev Init community factory, used only at deploy time.
      */
-    function initCommunityFactory(ICommunityFactory communityFactory_) external override onlyOwner {
+    function initCommunityAdminHelper(ICommunityAdminHelper communityAdminHelper_)
+        external
+        override
+        onlyOwner
+    {
         require(
-            address(communityFactory_) == address(0),
-            "CommunityAdmin::initCommunityFactory: NOT_VALID"
+            address(communityAdminHelper_) == address(0),
+            "CommunityAdmin::initCommunityAdminHelper: NOT_VALID"
         );
-        _communityFactory = communityFactory_;
-        emit CommunityFactoryChanged(address(communityFactory_));
+        _communityAdminHelper = communityAdminHelper_;
+        emit CommunityAdminHelperChanged(address(communityAdminHelper_));
     }
 
     function fundCommunity() external override onlyCommunities {
@@ -223,35 +231,11 @@ contract CommunityAdmin is ICommunityAdmin, Ownable {
             _cUSD.balanceOf(msg.sender) <= _communityMinTranche,
             "CommunityAdmin::fundCommunity: this community has enough funds"
         );
-        uint256 trancheAmount = calculateCommunityTrancheAmount(ICommunity(msg.sender));
+        uint256 trancheAmount = _communityAdminHelper.calculateCommunityTrancheAmount(
+            ICommunity(msg.sender)
+        );
 
         transferToCommunity(ICommunity(msg.sender), trancheAmount);
-    }
-
-    function calculateCommunityTrancheAmount(ICommunity community_)
-        public
-        view
-        override
-        returns (uint256)
-    {
-        uint256 validBeneficiaries = community_.validBeneficiaryCount();
-        uint256 claimAmount = community_.claimAmount();
-        uint256 treasuryFunds = community_.treasuryFunds();
-        uint256 privateFunds = community_.privateFunds();
-
-        uint256 trancheAmount;
-        trancheAmount =
-            (10e36 * validBeneficiaries * (treasuryFunds + privateFunds)) /
-            (claimAmount * treasuryFunds);
-
-        trancheAmount = (trancheAmount > _communityMinTranche)
-            ? trancheAmount
-            : _communityMinTranche;
-        trancheAmount = (trancheAmount < _communityMaxTranche)
-            ? trancheAmount
-            : _communityMaxTranche;
-
-        return trancheAmount;
     }
 
     function transfer(

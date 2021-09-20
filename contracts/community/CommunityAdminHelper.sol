@@ -4,12 +4,12 @@ pragma solidity 0.8.5;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./Community.sol";
 import "./interfaces/ICommunityAdmin.sol";
-import "./interfaces/ICommunityFactory.sol";
+import "./interfaces/ICommunityAdminHelper.sol";
 
 /**
- * @notice Welcome to CommunityFactory
+ * @notice Welcome to CommunityAdminHelper
  */
-contract CommunityFactory is ICommunityFactory, Ownable {
+contract CommunityAdminHelper is ICommunityAdminHelper, Ownable {
     ICommunityAdmin private _communityAdmin;
 
     constructor(ICommunityAdmin communityAdmin_) {
@@ -46,5 +46,32 @@ contract CommunityFactory is ICommunityFactory, Ownable {
                     ICommunityAdmin(msg.sender)
                 )
             );
+    }
+
+    function calculateCommunityTrancheAmount(ICommunity community_)
+        public
+        view
+        override
+        returns (uint256)
+    {
+        uint256 validBeneficiaries = community_.validBeneficiaryCount();
+        uint256 claimAmount = community_.claimAmount();
+        uint256 treasuryFunds = community_.treasuryFunds();
+        uint256 privateFunds = community_.privateFunds();
+
+        uint256 trancheAmount;
+        trancheAmount =
+            (10e36 * validBeneficiaries * (treasuryFunds + privateFunds)) /
+            (claimAmount * treasuryFunds);
+
+        if (trancheAmount < _communityAdmin.communityMinTranche()) {
+            trancheAmount = _communityAdmin.communityMinTranche();
+        }
+
+        if (trancheAmount > _communityAdmin.communityMaxTranche()) {
+            trancheAmount = _communityAdmin.communityMaxTranche();
+        }
+
+        return trancheAmount;
     }
 }
