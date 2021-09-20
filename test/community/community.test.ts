@@ -52,12 +52,12 @@ let beneficiaryC: SignerWithAddress;
 let beneficiaryD: SignerWithAddress;
 
 let Community: ethersTypes.ContractFactory;
-let CommunityFactory: ethersTypes.ContractFactory;
+let CommunityAdminHelper: ethersTypes.ContractFactory;
 let CommunityAdmin: ethersTypes.ContractFactory;
 
 // contract instances
 let communityInstance: ethersTypes.Contract;
-let communityFactoryInstance: ethersTypes.Contract;
+let communityAdminHelperInstance: ethersTypes.Contract;
 let communityAdminInstance: ethersTypes.Contract;
 let treasuryInstance: ethersTypes.Contract;
 let cUSDInstance: ethersTypes.Contract;
@@ -92,7 +92,9 @@ async function init() {
 	beneficiaryD = accounts[9];
 
 	Community = await ethers.getContractFactory("Community");
-	CommunityFactory = await ethers.getContractFactory("CommunityFactory");
+	CommunityAdminHelper = await ethers.getContractFactory(
+		"CommunityAdminHelper"
+	);
 	CommunityAdmin = await ethers.getContractFactory("CommunityAdminMock");
 }
 
@@ -114,10 +116,10 @@ async function deploy() {
 		treasury.address
 	);
 
-	const communityFactory = await deployments.get("CommunityFactory");
-	communityFactoryInstance = await ethers.getContractAt(
-		"CommunityFactory",
-		communityFactory.address
+	const communityAdminHelper = await deployments.get("CommunityAdminHelper");
+	communityAdminHelperInstance = await ethers.getContractAt(
+		"CommunityAdminHelper",
+		communityAdminHelper.address
 	);
 
 	//for testing
@@ -464,14 +466,13 @@ describe("Community - Governance (2)", () => {
 		const previousCommunityPreviousBalance = await cUSDInstance.balanceOf(
 			communityInstance.address
 		);
-		const newCommunityFactoryInstance = await CommunityFactory.deploy(
-			communityAdminInstance.address
-		);
+		const newCommunityAdminHelperInstance =
+			await CommunityAdminHelper.deploy(communityAdminInstance.address);
 
 		const newTx = await communityAdminInstance.migrateCommunity(
 			communityManagerA.address,
 			communityInstance.address,
-			newCommunityFactoryInstance.address
+			newCommunityAdminHelperInstance.address
 		);
 
 		let receipt = await newTx.wait();
