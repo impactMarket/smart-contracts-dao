@@ -9,15 +9,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const { deploy } = deployments;
 	const { deployer } = await getNamedAccounts();
 
-	const cUSD = await deployments.get("TokenMock");
-
-	await deploy("Treasury", {
+	await deploy("TreasuryMock", {
 		from: deployer,
-		args: [cUSD.address, deployer, ZERO_ADDRESS],
+		args: [ZERO_ADDRESS],
 		log: true,
 	});
 };
 
 export default func;
-func.dependencies = ["GovernanceTest", "cUSDTest"];
+func.dependencies = ["cUSDTest"];
 func.tags = ["TreasuryTest", "Test"];

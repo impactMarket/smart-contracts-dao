@@ -52,14 +52,12 @@ let beneficiaryC: SignerWithAddress;
 let beneficiaryD: SignerWithAddress;
 
 let Community: ethersTypes.ContractFactory;
-let CommunityFactory: ethersTypes.ContractFactory;
+let CommunityAdminHelper: ethersTypes.ContractFactory;
 let CommunityAdmin: ethersTypes.ContractFactory;
-let Treasury: ethersTypes.ContractFactory;
-let Token: ethersTypes.ContractFactory;
 
 // contract instances
 let communityInstance: ethersTypes.Contract;
-let communityFactoryInstance: ethersTypes.Contract;
+let communityAdminHelperInstance: ethersTypes.Contract;
 let communityAdminInstance: ethersTypes.Contract;
 let treasuryInstance: ethersTypes.Contract;
 let cUSDInstance: ethersTypes.Contract;
@@ -94,10 +92,10 @@ async function init() {
 	beneficiaryD = accounts[9];
 
 	Community = await ethers.getContractFactory("Community");
-	CommunityFactory = await ethers.getContractFactory("CommunityFactory");
-	CommunityAdmin = await ethers.getContractFactory("CommunityAdmin");
-	Treasury = await ethers.getContractFactory("Treasury");
-	Token = await ethers.getContractFactory("TokenMock");
+	CommunityAdminHelper = await ethers.getContractFactory(
+		"CommunityAdminHelper"
+	);
+	CommunityAdmin = await ethers.getContractFactory("CommunityAdminMock");
 }
 
 async function deploy() {
@@ -106,25 +104,22 @@ async function deploy() {
 	const cUSD = await deployments.get("TokenMock");
 	cUSDInstance = await ethers.getContractAt("TokenMock", cUSD.address);
 
-	const IPCTTimelock = await deployments.get("IPCTTimelock");
-	const IPCTTimelockInstance = await ethers.getContractAt(
-		"IPCTTimelock",
-		IPCTTimelock.address
-	);
-
 	const communityAdmin = await deployments.get("CommunityAdminMock");
 	communityAdminInstance = await ethers.getContractAt(
 		"CommunityAdminMock",
 		communityAdmin.address
 	);
 
-	const treasury = await deployments.get("Treasury");
-	treasuryInstance = await ethers.getContractAt("Treasury", treasury.address);
+	const treasury = await deployments.get("TreasuryMock");
+	treasuryInstance = await ethers.getContractAt(
+		"TreasuryMock",
+		treasury.address
+	);
 
-	const communityFactory = await deployments.get("CommunityFactory");
-	communityFactoryInstance = await ethers.getContractAt(
-		"CommunityFactory",
-		communityFactory.address
+	const communityAdminHelper = await deployments.get("CommunityAdminHelper");
+	communityAdminHelperInstance = await ethers.getContractAt(
+		"CommunityAdminHelper",
+		communityAdminHelper.address
 	);
 
 	//for testing
@@ -471,15 +466,13 @@ describe("Community - Governance (2)", () => {
 		const previousCommunityPreviousBalance = await cUSDInstance.balanceOf(
 			communityInstance.address
 		);
-		const newCommunityFactoryInstance = await CommunityFactory.deploy(
-			cUSDInstance.address,
-			communityAdminInstance.address
-		);
+		const newCommunityAdminHelperInstance =
+			await CommunityAdminHelper.deploy(communityAdminInstance.address);
 
 		const newTx = await communityAdminInstance.migrateCommunity(
 			communityManagerA.address,
 			communityInstance.address,
-			newCommunityFactoryInstance.address
+			newCommunityAdminHelperInstance.address
 		);
 
 		let receipt = await newTx.wait();
@@ -658,26 +651,7 @@ describe("CommunityAdmin", () => {
 		await init();
 	});
 	beforeEach(async () => {
-		cUSDInstance = await Token.deploy("cUSD", "cUSD");
-		communityAdminInstance = await CommunityAdmin.deploy(
-			cUSDInstance.address,
-			communityMinTranche,
-			communityMaxTranche
-		);
-		treasuryInstance = await Treasury.deploy(
-			cUSDInstance.address,
-			adminAccount1.address,
-			communityAdminInstance.address
-		);
-		communityFactoryInstance = await CommunityFactory.deploy(
-			cUSDInstance.address,
-			communityAdminInstance.address
-		);
-
-		await communityAdminInstance.setTreasury(treasuryInstance.address);
-		await communityAdminInstance.setCommunityFactory(
-			communityFactoryInstance.address
-		);
+		await deploy();
 	});
 
 	it("should be able to add a community if admin", async () => {
@@ -829,26 +803,7 @@ describe("Chaos test (complete flow)", async () => {
 		await init();
 	});
 	beforeEach(async () => {
-		cUSDInstance = await Token.deploy("cUSD", "cUSD");
-		communityAdminInstance = await CommunityAdmin.deploy(
-			cUSDInstance.address,
-			communityMinTranche,
-			communityMaxTranche
-		);
-		treasuryInstance = await Treasury.deploy(
-			cUSDInstance.address,
-			adminAccount1.address,
-			communityAdminInstance.address
-		);
-		communityFactoryInstance = await CommunityFactory.deploy(
-			cUSDInstance.address,
-			communityAdminInstance.address
-		);
-
-		await communityAdminInstance.setTreasury(treasuryInstance.address);
-		await communityAdminInstance.setCommunityFactory(
-			communityFactoryInstance.address
-		);
+		await deploy();
 	});
 
 	it("one beneficiary to one community", async () => {

@@ -18,10 +18,10 @@ yarn --ignore-engines
 | Contract                                     | Purpose                                                                       | Source
 |----------------------------------------------|-------------------------------------------------------------------------------| ------------------------------------- |
 | `/community/interfaces/ICommunity.sol`       | Interface for Community.sol                                                   |                                       |
-| `/community/interfaces/ICommunityFactory.sol`| Interface for CommunityFactory.sol                                            |                                       |
+| `/community/interfaces/ICommunityAdminHelper.sol`| Interface for CommunityAdminHelper.sol                                            |                                       |
 | `/community/interfaces/IImpactMarket.sol`    | Interface for ImpactMarket.sol                                                |                                       |
 | `/community/Community.sol`                   | A UBI community that is funded by Impact Labs which beneficiaries claim from  |                                       |
-| `/community/CommunityFactory.sol`            | The factory contract that creates new Communities                             |                                       |
+| `/community/CommunityAdminHelper.sol`            | The factory contract that creates new Communities                             |                                       |
 | `/community/ImpactMarket.sol`                | Community controller that orchestrates creation of new Communities            |                                       |
 | `/governance/IPTCGovernor.sol`               | Contract that manages creation, execution, cancellation of proposals          |                                       |
 | `/governance/Timelock.sol`                   | Timelock that marshalls the execution of governance proposals                 |                                       |

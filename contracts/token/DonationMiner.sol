@@ -11,157 +11,190 @@ import "./interfaces/ITreasury.sol";
 import "../community/interfaces/ICommunity.sol";
 
 import "hardhat/console.sol";
+import "./interfaces/IDonationMiner.sol";
 
-contract DonationMiner is Ownable, Pausable, ReentrancyGuard {
+contract DonationMiner is IDonationMiner, Ownable, Pausable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
-    event RewardClaimed(address indexed user, uint256 amount);
-    event DonationAdded(address indexed user, uint256 amount);
+    event RewardClaimed(address indexed donor, uint256 amount);
+    event DonationAdded(address indexed donor, uint256 amount);
 
-    IERC20 public immutable cUSD;
-    IERC20 public immutable IPCT;
-    ITreasury public treasury;
-    uint256 public rewardPeriodSize;
-    uint256 public startingBlock;
-    uint256 public rewardPerBlock;
+    IERC20 private immutable _cUSD;
+    IERC20 private immutable _IPCT;
+    ITreasury private _treasury;
+    uint256 private _rewardPeriodSize;
+    uint256 private _startingBlock;
+    uint256 private _rewardPerBlock;
+    uint256 private _rewardPeriodCount;
 
-    struct RewardPeriod {
-        uint256 reward; // Reward tokens created per block.
-        uint256 bonusReward; // Reward tokens from previous periods.
-        uint256 startBlock; // The block number at which reward distribution starts.
-        uint256 endBlock; // The block number at which reward distribution ends.
-        uint256 donations; // Total of donations for this rewardPeriod.
-    }
-
-    struct Donation {
-        uint256 rewardPeriodNumber;
-        uint256 amount;
-    }
-
-    struct User {
-        uint256 donationsCount;
-        uint256 lastClaim;
-        mapping(uint256 => Donation) donations;
-    }
-
-    mapping(uint256 => RewardPeriod) public rewardPeriods;
-    mapping(address => User) public users;
-
-    uint256 public rewardPeriodCount;
+    mapping(uint256 => RewardPeriod) private _rewardPeriods;
+    mapping(address => Donor) private _donors;
 
     /**
      * @notice Enforces beginning rewardPeriod has started
      */
     modifier whenStarted() {
-        require(block.number >= startingBlock, "DonationMiner: ERR_NOT_STARTED");
+        require(block.number >= _startingBlock, "DonationMiner: ERR_NOT_STARTED");
         _;
     }
 
     constructor(
-        IERC20 _cUSD,
-        IERC20 _IPCT,
-        ITreasury _treasury,
-        uint256 _rewardPerBlock,
-        uint256 _rewardPeriodSize,
-        uint256 _startingBlock
+        IERC20 cUSD_,
+        IERC20 IPCT_,
+        ITreasury treasury_,
+        uint256 rewardPerBlock_,
+        uint256 rewardPeriodSize_,
+        uint256 startingBlock_
     ) {
-        require(address(_cUSD) != address(0), "DonationMiner::constructor: _cUSD address not set!");
-        require(address(_IPCT) != address(0), "DonationMiner::constructor: _IPCT address not set!");
-        require(address(_treasury) != address(0), "DonationMiner::constructor: _treasury not set!");
-        require(_rewardPerBlock != 0, "DonationMiner::constructor: _rewardPerBlock not set!");
-        require(_startingBlock != 0, "DonationMiner::constructor: _startingRewardPeriod not set!");
+        require(address(cUSD_) != address(0), "DonationMiner::constructor: _cUSD address not set!");
+        require(address(IPCT_) != address(0), "DonationMiner::constructor: _IPCT address not set!");
+        require(address(treasury_) != address(0), "DonationMiner::constructor: _treasury not set!");
+        require(rewardPerBlock_ != 0, "DonationMiner::constructor: _rewardPerBlock not set!");
+        require(startingBlock_ != 0, "DonationMiner::constructor: _startingRewardPeriod not set!");
 
-        cUSD = _cUSD;
-        IPCT = _IPCT;
-        treasury = _treasury;
-        startingBlock = _startingBlock;
-        rewardPeriodSize = _rewardPeriodSize;
-        rewardPerBlock = _rewardPerBlock;
+        _cUSD = cUSD_;
+        _IPCT = IPCT_;
+        _treasury = treasury_;
+        _startingBlock = startingBlock_;
+        _rewardPeriodSize = rewardPeriodSize_;
+        _rewardPerBlock = rewardPerBlock_;
 
-        rewardPeriods[0].endBlock = _startingBlock - 1;
+        _rewardPeriods[0].endBlock = startingBlock_ - 1;
     }
 
-    function setRewardPeriodSize(uint256 _rewardPeriodSize) external onlyOwner {
-        rewardPeriodSize = _rewardPeriodSize;
+    function cUSD() external view override returns (IERC20) {
+        return _cUSD;
     }
 
-    /**
-     * @dev Deposit cUSD tokens to the donation mining contract
-     * @param _amount Amount of cUSD tokens to deposit.
-     */
-    function donate(uint256 _amount) external whenNotPaused whenStarted nonReentrant {
-        _createRewardPeriods();
-
-        // Transfer the cUSD from the user to the treasury
-        cUSD.safeTransferFrom(msg.sender, address(treasury), _amount);
-
-        RewardPeriod storage currentPeriod = rewardPeriods[rewardPeriodCount];
-        currentPeriod.donations = currentPeriod.donations + _amount;
-
-        User storage user = users[msg.sender];
-        user.donationsCount++;
-
-        Donation storage donation = user.donations[user.donationsCount];
-        donation.rewardPeriodNumber = rewardPeriodCount;
-        donation.amount = _amount;
-
-        emit DonationAdded(msg.sender, _amount);
+    function IPCT() external view override returns (IERC20) {
+        return _IPCT;
     }
 
-    /**
-     * @dev Deposit cUSD tokens to the donation mining contract
-     * @param _amount Amount of cUSD tokens to deposit.
-     */
-    function donateToCommunity(ICommunity _community, uint256 _amount)
+    function treasury() external view override returns (ITreasury) {
+        return _treasury;
+    }
+
+    function rewardPeriodSize() external view override returns (uint256) {
+        return _rewardPeriodSize;
+    }
+
+    function startingBlock() external view override returns (uint256) {
+        return _startingBlock;
+    }
+
+    function rewardPerBlock() external view override returns (uint256) {
+        return _rewardPerBlock;
+    }
+
+    function rewardPeriodCount() external view override returns (uint256) {
+        return _rewardPeriodCount;
+    }
+
+    function rewardPeriods(uint256 period)
         external
+        view
+        override
+        returns (
+            uint256 reward,
+            uint256 bonusReward,
+            uint256 startBlock,
+            uint256 endBlock,
+            uint256 donationsAmount
+        )
+    {
+        reward = _rewardPeriods[period].reward;
+        bonusReward = _rewardPeriods[period].bonusReward;
+        startBlock = _rewardPeriods[period].startBlock;
+        endBlock = _rewardPeriods[period].endBlock;
+        donationsAmount = _rewardPeriods[period].donationsAmount;
+    }
+
+    function donors(address donor)
+        external
+        view
+        override
+        returns (uint256 donationsCount, uint256 lastClaim)
+    {
+        donationsCount = _donors[donor].donationsCount;
+        lastClaim = _donors[donor].lastClaim;
+    }
+
+    function donations(address donor, uint256 donationId)
+        external
+        view
+        override
+        returns (uint256 rewardPeriodNumber, uint256 amount)
+    {
+        rewardPeriodNumber = _donors[donor].donations[donationId].rewardPeriodNumber;
+        amount = _donors[donor].donations[donationId].amount;
+    }
+
+    function setRewardPeriodSize(uint256 rewardPeriodSize_) external override onlyOwner {
+        _rewardPeriodSize = rewardPeriodSize_;
+    }
+
+    /**
+     * @dev Deposit cUSD tokens to the donation mining contract
+     * @param amount_ Amount of cUSD tokens to deposit.
+     */
+    function donate(uint256 amount_) external override whenNotPaused whenStarted nonReentrant {
+        createRewardPeriods();
+
+        // Transfer the cUSD from the donor to the treasury
+        _cUSD.safeTransferFrom(msg.sender, address(_treasury), amount_);
+
+        createDonation(amount_);
+    }
+
+    /**
+     * @dev Deposit cUSD tokens to the donation mining contract
+     * @param amount_ Amount of cUSD tokens to deposit.
+     */
+    function donateToCommunity(ICommunity community_, uint256 amount_)
+        external
+        override
         whenNotPaused
         whenStarted
         nonReentrant
     {
-        _createRewardPeriods();
+        ICommunityAdmin communityAdmin = _treasury.communityAdmin();
+        require(
+            communityAdmin.communities(address(community_)),
+            "DonationMiner::donateToCommunity: This is not a valid community address"
+        );
 
-        _community.donate(msg.sender, _amount);
-
-        RewardPeriod storage currentPeriod = rewardPeriods[rewardPeriodCount];
-        currentPeriod.donations = currentPeriod.donations + _amount;
-
-        User storage user = users[msg.sender];
-        user.donationsCount++;
-
-        Donation storage donation = user.donations[user.donationsCount];
-        donation.rewardPeriodNumber = rewardPeriodCount;
-        donation.amount = _amount;
-
-        emit DonationAdded(msg.sender, _amount);
+        createRewardPeriods();
+        community_.donate(msg.sender, amount_);
+        createDonation(amount_);
     }
 
     /**
-     * @dev Calculate and claim all pending rewards for a user
+     * @dev Calculate and claim all pending rewards for a donor
      */
-    function claimRewards() external whenNotPaused whenStarted nonReentrant {
-        User storage user = users[msg.sender];
+    function claimRewards() external override whenNotPaused whenStarted nonReentrant {
+        Donor storage donor = _donors[msg.sender];
         uint256 claimAmount;
 
-        while (user.lastClaim < user.donationsCount) {
-            user.lastClaim++;
-            Donation storage donation = user.donations[user.lastClaim];
-            RewardPeriod storage rewardPeriod = rewardPeriods[donation.rewardPeriodNumber];
+        while (donor.lastClaim < donor.donationsCount) {
+            donor.lastClaim++;
+            Donation storage donation = donor.donations[donor.lastClaim];
+            RewardPeriod storage rewardPeriod = _rewardPeriods[donation.rewardPeriodNumber];
 
             if (rewardPeriod.endBlock >= block.number) {
-                user.lastClaim--;
+                donor.lastClaim--;
                 break;
             }
             claimAmount +=
                 ((rewardPeriod.reward + rewardPeriod.bonusReward) * donation.amount) /
-                rewardPeriod.donations;
+                rewardPeriod.donationsAmount;
         }
 
         if (claimAmount > 0) {
             require(
-                IPCT.balanceOf(address(this)) >= claimAmount,
+                _IPCT.balanceOf(address(this)) >= claimAmount,
                 "DonationMiner::claimRewards: ERR_REWARD_TOKEN_BALANCE"
             );
-            IPCT.safeTransfer(msg.sender, claimAmount);
+            _IPCT.safeTransfer(msg.sender, claimAmount);
         }
 
         emit RewardClaimed(msg.sender, claimAmount);
@@ -169,59 +202,74 @@ contract DonationMiner is Ownable, Pausable, ReentrancyGuard {
 
     /**
      * @dev View function to see pending rewards on frontend.
-     * @param _user Address of a specific user.
+     * @param donor_ Address of a specific donor.
      * @return Pending rewards.
      */
-    function estimateClaimableReward(address _user)
+    function estimateClaimableReward(address donor_)
         external
         view
+        override
         whenStarted
         whenNotPaused
         returns (uint256)
     {
-        User storage user = users[_user];
-        uint256 toClaim = user.lastClaim + 1;
+        Donor storage donor = _donors[donor_];
+        uint256 toClaim = donor.lastClaim + 1;
 
         uint256 claimAmount;
 
-        while (toClaim <= user.donationsCount) {
-            Donation storage donation = user.donations[toClaim];
-            RewardPeriod storage rewardPeriod = rewardPeriods[donation.rewardPeriodNumber];
+        while (toClaim <= donor.donationsCount) {
+            Donation storage donation = donor.donations[toClaim];
+            RewardPeriod storage rewardPeriod = _rewardPeriods[donation.rewardPeriodNumber];
 
             claimAmount +=
                 ((rewardPeriod.reward + rewardPeriod.bonusReward) * donation.amount) /
-                rewardPeriod.donations;
+                rewardPeriod.donationsAmount;
             toClaim++;
         }
 
         return claimAmount;
     }
 
-    function _calculateReward(uint256 _startBlock, uint256 _endBlock)
+    function calculateReward(uint256 startBlock_, uint256 endBlock_)
         internal
         view
         returns (uint256)
     {
-        return (_endBlock - _startBlock) * rewardPerBlock;
+        return (endBlock_ - startBlock_) * _rewardPerBlock;
     }
 
     /**
      * @dev Create all reward periods from the past
      */
-    function _createRewardPeriods() internal {
-        RewardPeriod storage lastPeriod = rewardPeriods[rewardPeriodCount];
+    function createRewardPeriods() internal {
+        RewardPeriod storage lastPeriod = _rewardPeriods[_rewardPeriodCount];
 
         while (lastPeriod.endBlock < block.number) {
-            rewardPeriodCount++;
-            RewardPeriod storage newPeriod = rewardPeriods[rewardPeriodCount];
+            _rewardPeriodCount++;
+            RewardPeriod storage newPeriod = _rewardPeriods[_rewardPeriodCount];
             newPeriod.startBlock = lastPeriod.endBlock + 1;
-            newPeriod.endBlock = newPeriod.startBlock + rewardPeriodSize;
-            newPeriod.reward = _calculateReward(newPeriod.startBlock, newPeriod.endBlock);
-            if (lastPeriod.donations == 0) {
+            newPeriod.endBlock = newPeriod.startBlock + _rewardPeriodSize;
+            newPeriod.reward = calculateReward(newPeriod.startBlock, newPeriod.endBlock);
+            if (lastPeriod.donationsAmount == 0) {
                 newPeriod.bonusReward = lastPeriod.reward + lastPeriod.bonusReward;
             }
 
             lastPeriod = newPeriod;
         }
+    }
+
+    function createDonation(uint256 amount_) internal {
+        RewardPeriod storage currentPeriod = _rewardPeriods[_rewardPeriodCount];
+        currentPeriod.donationsAmount = currentPeriod.donationsAmount + amount_;
+
+        Donor storage donor = _donors[msg.sender];
+        donor.donationsCount++;
+
+        Donation storage donation = donor.donations[donor.donationsCount];
+        donation.rewardPeriodNumber = _rewardPeriodCount;
+        donation.amount = amount_;
+
+        emit DonationAdded(msg.sender, amount_);
     }
 }

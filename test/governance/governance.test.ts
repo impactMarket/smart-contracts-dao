@@ -40,7 +40,7 @@ let carol: SignerWithAddress;
 let ipctToken: ethersTypes.Contract;
 let ipctDelegator: ethersTypes.Contract;
 let ipctTimelock: ethersTypes.Contract;
-let communityFactory: ethersTypes.Contract;
+let communityAdminHelper: ethersTypes.Contract;
 let communityAdmin: ethersTypes.Contract;
 let treasury: ethersTypes.Contract;
 let cUSD: ethersTypes.Contract;
@@ -79,6 +79,7 @@ describe("IPCTGovernator", function () {
 		);
 
 		ipctDelegator = await IPCTDelegate.attach(ipctDelegator.address);
+		ipctDelegator._setVotingPeriod(5);
 
 		const communityAdminDeployment = await deployments.get(
 			"CommunityAdminMock"
@@ -88,17 +89,17 @@ describe("IPCTGovernator", function () {
 			communityAdminDeployment.address
 		);
 
-		const communityFactoryDeployment = await deployments.get(
-			"CommunityFactory"
+		const communityAdminHelperDeployment = await deployments.get(
+			"CommunityAdminHelper"
 		);
-		communityFactory = await ethers.getContractAt(
-			"CommunityFactory",
-			communityFactoryDeployment.address
+		communityAdminHelper = await ethers.getContractAt(
+			"CommunityAdminHelper",
+			communityAdminHelperDeployment.address
 		);
 
-		const treasuryDeployment = await deployments.get("Treasury");
+		const treasuryDeployment = await deployments.get("TreasuryMock");
 		treasury = await ethers.getContractAt(
-			"Treasury",
+			"TreasuryMock",
 			treasuryDeployment.address
 		);
 

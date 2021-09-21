@@ -2,6 +2,7 @@
 pragma solidity 0.8.5;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/ICommunity.sol";
@@ -17,38 +18,29 @@ import "hardhat/console.sol";
  * in one single contract. Each community has it's own members and
  * and managers.
  */
-contract Community is AccessControl {
+contract Community is ICommunity, AccessControl, Ownable {
     using SafeERC20 for IERC20;
 
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
 
     uint256 public constant DEFAULT_AMOUNT = 5e16;
 
-    enum BeneficiaryState {
-        NONE,
-        Valid,
-        Locked,
-        Removed,
-        MaxClaimed
-    } // starts by 0 (when user is not added yet)
+    mapping(address => uint256) private _cooldown;
+    mapping(address => uint256) private _claimed;
+    mapping(address => uint256) private _claims;
+    mapping(address => BeneficiaryState) private _beneficiaries;
 
-    mapping(address => uint256) public cooldown;
-    mapping(address => uint256) public claimed;
-    mapping(address => uint256) public claims;
-    mapping(address => BeneficiaryState) public beneficiaries;
+    uint256 private _claimAmount;
+    uint256 private _baseInterval;
+    uint256 private _incrementInterval;
+    uint256 private _maxClaim;
+    uint256 private _validBeneficiaryCount;
+    uint256 private _treasuryFunds;
+    uint256 private _privateFunds;
 
-    uint256 public claimAmount;
-    uint256 public baseInterval;
-    uint256 public incrementInterval;
-    uint256 public maxClaim;
-    uint256 public validBeneficiaryCount;
-    uint256 public treasuryFunds;
-    uint256 public privateFunds;
-
-    ICommunity public previousCommunity;
-    ICommunityAdmin public communityAdmin;
-    IERC20 public cUSD;
-    bool public locked;
+    ICommunity private _previousCommunity;
+    ICommunityAdmin private _communityAdmin;
+    bool private _locked;
 
     event ManagerAdded(address indexed _account);
     event ManagerRemoved(address indexed _account);
@@ -69,46 +61,44 @@ contract Community is AccessControl {
 
     /**
      * @dev Constructor with custom fields, choosen by the community.
-     * @param _firstManager Comminuty's first manager. Will
+     * @param firstManager_ Comminuty's first manager. Will
      * be able to add others.
-     * @param _claimAmount Base amount to be claim by the benificiary.
-     * @param _maxClaim Limit that a beneficiary can claim at once.
-     * @param _baseInterval Base interval to start claiming.
-     * @param _incrementInterval Increment interval used in each claim.
-     * @param _previousCommunity previous smart contract address of community.
-     * @param _cUSD cUSD smart contract address.
+     * @param claimAmount_ Base amount to be claim by the benificiary.
+     * @param maxClaim_ Limit that a beneficiary can claim at once.
+     * @param baseInterval_ Base interval to start claiming.
+     * @param incrementInterval_ Increment interval used in each claim.
+     * @param previousCommunity_ previous smart contract address of community.
      */
     constructor(
-        address _firstManager,
-        uint256 _claimAmount,
-        uint256 _maxClaim,
-        uint256 _baseInterval,
-        uint256 _incrementInterval,
-        ICommunity _previousCommunity,
-        IERC20 _cUSD,
-        ICommunityAdmin _communityAdmin
+        address firstManager_,
+        uint256 claimAmount_,
+        uint256 maxClaim_,
+        uint256 baseInterval_,
+        uint256 incrementInterval_,
+        ICommunity previousCommunity_,
+        ICommunityAdmin communityAdmin_
     ) {
-        require(_baseInterval > _incrementInterval, "");
-        require(_maxClaim > _claimAmount, "");
+        require(baseInterval_ > incrementInterval_, "");
+        require(maxClaim_ > claimAmount_, "");
 
-        _setupRole(MANAGER_ROLE, _firstManager);
+        _setupRole(MANAGER_ROLE, firstManager_);
         _setRoleAdmin(MANAGER_ROLE, MANAGER_ROLE);
-        emit ManagerAdded(_firstManager);
+        emit ManagerAdded(firstManager_);
 
-        claimAmount = _claimAmount;
-        baseInterval = _baseInterval;
-        incrementInterval = _incrementInterval;
-        maxClaim = _maxClaim;
+        _claimAmount = claimAmount_;
+        _baseInterval = baseInterval_;
+        _incrementInterval = incrementInterval_;
+        _maxClaim = maxClaim_;
+        _previousCommunity = previousCommunity_;
+        _communityAdmin = communityAdmin_;
+        _locked = false;
 
-        previousCommunity = _previousCommunity;
-        cUSD = _cUSD;
-        communityAdmin = _communityAdmin;
-        locked = false;
+        transferOwnership(address(communityAdmin_));
     }
 
     modifier onlyValidBeneficiary() {
         require(
-            beneficiaries[msg.sender] == BeneficiaryState.Valid,
+            _beneficiaries[msg.sender] == BeneficiaryState.Valid,
             "Community: NOT_VALID_BENEFICIARY"
         );
         _;
@@ -119,15 +109,70 @@ contract Community is AccessControl {
         _;
     }
 
-    modifier onlyCommunityAdmin() {
-        require(msg.sender == address(communityAdmin), "Community: NOT_ALLOWED");
-        _;
+    function previousCommunity() external view override returns (ICommunity) {
+        return _previousCommunity;
+    }
+
+    function claimAmount() external view override returns (uint256) {
+        return _claimAmount;
+    }
+
+    function baseInterval() external view override returns (uint256) {
+        return _baseInterval;
+    }
+
+    function incrementInterval() external view override returns (uint256) {
+        return _incrementInterval;
+    }
+
+    function maxClaim() external view override returns (uint256) {
+        return _maxClaim;
+    }
+
+    function validBeneficiaryCount() external view override returns (uint256) {
+        return _validBeneficiaryCount;
+    }
+
+    function treasuryFunds() external view override returns (uint256) {
+        return _treasuryFunds;
+    }
+
+    function privateFunds() external view override returns (uint256) {
+        return _privateFunds;
+    }
+
+    function communityAdmin() external view override returns (ICommunityAdmin) {
+        return _communityAdmin;
+    }
+
+    function cUSD() public view override returns (IERC20) {
+        return _communityAdmin.cUSD();
+    }
+
+    function locked() external view override returns (bool) {
+        return _locked;
+    }
+
+    function cooldown(address beneficiary_) external view override returns (uint256) {
+        return _cooldown[beneficiary_];
+    }
+
+    function claimed(address beneficiary_) external view override returns (uint256) {
+        return _claimed[beneficiary_];
+    }
+
+    function claims(address beneficiary_) external view override returns (uint256) {
+        return _claims[beneficiary_];
+    }
+
+    function beneficiaries(address beneficiary_) external view override returns (BeneficiaryState) {
+        return _beneficiaries[beneficiary_];
     }
 
     /**
      * @dev Allow community managers to add other managers.
      */
-    function addManager(address _account) external onlyManagers {
+    function addManager(address _account) external override onlyManagers {
         grantRole(MANAGER_ROLE, _account);
         emit ManagerAdded(_account);
     }
@@ -135,7 +180,7 @@ contract Community is AccessControl {
     /**
      * @dev Allow community managers to remove other managers.
      */
-    function removeManager(address _account) external onlyManagers {
+    function removeManager(address _account) external override onlyManagers {
         revokeRole(MANAGER_ROLE, _account);
         emit ManagerRemoved(_account);
     }
@@ -143,99 +188,99 @@ contract Community is AccessControl {
     /**
      * @dev Allow community managers to add beneficiaries.
      */
-    function addBeneficiary(address _account) external onlyManagers {
+    function addBeneficiary(address account_) external override onlyManagers {
         require(
-            beneficiaries[_account] == BeneficiaryState.NONE,
+            _beneficiaries[account_] == BeneficiaryState.NONE,
             "Community::addBeneficiary: NOT_YET"
         );
-        changeBeneficiaryState(_account, BeneficiaryState.Valid);
+        changeBeneficiaryState(account_, BeneficiaryState.Valid);
         // solhint-disable-next-line not-rely-on-time
-        cooldown[_account] = block.timestamp;
-        claims[_account] = 0;
+        _cooldown[account_] = block.timestamp;
+        _claims[account_] = 0;
         // send default amount when adding a new beneficiary
-        bool success = cUSD.transfer(_account, DEFAULT_AMOUNT);
+        bool success = cUSD().transfer(account_, DEFAULT_AMOUNT);
         require(success, "Community::addBeneficiary: NOT_ALLOWED");
-        emit BeneficiaryAdded(_account);
+        emit BeneficiaryAdded(account_);
     }
 
     /**
      * @dev Allow community managers to lock beneficiaries.
      */
-    function lockBeneficiary(address _account) external onlyManagers {
+    function lockBeneficiary(address account_) external override onlyManagers {
         require(
-            beneficiaries[_account] == BeneficiaryState.Valid,
+            _beneficiaries[account_] == BeneficiaryState.Valid,
             "Community::lockBeneficiary: NOT_YET"
         );
-        changeBeneficiaryState(_account, BeneficiaryState.Locked);
-        emit BeneficiaryLocked(_account);
+        changeBeneficiaryState(account_, BeneficiaryState.Locked);
+        emit BeneficiaryLocked(account_);
     }
 
     /**
      * @dev Allow community managers to unlock locked beneficiaries.
      */
-    function unlockBeneficiary(address _account) external onlyManagers {
+    function unlockBeneficiary(address account_) external override onlyManagers {
         require(
-            beneficiaries[_account] == BeneficiaryState.Locked,
+            _beneficiaries[account_] == BeneficiaryState.Locked,
             "Community::unlockBeneficiary: NOT_YET"
         );
-        changeBeneficiaryState(_account, BeneficiaryState.Valid);
-        emit BeneficiaryUnlocked(_account);
+        changeBeneficiaryState(account_, BeneficiaryState.Valid);
+        emit BeneficiaryUnlocked(account_);
     }
 
     /**
      * @dev Allow community managers to remove beneficiaries.
      */
-    function removeBeneficiary(address _account) external onlyManagers {
+    function removeBeneficiary(address account_) external override onlyManagers {
         require(
-            beneficiaries[_account] == BeneficiaryState.Valid ||
-                beneficiaries[_account] == BeneficiaryState.Locked,
+            _beneficiaries[account_] == BeneficiaryState.Valid ||
+                _beneficiaries[account_] == BeneficiaryState.Locked,
             "Community::removeBeneficiary: NOT_YET"
         );
-        changeBeneficiaryState(_account, BeneficiaryState.Removed);
-        emit BeneficiaryRemoved(_account);
+        changeBeneficiaryState(account_, BeneficiaryState.Removed);
+        emit BeneficiaryRemoved(account_);
     }
 
     /**
      * @dev Allow beneficiaries to claim.
      */
-    function claim() external onlyValidBeneficiary {
-        require(!locked, "LOCKED");
+    function claim() external override onlyValidBeneficiary {
+        require(!_locked, "LOCKED");
         // solhint-disable-next-line not-rely-on-time
-        require(cooldown[msg.sender] <= block.timestamp, "Community::claim: NOT_YET");
-        require((claimed[msg.sender] + claimAmount) <= maxClaim, "Community::claim: MAX_CLAIM");
-        claimed[msg.sender] = claimed[msg.sender] + claimAmount;
+        require(_cooldown[msg.sender] <= block.timestamp, "Community::claim: NOT_YET");
+        require((_claimed[msg.sender] + _claimAmount) <= _maxClaim, "Community::claim: MAX_CLAIM");
+        _claimed[msg.sender] = _claimed[msg.sender] + _claimAmount;
 
-        claims[msg.sender] += 1;
-        cooldown[msg.sender] = uint256(block.timestamp + lastInterval(msg.sender));
+        _claims[msg.sender] += 1;
+        _cooldown[msg.sender] = uint256(block.timestamp + lastInterval(msg.sender));
 
-        bool success = cUSD.transfer(msg.sender, claimAmount);
+        bool success = cUSD().transfer(msg.sender, _claimAmount);
         require(success, "Community::claim: NOT_ALLOWED");
-        emit BeneficiaryClaim(msg.sender, claimAmount);
+        emit BeneficiaryClaim(msg.sender, _claimAmount);
     }
 
-    function lastInterval(address _beneficiary) public view returns (uint256) {
-        if (claims[_beneficiary] == 0) {
+    function lastInterval(address beneficiary_) public view override returns (uint256) {
+        if (_claims[beneficiary_] == 0) {
             return 0;
         }
-        return baseInterval + (claims[_beneficiary] - 1) * incrementInterval;
+        return _baseInterval + (_claims[beneficiary_] - 1) * _incrementInterval;
     }
 
     /**
      * @dev Allow community managers to edit community variables.
      */
     function edit(
-        uint256 _claimAmount,
-        uint256 _maxClaim,
-        uint256 _baseInterval,
-        uint256 _incrementInterval
-    ) external onlyManagers {
-        require(_baseInterval > _incrementInterval, "");
-        require(_maxClaim > _claimAmount, "");
+        uint256 claimAmount_,
+        uint256 maxClaim_,
+        uint256 baseInterval_,
+        uint256 incrementInterval_
+    ) external override onlyManagers {
+        require(baseInterval_ > incrementInterval_, "");
+        require(maxClaim_ > claimAmount_, "");
 
-        claimAmount = _claimAmount;
-        baseInterval = _baseInterval;
-        incrementInterval = _incrementInterval;
-        maxClaim = _maxClaim;
+        _claimAmount = claimAmount_;
+        _baseInterval = baseInterval_;
+        _incrementInterval = incrementInterval_;
+        _maxClaim = maxClaim_;
 
         emit CommunityEdited(_claimAmount, _maxClaim, _baseInterval, _incrementInterval);
     }
@@ -243,68 +288,65 @@ contract Community is AccessControl {
     /**
      * Allow community managers to lock community claims.
      */
-    function lock() external onlyManagers {
-        locked = true;
+    function lock() external override onlyManagers {
+        _locked = true;
         emit CommunityLocked(msg.sender);
     }
 
     /**
      * Allow community managers to unlock community claims.
      */
-    function unlock() external onlyManagers {
-        locked = false;
+    function unlock() external override onlyManagers {
+        _locked = false;
         emit CommunityUnlocked(msg.sender);
     }
 
-    function requestFunds() external onlyManagers {
-        communityAdmin.fundCommunity();
+    function requestFunds() external override onlyManagers {
+        _communityAdmin.fundCommunity();
     }
 
     /**
      * Migrate funds in current community to new one.
      */
-    function migrateFunds(ICommunity _newCommunity, address _newCommunityManager)
+    function migrateFunds(ICommunity newCommunity_, address newCommunityManager_)
         external
-        onlyCommunityAdmin
+        override
+        onlyOwner
     {
         require(
-            _newCommunity.hasRole(MANAGER_ROLE, _newCommunityManager) == true,
+            newCommunity_.hasRole(MANAGER_ROLE, newCommunityManager_) == true,
             "Community::migrateFunds: NOT_ALLOWED"
         );
-        require(
-            _newCommunity.previousCommunity() == address(this),
-            "Community::migrateFunds: NOT_ALLOWED"
-        );
-        uint256 balance = cUSD.balanceOf(address(this));
-        bool success = cUSD.transfer(address(_newCommunity), balance);
+        require(newCommunity_.previousCommunity() == this, "Community::migrateFunds: NOT_ALLOWED");
+        uint256 balance = cUSD().balanceOf(address(this));
+        bool success = cUSD().transfer(address(newCommunity_), balance);
         require(success, "Community::migrateFunds: NOT_ALLOWED");
-        emit MigratedFunds(address(_newCommunity), balance);
+        emit MigratedFunds(address(newCommunity_), balance);
     }
 
-    function donate(address _sender, uint256 _amount) external {
-        cUSD.safeTransferFrom(_sender, address(this), _amount);
-        privateFunds += _amount;
+    function donate(address sender_, uint256 amount_) external override {
+        cUSD().safeTransferFrom(sender_, address(this), amount_);
+        _privateFunds += amount_;
     }
 
-    function addTreasuryFunds(uint256 _amount) external onlyCommunityAdmin {
-        treasuryFunds += _amount;
+    function addTreasuryFunds(uint256 _amount) external override onlyOwner {
+        _treasuryFunds += _amount;
     }
 
     function transferFunds(
-        IERC20 _erc20,
-        address _to,
-        uint256 _amount
-    ) external onlyCommunityAdmin {
-        _erc20.safeTransfer(_to, _amount);
+        IERC20 erc20_,
+        address to_,
+        uint256 amount_
+    ) external override onlyOwner {
+        erc20_.safeTransfer(to_, amount_);
     }
 
-    function changeBeneficiaryState(address _beneficiary, BeneficiaryState _newState) internal {
-        if (beneficiaries[_beneficiary] == _newState) {
+    function changeBeneficiaryState(address beneficiary_, BeneficiaryState newState_) internal {
+        if (_beneficiaries[beneficiary_] == newState_) {
             return;
         }
 
-        beneficiaries[_beneficiary] = _newState;
-
-        (_newState == BeneficiaryState.Valid) ? validBeneficiaryCount++ : validBeneficiaryCount--;
+        _beneficiaries[beneficiary_] = newState_;
+        (newState_ == BeneficiaryState.Valid) ? _validBeneficiaryCount++ : _validBeneficiaryCount--;
     }
 }
