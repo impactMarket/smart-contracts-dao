@@ -392,7 +392,6 @@ describe("Donation Miner", () => {
 		);
 	});
 
-	// ******************************************************************************************************************************
 	it("Should claim reward after reward period, multiple donors #4", async function () {
 		const { cUSD, IPCT, DonationMiner, signers } = await initialize();
 
@@ -438,6 +437,27 @@ describe("Donation Miner", () => {
 			`User1 donated ${formatEther(
 				user2Donation
 			)} cUSD and claimed: ${formatEther(user2ExpectedReward)} IPCT`
+		);
+	});
+
+	it("Should not be able to donate to a wrong community", async function () {
+		const { cUSD, IPCT, DonationMiner, signers } = await initialize();
+
+		const user1Donation = parseEther("1");
+
+		await advanceTimeAndBlockNTimes(STARTING_DELAY, REWARD_PERIOD_SIZE);
+
+		// Approve from user1
+		await cUSD.contract
+			.connect(signers[1])
+			.approve(DonationMiner.deployed.address, user1Donation);
+
+		await expect(
+			DonationMiner.contract
+				.connect(signers[1])
+				.donateToCommunity(signers[1].address, user1Donation)
+		).to.be.revertedWith(
+			"DonationMiner::donateToCommunity: This is not a valid community address"
 		);
 	});
 });

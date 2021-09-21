@@ -1,21 +1,49 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.5;
 
+import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./ICommunityAdmin.sol";
 
-interface ICommunity {
-    function previousCommunity() external view returns(address);
+interface ICommunity is IAccessControl {
+    enum BeneficiaryState {
+        NONE,
+        Valid,
+        Locked,
+        Removed,
+        MaxClaimed
+    } // starts by 0 (when user is not added yet)
+
+    function previousCommunity() external view returns(ICommunity);
     function claimAmount() external view returns(uint256);
     function baseInterval() external view returns(uint256);
     function incrementInterval() external view returns(uint256);
     function maxClaim() external view returns(uint256);
-    function previousCommunityContract() external view returns(address);
-    function hasRole(bytes32 role, address account) external view returns(bool);
-    function migrateFunds(ICommunity _newCommunity, address _newCommunityManager) external;
     function validBeneficiaryCount() external view returns(uint);
-    function donate(address sender, uint256 amount) external;
-    function addTreasuryFunds(uint256 amount) external;
     function treasuryFunds() external view returns(uint);
     function privateFunds() external view returns(uint);
+    function communityAdmin() external view returns(ICommunityAdmin);
+    function cUSD() external view  returns(IERC20);
+    function locked() external view returns(bool);
+    function cooldown(address beneficiary) external view returns(uint256);
+    function claimed(address beneficiary) external view returns(uint256);
+    function claims(address beneficiary) external view returns(uint256);
+    function beneficiaries(address beneficiary) external view returns(BeneficiaryState);
+    
+    function migrateFunds(ICommunity newCommunity, address newCommunityManager) external;
+    function donate(address sender, uint256 amount) external;
+    function addTreasuryFunds(uint256 amount) external;
     function transferFunds(IERC20 token, address to, uint256 amount) external;
+    function addManager(address account) external;
+    function removeManager(address account) external;
+    function addBeneficiary(address account) external;
+    function lockBeneficiary(address account) external;
+    function unlockBeneficiary(address account) external;
+    function removeBeneficiary(address account) external;
+    function claim() external;
+    function lastInterval(address beneficiary) external view returns (uint256);
+    function edit(uint256 claimAmount, uint256 maxClaim, uint256 baseInterval, uint256 incrementInterval) external;
+    function lock() external;
+    function unlock() external;
+    function requestFunds() external;
 }
