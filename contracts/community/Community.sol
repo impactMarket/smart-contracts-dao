@@ -37,6 +37,7 @@ contract Community is ICommunity, AccessControl, Ownable {
     uint256 private _validBeneficiaryCount;
     uint256 private _treasuryFunds;
     uint256 private _privateFunds;
+    uint256 private _decreaseStep = 1e16;
 
     ICommunity private _previousCommunity;
     ICommunityAdmin private _communityAdmin;
@@ -52,6 +53,7 @@ contract Community is ICommunity, AccessControl, Ownable {
     event CommunityEdited(
         uint256 _claimAmount,
         uint256 _maxClaim,
+        uint256 _decreaseStep,
         uint256 _baseInterval,
         uint256 _incrementInterval
     );
@@ -78,8 +80,14 @@ contract Community is ICommunity, AccessControl, Ownable {
         ICommunity previousCommunity_,
         ICommunityAdmin communityAdmin_
     ) {
-        require(baseInterval_ > incrementInterval_, "");
-        require(maxClaim_ > claimAmount_, "");
+        require(
+            baseInterval_ > incrementInterval_,
+            "Community::constructor: baseInterval must be greater than incrementInterval"
+        );
+        require(
+            maxClaim_ > claimAmount_,
+            "Community::constructor: maxClaim must be greater than claimAmount"
+        );
 
         _setupRole(MANAGER_ROLE, firstManager_);
         _setRoleAdmin(MANAGER_ROLE, MANAGER_ROLE);
@@ -167,6 +175,10 @@ contract Community is ICommunity, AccessControl, Ownable {
 
     function beneficiaries(address beneficiary_) external view override returns (BeneficiaryState) {
         return _beneficiaries[beneficiary_];
+    }
+
+    function decreaseStep() external view override returns (uint256) {
+        return _decreaseStep;
     }
 
     /**
@@ -271,18 +283,32 @@ contract Community is ICommunity, AccessControl, Ownable {
     function edit(
         uint256 claimAmount_,
         uint256 maxClaim_,
+        uint256 decreaseStep_,
         uint256 baseInterval_,
         uint256 incrementInterval_
-    ) external override onlyManagers {
-        require(baseInterval_ > incrementInterval_, "");
-        require(maxClaim_ > claimAmount_, "");
+    ) external override onlyOwner {
+        require(
+            baseInterval_ > incrementInterval_,
+            "Community::constructor: baseInterval must be greater than incrementInterval"
+        );
+        require(
+            maxClaim_ > claimAmount_,
+            "Community::constructor: maxClaim must be greater than claimAmount"
+        );
 
         _claimAmount = claimAmount_;
+        _maxClaim = maxClaim_;
+        _decreaseStep = decreaseStep_;
         _baseInterval = baseInterval_;
         _incrementInterval = incrementInterval_;
-        _maxClaim = maxClaim_;
 
-        emit CommunityEdited(_claimAmount, _maxClaim, _baseInterval, _incrementInterval);
+        emit CommunityEdited(
+            _claimAmount,
+            _maxClaim,
+            _decreaseStep,
+            _baseInterval,
+            _incrementInterval
+        );
     }
 
     /**
@@ -341,12 +367,35 @@ contract Community is ICommunity, AccessControl, Ownable {
         erc20_.safeTransfer(to_, amount_);
     }
 
+    function beneficiaryJoinFromMigrated() external override {
+        // no need to check if it's a beneficiary, as the state is copied
+        changeBeneficiaryState(msg.sender, _previousCommunity.beneficiaries(msg.sender));
+        _cooldown[msg.sender] = _previousCommunity.cooldown(msg.sender);
+        _claimed[msg.sender] = _previousCommunity.claimed(msg.sender);
+        _claims[msg.sender] =
+            (_previousCommunity.lastInterval(msg.sender) - _baseInterval) /
+            _incrementInterval +
+            1;
+    }
+
+    function managerJoinFromMigrated() external override {
+        require(_previousCommunity.hasRole(MANAGER_ROLE, msg.sender), "NOT_ALLOWED");
+        grantRole(MANAGER_ROLE, msg.sender);
+    }
+
     function changeBeneficiaryState(address beneficiary_, BeneficiaryState newState_) internal {
         if (_beneficiaries[beneficiary_] == newState_) {
             return;
         }
 
+        if (newState_ == BeneficiaryState.Valid) {
+            _validBeneficiaryCount++;
+            _claimAmount -= _decreaseStep;
+        } else if (_beneficiaries[beneficiary_] == BeneficiaryState.Valid) {
+            _validBeneficiaryCount--;
+            _claimAmount += _decreaseStep;
+        }
+
         _beneficiaries[beneficiary_] = newState_;
-        (newState_ == BeneficiaryState.Valid) ? _validBeneficiaryCount++ : _validBeneficiaryCount--;
     }
 }
