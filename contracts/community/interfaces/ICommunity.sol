@@ -10,9 +10,8 @@ interface ICommunity is IAccessControl {
         NONE,
         Valid,
         Locked,
-        Removed,
-        MaxClaimed
-    } // starts by 0 (when user is not added yet)
+        Removed
+    }
 
     function previousCommunity() external view returns(ICommunity);
     function claimAmount() external view returns(uint256);
@@ -29,7 +28,9 @@ interface ICommunity is IAccessControl {
     function claimed(address beneficiary) external view returns(uint256);
     function claims(address beneficiary) external view returns(uint256);
     function beneficiaries(address beneficiary) external view returns(BeneficiaryState);
-    
+    function decreaseStep() external view returns(uint);
+
+
     function migrateFunds(ICommunity newCommunity, address newCommunityManager) external;
     function donate(address sender, uint256 amount) external;
     function addTreasuryFunds(uint256 amount) external;
@@ -42,8 +43,12 @@ interface ICommunity is IAccessControl {
     function removeBeneficiary(address account) external;
     function claim() external;
     function lastInterval(address beneficiary) external view returns (uint256);
-    function edit(uint256 claimAmount, uint256 maxClaim, uint256 baseInterval, uint256 incrementInterval) external;
+    function edit(uint256 claimAmount, uint256 maxClaim, uint256 decreaseStep, uint256 baseInterval, uint256 incrementInterval) external;
     function lock() external;
     function unlock() external;
     function requestFunds() external;
+    function beneficiaryJoinFromMigrated() external;
+    function managerJoinFromMigrated() external;
+
+
 }
