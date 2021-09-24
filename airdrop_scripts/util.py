@@ -1,10 +1,10 @@
 import json
 import os
 
-from web3 import WebsocketProvider
+from web3 import WebsocketProvider, Web3
 
 from airdrop_scripts.http_provider import CustomHTTPProvider
-from airdrop_scripts.web3_instance import get_web3
+from airdrop_scripts.web3_instance import get_web3, set_web3
 
 ENV_INFURA_CONNECTION_TYPE = "INFURA_CONNECTION_TYPE"
 ENV_INFURA_PROJECT_ID = "INFURA_PROJECT_ID"
@@ -29,6 +29,39 @@ def get_target_block():
 
 def get_web3_network():
     return os.getenv(ENV_WEB3_NETWORK, "mainnet")
+
+
+def set_envvars():
+    if os.getenv('WEB3_NETWORK'):
+        return
+
+    # os.environ['WEB3_NETWORK'] = "https://celo-mainnet--rpc.datahub.figment.io/apikey/25daa59318b13c1f83a8a444578fdb57"
+    os.environ['WEB3_NETWORK'] = "http://localhost:8545"
+    # os.getcwd()
+    # '/home/ssallam/pycharm_projects/impact-market-token'
+    os.environ["IMARKET_ABI"]="./abi/ImpactMarket.json"
+    os.environ["CFACTORY_ABI"] = "./abi/CommunityFactory.json"
+    os.environ["COMMUNITY_ABI"] = "./abi/Community.json"
+    os.environ["ERC20_ABI"] = "./abi/ERC20.json"
+    os.environ["UBE_FACTORY_ABI"] = "./abi/Factory.json"
+    os.environ["UBE_PAIR_ABI"] = "./abi/Pair.json"
+    os.environ["MOOLA_LENDINGPOOL_ABI"] = "./abi/LendingPool.json"
+
+
+def initConnection():
+    # Web3Provider.init_web3(provider=get_web3_connection_provider(config.network_url))
+    # ContractHandler.set_artifacts_path(config.artifacts_path)
+
+    try:
+        web3 = get_web3()
+        return web3
+    except AssertionError:
+        pass
+
+    network = get_web3_network()
+    provider = get_web3_connection_provider(network)
+    set_web3(Web3(provider))
+    return get_web3()
 
 
 def get_web3_connection_provider(network_url):
@@ -95,14 +128,16 @@ def load_contract(filename, address):
             address = get_web3().toChecksumAddress(address)
         assert address is not None, "address shouldn't be None at this point"
 
+        bytecode = None
         if isinstance(contract_definition, dict):
             abi = contract_definition["abi"]
+            bytecode = contract_definition.get("bytecode")
         elif isinstance(contract_definition, list):
             abi = contract_definition
         else:
             raise AssertionError(f'Unrecognized abi file content of type {type(contract_definition)}.')
 
-        bytecode = contract_definition["bytecode"]
+
         contract = get_web3().eth.contract(
             address=address, abi=abi, bytecode=bytecode
         )
@@ -137,7 +172,7 @@ def get_block_steps(from_block, to_block, step_size=300000):
     assert to_block > from_block, ''
     nblocks = to_block - from_block + 1
     if step_size >= nblocks:
-        return nblocks
+        return [from_block, to_block]
 
     n = int(nblocks / step_size)
     step = step_size if n >= 2 else int(nblocks / 2)
