@@ -1,66 +1,25 @@
 import csv
 import json
 import os
-from multiprocessing import Process
+import multiprocessing as mp
 
-from airdrop_scripts.export_recipients import getIMCCManagers, getIMCCBeneficiaries
-from airdrop_scripts.quick_scripts import extract_transfers_and_save_to_file, get_impact_market_info, \
-    get_imarket_communities, extract_community_doners, get_ubeswap_info, get_moola_info, extract_token_holders
-from airdrop_scripts.util import get_block_steps, get_start_block, get_target_block
+from airdrop_scripts.export_recipients import (
+    get_impact_market_managers,
+    get_moola_info,
+    get_ubeswap_users,
+    get_moola_users,
+    get_impact_market_info,
+    process_ube_token, process_moo_token, get_ubeswap_info, process_cUSD_token, process_celo_token, get_impact_market_beneficiaries)
+from airdrop_scripts.events_helpers import get_imarket_communities
+from airdrop_scripts.util import get_block_steps, get_start_block, get_target_block, set_envvars, initConnection
 from airdrop_scripts.web3_instance import get_web3
 
-
-def dispatch_get_all_transfers(save_path, from_block, to_block, token_address, token_name, chunk_size=500):
-    _r = get_block_steps(from_block, to_block, 300000)
-    _last = _r[0] - 1
-    processes = []
-    saved_files = []
-    for i in range(len(_r)-1):
-        _from = _last + 1
-        _last = _r[i+1]
-        name = os.path.join(save_path, '%s.transfers.%s-%s' % (token_name, _from, _last))
-        print('getting transfers between blocks: %s, %s' % (_from, _last))
-        print('saving transfers to file: %s' % name)
-        saved_files.append(name)
-        processes.append(
-            Process(
-                target=extract_transfers_and_save_to_file,
-                args=(name, token_address, token_name, _from, _last, chunk_size)
-            )
-        )
-
-    for p in processes:
-        p.start()
-
-    for p in processes:
-        p.join()
-
-    all_transfers = []
-    for name in saved_files:
-        with open(name) as f:
-            transfers = json.load(f)
-            all_transfers.extend(transfers)
-
-    return all_transfers
-
-
-def get_all_celo_transfers(save_path, from_block, to_block, token_address):
-    return dispatch_get_all_transfers(save_path, from_block, to_block, token_address, 'cUSD')
-
-
-def get_all_cusd_transfers(save_path, from_block, to_block, token_address):
-    return dispatch_get_all_transfers(save_path, from_block, to_block, token_address, 'CELO')
-
-
-def get_all_ube_transfers(save_path, from_block, to_block, token_address):
-    return dispatch_get_all_transfers(save_path, from_block, to_block, token_address, 'UBE')
-
-
-def get_all_moo_transfers(save_path, from_block, to_block, token_address):
-    return dispatch_get_all_transfers(save_path, from_block, to_block, token_address, 'MOO')
+mp_pool = mp.Pool(mp.cpu_count()-2)
 
 
 def main(save_path=None):
+    set_envvars()
+    initConnection()
     if not save_path or not os.path.exists(save_path):
         save_path = os.path.expanduser('~/CELO_transfers_dir')
 
@@ -71,35 +30,20 @@ def main(save_path=None):
         target_block = web3.eth.blockNumber
 
     imarket_address, factory_address, cusd_address, celo_address, start_block = get_impact_market_info()
+    print('get impact market communities (imarket-address %s): %s - %s' % (imarket_address, start_block, target_block))
     communities = get_imarket_communities(web3, imarket_address, start_block, target_block)
 
-    cusd_transfers = get_all_cusd_transfers(save_path, start_block, target_block, cusd_address)
-    cusd_doners_list = extract_community_doners(cusd_transfers, communities)
+    # 1. cUSD  #############
+    print('get cUSD doners (token-address %s): %s - %s' % (cusd_address, start_block, target_block))
+    cusd_transfers, cusd_doners_list = process_cUSD_token(
+        mp_pool, save_path, start_block, target_block, cusd_address, communities
+    )
 
-    celo_transfers = get_all_celo_transfers(save_path, start_block, target_block, celo_address)
-    celo_doners_list = extract_community_doners(celo_transfers, communities)
-    celo_holders = extract_token_holders(celo_transfers)
-
-    ube_address, ube_block, factory, router, factory_block = get_ubeswap_info()
-    ube_transfers = get_all_ube_transfers(save_path, ube_block, target_block, ube_address)
-    ube_holders = extract_token_holders(ube_transfers)
-    ube_users = []
-    # get ube users from the protocol contracts
-
-    moo_address, moo_block = get_moola_info()
-    moo_transfers = get_all_moo_transfers(save_path, moo_block, target_block, moo_address)
-    moo_holders = extract_token_holders(moo_transfers)
-    moola_users = []
-    # get moola users from the protocol contracts
-
-
-    managers = getIMCCManagers(communities, start_block, target_block)
-
-    beneficiaries = getIMCCBeneficiaries(communities, start_block, target_block)
-
-    # MOO holders (around 900 at moment)
-    # UBE holders (around 3.3K at moment)
-    # Maybe even all addresses that interacted with any Ube or Moola contracts (edited)
+    # 2. CELO ##############
+    print('get CELO doners (token-address %s): %s - %s' % (celo_address, start_block, target_block))
+    celo_transfers, celo_doners_list, celo_holders = process_celo_token(
+        mp_pool, save_path, start_block, target_block, celo_address, communities
+    )
 
     address_amount_tuples = []
     address_amount_tuples.extend(cusd_doners_list)
@@ -108,6 +52,16 @@ def main(save_path=None):
     with open(doners_file, 'w') as f:
         csv_writer = csv.writer(f)
         csv_writer.writerows(address_amount_tuples)
+
+    # 3. UBE token holders ############## UBE holders (around 3.3K at moment)
+    ube_address, ube_block, factory, router, factory_block = get_ubeswap_info()
+    print('get UBE token holders (token-address %s): %s - %s' % (ube_address, ube_block, target_block))
+    ube_transfers, ube_holders = process_ube_token(mp_pool, save_path, ube_block, target_block, ube_address)
+
+    # 4. MOO token holders ############## MOO holders (around 900 at moment)
+    moo_address, moo_block, lending_contract_address, lending_block = get_moola_info()
+    print('get MOO token holders (token-address %s): %s - %s' % (moo_address, moo_block, target_block))
+    moo_transfers, moo_holders = process_moo_token(mp_pool, save_path, moo_block, target_block, moo_address)
 
     address_amount_tuples = []
     address_amount_tuples.extend(sorted(celo_holders.items(), key=lambda x: x[1]))
@@ -118,26 +72,51 @@ def main(save_path=None):
         csv_writer = csv.writer(f)
         csv_writer.writerows(address_amount_tuples)
 
+    # 5. UBE swap users ##############
+    print('get ubeswap users (Factory address %s): %s - %s' % (factory, factory_block, target_block))
+    ube_users = get_ubeswap_users(mp_pool, save_path, target_block, 10000)
+
+    # 6. MOO market users ##############
+    print('get moola users (LendingPool address %s): %s - %s' % (lending_contract_address, lending_block, target_block))
+    moola_users = get_moola_users(mp_pool, save_path, target_block, 10000)
+
+    addresses = [(address, ) for address in (ube_users + moola_users)]
+    users_file = os.path.join(save_path, 'ube-moola-users.csv')
+    with open(users_file, 'w') as f:
+        csv_writer = csv.writer(f)
+        csv_writer.writerows(addresses)
+
+    # 7. Impact market community Managers ##############
+    print('get imarket managers (%s communities): %s - %s' % (len(communities), start_block, target_block))
+    managers = get_impact_market_managers(communities, start_block, target_block)
     addresses = [(address, ) for address in managers]
     managers_file = os.path.join(save_path, 'managers.csv')
     with open(managers_file, 'w') as f:
         csv_writer = csv.writer(f)
         csv_writer.writerows(addresses)
 
-
+    # 8. Impact market community Beneficiaries ##############
+    print('get imarket beneficiaries (%s communities): %s - %s' % (len(communities), start_block, target_block))
+    beneficiaries = get_impact_market_beneficiaries(communities, start_block, target_block)
     beneficiaries_file = os.path.join(save_path, 'beneficiaries.csv')
     with open(beneficiaries_file, 'w') as f:
         csv_writer = csv.writer(f)
         csv_writer.writerows(beneficiaries)
 
-    users_list = []
-    users_list.extend(ube_users)
-    users_list.extend(moola_users)
-    ube_moola_users_file = os.path.join(save_path, 'ube_moola_users.csv')
-    with open(ube_moola_users_file, 'w') as f:
-        csv_writer = csv.writer(f)
-        csv_writer.writerows(users_list)
+    print('Completed, all info is saved in the following files: \n'
+          '%s\n'
+          '%s\n'
+          '%s\n'
+          '%s\n'
+          '%s\n'
+          '' % (doners_file, holders_file, users_file, managers_file, beneficiaries_file)
+          )
 
 
 if __name__ == "__main__":
-    main()
+    path = os.path.expanduser('~/CELO_transfers_dir_1')
+    if not os.path.exists(path):
+        os.mkdir(path)
+    main(path)
+
+    # main()

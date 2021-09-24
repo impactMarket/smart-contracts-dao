@@ -148,7 +148,7 @@ class Contract(object):
             return event().argument_names
 
     def get_event_logs(
-        self, event_name, from_block, to_block, filters, web3=None, chunk_size=1000
+        self, event_name, from_block, to_block, filters, web3=None, chunk_size=1000, verbose=True
     ):
         event = getattr(self.events, event_name)
         if not web3:
@@ -171,24 +171,28 @@ class Contract(object):
                 _to = min(_from + chunk - 1, to_block)
                 error_count = 0
                 # if (_from - from_block) % 1000 == 0:
-                print(
-                    f"    So far processed {len(all_logs)} {event_name} events from {_from-from_block} blocks."
-                )
-                # return logs
-                # for l in logs:
-                #     yield l
+                if verbose:
+                    print(
+                        f"    So far processed {len(all_logs)} {event_name} events from {_from-from_block} blocks."
+                    )
 
             except requests.exceptions.ReadTimeout as err:
                 print(f"ReadTimeout ({_from}, {_to}): {err}")
                 error_count += 1
+                chunk = max(int(chunk / 2), 2)
+                _to = min(_from + chunk - 1, to_block)
+
             except Exception as err:
                 print(f"Error ({_from}, {_to}): {err}")
                 error_count += 1
 
-            if error_count > 1:
+            if error_count > 5:
                 break
 
         print(f"Done processing events, found {len(all_logs)} logs." + "with errors" if error_count else "")
+        if error_count:
+            raise AssertionError('Errors encountered while fetching event logs.')
+
         return all_logs
 
     def getLogs(
