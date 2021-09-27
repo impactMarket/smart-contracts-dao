@@ -171,7 +171,7 @@ class Contract(object):
                 _to = min(_from + chunk - 1, to_block)
                 error_count = 0
                 # if (_from - from_block) % 1000 == 0:
-                if verbose:
+                if verbose or (_from - from_block) % 1000 == 0:
                     print(
                         f"    So far processed {len(all_logs)} {event_name} events from {_from-from_block} blocks."
                     )
@@ -185,6 +185,7 @@ class Contract(object):
             except Exception as err:
                 print(f"Error ({_from}, {_to}): {err}")
                 error_count += 1
+                raise
 
             if error_count > 5:
                 break

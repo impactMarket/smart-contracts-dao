@@ -9,7 +9,7 @@ from airdrop_scripts.events_helpers import initConnection, get_event_logs, get_c
 from airdrop_scripts.util import from_base_18, get_start_block, get_block_steps
 from airdrop_scripts.web3_instance import get_web3
 
-STEP_SIZE = 50000
+STEP_SIZE = 100000
 
 impactMarketContract = 'ImpactMarket'
 address_impactMarketContract = '0xe55C3eb4a04F93c3302A5d8058348157561BF5ca'
@@ -57,26 +57,31 @@ def get_moola_info():
 
 
 def dispatch_get_all_transfers(process_pool, save_path, from_block, to_block, token_address, token_name, chunk_size=500):
-    names = [n for n in os.listdir(save_path) if n.startswith(token_name)]
-    if names:
-        _names = [os.path.splitext(n)[0] if n.endswith('.json') else n for n in names]
-        last_block = sorted([int(n.split('-')[1]) for n in _names])[-1]
-        if last_block > from_block:
-            from_block = last_block + 1
+    # names = [n for n in os.listdir(save_path) if n.startswith(token_name)]
+    # if names:
+    #     _names = [os.path.splitext(n)[0] if n.endswith('.json') else n for n in names]
+    #     last_block = sorted([int(n.split('-')[1]) for n in _names])[-1]
+    #     if last_block > from_block:
+    #         from_block = last_block + 1
 
     _r = get_block_steps(from_block, to_block, STEP_SIZE)
     _last = _r[0] - 1
     args_lists = []
     saved_files = []
-    if names:
-        saved_files = [
-            os.path.join(save_path, n) for n in names
-        ]
+    # if names:
+    #     saved_files = [
+    #         os.path.join(save_path, n) for n in names
+    #     ]
 
     for i in range(len(_r)-1):
         _from = _last + 1
         _last = _r[i+1]
         name = os.path.join(save_path, '%s.transfers.%s-%s.json' % (token_name, _from, _last))
+        if os.path.exists(name):
+            print('transfers already complted for range: %s - %s, file %s' % (_from, _last, name))
+            saved_files.append(name)
+            continue
+
         print('getting transfers between blocks: %s, %s' % (_from, _last))
         print('saving transfers to file: %s' % name)
         saved_files.append(name)
@@ -118,32 +123,68 @@ def process_moo_token(process_pool, save_path, start_block, target_block, moo_ad
     return moo_transfers, moo_holders
 
 
-def get_impact_market_managers(communities, from_block, to_block):
+def get_impact_market_managers(process_pool, save_path, communities, from_block, to_block, chunk_size=100000):
     # All managers via the event ManagerAdded(address indexed _account); event
-    filters = {}
-    web3 = get_web3()
-    abi_path = os.getenv('COMMUNITY_ABI')
     event_name_ManagerAdded = 'ManagerAdded'
+    args_lists = []
+    for i, (comm, block) in enumerate(communities):
+        args_lists.append((
+            i, None, comm, 'Community',
+            'COMMUNITY_ABI', event_name_ManagerAdded, ['_account'], max(from_block, block),
+            to_block, chunk_size, False
+        ))
+        # logs = get_community_event_logs(
+        #     event_name_ManagerAdded, comm, web3, abi_path, max(from_block, block), to_block, filters, chunk_size=chunk_size)
+        # managers.extend([l.args["_account"] for l in logs])
+
+    result = process_pool.map(get_event_logs, args_lists)
     managers = []
-    for comm, block in communities:
-        logs = get_community_event_logs(
-            event_name_ManagerAdded, comm, web3, abi_path, max(from_block, block), to_block, filters, chunk_size=100000)
-        managers.extend([l.args["_account"] for l in logs])
+    for manager_list in result:
+        managers.extend(manager_list)
+
+    name = os.path.join(save_path, 'managers.%s-%s.json' % (from_block, to_block))
+    with open(name, 'w') as f:
+        json.dump(managers, f)
 
     return managers
 
 
-def get_impact_market_beneficiaries(communities, from_block, to_block):
+def get_impact_market_beneficiaries(process_pool, save_path, communities, from_block, to_block, chunk_size=100000):
     # All beneficiaries via the event BeneficiaryClaim(address indexed _account, uint256 _amount);  event
-    filters = {}
-    web3 = get_web3()
-    abi_path = os.getenv('COMMUNITY_ABI')
-    event_name_ManagerAdded = 'BeneficiaryClaim'
+    event_name_BeneficiaryClaim = 'BeneficiaryClaim'
+    args_lists = []
+    saved_files = []
+    for i, (comm, block) in enumerate(communities):
+        _from = max(from_block, block)
+        name = os.path.join(save_path, 'comm.%s.%s-%s.json' % (comm, _from, to_block))
+        saved_files.append(name)
+        print('saving beneficiaries to file: %s' % name)
+        if os.path.exists(name):
+            print('community (%s) beneficiaries already processed for %s' % (i, comm))
+            continue
+
+        args_lists.append((
+            i, name, comm, 'Community',
+            'COMMUNITY_ABI', event_name_BeneficiaryClaim, ['_account', '_amount'], _from,
+            to_block, chunk_size, False
+        ))
+
+        # event_name_ManagerAdded, comm, web3, abi_path, max(from_block, block), to_block, filters, chunk_size)
+        # logs = get_community_event_logs(
+        #     event_name_ManagerAdded, comm, web3, abi_path, max(from_block, block), to_block, filters, chunk_size=chunk_size)
+        # beneficiary_claims.extend([(l.args["_account"], from_base_18(l.args["_amount"])) for l in logs])
+
+    process_pool.map(get_event_logs, args_lists)
+
     beneficiary_claims = []
-    for comm, block in communities:
-        logs = get_community_event_logs(
-            event_name_ManagerAdded, comm, web3, abi_path, max(from_block, block), to_block, filters, chunk_size=100000)
-        beneficiary_claims.extend([(l.args["_account"], from_base_18(l.args["_amount"])) for l in logs])
+    for name in saved_files:
+        with open(name) as f:
+            address_claim_list = json.load(f)
+            beneficiary_claims.extend([(a, from_base_18(value)) for a, value in address_claim_list])
+
+    name = os.path.join(save_path, 'beneficiary_claims.%s-%s.json' % (from_block, to_block))
+    with open(name, 'w') as f:
+        json.dump(beneficiary_claims, f)
 
     return beneficiary_claims
 
@@ -179,12 +220,13 @@ def get_ubeswap_users(process_pool, save_path, blockNumber: int, chunk_size=500)
         name = os.path.join(save_path, 'ubeswap.pair%s.swaps.json' % i)
         saved_files.append(name)
         if os.path.exists(name):
+            print('pair (%s) swaps already processed.' % (i,))
             continue
 
         # args_lists.append((i, name, pair_address, block, blockNumber, chunk_size))
         args_lists.append((
             i, name, pair_address, pair_name,
-            'UBE_PAIR_ABI', event_name_Swap, [arg_name], pair_address,
+            'UBE_PAIR_ABI', event_name_Swap, [arg_name], block,
             blockNumber, chunk_size, False
         ))
 
@@ -208,6 +250,7 @@ def get_moola_users(process_pool, save_path, blockNumber: int, chunk_size=500):
         name = os.path.join(save_path, 'moola.%s.json' % e)
         saved_files.append(name)
         if os.path.exists(name):
+            print('event (%s) logs already processed.' % (e,))
             continue
 
         args_lists.append((

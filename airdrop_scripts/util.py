@@ -24,7 +24,7 @@ def get_start_block():
 
 
 def get_target_block():
-    return os.getenv(TARGET_BLOCK, None)
+    return os.getenv(TARGET_BLOCK, 8983266)
 
 
 def get_web3_network():
