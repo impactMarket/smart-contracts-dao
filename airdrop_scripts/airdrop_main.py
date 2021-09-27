@@ -29,9 +29,10 @@ def main(save_path=None):
     if not target_block or target_block < start_block:
         target_block = web3.eth.blockNumber
 
+    # 0. Impact Market Communities ###########
     imarket_address, factory_address, cusd_address, celo_address, start_block = get_impact_market_info()
     print('get impact market communities (imarket-address %s): %s - %s' % (imarket_address, start_block, target_block))
-    communities = get_imarket_communities(web3, imarket_address, start_block, target_block)
+    communities = get_imarket_communities(save_path, web3, imarket_address, start_block, target_block)
 
     # 1. cUSD  #############
     print('get cUSD doners (token-address %s): %s - %s' % (cusd_address, start_block, target_block))
@@ -48,10 +49,14 @@ def main(save_path=None):
     address_amount_tuples = []
     address_amount_tuples.extend(cusd_doners_list)
     address_amount_tuples.extend(celo_doners_list)
+    aggregated_doners = {a: 0 for a, v in address_amount_tuples}
+    for a, v in address_amount_tuples:
+        aggregated_doners[a] += v
+
     doners_file = os.path.join(save_path, 'doners.csv')
     with open(doners_file, 'w') as f:
         csv_writer = csv.writer(f)
-        csv_writer.writerows(address_amount_tuples)
+        csv_writer.writerows(sorted(aggregated_doners.items(), key=lambda x: x[1]))
 
     # 3. UBE token holders ############## UBE holders (around 3.3K at moment)
     ube_address, ube_block, factory, router, factory_block = get_ubeswap_info()
@@ -74,13 +79,13 @@ def main(save_path=None):
 
     # 5. UBE swap users ##############
     print('get ubeswap users (Factory address %s): %s - %s' % (factory, factory_block, target_block))
-    ube_users = get_ubeswap_users(mp_pool, save_path, target_block, 10000)
+    ube_users = get_ubeswap_users(mp_pool, save_path, target_block, 2000)
 
     # 6. MOO market users ##############
     print('get moola users (LendingPool address %s): %s - %s' % (lending_contract_address, lending_block, target_block))
-    moola_users = get_moola_users(mp_pool, save_path, target_block, 10000)
+    moola_users = get_moola_users(mp_pool, save_path, target_block, 2000)
 
-    addresses = [(address, ) for address in (ube_users + moola_users)]
+    addresses = [(address,) for address in set(ube_users + moola_users)]
     users_file = os.path.join(save_path, 'ube-moola-users.csv')
     with open(users_file, 'w') as f:
         csv_writer = csv.writer(f)
@@ -88,8 +93,8 @@ def main(save_path=None):
 
     # 7. Impact market community Managers ##############
     print('get imarket managers (%s communities): %s - %s' % (len(communities), start_block, target_block))
-    managers = get_impact_market_managers(communities, start_block, target_block)
-    addresses = [(address, ) for address in managers]
+    managers = get_impact_market_managers(mp_pool, save_path, communities, start_block, target_block, chunk_size=500000)
+    addresses = [(address, ) for address in set(managers)]
     managers_file = os.path.join(save_path, 'managers.csv')
     with open(managers_file, 'w') as f:
         csv_writer = csv.writer(f)
@@ -97,11 +102,15 @@ def main(save_path=None):
 
     # 8. Impact market community Beneficiaries ##############
     print('get imarket beneficiaries (%s communities): %s - %s' % (len(communities), start_block, target_block))
-    beneficiaries = get_impact_market_beneficiaries(communities, start_block, target_block)
+    beneficiaries = get_impact_market_beneficiaries(mp_pool, save_path, communities, start_block, target_block, chunk_size=5000)
+    aggregated_beneficiareies = {a: 0 for a, v in beneficiaries}
+    for a, v in beneficiaries:
+        aggregated_beneficiareies[a] += v
+
     beneficiaries_file = os.path.join(save_path, 'beneficiaries.csv')
     with open(beneficiaries_file, 'w') as f:
         csv_writer = csv.writer(f)
-        csv_writer.writerows(beneficiaries)
+        csv_writer.writerows(sorted(aggregated_beneficiareies.items(), key=lambda x: x[1]))
 
     print('Completed, all info is saved in the following files: \n'
           '%s\n'

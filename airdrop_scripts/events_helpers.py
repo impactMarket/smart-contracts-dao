@@ -6,12 +6,21 @@ from airdrop_scripts.util import to_base_18, from_base_18, initConnection, set_e
 from airdrop_scripts.custom_web3.contract import Contract
 
 
-def get_imarket_communities(_web3, imarket_address, _from, _to):
+def get_imarket_communities(save_path, _web3, imarket_address, _from, _to):
     # imarket_address = '0xe55C3eb4a04F93c3302A5d8058348157561BF5ca'
     imarket = Contract('ImpactMarket', os.getenv('IMARKET_ABI'), imarket_address)
     event_name_CommunityAdded = 'CommunityAdded'
-    logs = imarket.get_event_logs(event_name_CommunityAdded, _from, _to, {}, _web3, chunk_size=500000)
-    return [(l.args._communityAddress, l.blockNumber) for l in logs]
+    filename = os.path.join(save_path, 'communities.%s-%s.json' % (_from, _to))
+    if os.path.exists(filename):
+        with open(filename) as f:
+            communities = json.load(f)
+    else:
+        logs = imarket.get_event_logs(event_name_CommunityAdded, _from, _to, {}, _web3, chunk_size=500000)
+        communities = [(l.args._communityAddress, l.blockNumber) for l in logs]
+        with open(filename, 'w') as f:
+            json.dump(communities, f)
+
+    return communities
 
 
 def get_all_transfers(_web3, token_address, token_name, _from, _to, filters=None, chunk_size=1000):
@@ -76,19 +85,24 @@ def get_event_logs(args):
         )
     except Exception as e:
         print('Error processing event: %s.%s. \n error=%s'% (contract_name, event_name, e))
-        return
+        raise
+        # return
 
     print('done processing %s (%s) %s events, got %s logs' % (contract_name, i, event_name, len(logs)))
     if len(args_names) == 1:
-        values = [l.args[args_names[0]] for l in logs]
+        values = [(l.args[args_names[0]], l.blockNumber) for l in logs]
     else:
         values = []
         for l in logs:
-            values.append([l.args[a] for a in args_names])
+            lvs = [l.args[a] for a in args_names]
+            lvs.append(l.blockNumber)
+            values.append(lvs)
 
-    with open(filename, 'w') as outfile:
-        json.dump(values, outfile)
+    if filename:
+        with open(filename, 'w') as outfile:
+            json.dump(values, outfile)
 
+    return values
 
 # def get_community_transfers(_web3, token_address, token_name, _from, _to, filters=None, chunk_size=500000, sender='doner'):
 #     erc20 = Contract(token_name, os.getenv('ERC20_ABI'), _web3.toChecksumAddress(token_address))
@@ -136,7 +150,7 @@ def get_event_logs(args):
 
 def extract_community_doners(transfers, communities):
     doner_value_list = []
-    comms_set = set(communities)
+    comms_set = {comm for comm, block in communities}
     for _from, _to, value, block in transfers:
         if _to in comms_set:
             doner_value_list.append((_from, util.from_base_18(value)))
