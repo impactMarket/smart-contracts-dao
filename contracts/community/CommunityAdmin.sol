@@ -4,6 +4,7 @@ pragma solidity 0.8.5;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./interfaces/ICommunity.sol";
 import "./interfaces/ICommunityAdminHelper.sol";
 import "./Community.sol";
@@ -19,14 +20,18 @@ import "hardhat/console.sol";
  */
 contract CommunityAdmin is ICommunityAdmin, Ownable {
     using SafeERC20 for IERC20;
+    using EnumerableSet for EnumerableSet.AddressSet;
+
+    uint256 public constant VERSION = 1;
 
     IERC20 private _cUSD;
     ITreasury private _treasury;
     ICommunityAdminHelper private _communityAdminHelper;
-
-    mapping(address => bool) private _communities;
     uint256 private _communityMinTranche;
     uint256 private _communityMaxTranche;
+
+    mapping(address => CommunityState) private _communities;
+    EnumerableSet.AddressSet private _communityList;
 
     event CommunityAdded(
         address indexed _communityAddress,
@@ -65,7 +70,7 @@ contract CommunityAdmin is ICommunityAdmin, Ownable {
     }
 
     modifier onlyCommunities() {
-        require(_communities[msg.sender] == true, "CommunityAdmin: NOT_COMMUNITY");
+        require(_communities[msg.sender] == CommunityState.Valid, "CommunityAdmin: NOT_COMMUNITY");
         _;
     }
 
@@ -81,8 +86,13 @@ contract CommunityAdmin is ICommunityAdmin, Ownable {
         return _communityAdminHelper;
     }
 
-    function communities(address community_) external view override returns (bool) {
-        return _communities[community_];
+    function communities(address communityAddress_)
+        external
+        view
+        override
+        returns (CommunityState)
+    {
+        return _communities[communityAddress_];
     }
 
     function communityMinTranche() external view override returns (uint256) {
@@ -91,6 +101,14 @@ contract CommunityAdmin is ICommunityAdmin, Ownable {
 
     function communityMaxTranche() external view override returns (uint256) {
         return _communityMaxTranche;
+    }
+
+    function communityList(uint256 index) external view override returns (address) {
+        return _communityList.at(index);
+    }
+
+    function communityListLength() external view override returns (uint256) {
+        return _communityList.length();
     }
 
     function setTreasury(ITreasury newTreasury_) external override onlyOwner {
@@ -142,7 +160,8 @@ contract CommunityAdmin is ICommunityAdmin, Ownable {
             ICommunity(address(0))
         );
         require(communityAddress != address(0), "CommunityAdmin::addCommunity: NOT_VALID");
-        _communities[communityAddress] = true;
+        _communities[communityAddress] = CommunityState.Valid;
+        _communityList.add(communityAddress);
         emit CommunityAdded(
             communityAddress,
             firstManager_,
@@ -165,7 +184,7 @@ contract CommunityAdmin is ICommunityAdmin, Ownable {
         ICommunity previousCommunity_,
         ICommunityAdminHelper newCommunityAdminHelper_
     ) external override onlyOwner {
-        _communities[address(previousCommunity_)] = false;
+        _communities[address(previousCommunity_)] = CommunityState.Removed;
         require(
             address(previousCommunity_) != address(0),
             "CommunityAdmin::migrateCommunity: NOT_VALID"
@@ -182,7 +201,9 @@ contract CommunityAdmin is ICommunityAdmin, Ownable {
         );
         require(address(community) != address(0), "CommunityAdmin::migrateCommunity: NOT_VALID");
         previousCommunity_.migrateFunds(community, firstManager_);
-        _communities[address(community)] = true;
+        _communities[address(community)] = CommunityState.Valid;
+        _communityList.add(address(community));
+
         emit CommunityMigrated(firstManager_, address(community), address(previousCommunity_));
     }
 
@@ -190,7 +211,7 @@ contract CommunityAdmin is ICommunityAdmin, Ownable {
      * @dev Remove an existing community. Can be used only by an admin.
      */
     function removeCommunity(ICommunity community_) external override onlyOwner {
-        _communities[address(community_)] = false;
+        _communities[address(community_)] = CommunityState.Removed;
         emit CommunityRemoved(address(community_));
     }
 

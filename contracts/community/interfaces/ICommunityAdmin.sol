@@ -7,12 +7,20 @@ import "./ICommunityAdminHelper.sol";
 import "../../token/interfaces/ITreasury.sol";
 
 interface ICommunityAdmin {
+    enum CommunityState {
+        NONE,
+        Valid,
+        Removed
+    }
+
     function cUSD() external view returns(IERC20);
     function treasury() external view returns(ITreasury);
     function communityAdminHelper() external view returns(ICommunityAdminHelper);
-    function communities(address community) external view returns(bool);
+    function communities(address community) external view returns(CommunityState);
     function communityMinTranche() external view returns(uint256);
     function communityMaxTranche() external view returns(uint256);
+    function communityList(uint256 index) external view returns (address);
+    function communityListLength() external view returns (uint256);
 
     function setTreasury(ITreasury newTreasury) external;
     function setCommunityMinTranche(uint256 newCommunityMinTranche) external;

@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./interfaces/ICommunity.sol";
 import "./interfaces/ICommunityAdmin.sol";
 
@@ -20,16 +21,13 @@ import "hardhat/console.sol";
  */
 contract Community is ICommunity, AccessControl, Ownable {
     using SafeERC20 for IERC20;
+    using EnumerableSet for EnumerableSet.AddressSet;
 
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
-
     uint256 public constant DEFAULT_AMOUNT = 5e16;
+    uint256 public constant VERSION = 1;
 
-    mapping(address => uint256) private _cooldown;
-    mapping(address => uint256) private _claimed;
-    mapping(address => uint256) private _claims;
-    mapping(address => BeneficiaryState) private _beneficiaries;
-
+    bool private _locked;
     uint256 private _claimAmount;
     uint256 private _baseInterval;
     uint256 private _incrementInterval;
@@ -41,7 +39,9 @@ contract Community is ICommunity, AccessControl, Ownable {
 
     ICommunity private _previousCommunity;
     ICommunityAdmin private _communityAdmin;
-    bool private _locked;
+
+    mapping(address => Beneficiary) private _beneficiaries;
+    EnumerableSet.AddressSet private _beneficiaryList;
 
     event ManagerAdded(address indexed _account);
     event ManagerRemoved(address indexed _account);
@@ -106,7 +106,7 @@ contract Community is ICommunity, AccessControl, Ownable {
 
     modifier onlyValidBeneficiary() {
         require(
-            _beneficiaries[msg.sender] == BeneficiaryState.Valid,
+            _beneficiaries[msg.sender].state == BeneficiaryState.Valid,
             "Community: NOT_VALID_BENEFICIARY"
         );
         _;
@@ -161,24 +161,30 @@ contract Community is ICommunity, AccessControl, Ownable {
         return _locked;
     }
 
-    function cooldown(address beneficiary_) external view override returns (uint256) {
-        return _cooldown[beneficiary_];
-    }
-
-    function claimed(address beneficiary_) external view override returns (uint256) {
-        return _claimed[beneficiary_];
-    }
-
-    function claims(address beneficiary_) external view override returns (uint256) {
-        return _claims[beneficiary_];
-    }
-
-    function beneficiaries(address beneficiary_) external view override returns (BeneficiaryState) {
+    function beneficiaries(address beneficiary_)
+        external
+        view
+        override
+        returns (Beneficiary memory)
+    {
         return _beneficiaries[beneficiary_];
     }
 
     function decreaseStep() external view override returns (uint256) {
         return _decreaseStep;
+    }
+
+    function beneficiaryList(uint256 index) external view override returns (address) {
+        return _beneficiaryList.at(index);
+    }
+
+    function beneficiaryListLength() external view override returns (uint256) {
+        return _beneficiaryList.length();
+    }
+
+    // only used for backwards compatibility
+    function impactMarketAddress() external pure override returns (address) {
+        return address(0);
     }
 
     /**
@@ -200,81 +206,95 @@ contract Community is ICommunity, AccessControl, Ownable {
     /**
      * @dev Allow community managers to add beneficiaries.
      */
-    function addBeneficiary(address account_) external override onlyManagers {
-        require(
-            _beneficiaries[account_] == BeneficiaryState.NONE,
-            "Community::addBeneficiary: NOT_YET"
-        );
-        changeBeneficiaryState(account_, BeneficiaryState.Valid);
+    function addBeneficiary(address beneficiaryAddress_) external override onlyManagers {
+        Beneficiary storage beneficiary = _beneficiaries[beneficiaryAddress_];
+        require(beneficiary.state == BeneficiaryState.NONE, "Community::addBeneficiary: NOT_YET");
+        _changeBeneficiaryState(beneficiary, BeneficiaryState.Valid);
         // solhint-disable-next-line not-rely-on-time
-        _cooldown[account_] = block.timestamp;
-        _claims[account_] = 0;
+        beneficiary.lastClaim = block.timestamp;
+
         // send default amount when adding a new beneficiary
-        bool success = cUSD().transfer(account_, DEFAULT_AMOUNT);
+        bool success = cUSD().transfer(beneficiaryAddress_, DEFAULT_AMOUNT);
         require(success, "Community::addBeneficiary: NOT_ALLOWED");
-        emit BeneficiaryAdded(account_);
+
+        _beneficiaryList.add(beneficiaryAddress_);
+
+        emit BeneficiaryAdded(beneficiaryAddress_);
     }
 
     /**
      * @dev Allow community managers to lock beneficiaries.
      */
-    function lockBeneficiary(address account_) external override onlyManagers {
-        require(
-            _beneficiaries[account_] == BeneficiaryState.Valid,
-            "Community::lockBeneficiary: NOT_YET"
-        );
-        changeBeneficiaryState(account_, BeneficiaryState.Locked);
-        emit BeneficiaryLocked(account_);
+    function lockBeneficiary(address beneficiaryAddress_) external override onlyManagers {
+        Beneficiary storage beneficiary = _beneficiaries[beneficiaryAddress_];
+
+        require(beneficiary.state == BeneficiaryState.Valid, "Community::lockBeneficiary: NOT_YET");
+        _changeBeneficiaryState(beneficiary, BeneficiaryState.Locked);
+        emit BeneficiaryLocked(beneficiaryAddress_);
     }
 
     /**
      * @dev Allow community managers to unlock locked beneficiaries.
      */
-    function unlockBeneficiary(address account_) external override onlyManagers {
+    function unlockBeneficiary(address beneficiaryAddress_) external override onlyManagers {
+        Beneficiary storage beneficiary = _beneficiaries[beneficiaryAddress_];
+
         require(
-            _beneficiaries[account_] == BeneficiaryState.Locked,
+            beneficiary.state == BeneficiaryState.Locked,
             "Community::unlockBeneficiary: NOT_YET"
         );
-        changeBeneficiaryState(account_, BeneficiaryState.Valid);
-        emit BeneficiaryUnlocked(account_);
+        _changeBeneficiaryState(beneficiary, BeneficiaryState.Valid);
+        emit BeneficiaryUnlocked(beneficiaryAddress_);
     }
 
     /**
      * @dev Allow community managers to remove beneficiaries.
      */
-    function removeBeneficiary(address account_) external override onlyManagers {
+    function removeBeneficiary(address beneficiaryAddress_) external override onlyManagers {
+        Beneficiary storage beneficiary = _beneficiaries[beneficiaryAddress_];
+
         require(
-            _beneficiaries[account_] == BeneficiaryState.Valid ||
-                _beneficiaries[account_] == BeneficiaryState.Locked,
+            beneficiary.state == BeneficiaryState.Valid ||
+                beneficiary.state == BeneficiaryState.Locked,
             "Community::removeBeneficiary: NOT_YET"
         );
-        changeBeneficiaryState(account_, BeneficiaryState.Removed);
-        emit BeneficiaryRemoved(account_);
+        _changeBeneficiaryState(beneficiary, BeneficiaryState.Removed);
+        emit BeneficiaryRemoved(beneficiaryAddress_);
     }
 
     /**
      * @dev Allow beneficiaries to claim.
      */
     function claim() external override onlyValidBeneficiary {
+        Beneficiary storage beneficiary = _beneficiaries[msg.sender];
+
         require(!_locked, "LOCKED");
         // solhint-disable-next-line not-rely-on-time
-        require(_cooldown[msg.sender] <= block.timestamp, "Community::claim: NOT_YET");
-        require((_claimed[msg.sender] + _claimAmount) <= _maxClaim, "Community::claim: MAX_CLAIM");
-        _claimed[msg.sender] = _claimed[msg.sender] + _claimAmount;
+        require(claimCooldown(msg.sender) <= block.timestamp, "Community::claim: NOT_YET");
+        require(
+            (beneficiary.claimedAmount + _claimAmount) <= _maxClaim,
+            "Community::claim: MAX_CLAIM"
+        );
 
-        _claims[msg.sender] += 1;
-        _cooldown[msg.sender] = uint256(block.timestamp + lastInterval(msg.sender));
+        beneficiary.claimedAmount += _claimAmount;
+        beneficiary.claims++;
+        beneficiary.lastClaim = block.timestamp;
 
         bool success = cUSD().transfer(msg.sender, _claimAmount);
         require(success, "Community::claim: NOT_ALLOWED");
         emit BeneficiaryClaim(msg.sender, _claimAmount);
     }
 
-    function lastInterval(address beneficiary_) public view override returns (uint256) {
-        if (_claims[beneficiary_] == 0) {
+    function lastInterval(address beneficiaryAddress_) public view override returns (uint256) {
+        Beneficiary storage beneficiary = _beneficiaries[beneficiaryAddress_];
+        if (beneficiary.claims == 0) {
             return 0;
         }
-        return _baseInterval + (_claims[beneficiary_] - 1) * _incrementInterval;
+        return _baseInterval + (beneficiary.claims - 1) * _incrementInterval;
+    }
+
+    function claimCooldown(address beneficiaryAddress_) public view override returns (uint256) {
+        return _beneficiaries[beneficiaryAddress_].lastClaim + lastInterval(beneficiaryAddress_);
     }
 
     /**
@@ -369,13 +389,21 @@ contract Community is ICommunity, AccessControl, Ownable {
 
     function beneficiaryJoinFromMigrated() external override {
         // no need to check if it's a beneficiary, as the state is copied
-        changeBeneficiaryState(msg.sender, _previousCommunity.beneficiaries(msg.sender));
-        _cooldown[msg.sender] = _previousCommunity.cooldown(msg.sender);
-        _claimed[msg.sender] = _previousCommunity.claimed(msg.sender);
-        _claims[msg.sender] =
+        Beneficiary storage beneficiary = _beneficiaries[msg.sender];
+
+        Beneficiary memory oldBeneficiary = _previousCommunity.beneficiaries(msg.sender);
+
+        _changeBeneficiaryState(beneficiary, oldBeneficiary.state);
+        beneficiary.lastClaim = oldBeneficiary.lastClaim;
+        beneficiary.claimedAmount = oldBeneficiary.claimedAmount;
+        beneficiary.claims =
             (_previousCommunity.lastInterval(msg.sender) - _baseInterval) /
             _incrementInterval +
             1;
+
+        if (beneficiary.state == BeneficiaryState.NONE) {
+            _beneficiaryList.add(msg.sender);
+        }
     }
 
     function managerJoinFromMigrated() external override {
@@ -383,19 +411,21 @@ contract Community is ICommunity, AccessControl, Ownable {
         grantRole(MANAGER_ROLE, msg.sender);
     }
 
-    function changeBeneficiaryState(address beneficiary_, BeneficiaryState newState_) internal {
-        if (_beneficiaries[beneficiary_] == newState_) {
+    function _changeBeneficiaryState(Beneficiary storage beneficiary, BeneficiaryState newState_)
+        internal
+    {
+        if (beneficiary.state == newState_) {
             return;
         }
 
         if (newState_ == BeneficiaryState.Valid) {
             _validBeneficiaryCount++;
             _claimAmount -= _decreaseStep;
-        } else if (_beneficiaries[beneficiary_] == BeneficiaryState.Valid) {
+        } else if (beneficiary.state == BeneficiaryState.Valid) {
             _validBeneficiaryCount--;
             _claimAmount += _decreaseStep;
         }
 
-        _beneficiaries[beneficiary_] = newState_;
+        beneficiary.state = newState_;
     }
 }

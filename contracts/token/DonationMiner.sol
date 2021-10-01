@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "./interfaces/ITreasury.sol";
 import "../community/interfaces/ICommunity.sol";
+import "../community/interfaces/ICommunityAdmin.sol";
 
 import "hardhat/console.sol";
 import "./interfaces/IDonationMiner.sol";
@@ -159,7 +160,7 @@ contract DonationMiner is IDonationMiner, Ownable, Pausable, ReentrancyGuard {
     {
         ICommunityAdmin communityAdmin = _treasury.communityAdmin();
         require(
-            communityAdmin.communities(address(community_)),
+            communityAdmin.communities(address(community_)) == ICommunityAdmin.CommunityState.Valid,
             "DonationMiner::donateToCommunity: This is not a valid community address"
         );
 
