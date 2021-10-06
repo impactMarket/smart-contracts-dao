@@ -37,6 +37,7 @@
     "@nomiclabs/hardhat-ethers": "^2.0.2",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
     "@openzeppelin/contracts": "^4.1.0",
+    "@openzeppelin/contracts-upgradeable": "^4.3.2",
     "@openzeppelin/test-helpers": "^0.5.11",
     "@types/chai": "^4.2.19",
     "@types/chai-as-promised": "^7.1.4",
