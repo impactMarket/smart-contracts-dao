@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.5;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./interfaces/ICommunity.sol";
 import "./interfaces/ICommunityAdminHelper.sol";
 import "./Community.sol";
+import "./CommunityAdminStorageV1.sol";
 import "../token/interfaces/ITreasury.sol";
 
 import "hardhat/console.sol";
@@ -18,20 +19,16 @@ import "hardhat/console.sol";
  * over the list of communities. Being only able to add and
  * remove communities
  */
-contract CommunityAdmin is ICommunityAdmin, Ownable {
-    using SafeERC20 for IERC20;
-    using EnumerableSet for EnumerableSet.AddressSet;
-
+contract CommunityAdminImplementation is
+    ICommunityAdmin,
+    CommunityAdminStorageV1,
+    Initializable,
+    OwnableUpgradeable
+{
     uint256 public constant VERSION = 1;
 
-    IERC20 private _cUSD;
-    ITreasury private _treasury;
-    ICommunityAdminHelper private _communityAdminHelper;
-    uint256 private _communityMinTranche;
-    uint256 private _communityMaxTranche;
-
-    mapping(address => CommunityState) private _communities;
-    EnumerableSet.AddressSet private _communityList;
+    using SafeERC20 for IERC20;
+    using EnumerableSet for EnumerableSet.AddressSet;
 
     event CommunityAdded(
         address indexed _communityAddress,
@@ -51,15 +48,22 @@ contract CommunityAdmin is ICommunityAdmin, Ownable {
     event CommunityMinTrancheChanged(uint256 indexed _newCommunityMinTranche);
     event CommunityMaxTrancheChanged(uint256 indexed _newCommunitMaxTranche);
 
+    modifier onlyCommunities() {
+        require(_communities[msg.sender] == CommunityState.Valid, "CommunityAdmin: NOT_COMMUNITY");
+        _;
+    }
+
     /**
      * @dev It sets the first admin, which later can add others
      * and add/remove communities.
      */
-    constructor(
+    function initialize(
         IERC20 cUSD_,
         uint256 communityMinTranche_,
         uint256 communityMaxTranche_
-    ) {
+    ) public initializer {
+        __Ownable_init();
+
         require(
             communityMinTranche_ < communityMaxTranche_,
             "CommunityAdmin::constructor: communityMinTranche should be less then communityMaxTranche"
@@ -69,9 +73,8 @@ contract CommunityAdmin is ICommunityAdmin, Ownable {
         _communityMaxTranche = communityMaxTranche_;
     }
 
-    modifier onlyCommunities() {
-        require(_communities[msg.sender] == CommunityState.Valid, "CommunityAdmin: NOT_COMMUNITY");
-        _;
+    function upgrade(address newImplementation) external onlyOwner {
+        implementation = newImplementation;
     }
 
     function cUSD() external view override returns (IERC20) {

@@ -10,7 +10,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const { deployer } = await getNamedAccounts();
 
 	const Token = await deployments.get("IPCTToken");
-	const Treasury = await deployments.get("TreasuryMock");
+	const Treasury = await deployments.get("Treasury");
 	const IPCTTimelock = await deployments.get("IPCTTimelock");
 
 	const DonationMinerResult = await deploy("DonationMiner", {

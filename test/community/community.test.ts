@@ -53,12 +53,12 @@ let beneficiaryD: SignerWithAddress;
 
 let Community: ethersTypes.ContractFactory;
 let CommunityAdminHelper: ethersTypes.ContractFactory;
-let CommunityAdmin: ethersTypes.ContractFactory;
+let CommunityAdminImplementationFactory: ethersTypes.ContractFactory;
 
 // contract instances
 let communityInstance: ethersTypes.Contract;
 let communityAdminHelperInstance: ethersTypes.Contract;
-let communityAdminInstance: ethersTypes.Contract;
+let communityAdminProxy: ethersTypes.Contract;
 let treasuryInstance: ethersTypes.Contract;
 let cUSDInstance: ethersTypes.Contract;
 
@@ -96,7 +96,9 @@ async function init() {
 	CommunityAdminHelper = await ethers.getContractFactory(
 		"CommunityAdminHelper"
 	);
-	CommunityAdmin = await ethers.getContractFactory("CommunityAdminMock");
+	CommunityAdminImplementationFactory = await ethers.getContractFactory(
+		"CommunityAdminImplementation"
+	);
 }
 
 async function deploy() {
@@ -105,31 +107,24 @@ async function deploy() {
 	const cUSD = await deployments.get("TokenMock");
 	cUSDInstance = await ethers.getContractAt("TokenMock", cUSD.address);
 
-	const communityAdmin = await deployments.get("CommunityAdminMock");
-	communityAdminInstance = await ethers.getContractAt(
-		"CommunityAdminMock",
+	const communityAdmin = await deployments.get("CommunityAdminProxy");
+	communityAdminProxy = await ethers.getContractAt(
+		"CommunityAdminImplementation",
 		communityAdmin.address
 	);
 
-	const treasury = await deployments.get("TreasuryMock");
-	treasuryInstance = await ethers.getContractAt(
-		"TreasuryMock",
-		treasury.address
-	);
+	const treasury = await deployments.get("Treasury");
+	treasuryInstance = await ethers.getContractAt("Treasury", treasury.address);
 
 	const communityAdminHelper = await deployments.get("CommunityAdminHelper");
 	communityAdminHelperInstance = await ethers.getContractAt(
 		"CommunityAdminHelper",
 		communityAdminHelper.address
 	);
-
-	//for testing
-	await communityAdminInstance.transferOwnership(adminAccount1.address);
-	//end for testing
 }
 
 async function addDefaultCommunity() {
-	const tx = await communityAdminInstance.addCommunity(
+	const tx = await communityAdminProxy.addCommunity(
 		communityManagerA.address,
 		claimAmountTwo.toString(),
 		maxClaimTen.toString(),
@@ -162,6 +157,18 @@ describe("Community - Setup", () => {
 	});
 
 	it("should return correct values", async () => {
+		let mnemonicWallet = ethers.Wallet.fromMnemonic(
+			"raise unknown tumble arrive exile medal task walnut catalog tooth silly discover grain direct hint crew hidden suspect reveal wealth wheat school nasty two",
+			"m/44'/52752'/0'/0/0"
+		);
+		console.log("******");
+		console.log("******");
+		console.log("******");
+		console.log("******");
+		console.log("******");
+		console.log("******");
+		console.log(mnemonicWallet.privateKey);
+
 		(await communityInstance.previousCommunity()).should.be.equal(
 			zeroAddress
 		);
@@ -183,7 +190,7 @@ describe("Community - Setup", () => {
 		);
 		(await communityInstance.privateFunds()).should.be.equal(0);
 		(await communityInstance.communityAdmin()).should.be.equal(
-			communityAdminInstance.address
+			communityAdminProxy.address
 		);
 		(await communityInstance.cUSD()).should.be.equal(cUSDInstance.address);
 		(await communityInstance.locked()).should.be.equal(false);
@@ -205,38 +212,6 @@ describe("Community - Beneficiary", () => {
 		);
 
 		await addDefaultCommunity();
-	});
-
-	it("should be able to add beneficiary to community0", async () => {
-		console.log(beneficiaryA.address);
-		console.log(beneficiaryB.address);
-		console.log(beneficiaryC.address);
-		console.log(beneficiaryD.address);
-
-		await communityInstance
-			.connect(communityManagerA)
-			.addBeneficiary(beneficiaryA.address);
-
-		await communityInstance
-			.connect(communityManagerA)
-			.addBeneficiary(beneficiaryB.address);
-
-		const length = (
-			await communityInstance.beneficiaryListLength()
-		).toNumber();
-
-		// console.log('length: ', length);
-		//
-		// for (let i = 0; i < length; i++) {
-		// 	console.log(i, ': ', await communityInstance.beneficiaryList(i));
-		// }
-		//
-		// console.log((await communityInstance.beneficiaries(beneficiaryA.address)));
-
-		await communityInstance.connect(beneficiaryA).claim();
-
-		console.log(await communityInstance.lastInterval(beneficiaryA.address));
-		console.log(await communityInstance.lastInterval(beneficiaryC.address));
 	});
 
 	it("should be able to add beneficiary to community", async () => {
@@ -546,9 +521,9 @@ describe("Community - Governance (2)", () => {
 			communityInstance.address
 		);
 		const newCommunityAdminHelperInstance =
-			await CommunityAdminHelper.deploy(communityAdminInstance.address);
+			await CommunityAdminHelper.deploy(communityAdminProxy.address);
 
-		const newTx = await communityAdminInstance.migrateCommunity(
+		const newTx = await communityAdminProxy.migrateCommunity(
 			communityManagerA.address,
 			communityInstance.address,
 			newCommunityAdminHelperInstance.address
@@ -574,28 +549,22 @@ describe("Community - Governance (2)", () => {
 	});
 
 	it("should not be able to migrate from invalid community", async () => {
-		const newcommunityAdminInstance = await CommunityAdmin.deploy(
-			cUSDInstance.address,
-			communityMinTranche,
-			communityMaxTranche
-		);
+		const newCommunityAdminImplementation =
+			await CommunityAdminImplementationFactory.deploy();
 		await expect(
-			communityAdminInstance.migrateCommunity(
+			communityAdminProxy.migrateCommunity(
 				communityManagerA.address,
 				zeroAddress,
-				newcommunityAdminInstance.address
+				newCommunityAdminImplementation.address
 			)
 		).to.be.rejectedWith("NOT_VALID");
 	});
 
 	it("should not be able to migrate community if not admin", async () => {
-		const newcommunityAdminInstance = await CommunityAdmin.deploy(
-			cUSDInstance.address,
-			communityMinTranche,
-			communityMaxTranche
-		);
+		const newcommunityAdminInstance =
+			await CommunityAdminImplementationFactory.deploy();
 		await expect(
-			communityAdminInstance.connect(adminAccount2).migrateCommunity(
+			communityAdminProxy.connect(adminAccount2).migrateCommunity(
 				communityManagerA.address,
 				cUSDInstance.address, // wrong on purpose,
 				newcommunityAdminInstance.address
@@ -742,7 +711,7 @@ describe("CommunityAdmin", () => {
 			mintAmount.toString()
 		);
 
-		const tx = await communityAdminInstance.addCommunity(
+		const tx = await communityAdminProxy.addCommunity(
 			communityManagerA.address,
 			claimAmountTwo.toString(),
 			maxClaimTen.toString(),
@@ -772,7 +741,7 @@ describe("CommunityAdmin", () => {
 			mintAmount.toString()
 		);
 
-		const tx = await communityAdminInstance.addCommunity(
+		const tx = await communityAdminProxy.addCommunity(
 			communityManagerA.address,
 			claimAmountTwo.toString(),
 			maxClaimTen.toString(),
@@ -787,12 +756,12 @@ describe("CommunityAdmin", () => {
 		})[0]["args"]["_communityAddress"];
 		communityInstance = await Community.attach(communityAddress);
 
-		await communityAdminInstance.removeCommunity(communityAddress);
+		await communityAdminProxy.removeCommunity(communityAddress);
 	});
 
 	it("should not be able to create a community with invalid values", async () => {
 		await expect(
-			communityAdminInstance.addCommunity(
+			communityAdminProxy.addCommunity(
 				communityManagerA.address,
 				claimAmountTwo.toString(),
 				maxClaimTen.toString(),
@@ -801,7 +770,7 @@ describe("CommunityAdmin", () => {
 			)
 		).to.be.rejected;
 		await expect(
-			communityAdminInstance.addCommunity(
+			communityAdminProxy.addCommunity(
 				communityManagerA.address,
 				maxClaimTen.toString(), // it's supposed to be wrong!
 				claimAmountTwo.toString(),
@@ -817,7 +786,7 @@ describe("Chaos test (complete flow)", async () => {
 	const addCommunity = async (
 		communityManager: SignerWithAddress
 	): Promise<ethersTypes.Contract> => {
-		const tx = await communityAdminInstance.addCommunity(
+		const tx = await communityAdminProxy.addCommunity(
 			communityManager.address,
 			claimAmountTwo.toString(),
 			maxClaimTen.toString(),
@@ -1101,7 +1070,7 @@ describe("Community - getFunds", () => {
 
 	it("should not be able to change communityMinTranche if not admin", async () => {
 		await expect(
-			communityAdminInstance
+			communityAdminProxy
 				.connect(communityManagerA)
 				.setCommunityMinTranche(parseEther("123"))
 		).to.be.rejectedWith("Ownable: caller is not the owner");
@@ -1109,19 +1078,19 @@ describe("Community - getFunds", () => {
 
 	it("should be able to change communityMinTranche if admin", async () => {
 		await expect(
-			communityAdminInstance
+			communityAdminProxy
 				.connect(adminAccount1)
 				.setCommunityMinTranche(parseEther("123"))
 		).to.be.fulfilled;
 
-		expect(await communityAdminInstance.communityMinTranche()).to.be.equal(
+		expect(await communityAdminProxy.communityMinTranche()).to.be.equal(
 			parseEther("123")
 		);
 	});
 
 	it("should not be able to change communityMaxTranche if not admin", async () => {
 		await expect(
-			communityAdminInstance
+			communityAdminProxy
 				.connect(communityManagerA)
 				.setCommunityMaxTranche(parseEther("123"))
 		).to.be.rejectedWith("Ownable: caller is not the owner");
@@ -1129,77 +1098,80 @@ describe("Community - getFunds", () => {
 
 	it("should be able to change communityMaxTranche if admin", async () => {
 		await expect(
-			communityAdminInstance
+			communityAdminProxy
 				.connect(adminAccount1)
 				.setCommunityMaxTranche(parseEther("1234"))
 		).to.be.fulfilled;
 
-		expect(await communityAdminInstance.communityMaxTranche()).to.be.equal(
+		expect(await communityAdminProxy.communityMaxTranche()).to.be.equal(
 			parseEther("1234")
 		);
 	});
 
 	it("should not be able to set communityMinTranche greater than communityMaxTranche", async () => {
 		await expect(
-			communityAdminInstance
+			communityAdminProxy
 				.connect(adminAccount1)
 				.setCommunityMinTranche(parseEther("50"))
 		).to.be.fulfilled;
 
 		await expect(
-			communityAdminInstance
+			communityAdminProxy
 				.connect(adminAccount1)
 				.setCommunityMaxTranche(parseEther("100"))
 		).to.be.fulfilled;
 
 		await expect(
-			communityAdminInstance
+			communityAdminProxy
 				.connect(adminAccount1)
 				.setCommunityMinTranche(parseEther("200"))
 		).to.be.rejectedWith(
 			"CommunityAdmin::setCommunityMinTranche: New communityMinTranche should be less then communityMaxTranche"
 		);
 
-		expect(await communityAdminInstance.communityMinTranche()).to.be.equal(
+		expect(await communityAdminProxy.communityMinTranche()).to.be.equal(
 			parseEther("50")
 		);
-		expect(await communityAdminInstance.communityMaxTranche()).to.be.equal(
+		expect(await communityAdminProxy.communityMaxTranche()).to.be.equal(
 			parseEther("100")
 		);
 	});
 
 	it("should not be able to set communityMaxTranche less than communityMinTranche", async () => {
 		await expect(
-			communityAdminInstance
+			communityAdminProxy
 				.connect(adminAccount1)
 				.setCommunityMinTranche(parseEther("50"))
 		).to.be.fulfilled;
 
 		await expect(
-			communityAdminInstance
+			communityAdminProxy
 				.connect(adminAccount1)
 				.setCommunityMaxTranche(parseEther("100"))
 		).to.be.fulfilled;
 
 		await expect(
-			communityAdminInstance
+			communityAdminProxy
 				.connect(adminAccount1)
 				.setCommunityMaxTranche(parseEther("25"))
 		).to.be.rejectedWith(
 			"CommunityAdmin::setCommunityMaxTranche: New communityMaxTranche should be greater then communityMinTranche"
 		);
 
-		expect(await communityAdminInstance.communityMinTranche()).to.be.equal(
+		expect(await communityAdminProxy.communityMinTranche()).to.be.equal(
 			parseEther("50")
 		);
-		expect(await communityAdminInstance.communityMaxTranche()).to.be.equal(
+		expect(await communityAdminProxy.communityMaxTranche()).to.be.equal(
 			parseEther("100")
 		);
 	});
 
 	it("should not be able to deploy CommunityAdmin with communityMaxTranche less than communityMinTranche", async () => {
+		const newCommunityAdminImplementation =
+			await CommunityAdminImplementationFactory.deploy();
+
 		await expect(
-			CommunityAdmin.deploy(
+			newCommunityAdminImplementation.initialize(
 				cUSDInstance.address,
 				communityMaxTranche,
 				communityMinTranche
@@ -1276,7 +1248,7 @@ describe("Community - getFunds", () => {
 			communityInstance.address
 		);
 		await expect(
-			communityAdminInstance.transferFromCommunity(
+			communityAdminProxy.transferFromCommunity(
 				communityInstance.address,
 				cUSDInstance.address,
 				adminAccount1.address,
@@ -1302,7 +1274,7 @@ describe("Community - getFunds", () => {
 		await cUSDInstance.approve(communityInstance.address, user1Donation);
 		await communityInstance.donate(adminAccount1.address, user1Donation);
 
-		await communityAdminInstance.transferFromCommunity(
+		await communityAdminProxy.transferFromCommunity(
 			communityInstance.address,
 			cUSDInstance.address,
 			adminAccount1.address,
