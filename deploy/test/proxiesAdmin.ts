@@ -2,8 +2,6 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
-const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
-
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// @ts-ignore
 	const { deployments, getNamedAccounts, ethers } = hre;
@@ -12,13 +10,24 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const accounts: SignerWithAddress[] = await ethers.getSigners();
 	const deployer = accounts[0];
 
-	await deploy("Treasury", {
+	// const IPCTTimelock = await deployments.get("IPCTTimelock"); //prod
+	// const ownerAddress = IPCTTimelock.address; //prod
+	const ownerAddress = deployer.address; //dev
+
+	const ImpactProxyAdminResult = await deploy("ImpactProxyAdmin", {
 		from: deployer.address,
-		args: [ZERO_ADDRESS],
+		args: [],
 		log: true,
 	});
+
+	const ImpactProxyAdmin = await ethers.getContractAt(
+		"ImpactProxyAdmin",
+		ImpactProxyAdminResult.address
+	);
+
+	await ImpactProxyAdmin.transferOwnership(ownerAddress);
 };
 
 export default func;
-func.dependencies = ["ImpactProxyAdminTest", "cUSDTest"];
-func.tags = ["TreasuryTest", "Test"];
+func.dependencies = ["GovernanceTest"];
+func.tags = ["ImpactProxyAdminTest", "Test"];

@@ -2,11 +2,11 @@
 pragma solidity 0.8.5;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./interfaces/ICommunity.sol";
-import "./interfaces/ICommunityAdminHelper.sol";
 import "./Community.sol";
 import "./CommunityAdminStorageV1.sol";
 import "../token/interfaces/ITreasury.sol";
@@ -44,7 +44,6 @@ contract CommunityAdminImplementation is
         address indexed _communityAddress,
         address indexed _previousCommunityAddress
     );
-    event CommunityAdminHelperChanged(address indexed _newCommunityAdminHelper);
     event CommunityMinTrancheChanged(uint256 indexed _newCommunityMinTranche);
     event CommunityMaxTrancheChanged(uint256 indexed _newCommunitMaxTranche);
 
@@ -58,19 +57,24 @@ contract CommunityAdminImplementation is
      * and add/remove communities.
      */
     function initialize(
+        ICommunity communityTemplate_,
         IERC20 cUSD_,
         uint256 communityMinTranche_,
         uint256 communityMaxTranche_
-    ) public initializer {
-        __Ownable_init();
-
+    ) public override initializer {
         require(
             communityMinTranche_ < communityMaxTranche_,
             "CommunityAdmin::constructor: communityMinTranche should be less then communityMaxTranche"
         );
+
+        __Ownable_init();
+
+        _communityTemplate = communityTemplate_;
         _cUSD = cUSD_;
         _communityMinTranche = communityMinTranche_;
         _communityMaxTranche = communityMaxTranche_;
+
+        _communityProxyAdmin = new ProxyAdmin();
     }
 
     function upgrade(address newImplementation) external onlyOwner {
@@ -83,10 +87,6 @@ contract CommunityAdminImplementation is
 
     function treasury() external view override returns (ITreasury) {
         return _treasury;
-    }
-
-    function communityAdminHelper() external view override returns (ICommunityAdminHelper) {
-        return _communityAdminHelper;
     }
 
     function communities(address communityAddress_)
@@ -154,7 +154,7 @@ contract CommunityAdminImplementation is
         uint256 baseInterval_,
         uint256 incrementInterval_
     ) external override onlyOwner {
-        address communityAddress = _communityAdminHelper.deployCommunity(
+        address communityAddress = deployCommunity(
             firstManager_,
             claimAmount_,
             maxClaim_,
@@ -185,7 +185,7 @@ contract CommunityAdminImplementation is
     function migrateCommunity(
         address firstManager_,
         ICommunity previousCommunity_,
-        ICommunityAdminHelper newCommunityAdminHelper_
+        ICommunityAdmin newCommunityAdminHelper_
     ) external override onlyOwner {
         _communities[address(previousCommunity_)] = CommunityState.Removed;
         require(
@@ -193,7 +193,7 @@ contract CommunityAdminImplementation is
             "CommunityAdmin::migrateCommunity: NOT_VALID"
         );
         ICommunity community = ICommunity(
-            newCommunityAdminHelper_.deployCommunity(
+            deployCommunity(
                 firstManager_,
                 previousCommunity_.claimAmount(),
                 previousCommunity_.maxClaim(),
@@ -218,46 +218,12 @@ contract CommunityAdminImplementation is
         emit CommunityRemoved(address(community_));
     }
 
-    /**
-     * @dev Set the community factory address, if the contract is valid.
-     */
-    function setCommunityAdminHelper(ICommunityAdminHelper communityAdminHelper_)
-        external
-        override
-        onlyOwner
-    {
-        require(
-            address(communityAdminHelper_.communityAdmin()) == address(this),
-            "CommunityAdmin::setCommunityAdminHelper: NOT_ALLOWED"
-        );
-        _communityAdminHelper = communityAdminHelper_;
-        emit CommunityAdminHelperChanged(address(communityAdminHelper_));
-    }
-
-    /**
-     * @dev Init community factory, used only at deploy time.
-     */
-    function initCommunityAdminHelper(ICommunityAdminHelper communityAdminHelper_)
-        external
-        override
-        onlyOwner
-    {
-        require(
-            address(communityAdminHelper_) == address(0),
-            "CommunityAdmin::initCommunityAdminHelper: NOT_VALID"
-        );
-        _communityAdminHelper = communityAdminHelper_;
-        emit CommunityAdminHelperChanged(address(communityAdminHelper_));
-    }
-
     function fundCommunity() external override onlyCommunities {
         require(
             _cUSD.balanceOf(msg.sender) <= _communityMinTranche,
             "CommunityAdmin::fundCommunity: this community has enough funds"
         );
-        uint256 trancheAmount = _communityAdminHelper.calculateCommunityTrancheAmount(
-            ICommunity(msg.sender)
-        );
+        uint256 trancheAmount = calculateCommunityTrancheAmount(ICommunity(msg.sender));
 
         transferToCommunity(ICommunity(msg.sender), trancheAmount);
     }
@@ -279,8 +245,78 @@ contract CommunityAdminImplementation is
         community_.transferFunds(erc20_, to_, amount_);
     }
 
+    /**
+     * @notice Update proxy implementation address
+     *
+     * @param _communityProxy Address of a wallet proxy
+     * @param _newLogic Address of new implementation contract
+     *
+     */
+    function updateProxyImplementation(address _communityProxy, address _newLogic)
+        external
+        override
+        onlyOwner
+    {
+        _communityProxyAdmin.upgrade(
+            TransparentUpgradeableProxy(payable(_communityProxy)),
+            _newLogic
+        );
+    }
+
     function transferToCommunity(ICommunity community_, uint256 amount_) internal {
         _treasury.transfer(_cUSD, address(community_), amount_);
         community_.addTreasuryFunds(amount_);
+    }
+
+    function deployCommunity(
+        address firstManager_,
+        uint256 claimAmount_,
+        uint256 maxClaim_,
+        uint256 baseInterval_,
+        uint256 incrementInterval_,
+        ICommunity previousCommunity_
+    ) internal onlyOwner returns (address) {
+        TransparentUpgradeableProxy community = new TransparentUpgradeableProxy(
+            address(_communityTemplate),
+            address(_communityProxyAdmin),
+            abi.encodeWithSignature(
+                "initialize(address,uint256,uint256,uint256,uint256,address,address)",
+                firstManager_,
+                claimAmount_,
+                maxClaim_,
+                baseInterval_,
+                incrementInterval_,
+                address(previousCommunity_),
+                address(this)
+            )
+        );
+
+        return address(community);
+    }
+
+    function calculateCommunityTrancheAmount(ICommunity community_)
+        internal
+        view
+        returns (uint256)
+    {
+        uint256 validBeneficiaries = community_.validBeneficiaryCount();
+        uint256 claimAmount = community_.claimAmount();
+        uint256 treasuryFunds = community_.treasuryFunds();
+        uint256 privateFunds = community_.privateFunds();
+
+        uint256 trancheAmount;
+        trancheAmount =
+            (10e36 * validBeneficiaries * (treasuryFunds + privateFunds)) /
+            (claimAmount * treasuryFunds);
+
+        if (trancheAmount < _communityMinTranche) {
+            trancheAmount = _communityMinTranche;
+        }
+
+        if (trancheAmount > _communityMaxTranche) {
+            trancheAmount = _communityMaxTranche;
+        }
+
+        return trancheAmount;
     }
 }

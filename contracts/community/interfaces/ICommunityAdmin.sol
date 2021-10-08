@@ -3,7 +3,6 @@ pragma solidity 0.8.5;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./ICommunity.sol";
-import "./ICommunityAdminHelper.sol";
 import "../../token/interfaces/ITreasury.sol";
 
 interface ICommunityAdmin {
@@ -12,10 +11,15 @@ interface ICommunityAdmin {
         Valid,
         Removed
     }
+    function initialize(
+        ICommunity communityTemplate,
+        IERC20 cUSD,
+        uint256 communityMinTranche,
+        uint256 communityMaxTranche
+    ) external;
 
     function cUSD() external view returns(IERC20);
     function treasury() external view returns(ITreasury);
-    function communityAdminHelper() external view returns(ICommunityAdminHelper);
     function communities(address community) external view returns(CommunityState);
     function communityMinTranche() external view returns(uint256);
     function communityMaxTranche() external view returns(uint256);
@@ -35,14 +39,14 @@ interface ICommunityAdmin {
     function migrateCommunity(
         address firstManager,
         ICommunity previousCommunity,
-        ICommunityAdminHelper newCommunityAdminHelper
+        ICommunityAdmin newCommunityAdminHelper
     ) external;
     function removeCommunity(ICommunity community) external;
-    function setCommunityAdminHelper(ICommunityAdminHelper communityAdminHelper) external;
-    function initCommunityAdminHelper(ICommunityAdminHelper communityAdminHelper) external;
     function fundCommunity() external;
     function transfer(IERC20 erc20, address to, uint256 amount) external;
     function transferFromCommunity(ICommunity community, IERC20 erc20, address to, uint256 amount) external;
+    function updateProxyImplementation(address communityProxy, address newLogic) external;
+
 }
 
 

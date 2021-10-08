@@ -82,10 +82,10 @@
 // 		ipctDelegator._setVotingPeriod(5);
 //
 // 		const communityAdminDeployment = await deployments.get(
-// 			"CommunityAdminMock"
+// 			"CommunityAdminProxy"
 // 		);
 // 		communityAdmin = await ethers.getContractAt(
-// 			"CommunityAdminMock",
+// 			"CommunityAdminImplementation",
 // 			communityAdminDeployment.address
 // 		);
 //
@@ -97,9 +97,9 @@
 // 			communityAdminHelperDeployment.address
 // 		);
 //
-// 		const treasuryDeployment = await deployments.get("TreasuryMock");
+// 		const treasuryDeployment = await deployments.get("Treasury");
 // 		treasury = await ethers.getContractAt(
-// 			"TreasuryMock",
+// 			"Treasury",
 // 			treasuryDeployment.address
 // 		);
 //

@@ -1,24 +1,21 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// @ts-ignore
-	const { deployments, getNamedAccounts, ethers } = hre;
+	const { deployments, getNamedAccounts } = hre;
 	const { deploy } = deployments;
-
-	const accounts: SignerWithAddress[] = await ethers.getSigners();
-	const deployer = accounts[0];
+	const { deployer } = await getNamedAccounts();
 
 	await deploy("Treasury", {
-		from: deployer.address,
+		from: deployer,
 		args: [ZERO_ADDRESS],
 		log: true,
 	});
 };
 
 export default func;
-func.dependencies = ["ImpactProxyAdminTest", "cUSDTest"];
-func.tags = ["TreasuryTest", "Test"];
+func.dependencies = ["ImpactProxyAdminAlfajores", "cUSDAlfajores"];
+func.tags = ["TreasuryAlfajores", "Alfajores"];
