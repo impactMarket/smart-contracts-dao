@@ -18,11 +18,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// const IPCTTimelock = await deployments.get("IPCTTimelock"); //prod
 	// const ownerAddress = IPCTTimelock.address; //prod
 	const ownerAddress = deployer.address; //dev
+	// const cUSDAddress = getCUSDAddress(); //prod
+	const cUSDAddress = (await deployments.get("TokenMock")).address; //dev
 
 	const DonationMinerResult = await deploy("DonationMiner", {
 		from: deployer.address,
 		args: [
-			getCUSDAddress(),
+			cUSDAddress,
 			Token.address,
 			Treasury.address,
 			parseEther("100"),

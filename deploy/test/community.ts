@@ -21,8 +21,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// const IPCTTimelock = await deployments.get("IPCTTimelock"); //prod
 	// const ownerAddress = IPCTTimelock.address; //prod
 	const ownerAddress = deployer.address; //dev
+	// const cUSDAddress = getCUSDAddress(); //prod
+	const cUSDAddress = (await deployments.get("TokenMock")).address; //dev
 
-	console.log(1);
 	const communityAdminImplementationResult = await deploy(
 		"CommunityAdminImplementation",
 		{
@@ -33,7 +34,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		}
 	);
 
-	console.log(2);
 	const communityResult = await deploy("Community", {
 		from: deployer.address,
 		args: [],
@@ -41,7 +41,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		// gasLimit: 13000000,
 	});
 
-	console.log(3);
 	const communityAdminProxyResult = await deploy("CommunityAdminProxy", {
 		from: deployer.address,
 		args: [
@@ -52,40 +51,32 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		// gasLimit: 13000000,
 	});
 
-	console.log(4);
 	const CommunityAdminProxyContract = await ethers.getContractAt(
 		"CommunityAdminImplementation",
 		communityAdminProxyResult.address
 	);
 
-	console.log(5);
 	await CommunityAdminProxyContract.initialize(
 		communityResult.address,
-		getCUSDAddress(),
+		cUSDAddress,
 		COMMUNITY_MIN_TRANCHE,
 		COMMUNITY_MAX_TRANCHE
 	);
 
 	await CommunityAdminProxyContract.transferOwnership(ownerAddress);
 
-	console.log(6);
 	const Treasury = await deployments.get("Treasury");
 
-	console.log(7);
 	const TreasuryContract = await ethers.getContractAt(
 		"Treasury",
 		Treasury.address
 	);
 
-	console.log(8);
 	await CommunityAdminProxyContract.setTreasury(Treasury.address);
 
-	console.log(9);
 	await TreasuryContract.setCommunityAdmin(communityAdminProxyResult.address);
 
-	console.log(10);
 	await TreasuryContract.transferOwnership(ownerAddress);
-	console.log(11);
 };
 
 func.dependencies = [
