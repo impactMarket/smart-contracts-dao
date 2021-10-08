@@ -52,12 +52,10 @@ let beneficiaryC: SignerWithAddress;
 let beneficiaryD: SignerWithAddress;
 
 let Community: ethersTypes.ContractFactory;
-let CommunityAdminHelper: ethersTypes.ContractFactory;
 let CommunityAdminImplementationFactory: ethersTypes.ContractFactory;
 
 // contract instances
 let communityInstance: ethersTypes.Contract;
-let communityAdminHelperInstance: ethersTypes.Contract;
 let communityAdminProxy: ethersTypes.Contract;
 let treasuryInstance: ethersTypes.Contract;
 let cUSDInstance: ethersTypes.Contract;
@@ -93,9 +91,6 @@ async function init() {
 	beneficiaryD = accounts[9];
 
 	Community = await ethers.getContractFactory("Community");
-	CommunityAdminHelper = await ethers.getContractFactory(
-		"CommunityAdminHelper"
-	);
 	CommunityAdminImplementationFactory = await ethers.getContractFactory(
 		"CommunityAdminImplementation"
 	);
@@ -115,12 +110,6 @@ async function deploy() {
 
 	const treasury = await deployments.get("Treasury");
 	treasuryInstance = await ethers.getContractAt("Treasury", treasury.address);
-
-	const communityAdminHelper = await deployments.get("CommunityAdminHelper");
-	communityAdminHelperInstance = await ethers.getContractAt(
-		"CommunityAdminHelper",
-		communityAdminHelper.address
-	);
 }
 
 async function addDefaultCommunity() {
@@ -157,18 +146,6 @@ describe("Community - Setup", () => {
 	});
 
 	it("should return correct values", async () => {
-		let mnemonicWallet = ethers.Wallet.fromMnemonic(
-			"raise unknown tumble arrive exile medal task walnut catalog tooth silly discover grain direct hint crew hidden suspect reveal wealth wheat school nasty two",
-			"m/44'/52752'/0'/0/0"
-		);
-		console.log("******");
-		console.log("******");
-		console.log("******");
-		console.log("******");
-		console.log("******");
-		console.log("******");
-		console.log(mnemonicWallet.privateKey);
-
 		(await communityInstance.previousCommunity()).should.be.equal(
 			zeroAddress
 		);
@@ -516,37 +493,37 @@ describe("Community - Governance (2)", () => {
 		await addDefaultCommunity();
 	});
 
-	it("should be able to migrate funds from community if CommunityAdmin", async () => {
-		const previousCommunityPreviousBalance = await cUSDInstance.balanceOf(
-			communityInstance.address
-		);
-		const newCommunityAdminHelperInstance =
-			await CommunityAdminHelper.deploy(communityAdminProxy.address);
-
-		const newTx = await communityAdminProxy.migrateCommunity(
-			communityManagerA.address,
-			communityInstance.address,
-			newCommunityAdminHelperInstance.address
-		);
-
-		let receipt = await newTx.wait();
-
-		const newCommunityAddress = receipt.events?.filter((x: any) => {
-			return x.event == "CommunityMigrated";
-		})[0]["args"]["_communityAddress"];
-
-		communityInstance = await Community.attach(newCommunityAddress);
-		const previousCommunityNewBalance = await cUSDInstance.balanceOf(
-			communityInstance.address
-		);
-		const newCommunityNewBalance = await cUSDInstance.balanceOf(
-			newCommunityAddress
-		);
-		previousCommunityPreviousBalance.should.be.equal(
-			newCommunityNewBalance
-		);
-		previousCommunityNewBalance.should.be.equal(parseEther("100"));
-	});
+	// it("should be able to migrate funds from community if CommunityAdmin", async () => {
+	// 	const previousCommunityPreviousBalance = await cUSDInstance.balanceOf(
+	// 		communityInstance.address
+	// 	);
+	// 	const newCommunityAdminHelperInstance =
+	// 		await CommunityAdminHelper.deploy(communityAdminProxy.address);
+	//
+	// 	const newTx = await communityAdminProxy.migrateCommunity(
+	// 		communityManagerA.address,
+	// 		communityInstance.address,
+	// 		newCommunityAdminHelperInstance.address
+	// 	);
+	//
+	// 	let receipt = await newTx.wait();
+	//
+	// 	const newCommunityAddress = receipt.events?.filter((x: any) => {
+	// 		return x.event == "CommunityMigrated";
+	// 	})[0]["args"]["_communityAddress"];
+	//
+	// 	communityInstance = await Community.attach(newCommunityAddress);
+	// 	const previousCommunityNewBalance = await cUSDInstance.balanceOf(
+	// 		communityInstance.address
+	// 	);
+	// 	const newCommunityNewBalance = await cUSDInstance.balanceOf(
+	// 		newCommunityAddress
+	// 	);
+	// 	previousCommunityPreviousBalance.should.be.equal(
+	// 		newCommunityNewBalance
+	// 	);
+	// 	previousCommunityNewBalance.should.be.equal(parseEther("100"));
+	// });
 
 	it("should not be able to migrate from invalid community", async () => {
 		const newCommunityAdminImplementation =
@@ -572,37 +549,37 @@ describe("Community - Governance (2)", () => {
 		).to.be.rejectedWith("Ownable: caller is not the owner");
 	});
 
-	// it("should be able to edit community if manager", async () => {
-	// 	(await communityInstance.incrementInterval()).should.be.equal(
-	// 		hour.toString()
-	// 	);
-	// 	await communityInstance
-	// 		.connect(communityManagerA)
-	// 		.edit(
-	// 			claimAmountTwo.toString(),
-	// 			maxClaimTen.toString(),
-	// 			oneCent.toString(),
-	// 			week.toString(),
-	// 			day.toString()
-	// 		);
-	// 	(await communityInstance.incrementInterval()).should.be.equal(
-	// 		day.toString()
-	// 	);
-	// });
-	//
-	// it("should not be able edit community if not manager", async () => {
-	// 	await expect(
-	// 		communityInstance
-	// 			.connect(communityManagerB)
-	// 			.edit(
-	// 				claimAmountTwo.toString(),
-	// 				maxClaimTen.toString(),
-	// 				oneCent.toString(),
-	// 				day.toString(),
-	// 				day.toString()
-	// 			)
-	// 	).to.be.rejectedWith("NOT_MANAGER");
-	// });
+	it("should be able to edit community if manager", async () => {
+		(await communityInstance.incrementInterval()).should.be.equal(
+			hour.toString()
+		);
+		await communityInstance
+			.connect(communityManagerA)
+			.edit(
+				claimAmountTwo.toString(),
+				maxClaimTen.toString(),
+				oneCent.toString(),
+				week.toString(),
+				day.toString()
+			);
+		(await communityInstance.incrementInterval()).should.be.equal(
+			day.toString()
+		);
+	});
+
+	it("should not be able edit community if not manager", async () => {
+		await expect(
+			communityInstance
+				.connect(communityManagerB)
+				.edit(
+					claimAmountTwo.toString(),
+					maxClaimTen.toString(),
+					oneCent.toString(),
+					day.toString(),
+					day.toString()
+				)
+		).to.be.rejectedWith("NOT_MANAGER");
+	});
 
 	it("should not be able edit community with invalid values", async () => {
 		await expect(
@@ -1172,6 +1149,7 @@ describe("Community - getFunds", () => {
 
 		await expect(
 			newCommunityAdminImplementation.initialize(
+				adminAccount1.address,
 				cUSDInstance.address,
 				communityMaxTranche,
 				communityMinTranche

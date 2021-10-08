@@ -15,6 +15,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const { deploy } = deployments;
 
 	const accounts: SignerWithAddress[] = await ethers.getSigners();
+
 	const deployer = accounts[0];
 
 	const ImpactProxyAdmin = await deployments.get("ImpactProxyAdmin");
@@ -76,10 +77,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 };
 
 func.dependencies = [
-	"ImpactProxyAdminTest",
-	"GovernanceTest",
-	"TreasuryTest",
-	"cUSDTest",
+	"ImpactProxyAdminAlfajores",
+	"GovernanceAlfajores",
+	"TreasuryAlfajores",
+	"cUSDAlfajores",
 ];
-func.tags = ["CommunityTest", "Test"];
+func.tags = ["CommunityAlfajores", "Alfajores"];
 export default func;

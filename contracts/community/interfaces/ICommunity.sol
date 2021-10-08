@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.5;
 
-import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts-upgradeable/access/IAccessControlUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./ICommunityAdmin.sol";
 
-interface ICommunity is IAccessControl {
+interface ICommunity {
     enum BeneficiaryState {
         NONE,
         Valid,

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.5;
 
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -19,7 +21,7 @@ import "hardhat/console.sol";
  * in one single contract. Each community has it's own members and
  * and managers.
  */
-contract Community is ICommunity, AccessControl, Ownable {
+contract Community is ICommunity, Initializable, AccessControlUpgradeable, OwnableUpgradeable {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -35,7 +37,7 @@ contract Community is ICommunity, AccessControl, Ownable {
     uint256 private _validBeneficiaryCount;
     uint256 private _treasuryFunds;
     uint256 private _privateFunds;
-    uint256 private _decreaseStep = 1e16;
+    uint256 private _decreaseStep;
 
     ICommunity private _previousCommunity;
     ICommunityAdmin private _communityAdmin;
@@ -71,7 +73,7 @@ contract Community is ICommunity, AccessControl, Ownable {
      * @param incrementInterval_ Increment interval used in each claim.
      * @param previousCommunity_ previous smart contract address of community.
      */
-    constructor(
+    function initialize(
         address firstManager_,
         uint256 claimAmount_,
         uint256 maxClaim_,
@@ -79,7 +81,7 @@ contract Community is ICommunity, AccessControl, Ownable {
         uint256 incrementInterval_,
         ICommunity previousCommunity_,
         ICommunityAdmin communityAdmin_
-    ) {
+    ) public initializer {
         require(
             baseInterval_ > incrementInterval_,
             "Community::constructor: baseInterval must be greater than incrementInterval"
@@ -88,6 +90,9 @@ contract Community is ICommunity, AccessControl, Ownable {
             maxClaim_ > claimAmount_,
             "Community::constructor: maxClaim must be greater than claimAmount"
         );
+
+        __AccessControl_init();
+        __Ownable_init();
 
         _setupRole(MANAGER_ROLE, firstManager_);
         _setRoleAdmin(MANAGER_ROLE, MANAGER_ROLE);
@@ -100,6 +105,8 @@ contract Community is ICommunity, AccessControl, Ownable {
         _previousCommunity = previousCommunity_;
         _communityAdmin = communityAdmin_;
         _locked = false;
+
+        _decreaseStep = 1e16;
 
         transferOwnership(address(communityAdmin_));
     }
@@ -306,7 +313,7 @@ contract Community is ICommunity, AccessControl, Ownable {
         uint256 decreaseStep_,
         uint256 baseInterval_,
         uint256 incrementInterval_
-    ) external override onlyOwner {
+    ) external override onlyManagers {
         require(
             baseInterval_ > incrementInterval_,
             "Community::constructor: baseInterval must be greater than incrementInterval"
@@ -359,10 +366,10 @@ contract Community is ICommunity, AccessControl, Ownable {
         override
         onlyOwner
     {
-        require(
-            newCommunity_.hasRole(MANAGER_ROLE, newCommunityManager_) == true,
-            "Community::migrateFunds: NOT_ALLOWED"
-        );
+        //        require(
+        //            newCommunity_.hasRole(MANAGER_ROLE, newCommunityManager_) == true,       // must add IAccessControlUpgradeable in ICommunity inheritance
+        //            "Community::migrateFunds: NOT_ALLOWED"
+        //        );
         require(newCommunity_.previousCommunity() == this, "Community::migrateFunds: NOT_ALLOWED");
         uint256 balance = cUSD().balanceOf(address(this));
         bool success = cUSD().transfer(address(newCommunity_), balance);
@@ -407,7 +414,7 @@ contract Community is ICommunity, AccessControl, Ownable {
     }
 
     function managerJoinFromMigrated() external override {
-        require(_previousCommunity.hasRole(MANAGER_ROLE, msg.sender), "NOT_ALLOWED");
+        //        require(_previousCommunity.hasRole(MANAGER_ROLE, msg.sender), "NOT_ALLOWED");    // must add IAccessControlUpgradeable in ICommunity inheritance
         grantRole(MANAGER_ROLE, msg.sender);
     }
 
