@@ -1,14 +1,21 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// @ts-ignore
 	const { deployments, getNamedAccounts, ethers } = hre;
 	const { deploy } = deployments;
-	const { deployer } = await getNamedAccounts();
+
+	const accounts: SignerWithAddress[] = await ethers.getSigners();
+	const deployer = accounts[0];
+
+	// const IPCTTimelock = await deployments.get("IPCTTimelock"); //prod
+	// const ownerAddress = IPCTTimelock.address; //prod
+	const ownerAddress = deployer.address; //dev
 
 	const ImpactProxyAdminResult = await deploy("ImpactProxyAdmin", {
-		from: deployer,
+		from: deployer.address,
 		args: [],
 		log: true,
 	});
@@ -18,10 +25,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		ImpactProxyAdminResult.address
 	);
 
-	// const IPCTTimelock = await deployments.get("IPCTTimelock"); //only prod
-	// await ImpactProxyAdmin.transferOwnership(IPCTTimelock.address); //only prod
+	await ImpactProxyAdmin.transferOwnership(ownerAddress);
 };
 
 export default func;
-func.dependencies = ["GovernanceAlfajores"];
+func.dependencies = [];
 func.tags = ["ImpactProxyAdminAlfajores", "Alfajores"];
