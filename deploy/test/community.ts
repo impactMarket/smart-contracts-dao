@@ -22,7 +22,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// const ownerAddress = IPCTTimelock.address; //prod
 	const ownerAddress = deployer.address; //dev
 	// const cUSDAddress = getCUSDAddress(); //prod
-	const cUSDAddress = (await deployments.get("TokenMock")).address; //dev
+	const cUSDAddress = getCUSDAddress();
 
 	const communityAdminImplementationResult = await deploy(
 		"CommunityAdminImplementation",
