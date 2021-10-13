@@ -6,7 +6,7 @@ import "./IPCTDelegatorStorage.sol";
 import "./TimelockInterface.sol";
 
 /**
- * @title Storage for Governor Bravo Delegate
+ * @title Storage for Governor Delegate
  * @notice For future upgrades, do not change IPCTDelegateStorageV1. Create a new
  * contract which implements IPCTDelegateStorageV1 and following the naming convention
  * IPCTDelegateStorageVX.

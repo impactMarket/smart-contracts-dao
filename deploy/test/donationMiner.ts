@@ -13,7 +13,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const deployer = accounts[0];
 
 	const Token = await deployments.get("IPCTToken");
-	const Treasury = await deployments.get("Treasury");
+	const Treasury = await deployments.get("TreasuryProxy");
+
+	const ImpactProxyAdmin = await deployments.get("ImpactProxyAdmin");
 
 	// const IPCTTimelock = await deployments.get("IPCTTimelock"); //prod
 	// const ownerAddress = IPCTTimelock.address; //prod
@@ -21,25 +23,41 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// const cUSDAddress = getCUSDAddress(); //prod
 	const cUSDAddress = (await deployments.get("TokenMock")).address; //dev
 
-	const DonationMinerResult = await deploy("DonationMiner", {
-		from: deployer.address,
-		args: [
-			cUSDAddress,
-			Token.address,
-			Treasury.address,
-			parseEther("100"),
-			14,
-			30,
-		],
-		log: true,
-	});
-
-	const DonationMiner = await ethers.getContractAt(
-		"DonationMiner",
-		DonationMinerResult.address
+	const donationMinerImplementationResult = await deploy(
+		"DonationMinerImplementation",
+		{
+			from: deployer.address,
+			args: [],
+			log: true,
+			// gasLimit: 13000000,
+		}
 	);
 
-	await DonationMiner.transferOwnership(ownerAddress);
+	const donationMinerProxyResult = await deploy("DonationMinerProxy", {
+		from: deployer.address,
+		args: [
+			donationMinerImplementationResult.address,
+			ImpactProxyAdmin.address,
+		],
+		log: true,
+		// gasLimit: 13000000,
+	});
+
+	const donationMinerContract = await ethers.getContractAt(
+		"DonationMinerImplementation",
+		donationMinerProxyResult.address
+	);
+
+	await donationMinerContract.initialize(
+		cUSDAddress,
+		Token.address,
+		Treasury.address,
+		parseEther("100"),
+		14,
+		30
+	);
+
+	await donationMinerContract.transferOwnership(ownerAddress);
 };
 
 export default func;

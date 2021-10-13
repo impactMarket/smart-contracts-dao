@@ -1,35 +1,30 @@
 //SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.5;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "./interfaces/ITreasury.sol";
+import "./interfaces/DoantionMinerStorageV1.sol";
 import "../community/interfaces/ICommunity.sol";
 import "../community/interfaces/ICommunityAdmin.sol";
 
 import "hardhat/console.sol";
-import "./interfaces/IDonationMiner.sol";
 
-contract DonationMiner is IDonationMiner, Ownable, Pausable, ReentrancyGuard {
+contract DonationMinerImplementation is
+    DonationMinerStorageV1,
+    Initializable,
+    OwnableUpgradeable,
+    PausableUpgradeable,
+    ReentrancyGuardUpgradeable
+{
     using SafeERC20 for IERC20;
 
     event RewardClaimed(address indexed donor, uint256 amount);
     event DonationAdded(address indexed donor, uint256 amount);
-
-    IERC20 private immutable _cUSD;
-    IERC20 private immutable _IPCT;
-    ITreasury private _treasury;
-    uint256 private _rewardPeriodSize;
-    uint256 private _startingBlock;
-    uint256 private _rewardPerBlock;
-    uint256 private _rewardPeriodCount;
-
-    mapping(uint256 => RewardPeriod) private _rewardPeriods;
-    mapping(address => Donor) private _donors;
 
     /**
      * @notice Enforces beginning rewardPeriod has started
@@ -39,19 +34,23 @@ contract DonationMiner is IDonationMiner, Ownable, Pausable, ReentrancyGuard {
         _;
     }
 
-    constructor(
+    function initialize(
         IERC20 cUSD_,
         IERC20 IPCT_,
         ITreasury treasury_,
         uint256 rewardPerBlock_,
         uint256 rewardPeriodSize_,
         uint256 startingBlock_
-    ) {
+    ) public override initializer {
         require(address(cUSD_) != address(0), "DonationMiner::constructor: _cUSD address not set!");
         require(address(IPCT_) != address(0), "DonationMiner::constructor: _IPCT address not set!");
         require(address(treasury_) != address(0), "DonationMiner::constructor: _treasury not set!");
         require(rewardPerBlock_ != 0, "DonationMiner::constructor: _rewardPerBlock not set!");
         require(startingBlock_ != 0, "DonationMiner::constructor: _startingRewardPeriod not set!");
+
+        __Ownable_init();
+        __Pausable_init();
+        __ReentrancyGuard_init();
 
         _cUSD = cUSD_;
         _IPCT = IPCT_;
@@ -110,13 +109,22 @@ contract DonationMiner is IDonationMiner, Ownable, Pausable, ReentrancyGuard {
         donationsAmount = _rewardPeriods[period].donationsAmount;
     }
 
+    function rewardPeriodDonations(uint256 period, address donor)
+        external
+        view
+        override
+        returns (uint256)
+    {
+        return _rewardPeriods[period].donations[donor];
+    }
+
     function donors(address donor)
         external
         view
         override
-        returns (uint256 donationsCount, uint256 lastClaim)
+        returns (uint256 rewardPeriodsCount, uint256 lastClaim)
     {
-        donationsCount = _donors[donor].donationsCount;
+        rewardPeriodsCount = _donors[donor].rewardPeriodsCount;
         lastClaim = _donors[donor].lastClaim;
     }
 
@@ -126,8 +134,8 @@ contract DonationMiner is IDonationMiner, Ownable, Pausable, ReentrancyGuard {
         override
         returns (uint256 rewardPeriodNumber, uint256 amount)
     {
-        rewardPeriodNumber = _donors[donor].donations[donationId].rewardPeriodNumber;
-        amount = _donors[donor].donations[donationId].amount;
+        rewardPeriodNumber = _donors[donor].rewardPeriods[donationId];
+        amount = _rewardPeriods[rewardPeriodNumber].donations[donor];
     }
 
     function setRewardPeriodSize(uint256 rewardPeriodSize_) external override onlyOwner {
@@ -170,25 +178,12 @@ contract DonationMiner is IDonationMiner, Ownable, Pausable, ReentrancyGuard {
     }
 
     /**
-     * @dev Calculate and claim all pending rewards for a donor
+     * @dev Claim all pending rewards for a donor
      */
     function claimRewards() external override whenNotPaused whenStarted nonReentrant {
         Donor storage donor = _donors[msg.sender];
-        uint256 claimAmount;
-
-        while (donor.lastClaim < donor.donationsCount) {
-            donor.lastClaim++;
-            Donation storage donation = donor.donations[donor.lastClaim];
-            RewardPeriod storage rewardPeriod = _rewardPeriods[donation.rewardPeriodNumber];
-
-            if (rewardPeriod.endBlock >= block.number) {
-                donor.lastClaim--;
-                break;
-            }
-            claimAmount +=
-                ((rewardPeriod.reward + rewardPeriod.bonusReward) * donation.amount) /
-                rewardPeriod.donationsAmount;
-        }
+        uint256 claimAmount = calculateClaimableRewards(msg.sender);
+        donor.lastClaim = getDonorLastEndedRewardPeriodIndex(donor);
 
         if (claimAmount > 0) {
             require(
@@ -199,6 +194,30 @@ contract DonationMiner is IDonationMiner, Ownable, Pausable, ReentrancyGuard {
         }
 
         emit RewardClaimed(msg.sender, claimAmount);
+    }
+
+    /**
+     * @dev Calculate all pending rewards for a donor
+     */
+    function calculateClaimableRewards(address donor_) public override returns (uint256) {
+        Donor storage donor = _donors[donor_];
+        uint256 claimAmount;
+        uint256 rewardPeriodNumber;
+        uint256 lastEndedRewardPeriodIndex = getDonorLastEndedRewardPeriodIndex(donor);
+        uint256 index = donor.lastClaim + 1;
+
+        while (index <= lastEndedRewardPeriodIndex) {
+            rewardPeriodNumber = donor.rewardPeriods[index];
+            RewardPeriod storage rewardPeriod = _rewardPeriods[rewardPeriodNumber];
+
+            claimAmount +=
+                ((rewardPeriod.reward + rewardPeriod.bonusReward) *
+                    rewardPeriod.donations[msg.sender]) /
+                rewardPeriod.donationsAmount;
+            index++;
+        }
+
+        return claimAmount;
     }
 
     /**
@@ -214,19 +233,16 @@ contract DonationMiner is IDonationMiner, Ownable, Pausable, ReentrancyGuard {
         whenNotPaused
         returns (uint256)
     {
-        Donor storage donor = _donors[donor_];
-        uint256 toClaim = donor.lastClaim + 1;
+        RewardPeriod storage lastRewardPeriod = _rewardPeriods[_rewardPeriodCount];
 
         uint256 claimAmount;
 
-        while (toClaim <= donor.donationsCount) {
-            Donation storage donation = donor.donations[toClaim];
-            RewardPeriod storage rewardPeriod = _rewardPeriods[donation.rewardPeriodNumber];
-
+        // if donor have donated in current rewardPeriod
+        if (lastRewardPeriod.endBlock >= block.number) {
             claimAmount +=
-                ((rewardPeriod.reward + rewardPeriod.bonusReward) * donation.amount) /
-                rewardPeriod.donationsAmount;
-            toClaim++;
+                ((lastRewardPeriod.reward + lastRewardPeriod.bonusReward) *
+                    lastRewardPeriod.donations[donor_]) /
+                lastRewardPeriod.donationsAmount;
         }
 
         return claimAmount;
@@ -262,15 +278,26 @@ contract DonationMiner is IDonationMiner, Ownable, Pausable, ReentrancyGuard {
 
     function createDonation(uint256 amount_) internal {
         RewardPeriod storage currentPeriod = _rewardPeriods[_rewardPeriodCount];
-        currentPeriod.donationsAmount = currentPeriod.donationsAmount + amount_;
+        currentPeriod.donationsAmount += amount_;
+        currentPeriod.donations[msg.sender] += amount_;
 
         Donor storage donor = _donors[msg.sender];
-        donor.donationsCount++;
+        uint256 lastDonorRewardPeriod = donor.rewardPeriods[donor.rewardPeriodsCount];
 
-        Donation storage donation = donor.donations[donor.donationsCount];
-        donation.rewardPeriodNumber = _rewardPeriodCount;
-        donation.amount = amount_;
+        if (lastDonorRewardPeriod != _rewardPeriodCount) {
+            donor.rewardPeriodsCount++;
+            donor.rewardPeriods[donor.rewardPeriodsCount] = _rewardPeriodCount;
+        }
 
         emit DonationAdded(msg.sender, amount_);
+    }
+
+    function getDonorLastEndedRewardPeriodIndex(Donor storage donor) internal returns (uint256) {
+        uint256 lastRewardPeriodIndex = donor.rewardPeriods[donor.rewardPeriodsCount];
+        if (_rewardPeriods[lastRewardPeriodIndex].endBlock < block.number) {
+            return donor.rewardPeriodsCount;
+        } else {
+            return donor.rewardPeriodsCount - 1;
+        }
     }
 }

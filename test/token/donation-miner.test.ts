@@ -18,9 +18,9 @@ const initialize = deployments.createFixture(
 			"TokenMock",
 			cUSD.address
 		);
-		const DonationMiner = await deployments.get("DonationMiner");
+		const DonationMiner = await deployments.get("DonationMinerProxy");
 		const DonationMinerContract = await ethers.getContractAt(
-			"DonationMiner",
+			"DonationMinerImplementation",
 			DonationMiner.address
 		);
 		const IPCT = await deployments.get("IPCTToken");

@@ -6,16 +6,18 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
-import "./interfaces/ICommunity.sol";
-import "./interfaces/ICommunityAdmin.sol";
-import "./Community.sol";
-import "../token/interfaces/ITreasury.sol";
+import "./ICommunityAdmin.sol";
+import "../../token/interfaces/ITreasury.sol";
 
 import "hardhat/console.sol";
 
+/**
+ * @title Storage for CommunityAdmin
+ * @notice For future upgrades, do not change CommunityAdminStorageV1. Create a new
+ * contract which implements CommunityAdminStorageV1 and following the naming convention
+ * CommunityAdminStorageVX.
+ */
 abstract contract CommunityAdminStorageV1 is ICommunityAdmin {
-    address internal implementation;
-
     IERC20 internal _cUSD;
     ITreasury internal _treasury;
     ICommunity internal _communityTemplate;
