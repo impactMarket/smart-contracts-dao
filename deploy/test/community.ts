@@ -34,13 +34,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		}
 	);
 
-	const communityResult = await deploy("Community", {
-		from: deployer.address,
-		args: [],
-		log: true,
-		// gasLimit: 13000000,
-	});
-
 	const communityAdminProxyResult = await deploy("CommunityAdminProxy", {
 		from: deployer.address,
 		args: [
@@ -51,28 +44,35 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		// gasLimit: 13000000,
 	});
 
-	const CommunityAdminProxyContract = await ethers.getContractAt(
+	const CommunityAdminContract = await ethers.getContractAt(
 		"CommunityAdminImplementation",
 		communityAdminProxyResult.address
 	);
 
-	await CommunityAdminProxyContract.initialize(
+	const communityResult = await deploy("Community", {
+		from: deployer.address,
+		args: [],
+		log: true,
+		// gasLimit: 13000000,
+	});
+
+	await CommunityAdminContract.initialize(
 		communityResult.address,
 		cUSDAddress,
 		COMMUNITY_MIN_TRANCHE,
 		COMMUNITY_MAX_TRANCHE
 	);
 
-	await CommunityAdminProxyContract.transferOwnership(ownerAddress);
+	await CommunityAdminContract.transferOwnership(ownerAddress);
 
-	const Treasury = await deployments.get("Treasury");
+	const Treasury = await deployments.get("TreasuryProxy");
 
 	const TreasuryContract = await ethers.getContractAt(
-		"Treasury",
+		"TreasuryImplementation",
 		Treasury.address
 	);
 
-	await CommunityAdminProxyContract.setTreasury(Treasury.address);
+	await CommunityAdminContract.setTreasury(Treasury.address);
 
 	await TreasuryContract.setCommunityAdmin(communityAdminProxyResult.address);
 

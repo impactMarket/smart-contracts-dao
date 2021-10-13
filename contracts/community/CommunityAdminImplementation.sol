@@ -7,8 +7,8 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./interfaces/ICommunity.sol";
+import "./interfaces/CommunityAdminStorageV1.sol";
 import "./Community.sol";
-import "./CommunityAdminStorageV1.sol";
 import "../token/interfaces/ITreasury.sol";
 
 import "hardhat/console.sol";
@@ -20,7 +20,6 @@ import "hardhat/console.sol";
  * remove communities
  */
 contract CommunityAdminImplementation is
-    ICommunityAdmin,
     CommunityAdminStorageV1,
     Initializable,
     OwnableUpgradeable
@@ -52,10 +51,6 @@ contract CommunityAdminImplementation is
         _;
     }
 
-    /**
-     * @dev It sets the first admin, which later can add others
-     * and add/remove communities.
-     */
     function initialize(
         ICommunity communityTemplate_,
         IERC20 cUSD_,
@@ -75,10 +70,6 @@ contract CommunityAdminImplementation is
         _communityMaxTranche = communityMaxTranche_;
 
         _communityProxyAdmin = new ProxyAdmin();
-    }
-
-    function upgrade(address newImplementation) external onlyOwner {
-        implementation = newImplementation;
     }
 
     function cUSD() external view override returns (IERC20) {

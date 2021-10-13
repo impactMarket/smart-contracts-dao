@@ -108,8 +108,11 @@ async function deploy() {
 		communityAdmin.address
 	);
 
-	const treasury = await deployments.get("Treasury");
-	treasuryInstance = await ethers.getContractAt("Treasury", treasury.address);
+	const treasury = await deployments.get("TreasuryProxy");
+	treasuryInstance = await ethers.getContractAt(
+		"TreasuryImplementation",
+		treasury.address
+	);
 }
 
 async function addDefaultCommunity() {
