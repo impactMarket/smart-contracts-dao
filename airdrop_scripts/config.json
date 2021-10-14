@@ -1,0 +1,12 @@
+{
+  "network": "http://localhost:8545",
+  "savePath": "~/CELO_transfers_dir_1",
+  "imarketStartBlock": 2627648,
+  "targetBlock": 8983266,
+  "distributions": {
+    "doners": 1,
+    "holders": 1,
+    "managers": 50,
+    "beneficiaries": 1
+  }
+}

@@ -37,8 +37,8 @@ def get_all_transfers(_web3, token_address, token_name, _from, _to, filters=None
 
 
 def extract_transfers_and_save_to_file(args):
-    filename, token_address, token_name, _from, _to, filters, chunk_size = args
-    set_envvars()
+    network, filename, token_address, token_name, _from, _to, filters, chunk_size = args
+    set_envvars(network)
     web3 = initConnection()
     print('start get transfers: _from %s, _to %s ' % (_from, _to))
     transfers = get_all_transfers(web3, token_address, token_name, _from, _to, filters, chunk_size)
@@ -64,11 +64,12 @@ def get_community_event_logs(
 
 def get_event_logs(args):
     (
-        i, filename, contract_address, contract_name,
+        network, i, filename, contract_address, contract_name,
         abi_path_envvar, event_name, args_names, from_block,
         to_block, chunk_size, verbose
     ) = args
-    set_envvars()
+
+    set_envvars(network)
     web3 = initConnection()
     abi_path = os.getenv(abi_path_envvar)
     pair_contract = Contract(contract_name, abi_path, web3.toChecksumAddress(contract_address))
@@ -149,16 +150,27 @@ def get_event_logs(args):
 
 
 def extract_community_doners(transfers, communities):
+    """
+    donation amounts are in float type, already converted from base_18
+
+    :param transfers:
+    :param communities:
+    :return:
+    """
     doner_value_list = []
-    comms_set = {comm for comm, block in communities}
+    communities_set = {comm for comm, block in communities}
     for _from, _to, value, block in transfers:
-        if _to in comms_set:
+        if _to in communities_set:
             doner_value_list.append((_from, util.from_base_18(value)))
 
     return doner_value_list
 
 
 def extract_token_holders(transfers, min_amount=1.0):
+    """
+        calculations are done using base_18 amounts
+        but the returned holder token amounts are in float type, already converted from base_18
+    """
     balances = calculate_balances(transfers)
     _min_amount = to_base_18(min_amount)
     balances = {a: from_base_18(value) for a, value in balances.items() if value >= _min_amount}
@@ -169,6 +181,7 @@ def calculate_balances(transfers):
     _from = [t[0].lower() for t in transfers]
     _to = [t[1].lower() for t in transfers]
     _value = [t[2] for t in transfers]
+    _blocks = [t[3] for t in transfers]
 
     a_to_value = {a: 0 for a in _from}
     a_to_value.update({a: 0 for a in _to})
