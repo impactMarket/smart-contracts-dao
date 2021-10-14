@@ -154,7 +154,7 @@ def main(config_file_path):
     total_donations = sum([amount for _, amount in sorted_doners])
     donation_multiplier = float(doners_tokens / total_donations)
     print('donation reward multiplier == %s (total donations amount is %s) ' % (donation_multiplier, total_donations))
-    receivers.extend([(address, amount * donation_multiplier) for address, amount in sorted_doners if (amount * donation_multiplier) <= 0.0])
+    receivers.extend([(address, amount * donation_multiplier) for address, amount in sorted_doners if (amount * donation_multiplier) > 0.0])
 
     # make receivers unique so a receiver does not receive multiple rewards
     # sorted_holders = [a for a, amount in sorted_holders]
