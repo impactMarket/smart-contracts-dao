@@ -6,13 +6,10 @@ from web3 import WebsocketProvider, Web3
 from airdrop_scripts.http_provider import CustomHTTPProvider
 from airdrop_scripts.web3_instance import get_web3, set_web3
 
-ENV_INFURA_CONNECTION_TYPE = "INFURA_CONNECTION_TYPE"
-ENV_INFURA_PROJECT_ID = "INFURA_PROJECT_ID"
 ENV_WEB3_NETWORK = "WEB3_NETWORK"
 IMPACT_MARKET_START_BLOCK = "IMPACT_MARKET_START_BLOCK"
 TARGET_BLOCK = "TARGET_BLOCK"
 
-WEB3_INFURA_PROJECT_ID = "357f2fe737db4304bd2f7285c5602d0d"
 GANACHE_URL = "http://127.0.0.1:8545"
 
 # shortcut names for networks that *Infura* supports, plus ganache
@@ -24,19 +21,22 @@ def get_start_block():
 
 
 def get_target_block():
-    return os.getenv(TARGET_BLOCK, 8983266)
+    return os.getenv(TARGET_BLOCK, None)
 
 
 def get_web3_network():
-    return os.getenv(ENV_WEB3_NETWORK, "mainnet")
+    return os.getenv(ENV_WEB3_NETWORK, "http://localhost:8545")
 
 
-def set_envvars():
+def set_envvars(web3_network, target_block=None):
     if os.getenv('WEB3_NETWORK'):
         return
 
     # os.environ['WEB3_NETWORK'] = "https://celo-mainnet--rpc.datahub.figment.io/apikey/25daa59318b13c1f83a8a444578fdb57"
-    os.environ['WEB3_NETWORK'] = "http://localhost:8545"
+    os.environ['WEB3_NETWORK'] = web3_network
+    if target_block:
+        os.environ['TARGET_BLOCK'] = str(target_block)
+
     # os.getcwd()
     # '/home/ssallam/pycharm_projects/impact-market-token'
     os.environ["IMARKET_ABI"]="./abi/ImpactMarket.json"

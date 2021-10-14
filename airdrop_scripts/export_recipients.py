@@ -6,7 +6,7 @@ import os
 from airdrop_scripts.custom_web3.contract import Contract
 from airdrop_scripts.events_helpers import initConnection, get_event_logs, get_community_event_logs, extract_community_doners, \
     extract_token_holders, extract_transfers_and_save_to_file
-from airdrop_scripts.util import from_base_18, get_start_block, get_block_steps
+from airdrop_scripts.util import from_base_18, get_start_block, get_block_steps, ENV_WEB3_NETWORK
 from airdrop_scripts.web3_instance import get_web3
 
 STEP_SIZE = 100000
@@ -57,57 +57,96 @@ def get_moola_info():
 
 
 def dispatch_get_all_transfers(process_pool, save_path, from_block, to_block, token_address, token_name, chunk_size=500):
-    # names = [n for n in os.listdir(save_path) if n.startswith(token_name)]
-    # if names:
-    #     _names = [os.path.splitext(n)[0] if n.endswith('.json') else n for n in names]
-    #     last_block = sorted([int(n.split('-')[1]) for n in _names])[-1]
-    #     if last_block > from_block:
-    #         from_block = last_block + 1
+    _start_name = token_name + '.transfers.'
+    prefix_length = len(_start_name)
+    existing_names = [n[prefix_length:] for n in os.listdir(save_path) if n.startswith(_start_name)]
+    _starting_names = []
+    if existing_names:
+        _names = [os.path.splitext(n)[0] if n.endswith('.json') else n for n in existing_names]
+        _starting_ranges = sorted([int(n.split('-')[0]) for n in _names])
+        _ending_ranges = sorted([int(n.split('-')[1]) for n in _names])
+        valid_ranges_i = [i for i, block in enumerate(_ending_ranges) if block <= to_block]
+        if valid_ranges_i:
+            _starting_ranges = _starting_ranges[:max(valid_ranges_i)]
+            _ending_ranges = _ending_ranges[:max(valid_ranges_i)]
 
-    _r = get_block_steps(from_block, to_block, STEP_SIZE)
-    _last = _r[0] - 1
+            first_block = _starting_ranges[0]
+            last_end_block = _ending_ranges[0]
+            missing_ranges = []
+            if from_block < first_block:
+                missing_ranges.append((from_block, first_block-1))
+                _starting_names.append(os.path.join(save_path, '%s.transfers.%s-%s.json' % (token_name, from_block, first_block - 1)))
+
+            _starting_names.append(os.path.join(save_path, '%s.transfers.%s-%s.json' % (token_name, first_block, last_end_block)))
+            for i, start_block in enumerate(_starting_ranges[1:]):
+                d = start_block - last_end_block
+                if d > 1:
+                    missing_ranges.append((last_end_block + 1, start_block - 1))
+                    _starting_names.append(os.path.join(save_path, '%s.transfers.%s-%s.json' % (token_name, last_end_block + 1, start_block - 1)))
+                last_end_block = _ending_ranges[i+1]
+                _starting_names.append(os.path.join(save_path, '%s.transfers.%s-%s.json' % (token_name, start_block, last_end_block)))
+
+            last_block = last_end_block
+            if last_block > from_block:
+                from_block = last_block + 1
+
     args_lists = []
-    saved_files = []
-    # if names:
-    #     saved_files = [
-    #         os.path.join(save_path, n) for n in names
-    #     ]
-
-    for i in range(len(_r)-1):
-        _from = _last + 1
-        _last = _r[i+1]
+    saved_files = _starting_names
+    network = os.getenv(ENV_WEB3_NETWORK)
+    for _block_range in missing_ranges:
+        _from, _last = _block_range
         name = os.path.join(save_path, '%s.transfers.%s-%s.json' % (token_name, _from, _last))
         if os.path.exists(name):
-            print('transfers already complted for range: %s - %s, file %s' % (_from, _last, name))
-            saved_files.append(name)
+            print('transfers already completed for range: %s - %s, file %s' % (_from, _last, name))
+            # saved_files.append(name)
             continue
 
         print('getting transfers between blocks: %s, %s' % (_from, _last))
         print('saving transfers to file: %s' % name)
-        saved_files.append(name)
-        args_lists.append([name, token_address, token_name, _from, _last, None, chunk_size])
+        # saved_files.append(name)
+        args_lists.append([network, name, token_address, token_name, _from, _last, None, chunk_size])
 
-    process_pool.map(extract_transfers_and_save_to_file, args_lists)
+    if from_block <= to_block:
+        _r = get_block_steps(from_block, to_block, STEP_SIZE)
+        _last = _r[0] - 1
+        for i in range(len(_r)-1):
+            _from = _last + 1
+            _last = _r[i+1]
+            name = os.path.join(save_path, '%s.transfers.%s-%s.json' % (token_name, _from, _last))
+            if os.path.exists(name):
+                print('transfers already completed for range: %s - %s, file %s' % (_from, _last, name))
+                saved_files.append(name)
+                continue
+
+            print('getting transfers between blocks: %s, %s' % (_from, _last))
+            print('saving transfers to file: %s' % name)
+            saved_files.append(name)
+            args_lists.append([network, name, token_address, token_name, _from, _last, None, chunk_size])
+
+    if args_lists:
+        process_pool.map(extract_transfers_and_save_to_file, args_lists)
 
     all_transfers = []
     for name in saved_files:
         with open(name) as f:
             transfers = json.load(f)
             all_transfers.extend(transfers)
-
+    if all_transfers[-1][3] > to_block:
+        all_transfers = [t for t in all_transfers if t[3] <= to_block]
     return all_transfers
 
 
 def process_cUSD_token(process_pool, save_path, start_block, target_block, cusd_address, communities):
     cusd_transfers = dispatch_get_all_transfers(process_pool, save_path, start_block, target_block, cusd_address, 'cUSD')
     cusd_doners_list = extract_community_doners(cusd_transfers, communities)
-    return cusd_transfers, cusd_doners_list
+    cusd_holders = extract_token_holders(cusd_transfers, min_amount=10.0)
+    return cusd_transfers, cusd_doners_list, cusd_holders
 
 
 def process_celo_token(process_pool, save_path, start_block, target_block, celo_address, communities):
     celo_transfers = dispatch_get_all_transfers(process_pool, save_path, start_block, target_block, celo_address, 'CELO')
     celo_doners_list = extract_community_doners(celo_transfers, communities)
-    celo_holders = extract_token_holders(celo_transfers)
+    celo_holders = extract_token_holders(celo_transfers, min_amount=1.0)
     return celo_transfers, celo_doners_list, celo_holders
 
 
@@ -125,25 +164,39 @@ def process_moo_token(process_pool, save_path, start_block, target_block, moo_ad
 
 def get_impact_market_managers(process_pool, save_path, communities, from_block, to_block, chunk_size=100000):
     # All managers via the event ManagerAdded(address indexed _account); event
+    main_name = os.path.join(save_path, 'managers.%s-%s.json' % (from_block, to_block))
+    if os.path.exists(main_name):
+        with open(main_name) as f:
+            managers = json.load(f)
+            return managers
+
     event_name_ManagerAdded = 'ManagerAdded'
     args_lists = []
+    saved_files = []
+    network = os.getenv(ENV_WEB3_NETWORK)
     for i, (comm, block) in enumerate(communities):
+        _from = max(from_block, block)
+        name = os.path.join(save_path, 'comm-managers.%s.%s-%s.json' % (comm, _from, to_block))
+        saved_files.append(name)
+        if os.path.exists(name):
+            print('community (%s) managers already processed for %s' % (i, comm))
+            continue
+
+        print('saving community managers to file: %s' % name)
         args_lists.append((
-            i, None, comm, 'Community',
-            'COMMUNITY_ABI', event_name_ManagerAdded, ['_account'], max(from_block, block),
+            network, i, name, comm, 'Community',
+            'COMMUNITY_ABI', event_name_ManagerAdded, ['_account'], _from,
             to_block, chunk_size, False
         ))
-        # logs = get_community_event_logs(
-        #     event_name_ManagerAdded, comm, web3, abi_path, max(from_block, block), to_block, filters, chunk_size=chunk_size)
-        # managers.extend([l.args["_account"] for l in logs])
 
-    result = process_pool.map(get_event_logs, args_lists)
+    process_pool.map(get_event_logs, args_lists)
     managers = []
-    for manager_list in result:
-        managers.extend(manager_list)
+    for name in saved_files:
+        with open(name) as f:
+            manager_list = json.load(f)
+            managers.extend(manager_list)
 
-    name = os.path.join(save_path, 'managers.%s-%s.json' % (from_block, to_block))
-    with open(name, 'w') as f:
+    with open(main_name, 'w') as f:
         json.dump(managers, f)
 
     return managers
@@ -151,28 +204,30 @@ def get_impact_market_managers(process_pool, save_path, communities, from_block,
 
 def get_impact_market_beneficiaries(process_pool, save_path, communities, from_block, to_block, chunk_size=100000):
     # All beneficiaries via the event BeneficiaryClaim(address indexed _account, uint256 _amount);  event
+    main_name = os.path.join(save_path, 'beneficiary_claims.%s-%s.json' % (from_block, to_block))
+    if os.path.exists(main_name):
+        with open(main_name) as f:
+            beneficiary_claims = json.load(f)
+            return beneficiary_claims
+
     event_name_BeneficiaryClaim = 'BeneficiaryClaim'
     args_lists = []
     saved_files = []
+    network = os.getenv(ENV_WEB3_NETWORK)
     for i, (comm, block) in enumerate(communities):
         _from = max(from_block, block)
         name = os.path.join(save_path, 'comm.%s.%s-%s.json' % (comm, _from, to_block))
         saved_files.append(name)
-        print('saving beneficiaries to file: %s' % name)
         if os.path.exists(name):
             print('community (%s) beneficiaries already processed for %s' % (i, comm))
             continue
 
+        print('saving beneficiaries to file: %s' % name)
         args_lists.append((
-            i, name, comm, 'Community',
+            network, i, name, comm, 'Community',
             'COMMUNITY_ABI', event_name_BeneficiaryClaim, ['_account', '_amount'], _from,
             to_block, chunk_size, False
         ))
-
-        # event_name_ManagerAdded, comm, web3, abi_path, max(from_block, block), to_block, filters, chunk_size)
-        # logs = get_community_event_logs(
-        #     event_name_ManagerAdded, comm, web3, abi_path, max(from_block, block), to_block, filters, chunk_size=chunk_size)
-        # beneficiary_claims.extend([(l.args["_account"], from_base_18(l.args["_amount"])) for l in logs])
 
     process_pool.map(get_event_logs, args_lists)
 
@@ -182,8 +237,7 @@ def get_impact_market_beneficiaries(process_pool, save_path, communities, from_b
             address_claim_list = json.load(f)
             beneficiary_claims.extend([(a, from_base_18(value)) for a, value in address_claim_list])
 
-    name = os.path.join(save_path, 'beneficiary_claims.%s-%s.json' % (from_block, to_block))
-    with open(name, 'w') as f:
+    with open(main_name, 'w') as f:
         json.dump(beneficiary_claims, f)
 
     return beneficiary_claims
@@ -216,6 +270,7 @@ def get_ubeswap_users(process_pool, save_path, blockNumber: int, chunk_size=500)
     arg_name = 'sender' # a user ethereum address
     args_lists = []
     saved_files = []
+    network = os.getenv(ENV_WEB3_NETWORK)
     for i, (pair_address, block) in enumerate(pair_contracts):
         name = os.path.join(save_path, 'ubeswap.pair%s.swaps.json' % i)
         saved_files.append(name)
@@ -225,7 +280,7 @@ def get_ubeswap_users(process_pool, save_path, blockNumber: int, chunk_size=500)
 
         # args_lists.append((i, name, pair_address, block, blockNumber, chunk_size))
         args_lists.append((
-            i, name, pair_address, pair_name,
+            network, i, name, pair_address, pair_name,
             'UBE_PAIR_ABI', event_name_Swap, [arg_name], block,
             blockNumber, chunk_size, False
         ))
@@ -246,6 +301,7 @@ def get_moola_users(process_pool, save_path, blockNumber: int, chunk_size=500):
     arg_name = '_user' # a user ethereum address
     saved_files = []
     args_lists = []
+    network = os.getenv(ENV_WEB3_NETWORK)
     for e in events_names:
         name = os.path.join(save_path, 'moola.%s.json' % e)
         saved_files.append(name)
@@ -254,7 +310,7 @@ def get_moola_users(process_pool, save_path, blockNumber: int, chunk_size=500):
             continue
 
         args_lists.append((
-            '0', name, moola_lending_pool, lendingpool_name,
+            network, '0', name, moola_lending_pool, lendingpool_name,
             'MOOLA_LENDINGPOOL_ABI', e, [arg_name], lending_start_block,
             blockNumber, chunk_size, True
         ))
