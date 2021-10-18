@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./interfaces/ICommunity.sol";
+import "./interfaces/ICommunityOld.sol";
 import "./interfaces/ICommunityAdmin.sol";
 
 import "hardhat/console.sol";
@@ -190,7 +191,7 @@ contract Community is ICommunity, Initializable, AccessControlUpgradeable, Ownab
     }
 
     // only used for backwards compatibility
-    function impactMarketAddress() external pure override returns (address) {
+    function impactMarketAddress() public pure override returns (address) {
         return address(0);
     }
 
@@ -223,8 +224,6 @@ contract Community is ICommunity, Initializable, AccessControlUpgradeable, Ownab
         // send default amount when adding a new beneficiary
         bool success = cUSD().transfer(beneficiaryAddress_, DEFAULT_AMOUNT);
         require(success, "Community::addBeneficiary: NOT_ALLOWED");
-
-        _beneficiaryList.add(beneficiaryAddress_);
 
         emit BeneficiaryAdded(beneficiaryAddress_);
     }
@@ -358,25 +357,6 @@ contract Community is ICommunity, Initializable, AccessControlUpgradeable, Ownab
         _communityAdmin.fundCommunity();
     }
 
-    /**
-     * Migrate funds in current community to new one.
-     */
-    function migrateFunds(ICommunity newCommunity_, address newCommunityManager_)
-        external
-        override
-        onlyOwner
-    {
-        //        require(
-        //            newCommunity_.hasRole(MANAGER_ROLE, newCommunityManager_) == true,       // must add IAccessControlUpgradeable in ICommunity inheritance
-        //            "Community::migrateFunds: NOT_ALLOWED"
-        //        );
-        require(newCommunity_.previousCommunity() == this, "Community::migrateFunds: NOT_ALLOWED");
-        uint256 balance = cUSD().balanceOf(address(this));
-        bool success = cUSD().transfer(address(newCommunity_), balance);
-        require(success, "Community::migrateFunds: NOT_ALLOWED");
-        emit MigratedFunds(address(newCommunity_), balance);
-    }
-
     function donate(address sender_, uint256 amount_) external override {
         cUSD().safeTransferFrom(sender_, address(this), amount_);
         _privateFunds += amount_;
@@ -398,23 +378,34 @@ contract Community is ICommunity, Initializable, AccessControlUpgradeable, Ownab
         // no need to check if it's a beneficiary, as the state is copied
         Beneficiary storage beneficiary = _beneficiaries[msg.sender];
 
-        Beneficiary memory oldBeneficiary = _previousCommunity.beneficiaries(msg.sender);
+        if (impactMarketAddress() == address(0)) {
+            Beneficiary memory oldBeneficiary = _previousCommunity.beneficiaries(msg.sender);
 
-        _changeBeneficiaryState(beneficiary, oldBeneficiary.state);
-        beneficiary.lastClaim = oldBeneficiary.lastClaim;
-        beneficiary.claimedAmount = oldBeneficiary.claimedAmount;
-        beneficiary.claims =
-            (_previousCommunity.lastInterval(msg.sender) - _baseInterval) /
-            _incrementInterval +
-            1;
-
-        if (beneficiary.state == BeneficiaryState.NONE) {
-            _beneficiaryList.add(msg.sender);
+            _changeBeneficiaryState(beneficiary, oldBeneficiary.state);
+            beneficiary.lastClaim = oldBeneficiary.lastClaim;
+            beneficiary.claimedAmount = oldBeneficiary.claimedAmount;
+            beneficiary.claims = beneficiary.claims;
+        } else {
+            ICommunityOld oldCommunity = ICommunityOld(address(_previousCommunity));
+            uint256 previousLastInterval = oldCommunity.lastInterval(msg.sender);
+            _changeBeneficiaryState(
+                beneficiary,
+                BeneficiaryState(oldCommunity.beneficiaries(msg.sender))
+            );
+            beneficiary.lastClaim = oldCommunity.cooldown(msg.sender) - previousLastInterval;
+            beneficiary.claimedAmount = oldCommunity.claimed(msg.sender);
+            beneficiary.claims = (previousLastInterval - _baseInterval) / _incrementInterval + 1;
         }
     }
 
     function managerJoinFromMigrated() external override {
-        //        require(_previousCommunity.hasRole(MANAGER_ROLE, msg.sender), "NOT_ALLOWED");    // must add IAccessControlUpgradeable in ICommunity inheritance
+        require(
+            IAccessControlUpgradeable(address(_previousCommunity)).hasRole(
+                MANAGER_ROLE,
+                msg.sender
+            ),
+            "NOT_ALLOWED"
+        );
         grantRole(MANAGER_ROLE, msg.sender);
     }
 
@@ -425,12 +416,15 @@ contract Community is ICommunity, Initializable, AccessControlUpgradeable, Ownab
             return;
         }
 
+        if (beneficiary.state == BeneficiaryState.NONE) {
+            _beneficiaryList.add(msg.sender);
+        }
+
         if (newState_ == BeneficiaryState.Valid) {
             _validBeneficiaryCount++;
-            _claimAmount -= _decreaseStep;
+            _maxClaim -= _decreaseStep;
         } else if (beneficiary.state == BeneficiaryState.Valid) {
             _validBeneficiaryCount--;
-            _claimAmount += _decreaseStep;
         }
 
         beneficiary.state = newState_;

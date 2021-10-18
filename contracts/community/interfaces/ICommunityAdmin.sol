@@ -27,6 +27,7 @@ interface ICommunityAdmin {
     function communityListLength() external view returns (uint256);
 
     function setTreasury(ITreasury newTreasury) external;
+    function setCommunityTemplate(ICommunity communityTemplate_) external;
     function setCommunityMinTranche(uint256 newCommunityMinTranche) external;
     function setCommunityMaxTranche(uint256 newCommunityMaxTranche) external;
     function addCommunity(
@@ -36,17 +37,12 @@ interface ICommunityAdmin {
         uint256 baseInterval,
         uint256 incrementInterval
     ) external;
-    function migrateCommunity(
-        address firstManager,
-        ICommunity previousCommunity,
-        ICommunityAdmin newCommunityAdminHelper
-    ) external;
+    function migrateCommunity(address firstManager, ICommunity previousCommunity) external;
     function removeCommunity(ICommunity community) external;
     function fundCommunity() external;
     function transfer(IERC20 erc20, address to, uint256 amount) external;
     function transferFromCommunity(ICommunity community, IERC20 erc20, address to, uint256 amount) external;
     function updateProxyImplementation(address communityProxy, address newLogic) external;
-
 }
 
 
