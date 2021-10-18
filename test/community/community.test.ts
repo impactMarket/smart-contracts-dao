@@ -497,7 +497,7 @@ describe("Community - Governance (2)", () => {
 	});
 
 	it("should be able to migrate funds from community if CommunityAdmin", async () => {
-		const previousCommunityPreviousBalance = await cUSDInstance.balanceOf(
+		const previousCommunityOldBalance = await cUSDInstance.balanceOf(
 			communityInstance.address
 		);
 
@@ -519,10 +519,99 @@ describe("Community - Governance (2)", () => {
 		const newCommunityNewBalance = await cUSDInstance.balanceOf(
 			newCommunityAddress
 		);
-		previousCommunityPreviousBalance.should.be.equal(
-			newCommunityNewBalance
-		);
+		previousCommunityOldBalance.should.be.equal(newCommunityNewBalance);
 		previousCommunityNewBalance.should.be.equal(parseEther("100"));
+	});
+
+	it("should be able to call managerJoinFromMigrated", async () => {
+		await communityInstance
+			.connect(communityManagerA)
+			.addManager(communityManagerB.address);
+
+		const newTx = await communityAdminProxy.migrateCommunity(
+			communityManagerA.address,
+			communityInstance.address
+		);
+
+		let receipt = await newTx.wait();
+
+		const newCommunityAddress = receipt.events?.filter((x: any) => {
+			return x.event == "CommunityMigrated";
+		})[0]["args"]["_communityAddress"];
+
+		const newCommunityInstance = await Community.attach(
+			newCommunityAddress
+		);
+		await expect(
+			newCommunityInstance
+				.connect(communityManagerC)
+				.managerJoinFromMigrated()
+		).to.be.rejectedWith("Community::managerJoinFromMigrated: NOT_ALLOWED");
+		await expect(
+			newCommunityInstance
+				.connect(communityManagerB)
+				.addManager(communityManagerC.address)
+		).to.be.rejectedWith("Community: NOT_MANAGER");
+		await expect(
+			newCommunityInstance
+				.connect(communityManagerB)
+				.managerJoinFromMigrated()
+		).to.be.fulfilled;
+		await expect(
+			newCommunityInstance
+				.connect(communityManagerB)
+				.addManager(communityManagerC.address)
+		).to.be.fulfilled;
+	});
+
+	it("should be able to call beneficiaryJoinFromMigrated", async () => {
+		await communityInstance
+			.connect(communityManagerA)
+			.addBeneficiary(beneficiaryA.address);
+
+		await communityInstance
+			.connect(communityManagerA)
+			.addBeneficiary(beneficiaryB.address);
+
+		const newTx = await communityAdminProxy.migrateCommunity(
+			communityManagerA.address,
+			communityInstance.address
+		);
+
+		let receipt = await newTx.wait();
+
+		const newCommunityAddress = receipt.events?.filter((x: any) => {
+			return x.event == "CommunityMigrated";
+		})[0]["args"]["_communityAddress"];
+
+		const newCommunityInstance = await Community.attach(
+			newCommunityAddress
+		);
+		await expect(
+			newCommunityInstance
+				.connect(beneficiaryA)
+				.beneficiaryJoinFromMigrated()
+		).to.be.fulfilled;
+		await expect(
+			newCommunityInstance
+				.connect(beneficiaryB)
+				.beneficiaryJoinFromMigrated()
+		).to.be.fulfilled;
+		await expect(
+			newCommunityInstance
+				.connect(beneficiaryC)
+				.beneficiaryJoinFromMigrated()
+		).to.be.fulfilled;
+
+		(await newCommunityInstance.beneficiaries(beneficiaryA.address)).state
+			.toString()
+			.should.be.equal(BeneficiaryState.Valid);
+		(await newCommunityInstance.beneficiaries(beneficiaryB.address)).state
+			.toString()
+			.should.be.equal(BeneficiaryState.Valid);
+		(await newCommunityInstance.beneficiaries(beneficiaryC.address)).state
+			.toString()
+			.should.be.equal(BeneficiaryState.NONE);
 	});
 
 	it("should not be able to migrate from invalid community", async () => {
@@ -547,24 +636,24 @@ describe("Community - Governance (2)", () => {
 		(await communityInstance.incrementInterval()).should.be.equal(
 			hour.toString()
 		);
-		await communityInstance
-			.connect(communityManagerA)
-			.edit(
-				claimAmountTwo.toString(),
-				maxClaimTen.toString(),
-				oneCent.toString(),
-				week.toString(),
-				day.toString()
-			);
+		await communityAdminProxy.editCommunity(
+			communityInstance.address,
+			claimAmountTwo.toString(),
+			maxClaimTen.toString(),
+			oneCent.toString(),
+			week.toString(),
+			day.toString()
+		);
+
 		(await communityInstance.incrementInterval()).should.be.equal(
 			day.toString()
 		);
 	});
 
-	it("should not be able edit community if not manager", async () => {
+	it("should not be able edit community if not CommunityAdmin", async () => {
 		await expect(
 			communityInstance
-				.connect(communityManagerB)
+				.connect(adminAccount1)
 				.edit(
 					claimAmountTwo.toString(),
 					maxClaimTen.toString(),
@@ -572,27 +661,29 @@ describe("Community - Governance (2)", () => {
 					day.toString(),
 					day.toString()
 				)
-		).to.be.rejectedWith("NOT_MANAGER");
+		).to.be.rejectedWith("Ownable: caller is not the owner");
 	});
 
 	it("should not be able edit community with invalid values", async () => {
 		await expect(
-			communityInstance
-				.connect(communityManagerA)
-				.edit(
-					claimAmountTwo.toString(),
-					maxClaimTen.toString(),
-					oneCent.toString(),
-					day.toString(),
-					week.toString()
-				)
+			communityAdminProxy.editCommunity(
+				communityInstance.address,
+				claimAmountTwo.toString(),
+				maxClaimTen.toString(),
+				oneCent.toString(),
+				day.toString(),
+				week.toString()
+			)
 		).to.be.rejected;
+
 		await expect(
-			communityInstance.connect(communityManagerA).edit(
-				maxClaimTen, // supposed to be wrong
-				claimAmountTwo,
-				week,
-				day
+			communityAdminProxy.editCommunity(
+				communityInstance.address,
+				maxClaimTen.toString(),
+				claimAmountTwo.toString(),
+				oneCent.toString(),
+				day.toString(),
+				week.toString()
 			)
 		).to.be.rejected;
 	});
@@ -621,6 +712,11 @@ describe("Community - Governance (2)", () => {
 			communityInstance
 				.connect(communityManagerA)
 				.addManager(communityManagerB.address)
+		).to.be.fulfilled;
+		await expect(
+			communityInstance
+				.connect(communityManagerB)
+				.addManager(communityManagerC.address)
 		).to.be.fulfilled;
 	});
 

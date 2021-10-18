@@ -36,12 +36,20 @@ interface ICommunityAdmin {
         uint256 maxClaim,
         uint256 baseInterval,
         uint256 incrementInterval
-    ) external;
+    ) external returns(address);
     function migrateCommunity(address firstManager, ICommunity previousCommunity) external;
     function removeCommunity(ICommunity community) external;
     function fundCommunity() external;
     function transfer(IERC20 erc20, address to, uint256 amount) external;
     function transferFromCommunity(ICommunity community, IERC20 erc20, address to, uint256 amount) external;
+    function editCommunity(
+        ICommunity community,
+        uint256 claimAmount,
+        uint256 maxClaim,
+        uint256 decreaseStep,
+        uint256 baseInterval,
+        uint256 incrementInterval
+    ) external;
     function updateProxyImplementation(address communityProxy, address newLogic) external;
 }
 

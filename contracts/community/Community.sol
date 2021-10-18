@@ -96,6 +96,7 @@ contract Community is ICommunity, Initializable, AccessControlUpgradeable, Ownab
         __Ownable_init();
 
         _setupRole(MANAGER_ROLE, firstManager_);
+        _setupRole(MANAGER_ROLE, msg.sender);
         _setRoleAdmin(MANAGER_ROLE, MANAGER_ROLE);
         emit ManagerAdded(firstManager_);
 
@@ -199,7 +200,7 @@ contract Community is ICommunity, Initializable, AccessControlUpgradeable, Ownab
      * @dev Allow community managers to add other managers.
      */
     function addManager(address _account) external override onlyManagers {
-        grantRole(MANAGER_ROLE, _account);
+        _setupRole(MANAGER_ROLE, _account);
         emit ManagerAdded(_account);
     }
 
@@ -304,7 +305,7 @@ contract Community is ICommunity, Initializable, AccessControlUpgradeable, Ownab
     }
 
     /**
-     * @dev Allow community managers to edit community variables.
+     * @dev Allow community admin to edit community variables.
      */
     function edit(
         uint256 claimAmount_,
@@ -312,7 +313,7 @@ contract Community is ICommunity, Initializable, AccessControlUpgradeable, Ownab
         uint256 decreaseStep_,
         uint256 baseInterval_,
         uint256 incrementInterval_
-    ) external override onlyManagers {
+    ) external override onlyOwner {
         require(
             baseInterval_ > incrementInterval_,
             "Community::constructor: baseInterval must be greater than incrementInterval"
@@ -404,9 +405,9 @@ contract Community is ICommunity, Initializable, AccessControlUpgradeable, Ownab
                 MANAGER_ROLE,
                 msg.sender
             ),
-            "NOT_ALLOWED"
+            "Community::managerJoinFromMigrated: NOT_ALLOWED"
         );
-        grantRole(MANAGER_ROLE, msg.sender);
+        _setupRole(MANAGER_ROLE, msg.sender);
     }
 
     function _changeBeneficiaryState(Beneficiary storage beneficiary, BeneficiaryState newState_)
@@ -425,6 +426,7 @@ contract Community is ICommunity, Initializable, AccessControlUpgradeable, Ownab
             _maxClaim -= _decreaseStep;
         } else if (beneficiary.state == BeneficiaryState.Valid) {
             _validBeneficiaryCount--;
+            _maxClaim -= _decreaseStep;
         }
 
         beneficiary.state = newState_;

@@ -148,7 +148,7 @@ contract CommunityAdminImplementation is
         uint256 maxClaim_,
         uint256 baseInterval_,
         uint256 incrementInterval_
-    ) external override onlyOwner {
+    ) external override onlyOwner returns (address) {
         address communityAddress = deployCommunity(
             firstManager_,
             claimAmount_,
@@ -170,6 +170,8 @@ contract CommunityAdminImplementation is
         );
 
         transferToCommunity(ICommunity(communityAddress), _communityMinTranche);
+
+        return communityAddress;
     }
 
     /**
@@ -187,6 +189,12 @@ contract CommunityAdminImplementation is
             address(previousCommunity_) != address(0),
             "CommunityAdmin::migrateCommunity: NOT_VALID"
         );
+
+        uint256 maxClaim = previousCommunity_.impactMarketAddress() == address(0)
+            ? previousCommunity_.maxClaim() +
+                previousCommunity_.validBeneficiaryCount() *
+                previousCommunity_.decreaseStep()
+            : previousCommunity_.maxClaim();
         ICommunity community = ICommunity(
             deployCommunity(
                 firstManager_,
@@ -201,8 +209,6 @@ contract CommunityAdminImplementation is
 
         if (previousCommunity_.impactMarketAddress() == address(0)) {
             uint256 balance = _cUSD.balanceOf(address(previousCommunity_));
-            console.log("this: ", address(this));
-            console.log("msg.sender1: ", msg.sender);
             previousCommunity_.transferFunds(_cUSD, address(community), balance);
         }
 
@@ -245,6 +251,17 @@ contract CommunityAdminImplementation is
         uint256 amount_
     ) external override onlyOwner {
         community_.transferFunds(erc20_, to_, amount_);
+    }
+
+    function editCommunity(
+        ICommunity community_,
+        uint256 claimAmount_,
+        uint256 maxClaim_,
+        uint256 decreaseStep_,
+        uint256 baseInterval_,
+        uint256 incrementInterval_
+    ) external override onlyOwner {
+        community_.edit(claimAmount_, maxClaim_, decreaseStep_, baseInterval_, incrementInterval_);
     }
 
     /**
