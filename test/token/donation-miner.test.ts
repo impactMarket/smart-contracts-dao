@@ -88,7 +88,9 @@
 // 		const { cUSD, IPCT, DonationMiner, signers } = await initialize();
 //
 // 		// console.log(formatEther(await DonationMiner.contract.calculateRewardPerBlock(1)));
-// 		console.log(formatEther(await DonationMiner.contract.calculateRewardPerBlock(2)));
+// 		console.log(
+// 			formatEther(await DonationMiner.contract.calculateRewardPerBlock(2))
+// 		);
 // 		// console.log(formatEther(await DonationMiner.contract.calculateRewardPerBlock(3)));
 // 		// console.log(formatEther(await DonationMiner.contract.calculateRewardPerBlock(4)));
 // 		// console.log(formatEther(await DonationMiner.contract.calculateRewardPerBlock(5)));
@@ -104,9 +106,7 @@
 // 		// await DonationMiner.contract.calculateRewardPerBlock(6)
 // 		// await DonationMiner.contract.calculateRewardPerBlock(7)
 // 		// await DonationMiner.contract.calculateRewardPerBlock(3284)
-//
 // 	});
-//
 //
 // 	it("Should approve and donate 100 cUSD from user1", async function () {
 // 		const { cUSD, IPCT, DonationMiner, signers } = await initialize();
