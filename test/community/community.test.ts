@@ -16,6 +16,7 @@ import {
 import type * as ethersTypes from "ethers";
 import { DeployFunction } from "hardhat-deploy/types";
 import { parseEther, formatEther } from "@ethersproject/units";
+import { advanceTimeAndBlockNTimes } from "../utils/TimeTravel";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const {
@@ -61,10 +62,11 @@ let treasuryInstance: ethersTypes.Contract;
 let cUSDInstance: ethersTypes.Contract;
 
 // constants
-const hour = time.duration.hours(1);
-const day = time.duration.days(1);
-const week = time.duration.weeks(1);
-const month = time.duration.days(30);
+const oneMinuteInBlocks = 12;
+const threeMinutesInBlocks = 36;
+const hourInBlocks = 720;
+const dayInBlocks = 17280;
+const weekInBlocks = 120960;
 const claimAmountTwo = parseEther("2");
 const maxClaimTen = parseEther("10");
 const fiveCents = parseEther("0.05");
@@ -120,8 +122,8 @@ async function addDefaultCommunity() {
 		communityManagerA.address,
 		claimAmountTwo.toString(),
 		maxClaimTen.toString(),
-		day.toString(),
-		hour.toString()
+		threeMinutesInBlocks.toString(),
+		oneMinuteInBlocks.toString()
 	);
 
 	let receipt = await tx.wait();
@@ -156,10 +158,10 @@ describe("Community - Setup", () => {
 			claimAmountTwo.toString()
 		);
 		(await communityInstance.baseInterval()).should.be.equal(
-			day.toString()
+			threeMinutesInBlocks.toString()
 		);
 		(await communityInstance.incrementInterval()).should.be.equal(
-			hour.toString()
+			oneMinuteInBlocks.toString()
 		);
 		(await communityInstance.maxClaim()).should.be.equal(
 			maxClaimTen.toString()
@@ -342,38 +344,35 @@ describe("Community - Claim", () => {
 		expect(
 			await communityInstance.lastInterval(beneficiaryA.address)
 		).to.be.equal(baseInterval);
-		await network.provider.send("evm_increaseTime", [baseInterval]);
+		await advanceTimeAndBlockNTimes(baseInterval);
 		await communityInstance.connect(beneficiaryA).claim();
 		expect(
 			await communityInstance.lastInterval(beneficiaryA.address)
 		).to.be.equal(baseInterval + incrementInterval);
-		await network.provider.send("evm_increaseTime", [incrementInterval]);
+		await advanceTimeAndBlockNTimes(incrementInterval);
+
 		await expect(
 			communityInstance.connect(beneficiaryA).claim()
 		).to.be.rejectedWith("NOT_YET");
 		expect(
 			await communityInstance.lastInterval(beneficiaryA.address)
 		).to.be.equal(baseInterval + incrementInterval);
-		await network.provider.send("evm_increaseTime", [
-			baseInterval + incrementInterval,
-		]);
+		await advanceTimeAndBlockNTimes(baseInterval + incrementInterval);
+
 		await expect(communityInstance.connect(beneficiaryA).claim()).to.be
 			.fulfilled;
 		expect(
 			await communityInstance.lastInterval(beneficiaryA.address)
 		).to.be.equal(baseInterval + 2 * incrementInterval);
-		await network.provider.send("evm_increaseTime", [
-			baseInterval + incrementInterval,
-		]);
+		await advanceTimeAndBlockNTimes(baseInterval + incrementInterval);
+
 		await expect(
 			communityInstance.connect(beneficiaryA).claim()
 		).to.be.rejectedWith("NOT_YET");
 		expect(
 			await communityInstance.lastInterval(beneficiaryA.address)
 		).to.be.equal(baseInterval + 2 * incrementInterval);
-		await network.provider.send("evm_increaseTime", [
-			baseInterval + 2 * incrementInterval,
-		]);
+		await advanceTimeAndBlockNTimes(baseInterval + 2 * incrementInterval);
 		await expect(communityInstance.connect(beneficiaryA).claim()).to.be
 			.fulfilled;
 	});
@@ -419,26 +418,20 @@ describe("Community - Claim", () => {
 			await communityInstance.incrementInterval()
 		).toNumber();
 		await communityInstance.connect(beneficiaryA).claim();
-		await network.provider.send("evm_increaseTime", [baseInterval]);
+		await advanceTimeAndBlockNTimes(baseInterval);
 		await communityInstance.connect(beneficiaryA).claim();
-		await network.provider.send("evm_increaseTime", [incrementInterval]);
+		await advanceTimeAndBlockNTimes(incrementInterval);
 		await expect(
 			communityInstance.connect(beneficiaryA).claim()
 		).to.be.rejectedWith("NOT_YET");
-		await network.provider.send("evm_increaseTime", [
-			baseInterval + incrementInterval,
-		]);
+		await advanceTimeAndBlockNTimes(baseInterval + incrementInterval);
 		await expect(communityInstance.connect(beneficiaryA).claim()).to.be
 			.fulfilled;
-		await network.provider.send("evm_increaseTime", [
-			baseInterval + incrementInterval,
-		]);
+		await advanceTimeAndBlockNTimes(baseInterval + incrementInterval);
 		await expect(
 			communityInstance.connect(beneficiaryA).claim()
 		).to.be.rejectedWith("NOT_YET");
-		await network.provider.send("evm_increaseTime", [
-			baseInterval + 2 * incrementInterval,
-		]);
+		await advanceTimeAndBlockNTimes(baseInterval + 2 * incrementInterval);
 		await expect(communityInstance.connect(beneficiaryA).claim()).to.be
 			.fulfilled;
 	});
@@ -447,7 +440,7 @@ describe("Community - Claim", () => {
 		const baseInterval = (
 			await communityInstance.baseInterval()
 		).toNumber();
-		await network.provider.send("evm_increaseTime", [baseInterval + 5]);
+		await advanceTimeAndBlockNTimes(baseInterval + 1);
 		await communityInstance.connect(beneficiaryA).claim();
 		(await cUSDInstance.balanceOf(beneficiaryA.address)).should.be.equal(
 			claimAmountTwo.add(fiveCents)
@@ -466,14 +459,14 @@ describe("Community - Claim", () => {
 		await communityInstance.connect(beneficiaryA).claim();
 		const maxClaimsPerUser = maxClaimAmount.div(claimAmount).toNumber();
 		for (let index = 0; index < maxClaimsPerUser - 1; index++) {
-			await network.provider.send("evm_increaseTime", [
-				baseInterval + incrementInterval * index + 5,
-			]);
+			await advanceTimeAndBlockNTimes(
+				baseInterval + incrementInterval * index + 5
+			);
 			await communityInstance.connect(beneficiaryA).claim();
 		}
-		await network.provider.send("evm_increaseTime", [
-			baseInterval + incrementInterval * maxClaimsPerUser + 5,
-		]);
+		await advanceTimeAndBlockNTimes(
+			baseInterval + incrementInterval * maxClaimsPerUser + 5
+		);
 		await expect(
 			communityInstance.connect(beneficiaryA).claim()
 		).to.be.rejectedWith("MAX_CLAIM");
@@ -634,19 +627,19 @@ describe("Community - Governance (2)", () => {
 
 	it("should be able to edit community if manager", async () => {
 		(await communityInstance.incrementInterval()).should.be.equal(
-			hour.toString()
+			oneMinuteInBlocks.toString()
 		);
 		await communityAdminProxy.editCommunity(
 			communityInstance.address,
 			claimAmountTwo.toString(),
 			maxClaimTen.toString(),
 			oneCent.toString(),
-			week.toString(),
-			day.toString()
+			weekInBlocks.toString(),
+			threeMinutesInBlocks.toString()
 		);
 
 		(await communityInstance.incrementInterval()).should.be.equal(
-			day.toString()
+			threeMinutesInBlocks.toString()
 		);
 	});
 
@@ -658,8 +651,8 @@ describe("Community - Governance (2)", () => {
 					claimAmountTwo.toString(),
 					maxClaimTen.toString(),
 					oneCent.toString(),
-					day.toString(),
-					day.toString()
+					threeMinutesInBlocks.toString(),
+					threeMinutesInBlocks.toString()
 				)
 		).to.be.rejectedWith("Ownable: caller is not the owner");
 	});
@@ -671,8 +664,8 @@ describe("Community - Governance (2)", () => {
 				claimAmountTwo.toString(),
 				maxClaimTen.toString(),
 				oneCent.toString(),
-				day.toString(),
-				week.toString()
+				threeMinutesInBlocks.toString(),
+				weekInBlocks.toString()
 			)
 		).to.be.rejected;
 
@@ -682,8 +675,8 @@ describe("Community - Governance (2)", () => {
 				maxClaimTen.toString(),
 				claimAmountTwo.toString(),
 				oneCent.toString(),
-				day.toString(),
-				week.toString()
+				threeMinutesInBlocks.toString(),
+				weekInBlocks.toString()
 			)
 		).to.be.rejected;
 	});
@@ -782,8 +775,8 @@ describe("CommunityAdmin", () => {
 			communityManagerA.address,
 			claimAmountTwo.toString(),
 			maxClaimTen.toString(),
-			day.toString(),
-			hour.toString()
+			threeMinutesInBlocks.toString(),
+			oneMinuteInBlocks.toString()
 		);
 
 		let receipt = await tx.wait();
@@ -795,10 +788,10 @@ describe("CommunityAdmin", () => {
 
 		(await communityInstance.baseInterval())
 			.toString()
-			.should.be.equal("86400");
+			.should.be.equal(threeMinutesInBlocks.toString());
 		(await communityInstance.incrementInterval())
 			.toString()
-			.should.be.equal("3600");
+			.should.be.equal(oneMinuteInBlocks.toString());
 		(await communityInstance.maxClaim()).should.be.equal(maxClaimTen);
 	});
 
@@ -812,8 +805,8 @@ describe("CommunityAdmin", () => {
 			communityManagerA.address,
 			claimAmountTwo.toString(),
 			maxClaimTen.toString(),
-			day.toString(),
-			hour.toString()
+			threeMinutesInBlocks.toString(),
+			oneMinuteInBlocks.toString()
 		);
 
 		let receipt = await tx.wait();
@@ -832,8 +825,8 @@ describe("CommunityAdmin", () => {
 				communityManagerA.address,
 				claimAmountTwo.toString(),
 				maxClaimTen.toString(),
-				hour.toString(),
-				day.toString()
+				oneMinuteInBlocks.toString(),
+				threeMinutesInBlocks.toString()
 			)
 		).to.be.rejected;
 		await expect(
@@ -841,8 +834,8 @@ describe("CommunityAdmin", () => {
 				communityManagerA.address,
 				maxClaimTen.toString(), // it's supposed to be wrong!
 				claimAmountTwo.toString(),
-				day.toString(),
-				hour.toString()
+				threeMinutesInBlocks.toString(),
+				oneMinuteInBlocks.toString()
 			)
 		).to.be.rejected;
 	});
@@ -857,8 +850,8 @@ describe("Chaos test (complete flow)", async () => {
 			communityManager.address,
 			claimAmountTwo.toString(),
 			maxClaimTen.toString(),
-			day.toString(),
-			hour.toString()
+			threeMinutesInBlocks.toString(),
+			oneMinuteInBlocks.toString()
 		);
 
 		let receipt = await tx.wait();
@@ -881,7 +874,6 @@ describe("Chaos test (complete flow)", async () => {
 			.connect(communityManagerAddress)
 			.addBeneficiary(beneficiaryAddress.address);
 		const block = await provider.getBlock(tx.blockNumber); // block is null; the regular provider apparently doesn't know about this block yet.
-		const creationTime = block.timestamp; // Block is null, so this fails.
 
 		(await instance.beneficiaries(beneficiaryAddress.address)).state
 			.toString()
@@ -895,7 +887,7 @@ describe("Chaos test (complete flow)", async () => {
 		const waitIs = (
 			await instance.lastInterval(beneficiaryAddress.address)
 		).toNumber();
-		await network.provider.send("evm_increaseTime", [waitIs + 5]);
+		await advanceTimeAndBlockNTimes(waitIs + 1);
 	};
 	// claim
 	const beneficiaryClaim = async (

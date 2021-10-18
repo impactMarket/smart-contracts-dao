@@ -209,7 +209,7 @@ contract CommunityAdminImplementation is
 
         if (previousCommunity_.impactMarketAddress() == address(0)) {
             uint256 balance = _cUSD.balanceOf(address(previousCommunity_));
-            previousCommunity_.transferFunds(_cUSD, address(community), balance);
+            previousCommunity_.transfer(_cUSD, address(community), balance);
         }
 
         _communities[address(community)] = CommunityState.Valid;
@@ -224,6 +224,8 @@ contract CommunityAdminImplementation is
     function removeCommunity(ICommunity community_) external override onlyOwner {
         _communities[address(community_)] = CommunityState.Removed;
         emit CommunityRemoved(address(community_));
+
+        community_.transfer(_cUSD, address(_treasury), _cUSD.balanceOf(address(community_)));
     }
 
     function fundCommunity() external override onlyCommunities {
@@ -250,7 +252,7 @@ contract CommunityAdminImplementation is
         address to_,
         uint256 amount_
     ) external override onlyOwner {
-        community_.transferFunds(erc20_, to_, amount_);
+        community_.transfer(erc20_, to_, amount_);
     }
 
     function editCommunity(

@@ -55,4 +55,5 @@ interface IDonationMiner {
     function claimRewards() external;
     function calculateClaimableRewards(address donor) external returns (uint256);
     function estimateClaimableReward(address donor) external view returns (uint256);
+    function transfer(IERC20 token, address to, uint256 amount) external;
 }
