@@ -199,7 +199,7 @@ contract CommunityAdminImplementation is
             deployCommunity(
                 firstManager_,
                 previousCommunity_.claimAmount(),
-                previousCommunity_.maxClaim(),
+                maxClaim,
                 previousCommunity_.baseInterval(),
                 previousCommunity_.incrementInterval(),
                 previousCommunity_
