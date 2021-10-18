@@ -37,7 +37,6 @@ interface ICommunity {
     function beneficiaryListLength() external view returns (uint256);
     function impactMarketAddress() external pure returns (address);
 
-    function migrateFunds(ICommunity newCommunity, address newCommunityManager) external;
     function donate(address sender, uint256 amount) external;
     function addTreasuryFunds(uint256 amount) external;
     function transferFunds(IERC20 token, address to, uint256 amount) external;

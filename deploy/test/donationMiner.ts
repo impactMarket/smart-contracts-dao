@@ -48,13 +48,18 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		donationMinerProxyResult.address
 	);
 
+	//for testing we need that rewardPeriodSize to be a small number
+	//to have the same reward for a period, will change the values for
+	//firstRewardPerBlock (250) with  216000 (250 * 864)
+	//and rewardPeriodSize (17280) with  20 (17280 / 864)
 	await donationMinerContract.initialize(
 		cUSDAddress,
 		Token.address,
 		Treasury.address,
-		parseEther("100"),
-		14,
-		30
+		parseEther("216000"),
+		20,
+		30,
+		"998902"
 	);
 
 	await donationMinerContract.transferOwnership(ownerAddress);

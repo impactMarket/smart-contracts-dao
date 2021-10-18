@@ -5,8 +5,7 @@
 // import { parseEther, formatEther } from "@ethersproject/units";
 //
 // const STARTING_DELAY = 10;
-// const REWARD_PERIOD_SIZE = 14;
-// const STARTING_REWARD_PER_BLOCK = parseEther("100");
+// const REWARD_PERIOD_SIZE = 20;
 //
 // const initialize = deployments.createFixture(
 // 	async ({ deployments, getNamedAccounts, ethers }, options) => {
@@ -85,6 +84,30 @@
 // }
 //
 // describe("Donation Miner", () => {
+// 	it("Should approve and donate 100 cUSD from user1", async function () {
+// 		const { cUSD, IPCT, DonationMiner, signers } = await initialize();
+//
+// 		// console.log(formatEther(await DonationMiner.contract.calculateRewardPerBlock(1)));
+// 		console.log(formatEther(await DonationMiner.contract.calculateRewardPerBlock(2)));
+// 		// console.log(formatEther(await DonationMiner.contract.calculateRewardPerBlock(3)));
+// 		// console.log(formatEther(await DonationMiner.contract.calculateRewardPerBlock(4)));
+// 		// console.log(formatEther(await DonationMiner.contract.calculateRewardPerBlock(5)));
+// 		// console.log(formatEther(await DonationMiner.contract.calculateRewardPerBlock(6)));
+// 		// console.log(formatEther(await DonationMiner.contract.calculateRewardPerBlock(7)));
+// 		// console.log(formatEther(await DonationMiner.contract.calculateRewardPerBlock(3284)));
+//
+// 		// await DonationMiner.contract.calculateRewardPerBlock(1)
+// 		// await DonationMiner.contract.calculateRewardPerBlock(2)
+// 		// await DonationMiner.contract.calculateRewardPerBlock(3)
+// 		// await DonationMiner.contract.calculateRewardPerBlock(4)
+// 		// await DonationMiner.contract.calculateRewardPerBlock(5)
+// 		// await DonationMiner.contract.calculateRewardPerBlock(6)
+// 		// await DonationMiner.contract.calculateRewardPerBlock(7)
+// 		// await DonationMiner.contract.calculateRewardPerBlock(3284)
+//
+// 	});
+//
+//
 // 	it("Should approve and donate 100 cUSD from user1", async function () {
 // 		const { cUSD, IPCT, DonationMiner, signers } = await initialize();
 //

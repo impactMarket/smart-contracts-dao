@@ -109,6 +109,10 @@ contract CommunityAdminImplementation is
         _treasury = newTreasury_;
     }
 
+    function setCommunityTemplate(ICommunity communityTemplate_) external override onlyOwner {
+        _communityTemplate = communityTemplate_;
+    }
+
     /**
      * @dev Set the community min tranche
      */
@@ -173,11 +177,11 @@ contract CommunityAdminImplementation is
      * For further information regarding each parameter, see
      * *Community* smart contract constructor.
      */
-    function migrateCommunity(
-        address firstManager_,
-        ICommunity previousCommunity_,
-        ICommunityAdmin newCommunityAdminHelper_
-    ) external override onlyOwner {
+    function migrateCommunity(address firstManager_, ICommunity previousCommunity_)
+        external
+        override
+        onlyOwner
+    {
         _communities[address(previousCommunity_)] = CommunityState.Removed;
         require(
             address(previousCommunity_) != address(0),
@@ -194,7 +198,14 @@ contract CommunityAdminImplementation is
             )
         );
         require(address(community) != address(0), "CommunityAdmin::migrateCommunity: NOT_VALID");
-        previousCommunity_.migrateFunds(community, firstManager_);
+
+        if (previousCommunity_.impactMarketAddress() == address(0)) {
+            uint256 balance = _cUSD.balanceOf(address(previousCommunity_));
+            console.log("this: ", address(this));
+            console.log("msg.sender1: ", msg.sender);
+            previousCommunity_.transferFunds(_cUSD, address(community), balance);
+        }
+
         _communities[address(community)] = CommunityState.Valid;
         _communityList.add(address(community));
 
@@ -297,7 +308,7 @@ contract CommunityAdminImplementation is
 
         uint256 trancheAmount;
         trancheAmount =
-            (10e36 * validBeneficiaries * (treasuryFunds + privateFunds)) /
+            (1e36 * validBeneficiaries * (treasuryFunds + privateFunds)) /
             (claimAmount * treasuryFunds);
 
         if (trancheAmount < _communityMinTranche) {
