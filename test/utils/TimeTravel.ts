@@ -29,10 +29,7 @@ export async function advanceTimeAndBlock() {
 	await advanceBlock();
 }
 
-export async function advanceTimeAndBlockNTimes(
-	n: number,
-	rewardPeriodSize: number
-) {
+export async function advanceTimeAndBlockNTimes(n: number) {
 	for (let i = 0; i < n; i++) {
 		const newBlock = await advanceTimeAndBlock();
 	}

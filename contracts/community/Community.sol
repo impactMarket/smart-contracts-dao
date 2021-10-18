@@ -220,7 +220,7 @@ contract Community is ICommunity, Initializable, AccessControlUpgradeable, Ownab
         require(beneficiary.state == BeneficiaryState.NONE, "Community::addBeneficiary: NOT_YET");
         _changeBeneficiaryState(beneficiary, BeneficiaryState.Valid);
         // solhint-disable-next-line not-rely-on-time
-        beneficiary.lastClaim = block.timestamp;
+        beneficiary.lastClaim = block.number;
 
         // send default amount when adding a new beneficiary
         bool success = cUSD().transfer(beneficiaryAddress_, DEFAULT_AMOUNT);
@@ -277,7 +277,7 @@ contract Community is ICommunity, Initializable, AccessControlUpgradeable, Ownab
 
         require(!_locked, "LOCKED");
         // solhint-disable-next-line not-rely-on-time
-        require(claimCooldown(msg.sender) <= block.timestamp, "Community::claim: NOT_YET");
+        require(claimCooldown(msg.sender) <= block.number, "Community::claim: NOT_YET");
         require(
             (beneficiary.claimedAmount + _claimAmount) <= _maxClaim,
             "Community::claim: MAX_CLAIM"
@@ -285,7 +285,7 @@ contract Community is ICommunity, Initializable, AccessControlUpgradeable, Ownab
 
         beneficiary.claimedAmount += _claimAmount;
         beneficiary.claims++;
-        beneficiary.lastClaim = block.timestamp;
+        beneficiary.lastClaim = block.number;
 
         bool success = cUSD().transfer(msg.sender, _claimAmount);
         require(success, "Community::claim: NOT_ALLOWED");
@@ -367,7 +367,7 @@ contract Community is ICommunity, Initializable, AccessControlUpgradeable, Ownab
         _treasuryFunds += _amount;
     }
 
-    function transferFunds(
+    function transfer(
         IERC20 erc20_,
         address to_,
         uint256 amount_
@@ -426,7 +426,7 @@ contract Community is ICommunity, Initializable, AccessControlUpgradeable, Ownab
             _maxClaim -= _decreaseStep;
         } else if (beneficiary.state == BeneficiaryState.Valid) {
             _validBeneficiaryCount--;
-            _maxClaim -= _decreaseStep;
+            _maxClaim += _decreaseStep;
         }
 
         beneficiary.state = newState_;

@@ -270,6 +270,14 @@ contract DonationMinerImplementation is
         return (_rewardPeriods[periodNumber_ - 1].rewardPerBlock * _decay) / DECAY_PRECISION;
     }
 
+    function transfer(
+        IERC20 token_,
+        address to_,
+        uint256 amount_
+    ) external override onlyOwner {
+        token_.safeTransfer(to_, amount_);
+    }
+
     /**
      * @dev Create all reward periods from the past
      */

@@ -39,7 +39,7 @@ interface ICommunity {
 
     function donate(address sender, uint256 amount) external;
     function addTreasuryFunds(uint256 amount) external;
-    function transferFunds(IERC20 token, address to, uint256 amount) external;
+    function transfer(IERC20 token, address to, uint256 amount) external;
     function addManager(address managerAddress) external;
     function removeManager(address managerAddress) external;
     function addBeneficiary(address beneficiaryAddress) external;
