@@ -16,11 +16,11 @@ import "./interfaces/CommunityStorageV1.sol";
 
 /**
  * @notice Welcome to the Community contract. For each community
- * there will be one contract like this being deployed by
- * CommunityAdmin contract. This enable us to save tokens on the
- * contract itself, and avoid the problems of having everything
- * in one single contract. Each community has it's own members and
- * and managers.
+ * there will be one proxy contract deployed by CommunityAdmin.
+ * The implementation of the proxy is this contract. This enable
+ * us to save tokens on the contract itself, and avoid the problems
+ * of having everything in one single contract.
+ *Each community has it's own members and and managers.
  */
 contract Community is
     CommunityStorageV1,
@@ -55,11 +55,11 @@ contract Community is
     event MigratedFunds(address indexed _to, uint256 _amount);
 
     /**
-     * @dev Constructor with custom fields, choosen by the community.
+     * @dev Constructor with custom fields, chosen by the community.
      * @param firstManager_ Community's first manager. Will
      * be able to add others.
      * @param claimAmount_ Base amount to be claim by the beneficiary.
-     * @param maxClaim_ Limit that a beneficiary can claim at once.
+     * @param maxClaim_ Limit that a beneficiary can claim at in total.
      * @param baseInterval_ Base interval to start claiming.
      * @param incrementInterval_ Increment interval used in each claim.
      * @param previousCommunity_ previous smart contract address of community.
@@ -70,8 +70,7 @@ contract Community is
         uint256 maxClaim_,
         uint256 baseInterval_,
         uint256 incrementInterval_,
-        ICommunity previousCommunity_,
-        ICommunityAdmin communityAdmin_
+        ICommunity previousCommunity_
     ) public initializer {
         require(
             baseInterval_ > incrementInterval_,
@@ -95,12 +94,12 @@ contract Community is
         _incrementInterval = incrementInterval_;
         _maxClaim = maxClaim_;
         _previousCommunity = previousCommunity_;
-        _communityAdmin = communityAdmin_;
+        _communityAdmin = ICommunityAdmin(msg.sender);
         _locked = false;
 
         _decreaseStep = 1e16;
 
-        transferOwnership(address(communityAdmin_));
+        transferOwnership(msg.sender);
     }
 
     modifier onlyValidBeneficiary() {

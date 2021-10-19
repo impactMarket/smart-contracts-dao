@@ -304,14 +304,13 @@ contract CommunityAdminImplementation is
             address(_communityTemplate),
             address(_communityProxyAdmin),
             abi.encodeWithSignature(
-                "initialize(address,uint256,uint256,uint256,uint256,address,address)",
+                "initialize(address,uint256,uint256,uint256,uint256,address)",
                 firstManager_,
                 claimAmount_,
                 maxClaim_,
                 baseInterval_,
                 incrementInterval_,
-                address(previousCommunity_),
-                address(this)
+                address(previousCommunity_)
             )
         );
 
