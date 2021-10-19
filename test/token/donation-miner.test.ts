@@ -409,7 +409,6 @@ describe("Donation Miner", () => {
 		await DonationMiner.contract.connect(signers[1]).donate(user1Donation);
 		await DonationMiner.contract.connect(signers[2]).donate(user2Donation);
 
-		// Advance 3 blocks
 		await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
 
 		// Claim their rewards
