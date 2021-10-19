@@ -3,6 +3,7 @@ pragma solidity 0.8.5;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
@@ -22,7 +23,8 @@ import "hardhat/console.sol";
 contract CommunityAdminImplementation is
     CommunityAdminStorageV1,
     Initializable,
-    OwnableUpgradeable
+    OwnableUpgradeable,
+    ReentrancyGuardUpgradeable
 {
     uint256 public constant VERSION = 1;
 
@@ -183,6 +185,7 @@ contract CommunityAdminImplementation is
         external
         override
         onlyOwner
+        nonReentrant
     {
         _communities[address(previousCommunity_)] = CommunityState.Removed;
         require(
@@ -221,7 +224,7 @@ contract CommunityAdminImplementation is
     /**
      * @dev Remove an existing community. Can be used only by an admin.
      */
-    function removeCommunity(ICommunity community_) external override onlyOwner {
+    function removeCommunity(ICommunity community_) external override onlyOwner nonReentrant {
         _communities[address(community_)] = CommunityState.Removed;
         emit CommunityRemoved(address(community_));
 
@@ -242,7 +245,7 @@ contract CommunityAdminImplementation is
         IERC20 erc20_,
         address to_,
         uint256 amount_
-    ) external override onlyOwner {
+    ) external override onlyOwner nonReentrant {
         erc20_.safeTransfer(to_, amount_);
     }
 
@@ -251,7 +254,7 @@ contract CommunityAdminImplementation is
         IERC20 erc20_,
         address to_,
         uint256 amount_
-    ) external override onlyOwner {
+    ) external override onlyOwner nonReentrant {
         community_.transfer(erc20_, to_, amount_);
     }
 
@@ -284,7 +287,7 @@ contract CommunityAdminImplementation is
         );
     }
 
-    function transferToCommunity(ICommunity community_, uint256 amount_) internal {
+    function transferToCommunity(ICommunity community_, uint256 amount_) internal nonReentrant {
         _treasury.transfer(_cUSD, address(community_), amount_);
         community_.addTreasuryFunds(amount_);
     }

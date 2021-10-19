@@ -274,7 +274,7 @@ contract DonationMinerImplementation is
         IERC20 token_,
         address to_,
         uint256 amount_
-    ) external override onlyOwner {
+    ) external override onlyOwner nonReentrant {
         token_.safeTransfer(to_, amount_);
     }
 

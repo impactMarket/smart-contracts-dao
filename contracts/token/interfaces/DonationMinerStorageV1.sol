@@ -3,8 +3,6 @@ pragma solidity 0.8.5;
 
 import "./IDonationMiner.sol";
 
-import "hardhat/console.sol";
-
 /**
  * @title Storage for DonationMiner
  * @notice For future upgrades, do not change DonationMinerStorageV1. Create a new

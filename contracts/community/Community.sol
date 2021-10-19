@@ -3,8 +3,7 @@ pragma solidity 0.8.5;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
@@ -13,6 +12,7 @@ import "./interfaces/ICommunityOld.sol";
 import "./interfaces/ICommunityAdmin.sol";
 
 import "hardhat/console.sol";
+import "./interfaces/CommunityStorageV1.sol";
 
 /**
  * @notice Welcome to the Community contract. For each community
@@ -22,29 +22,19 @@ import "hardhat/console.sol";
  * in one single contract. Each community has it's own members and
  * and managers.
  */
-contract Community is ICommunity, Initializable, AccessControlUpgradeable, OwnableUpgradeable {
+contract Community is
+    CommunityStorageV1,
+    Initializable,
+    AccessControlUpgradeable,
+    OwnableUpgradeable,
+    ReentrancyGuardUpgradeable
+{
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
     uint256 public constant DEFAULT_AMOUNT = 5e16;
     uint256 public constant VERSION = 1;
-
-    bool private _locked;
-    uint256 private _claimAmount;
-    uint256 private _baseInterval;
-    uint256 private _incrementInterval;
-    uint256 private _maxClaim;
-    uint256 private _validBeneficiaryCount;
-    uint256 private _treasuryFunds;
-    uint256 private _privateFunds;
-    uint256 private _decreaseStep;
-
-    ICommunity private _previousCommunity;
-    ICommunityAdmin private _communityAdmin;
-
-    mapping(address => Beneficiary) private _beneficiaries;
-    EnumerableSet.AddressSet private _beneficiaryList;
 
     event ManagerAdded(address indexed _account);
     event ManagerRemoved(address indexed _account);
@@ -66,9 +56,9 @@ contract Community is ICommunity, Initializable, AccessControlUpgradeable, Ownab
 
     /**
      * @dev Constructor with custom fields, choosen by the community.
-     * @param firstManager_ Comminuty's first manager. Will
+     * @param firstManager_ Community's first manager. Will
      * be able to add others.
-     * @param claimAmount_ Base amount to be claim by the benificiary.
+     * @param claimAmount_ Base amount to be claim by the beneficiary.
      * @param maxClaim_ Limit that a beneficiary can claim at once.
      * @param baseInterval_ Base interval to start claiming.
      * @param incrementInterval_ Increment interval used in each claim.
@@ -215,7 +205,12 @@ contract Community is ICommunity, Initializable, AccessControlUpgradeable, Ownab
     /**
      * @dev Allow community managers to add beneficiaries.
      */
-    function addBeneficiary(address beneficiaryAddress_) external override onlyManagers {
+    function addBeneficiary(address beneficiaryAddress_)
+        external
+        override
+        onlyManagers
+        nonReentrant
+    {
         Beneficiary storage beneficiary = _beneficiaries[beneficiaryAddress_];
         require(beneficiary.state == BeneficiaryState.NONE, "Community::addBeneficiary: NOT_YET");
         _changeBeneficiaryState(beneficiary, BeneficiaryState.Valid);
@@ -223,8 +218,7 @@ contract Community is ICommunity, Initializable, AccessControlUpgradeable, Ownab
         beneficiary.lastClaim = block.number;
 
         // send default amount when adding a new beneficiary
-        bool success = cUSD().transfer(beneficiaryAddress_, DEFAULT_AMOUNT);
-        require(success, "Community::addBeneficiary: NOT_ALLOWED");
+        cUSD().safeTransfer(beneficiaryAddress_, DEFAULT_AMOUNT);
 
         emit BeneficiaryAdded(beneficiaryAddress_);
     }
@@ -272,7 +266,7 @@ contract Community is ICommunity, Initializable, AccessControlUpgradeable, Ownab
     /**
      * @dev Allow beneficiaries to claim.
      */
-    function claim() external override onlyValidBeneficiary {
+    function claim() external override onlyValidBeneficiary nonReentrant {
         Beneficiary storage beneficiary = _beneficiaries[msg.sender];
 
         require(!_locked, "LOCKED");
@@ -287,8 +281,7 @@ contract Community is ICommunity, Initializable, AccessControlUpgradeable, Ownab
         beneficiary.claims++;
         beneficiary.lastClaim = block.number;
 
-        bool success = cUSD().transfer(msg.sender, _claimAmount);
-        require(success, "Community::claim: NOT_ALLOWED");
+        cUSD().safeTransfer(msg.sender, _claimAmount);
         emit BeneficiaryClaim(msg.sender, _claimAmount);
     }
 
@@ -358,7 +351,7 @@ contract Community is ICommunity, Initializable, AccessControlUpgradeable, Ownab
         _communityAdmin.fundCommunity();
     }
 
-    function donate(address sender_, uint256 amount_) external override {
+    function donate(address sender_, uint256 amount_) external override nonReentrant {
         cUSD().safeTransferFrom(sender_, address(this), amount_);
         _privateFunds += amount_;
     }
@@ -371,7 +364,7 @@ contract Community is ICommunity, Initializable, AccessControlUpgradeable, Ownab
         IERC20 erc20_,
         address to_,
         uint256 amount_
-    ) external override onlyOwner {
+    ) external override onlyOwner nonReentrant {
         erc20_.safeTransfer(to_, amount_);
     }
 
