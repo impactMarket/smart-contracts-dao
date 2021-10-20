@@ -72,9 +72,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		Treasury.address
 	);
 
-	await CommunityAdminContract.setTreasury(Treasury.address);
+	await CommunityAdminContract.updateTreasury(Treasury.address);
 
-	await TreasuryContract.setCommunityAdmin(communityAdminProxyResult.address);
+	await TreasuryContract.updateCommunityAdmin(
+		communityAdminProxyResult.address
+	);
 
 	await TreasuryContract.transferOwnership(ownerAddress);
 };

@@ -26,22 +26,10 @@ interface ICommunityAdmin {
     function communityList(uint256 index) external view returns (address);
     function communityListLength() external view returns (uint256);
 
-    function setTreasury(ITreasury newTreasury) external;
-    function setCommunityTemplate(ICommunity communityTemplate_) external;
-    function editCommunityTrancheLimits(uint256 newCommunityMinTranche, uint256 newCommunityMaxTranche) external;
-    function addCommunity(
-        address firstManager,
-        uint256 claimAmount,
-        uint256 maxClaim,
-        uint256 baseInterval,
-        uint256 incrementInterval
-    ) external returns(address);
-    function migrateCommunity(address firstManager, ICommunity previousCommunity) external;
-    function removeCommunity(ICommunity community) external;
-    function fundCommunity() external;
-    function transfer(IERC20 token, address to, uint256 amount) external;
-    function transferFromCommunity(ICommunity community, IERC20 erc20, address to, uint256 amount) external;
-    function editCommunity(
+    function updateTreasury(ITreasury newTreasury) external;
+    function updateCommunityTemplate(ICommunity communityTemplate_) external;
+    function updateCommunityTrancheLimits(uint256 newCommunityMinTranche, uint256 newCommunityMaxTranche) external;
+    function updateCommunityBeneficiaryParams(
         ICommunity community,
         uint256 claimAmount,
         uint256 maxClaim,
@@ -50,6 +38,18 @@ interface ICommunityAdmin {
         uint256 incrementInterval
     ) external;
     function updateProxyImplementation(address communityProxy, address newLogic) external;
+    function addCommunity(
+        address firstManager,
+        uint256 claimAmount,
+        uint256 maxClaim,
+        uint256 baseInterval,
+        uint256 incrementInterval
+    ) external;
+    function migrateCommunity(address firstManager, ICommunity previousCommunity) external;
+    function removeCommunity(ICommunity community) external;
+    function fundCommunity() external;
+    function transfer(IERC20 token, address to, uint256 amount) external;
+    function transferFromCommunity(ICommunity community, IERC20 erc20, address to, uint256 amount) external;
 }
 
 

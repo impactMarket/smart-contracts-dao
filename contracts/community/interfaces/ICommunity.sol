@@ -37,6 +37,15 @@ interface ICommunity {
     function beneficiaryListLength() external view returns (uint256);
     function impactMarketAddress() external pure returns (address);
 
+    function updateCommunityAdmin(ICommunityAdmin communityAdmin) external;
+    function updatePreviousCommunity(ICommunity newPreviousCommunity) external;
+    function updateBeneficiaryParams(
+        uint256 claimAmount,
+        uint256 maxClaim,
+        uint256 decreaseStep,
+        uint256 baseInterval,
+        uint256 incrementInterval
+    ) external;
     function donate(address sender, uint256 amount) external;
     function addTreasuryFunds(uint256 amount) external;
     function transfer(IERC20 token, address to, uint256 amount) external;
@@ -49,7 +58,6 @@ interface ICommunity {
     function claim() external;
     function lastInterval(address beneficiaryAddress) external view returns (uint256);
     function claimCooldown(address beneficiaryAddress) external view returns (uint256);
-    function edit(uint256 claimAmount, uint256 maxClaim, uint256 decreaseStep, uint256 baseInterval, uint256 incrementInterval) external;
     function lock() external;
     function unlock() external;
     function requestFunds() external;

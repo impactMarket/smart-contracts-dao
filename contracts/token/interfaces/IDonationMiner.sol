@@ -3,6 +3,7 @@ pragma solidity 0.8.5;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../community/interfaces/ICommunityAdmin.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./ITreasury.sol";
 
 interface IDonationMiner {
@@ -17,8 +18,7 @@ interface IDonationMiner {
 
     struct Donor {
         uint256 lastClaim;
-        uint256 rewardPeriodsCount;
-        mapping(uint256 => uint256) rewardPeriods;
+        EnumerableSet.UintSet rewardPeriods;
     }
 
     function initialize(
@@ -49,11 +49,12 @@ interface IDonationMiner {
     function donors(address donor) external view returns (uint256 rewardPeriodsCount, uint256 lastClaim);
     function donations(address donor, uint256 donationId) external view returns (uint256 rewardPeriodNumber, uint256 amount);
 
-    function editRewardPeriodParams(
+    function updateRewardPeriodParams(
         uint256 newRewardPeriodSize,
         uint256 newDecayNumerator,
         uint256 newDecayDenominator
     ) external;
+    function updateTreasury(ITreasury newTreasury) external;
     function donate(uint256 amount) external;
     function donateToCommunity(ICommunity community, uint256 amount) external;
     function claimRewards() external;
