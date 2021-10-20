@@ -81,10 +81,10 @@ export default {
     user3: {
       default: 3
     }
+  },
+  docgen: {
+    path: './docs',
+    clear: true,
+    runOnCompile: true,
   }
-  // docgen: {
-  //   path: './docs',
-  //   clear: true,
-  //   runOnCompile: true,
-  // }
 };

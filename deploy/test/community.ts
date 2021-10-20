@@ -3,6 +3,8 @@ import { DeployFunction } from "hardhat-deploy/types";
 import { BigNumberish } from "ethers";
 import { parseEther } from "@ethersproject/units";
 import { getCUSDAddress } from "./cUSD";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { ethers } from "hardhat";
 
 const COMMUNITY_MIN_TRANCHE: BigNumberish = parseEther("100");
 const COMMUNITY_MAX_TRANCHE: BigNumberish = parseEther("5000");
@@ -11,44 +13,77 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const { deployments, getNamedAccounts, ethers } = hre;
 
 	const { deploy } = deployments;
-	const { deployer } = await getNamedAccounts();
 
-	const communityAdminResult = await deploy("CommunityAdminMock", {
-		from: deployer,
-		args: [getCUSDAddress(), COMMUNITY_MIN_TRANCHE, COMMUNITY_MAX_TRANCHE],
+	const accounts: SignerWithAddress[] = await ethers.getSigners();
+	const deployer = accounts[0];
+
+	const ImpactProxyAdmin = await deployments.get("ImpactProxyAdmin");
+	// const IPCTTimelock = await deployments.get("IPCTTimelock"); //prod
+	// const ownerAddress = IPCTTimelock.address; //prod
+	const ownerAddress = deployer.address; //dev
+	// const cUSDAddress = getCUSDAddress(); //prod
+	const cUSDAddress = getCUSDAddress();
+
+	const communityAdminImplementationResult = await deploy(
+		"CommunityAdminImplementation",
+		{
+			from: deployer.address,
+			args: [],
+			log: true,
+			// gasLimit: 13000000,
+		}
+	);
+
+	const communityAdminProxyResult = await deploy("CommunityAdminProxy", {
+		from: deployer.address,
+		args: [
+			communityAdminImplementationResult.address,
+			ImpactProxyAdmin.address,
+		],
 		log: true,
 		// gasLimit: 13000000,
 	});
 
-	const communityAdminHelperResult = await deploy("CommunityAdminHelper", {
-		from: deployer,
-		args: [communityAdminResult.address],
+	const CommunityAdminContract = await ethers.getContractAt(
+		"CommunityAdminImplementation",
+		communityAdminProxyResult.address
+	);
+
+	const communityResult = await deploy("Community", {
+		from: deployer.address,
+		args: [],
 		log: true,
 		// gasLimit: 13000000,
 	});
 
-	const Treasury = await deployments.get("TreasuryMock");
-	const IPCTTimelock = await deployments.get("IPCTTimelock");
+	await CommunityAdminContract.initialize(
+		communityResult.address,
+		cUSDAddress,
+		COMMUNITY_MIN_TRANCHE,
+		COMMUNITY_MAX_TRANCHE
+	);
+
+	await CommunityAdminContract.transferOwnership(ownerAddress);
+
+	const Treasury = await deployments.get("TreasuryProxy");
 
 	const TreasuryContract = await ethers.getContractAt(
-		"Treasury",
+		"TreasuryImplementation",
 		Treasury.address
-	);
-	const CommunityAdminContract = await ethers.getContractAt(
-		"CommunityAdminMock",
-		communityAdminResult.address
 	);
 
 	await CommunityAdminContract.setTreasury(Treasury.address);
-	await CommunityAdminContract.setCommunityAdminHelper(
-		communityAdminHelperResult.address
-	);
 
-	await CommunityAdminContract.transferOwnership(IPCTTimelock.address);
-	await TreasuryContract.setCommunityAdmin(communityAdminResult.address);
-	await TreasuryContract.transferOwnership(IPCTTimelock.address);
+	await TreasuryContract.setCommunityAdmin(communityAdminProxyResult.address);
+
+	await TreasuryContract.transferOwnership(ownerAddress);
 };
 
-func.dependencies = ["GovernanceTest", "TreasuryTest", "cUSDTest"];
+func.dependencies = [
+	"ImpactProxyAdminTest",
+	"GovernanceTest",
+	"TreasuryTest",
+	"cUSDTest",
+];
 func.tags = ["CommunityTest", "Test"];
 export default func;

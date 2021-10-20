@@ -5,8 +5,7 @@ import { advanceTimeAndBlockNTimes } from "../utils/TimeTravel";
 import { parseEther, formatEther } from "@ethersproject/units";
 
 const STARTING_DELAY = 10;
-const REWARD_PERIOD_SIZE = 14;
-const STARTING_REWARD_PER_BLOCK = parseEther("100");
+const REWARD_PERIOD_SIZE = 20;
 
 const initialize = deployments.createFixture(
 	async ({ deployments, getNamedAccounts, ethers }, options) => {
@@ -18,9 +17,9 @@ const initialize = deployments.createFixture(
 			"TokenMock",
 			cUSD.address
 		);
-		const DonationMiner = await deployments.get("DonationMiner");
+		const DonationMiner = await deployments.get("DonationMinerProxy");
 		const DonationMinerContract = await ethers.getContractAt(
-			"DonationMiner",
+			"DonationMinerImplementation",
 			DonationMiner.address
 		);
 		const IPCT = await deployments.get("IPCTToken");
@@ -34,10 +33,10 @@ const initialize = deployments.createFixture(
 		await cUSDContract.mint(user2, parseEther("10000000"));
 		await cUSDContract.mint(user3, parseEther("100000000"));
 
-		// Mint the DonationMiner some IPCT
+		// transfer to the DonationMiner some IPCT
 		await IPCTContract.transfer(
 			DonationMiner.address,
-			parseEther("1000000")
+			parseEther("4000000000")
 		);
 
 		// Get signers for write tests
@@ -90,7 +89,7 @@ describe("Donation Miner", () => {
 
 		const user1Donation = parseEther("200");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY, REWARD_PERIOD_SIZE);
+		await advanceTimeAndBlockNTimes(STARTING_DELAY);
 
 		// Approve from user1
 		await cUSD.contract
@@ -109,9 +108,9 @@ describe("Donation Miner", () => {
 		const { cUSD, IPCT, DonationMiner, signers } = await initialize();
 
 		const user1Donation = parseEther("100");
-		const user1ExpectedReward = parseEther("1400");
+		const user1ExpectedReward = parseEther("4320000");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY, REWARD_PERIOD_SIZE);
+		await advanceTimeAndBlockNTimes(STARTING_DELAY);
 
 		// Approve from user1
 		await cUSD.contract
@@ -120,7 +119,7 @@ describe("Donation Miner", () => {
 
 		await DonationMiner.contract.connect(signers[1]).donate(user1Donation);
 
-		await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE, REWARD_PERIOD_SIZE);
+		await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
 
 		// Claim the rewards
 		await DonationMiner.contract.connect(signers[1]).claimRewards();
@@ -143,14 +142,14 @@ describe("Donation Miner", () => {
 		const user1Donation = parseEther("100");
 		const user1ExpectedReward = parseEther("0");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY, REWARD_PERIOD_SIZE);
+		await advanceTimeAndBlockNTimes(STARTING_DELAY);
 
 		// Approve from user1
 		await cUSD.contract
 			.connect(signers[1])
 			.approve(DonationMiner.deployed.address, user1Donation);
 
-		await advanceTimeAndBlockNTimes(1, REWARD_PERIOD_SIZE);
+		await advanceTimeAndBlockNTimes(1);
 		await DonationMiner.contract.connect(signers[1]).donate(user1Donation);
 
 		// Claim the rewards
@@ -176,7 +175,7 @@ describe("Donation Miner", () => {
 		const user1ExpectedReward = parseEther("0");
 		const user2ExpectedReward = parseEther("0");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY, REWARD_PERIOD_SIZE);
+		await advanceTimeAndBlockNTimes(STARTING_DELAY);
 
 		// Approve from user1
 		await cUSD.contract
@@ -217,12 +216,9 @@ describe("Donation Miner", () => {
 		const { cUSD, IPCT, DonationMiner, signers } = await initialize();
 
 		const user1Donation = parseEther("100");
-		const user1ExpectedReward = parseEther("2800");
+		const user1ExpectedReward = parseEther("8635256.64");
 
-		await advanceTimeAndBlockNTimes(
-			STARTING_DELAY + REWARD_PERIOD_SIZE,
-			REWARD_PERIOD_SIZE
-		);
+		await advanceTimeAndBlockNTimes(STARTING_DELAY + REWARD_PERIOD_SIZE);
 
 		// Approve from user1
 		await cUSD.contract
@@ -231,7 +227,7 @@ describe("Donation Miner", () => {
 
 		await DonationMiner.contract.connect(signers[1]).donate(user1Donation);
 
-		await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE, REWARD_PERIOD_SIZE);
+		await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
 
 		// Claim their rewards
 		await DonationMiner.contract.connect(signers[1]).claimRewards();
@@ -253,10 +249,10 @@ describe("Donation Miner", () => {
 
 		const user1Donation = parseEther("100");
 		const user2Donation = parseEther("100");
-		const user1ExpectedReward = parseEther("700");
-		const user2ExpectedReward = parseEther("700");
+		const user1ExpectedReward = parseEther("2160000");
+		const user2ExpectedReward = parseEther("2160000");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY, REWARD_PERIOD_SIZE);
+		await advanceTimeAndBlockNTimes(STARTING_DELAY);
 
 		// Approve from user1
 		await cUSD.contract
@@ -270,7 +266,7 @@ describe("Donation Miner", () => {
 		await DonationMiner.contract.connect(signers[2]).donate(user2Donation);
 
 		// Advance 3 blocks
-		await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE, REWARD_PERIOD_SIZE);
+		await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
 
 		// Claim their rewards
 		await DonationMiner.contract.connect(signers[1]).claimRewards();
@@ -301,10 +297,10 @@ describe("Donation Miner", () => {
 
 		const user1Donation = parseEther("100");
 		const user2Donation = parseEther("200");
-		const user1ExpectedReward = "466666666666666666666"; //466.66
-		const user2ExpectedReward = "933333333333333333333"; //933.33
+		const user1ExpectedReward = parseEther("1440000");
+		const user2ExpectedReward = parseEther("2880000");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY, REWARD_PERIOD_SIZE);
+		await advanceTimeAndBlockNTimes(STARTING_DELAY);
 
 		// Approve from user1
 		await cUSD.contract
@@ -318,7 +314,7 @@ describe("Donation Miner", () => {
 		await DonationMiner.contract.connect(signers[2]).donate(user2Donation);
 
 		// Advance 3 blocks
-		await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE, REWARD_PERIOD_SIZE);
+		await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
 
 		// Claim their rewards
 		await DonationMiner.contract.connect(signers[1]).claimRewards();
@@ -349,10 +345,10 @@ describe("Donation Miner", () => {
 
 		const user1Donation = parseEther("300");
 		const user2Donation = parseEther("100");
-		const user1ExpectedReward = parseEther("1050");
-		const user2ExpectedReward = parseEther("350");
+		const user1ExpectedReward = parseEther("3240000");
+		const user2ExpectedReward = parseEther("1080000");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY, REWARD_PERIOD_SIZE);
+		await advanceTimeAndBlockNTimes(STARTING_DELAY);
 
 		// Approve from user1
 		await cUSD.contract
@@ -366,7 +362,7 @@ describe("Donation Miner", () => {
 		await DonationMiner.contract.connect(signers[2]).donate(user2Donation);
 
 		// Advance 3 blocks
-		await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE, REWARD_PERIOD_SIZE);
+		await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
 
 		// Claim their rewards
 		await DonationMiner.contract.connect(signers[1]).claimRewards();
@@ -397,10 +393,10 @@ describe("Donation Miner", () => {
 
 		const user1Donation = parseEther("1");
 		const user2Donation = parseEther("1000000");
-		const user1ExpectedReward = parseEther("0.001399998600001399");
-		const user2ExpectedReward = parseEther("1399.9986000013999986");
+		const user1ExpectedReward = parseEther("4.319995680004319995");
+		const user2ExpectedReward = parseEther("4319995.680004319995680004");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY, REWARD_PERIOD_SIZE);
+		await advanceTimeAndBlockNTimes(STARTING_DELAY);
 
 		// Approve from user1
 		await cUSD.contract
@@ -413,8 +409,7 @@ describe("Donation Miner", () => {
 		await DonationMiner.contract.connect(signers[1]).donate(user1Donation);
 		await DonationMiner.contract.connect(signers[2]).donate(user2Donation);
 
-		// Advance 3 blocks
-		await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE, REWARD_PERIOD_SIZE);
+		await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
 
 		// Claim their rewards
 		await DonationMiner.contract.connect(signers[1]).claimRewards();
@@ -445,7 +440,7 @@ describe("Donation Miner", () => {
 
 		const user1Donation = parseEther("1");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY, REWARD_PERIOD_SIZE);
+		await advanceTimeAndBlockNTimes(STARTING_DELAY);
 
 		// Approve from user1
 		await cUSD.contract
