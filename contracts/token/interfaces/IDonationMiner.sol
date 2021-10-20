@@ -3,7 +3,6 @@ pragma solidity 0.8.5;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../community/interfaces/ICommunityAdmin.sol";
-import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./ITreasury.sol";
 
 interface IDonationMiner {
@@ -13,12 +12,20 @@ interface IDonationMiner {
         uint256 startBlock; // The block number at which reward distribution starts.
         uint256 endBlock; // The block number at which reward distribution ends.
         uint256 donationsAmount; // Total of donations for this rewardPeriod.
-        mapping(address => uint256) donations; // Amount donated by a donor in this rewardPeriod.
+        mapping(address => uint256) donorAmounts; // Amounts donated by every donor in this rewardPeriod.
     }
 
     struct Donor {
-        uint256 lastClaim;
-        EnumerableSet.UintSet rewardPeriods;
+        uint256 lastClaim;  //last reward period index for which the donor has claimed the reward
+        uint256 rewardPeriodsCount; //total number of reward periods in which the donor donated
+        mapping(uint256 => uint256) rewardPeriods; //list of all reward period ids in which the donor donated
+    }
+
+    struct Donation {
+        uint256 rewardPeriod;
+        uint256 amount;
+        address donor;
+        address community;
     }
 
     function initialize(
@@ -38,6 +45,7 @@ interface IDonationMiner {
     function startingBlock() external view returns (uint256);
     function decay() external view returns (uint256);
     function rewardPeriodCount() external view returns (uint256);
+    function donationCount() external view returns (uint256);
     function rewardPeriods(uint256 period) external view returns (
         uint256 rewardPerBlock,
         uint256 rewardAmount,
@@ -45,10 +53,13 @@ interface IDonationMiner {
         uint256 endBlock,
         uint256 donationsAmount
     );
-    function rewardPeriodDonations(uint256 period, address donor) external view returns (uint256);
+    function rewardPeriodDonorAmount(uint256 period, address donor) external view returns (uint256);
     function donors(address donor) external view returns (uint256 rewardPeriodsCount, uint256 lastClaim);
-    function donations(address donor, uint256 donationId) external view returns (uint256 rewardPeriodNumber, uint256 amount);
-
+    function donorRewardPeriod(
+        address donor,
+        uint256 rewardPeriodIndex
+    ) external view returns (uint256 rewardPeriodNumber, uint256 amount);
+    function donation(uint256 index) external view returns(Donation memory);
     function updateRewardPeriodParams(
         uint256 newRewardPeriodSize,
         uint256 newDecayNumerator,
