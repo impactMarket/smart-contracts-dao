@@ -46,6 +46,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		from: deployer,
 		args: [delegatorAddress, TWO_DAYS_SECONDS],
 		log: true,
+		gasLimit: 13000000,
 	});
 
 	const delegatorResult = await deploy("IPCTDelegator", {
