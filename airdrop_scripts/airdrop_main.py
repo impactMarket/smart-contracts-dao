@@ -189,6 +189,11 @@ def main(config_file_path):
         csv_writer = csv.writer(f)
         csv_writer.writerows(sorted_receivers_base_18)
 
+    receivers_dict_base_18 = dict(sorted_receivers_base_18)
+    rewards_file_base_18_json = os.path.join(save_path, 'reward_distributions_base_18.json')
+    with open(rewards_file_base_18_json, 'w') as f:
+        json.dump(receivers_dict_base_18, f)
+
     print('total reward = %s' % total_reward)
     print('smallest reward = %s' % sorted_receivers[0][1])
     print('biggest reward = %s' % sorted_receivers[-1][1])
