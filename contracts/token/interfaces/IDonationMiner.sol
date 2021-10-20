@@ -28,7 +28,8 @@ interface IDonationMiner {
         uint256 firstRewardPerBlock,
         uint256 rewardPeriodSize,
         uint256 startingBlock,
-        uint256 decay
+        uint256 decayNumerator,
+        uint256 decayDenominator
     ) external;
     function cUSD() external view returns (IERC20);
     function IPCT() external view returns (IERC20);
@@ -48,8 +49,11 @@ interface IDonationMiner {
     function donors(address donor) external view returns (uint256 rewardPeriodsCount, uint256 lastClaim);
     function donations(address donor, uint256 donationId) external view returns (uint256 rewardPeriodNumber, uint256 amount);
 
-    function setRewardPeriodSize(uint256 rewardPeriodSize) external;
-    function setDecay(uint256 decay) external;
+    function editRewardPeriodParams(
+        uint256 newRewardPeriodSize,
+        uint256 newDecayNumerator,
+        uint256 newDecayDenominator
+    ) external;
     function donate(uint256 amount) external;
     function donateToCommunity(ICommunity community, uint256 amount) external;
     function claimRewards() external;

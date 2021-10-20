@@ -16,6 +16,26 @@ contract TreasuryImplementation is
 {
     using SafeERC20 for IERC20;
 
+    /**
+     * @notice Triggered when a donation has been added
+     *
+     * @param oldCommunityAdmin   Old communityAdmin address
+     * @param newCommunityAdmin   New communityAdmin address
+     */
+    event CommunityAdminChanged(
+        address indexed oldCommunityAdmin,
+        address indexed newCommunityAdmin
+    );
+
+    /**
+     * @notice Triggered when an amount of an ERC20 has been transferred from this contract to an address
+     *
+     * @param token               ERC20 token address
+     * @param to                  Address of the receiver
+     * @param amount              Amount of the transaction
+     */
+    event TransferERC20(address indexed token, address indexed to, uint256 amount);
+
     function initialize(ICommunityAdmin communityAdmin_) public override initializer {
         __Ownable_init();
 
@@ -40,7 +60,10 @@ contract TreasuryImplementation is
     }
 
     function setCommunityAdmin(ICommunityAdmin communityAdmin_) external override onlyOwner {
+        address oldCommunityAdminAddress = address(_communityAdmin);
         _communityAdmin = communityAdmin_;
+
+        emit CommunityAdminChanged(oldCommunityAdminAddress, address(_communityAdmin));
     }
 
     function transfer(
@@ -49,5 +72,7 @@ contract TreasuryImplementation is
         uint256 amount_
     ) external override onlyCommunityAdminOrOwner nonReentrant {
         token_.safeTransfer(to_, amount_);
+
+        emit TransferERC20(address(token_), to_, amount_);
     }
 }

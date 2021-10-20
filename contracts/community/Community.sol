@@ -36,23 +36,115 @@ contract Community is
     uint256 public constant DEFAULT_AMOUNT = 5e16;
     uint256 public constant VERSION = 1;
 
-    event ManagerAdded(address indexed _account);
-    event ManagerRemoved(address indexed _account);
-    event BeneficiaryAdded(address indexed _account);
-    event BeneficiaryLocked(address indexed _account);
-    event BeneficiaryUnlocked(address indexed _account);
-    event BeneficiaryRemoved(address indexed _account);
-    event BeneficiaryClaim(address indexed _account, uint256 _amount);
+    /**
+     * @notice Triggered when a manager has been added
+     *
+     * @param manager           Address of the manager that triggered the event
+     * @param account           Address of the manager that has been added
+     */
+
+    event ManagerAdded(address indexed manager, address indexed account);
+
+    /**
+     * @notice Triggered when a manager has been removed
+     *
+     * @param manager           Address of the manager that triggered the event
+     * @param account           Address of the manager that has been removed
+     */
+    event ManagerRemoved(address indexed manager, address indexed account);
+
+    /**
+     * @notice Triggered when a beneficiary has been added
+     *
+     * @param manager           Address of the manager that triggered the event
+     * @param beneficiary       Address of the beneficiary that has been added
+     */
+    event BeneficiaryAdded(address indexed manager, address indexed beneficiary);
+
+    /**
+     * @notice Triggered when a beneficiary has been locked
+     *
+     * @param manager           Address of the manager that triggered the event
+     * @param beneficiary       Address of the beneficiary that has been locked
+     */
+    event BeneficiaryLocked(address indexed manager, address indexed beneficiary);
+
+    /**
+     * @notice Triggered when a beneficiary has been unlocked
+     *
+     * @param manager           Address of the manager that triggered the event
+     * @param beneficiary       Address of the beneficiary that has been unlocked
+     */
+    event BeneficiaryUnlocked(address indexed manager, address indexed beneficiary);
+
+    /**
+     * @notice Triggered when a beneficiary has been removed
+     *
+     * @param manager           Address of the manager that triggered the event
+     * @param beneficiary       Address of the beneficiary that has been removed
+     */
+    event BeneficiaryRemoved(address indexed manager, address indexed beneficiary);
+
+    /**
+     * @notice Triggered when a beneficiary has claimed
+     *
+     * @param beneficiary       Address of the beneficiary that has claimed
+     * @param amount            Amount of the claim
+     */
+    event BeneficiaryClaim(address indexed beneficiary, uint256 amount);
+
+    /**
+     * @notice Triggered when a community has been locked
+     *
+     * @param manager           Address of the manager that triggered the event
+     */
+    event CommunityLocked(address indexed manager);
+
+    /**
+     * @notice Triggered when a community has been unlocked
+     *
+     * @param manager           Address of the manager that triggered the event
+     */
+    event CommunityUnlocked(address indexed manager);
+
+    /**
+     * @notice Triggered when a community has been edited
+     *
+     * @param oldClaimAmount       Old claimAmount value
+     * @param oldMaxClaim          Old maxClaim value
+     * @param oldDecreaseStep      Old decreaseStep value
+     * @param oldBaseInterval      Old baseInterval value
+     * @param oldIncrementInterval Old incrementInterval value
+     * @param newClaimAmount       New claimAmount value
+     * @param newMaxClaim          New maxClaim value
+     * @param newDecreaseStep      New decreaseStep value
+     * @param newBaseInterval      New baseInterval value
+     * @param newIncrementInterval New incrementInterval value
+     *
+     * For further information regarding each parameter, see
+     * *Community* smart contract initialize method.
+     */
     event CommunityEdited(
-        uint256 _claimAmount,
-        uint256 _maxClaim,
-        uint256 _decreaseStep,
-        uint256 _baseInterval,
-        uint256 _incrementInterval
+        uint256 oldClaimAmount,
+        uint256 oldMaxClaim,
+        uint256 oldDecreaseStep,
+        uint256 oldBaseInterval,
+        uint256 oldIncrementInterval,
+        uint256 newClaimAmount,
+        uint256 newMaxClaim,
+        uint256 newDecreaseStep,
+        uint256 newBaseInterval,
+        uint256 newIncrementInterval
     );
-    event CommunityLocked(address indexed _by);
-    event CommunityUnlocked(address indexed _by);
-    event MigratedFunds(address indexed _to, uint256 _amount);
+
+    /**
+     * @notice Triggered when an amount of an ERC20 has been transferred from this contract to an address
+     *
+     * @param token               ERC20 token address
+     * @param to                  Address of the receiver
+     * @param amount              Amount of the transaction
+     */
+    event TransferERC20(address indexed token, address indexed to, uint256 amount);
 
     /**
      * @dev Constructor with custom fields, chosen by the community.
@@ -87,7 +179,6 @@ contract Community is
         _setupRole(MANAGER_ROLE, firstManager_);
         _setupRole(MANAGER_ROLE, msg.sender);
         _setRoleAdmin(MANAGER_ROLE, MANAGER_ROLE);
-        emit ManagerAdded(firstManager_);
 
         _claimAmount = claimAmount_;
         _baseInterval = baseInterval_;
@@ -100,6 +191,8 @@ contract Community is
         _decreaseStep = 1e16;
 
         transferOwnership(msg.sender);
+
+        emit ManagerAdded(msg.sender, firstManager_);
     }
 
     modifier onlyValidBeneficiary() {
@@ -190,7 +283,7 @@ contract Community is
      */
     function addManager(address _account) external override onlyManagers {
         _setupRole(MANAGER_ROLE, _account);
-        emit ManagerAdded(_account);
+        emit ManagerAdded(msg.sender, _account);
     }
 
     /**
@@ -198,7 +291,7 @@ contract Community is
      */
     function removeManager(address _account) external override onlyManagers {
         revokeRole(MANAGER_ROLE, _account);
-        emit ManagerRemoved(_account);
+        emit ManagerRemoved(msg.sender, _account);
     }
 
     /**
@@ -219,7 +312,7 @@ contract Community is
         // send default amount when adding a new beneficiary
         cUSD().safeTransfer(beneficiaryAddress_, DEFAULT_AMOUNT);
 
-        emit BeneficiaryAdded(beneficiaryAddress_);
+        emit BeneficiaryAdded(msg.sender, beneficiaryAddress_);
     }
 
     /**
@@ -230,7 +323,7 @@ contract Community is
 
         require(beneficiary.state == BeneficiaryState.Valid, "Community::lockBeneficiary: NOT_YET");
         _changeBeneficiaryState(beneficiary, BeneficiaryState.Locked);
-        emit BeneficiaryLocked(beneficiaryAddress_);
+        emit BeneficiaryLocked(msg.sender, beneficiaryAddress_);
     }
 
     /**
@@ -244,7 +337,7 @@ contract Community is
             "Community::unlockBeneficiary: NOT_YET"
         );
         _changeBeneficiaryState(beneficiary, BeneficiaryState.Valid);
-        emit BeneficiaryUnlocked(beneficiaryAddress_);
+        emit BeneficiaryUnlocked(msg.sender, beneficiaryAddress_);
     }
 
     /**
@@ -259,7 +352,7 @@ contract Community is
             "Community::removeBeneficiary: NOT_YET"
         );
         _changeBeneficiaryState(beneficiary, BeneficiaryState.Removed);
-        emit BeneficiaryRemoved(beneficiaryAddress_);
+        emit BeneficiaryRemoved(msg.sender, beneficiaryAddress_);
     }
 
     /**
@@ -315,6 +408,12 @@ contract Community is
             "Community::constructor: maxClaim must be greater than claimAmount"
         );
 
+        uint256 oldClaimAmount = claimAmount_;
+        uint256 oldMaxClaim = maxClaim_;
+        uint256 oldDecreaseStep = decreaseStep_;
+        uint256 oldBaseInterval = baseInterval_;
+        uint256 oldIncrementInterval = incrementInterval_;
+
         _claimAmount = claimAmount_;
         _maxClaim = maxClaim_;
         _decreaseStep = decreaseStep_;
@@ -322,6 +421,11 @@ contract Community is
         _incrementInterval = incrementInterval_;
 
         emit CommunityEdited(
+            oldClaimAmount,
+            oldMaxClaim,
+            oldDecreaseStep,
+            oldBaseInterval,
+            oldIncrementInterval,
             _claimAmount,
             _maxClaim,
             _decreaseStep,
@@ -360,11 +464,13 @@ contract Community is
     }
 
     function transfer(
-        IERC20 erc20_,
+        IERC20 token_,
         address to_,
         uint256 amount_
     ) external override onlyOwner nonReentrant {
-        erc20_.safeTransfer(to_, amount_);
+        token_.safeTransfer(to_, amount_);
+
+        emit TransferERC20(address(token_), to_, amount_);
     }
 
     function beneficiaryJoinFromMigrated() external override {

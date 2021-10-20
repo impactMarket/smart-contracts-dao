@@ -130,7 +130,7 @@ async function addDefaultCommunity() {
 
 	const communityAddress = receipt.events?.filter((x: any) => {
 		return x.event == "CommunityAdded";
-	})[0]["args"]["_communityAddress"];
+	})[0]["args"]["communityAddress"];
 	communityInstance = await Community.attach(communityAddress);
 }
 
@@ -503,7 +503,7 @@ describe("Community - Governance (2)", () => {
 
 		const newCommunityAddress = receipt.events?.filter((x: any) => {
 			return x.event == "CommunityMigrated";
-		})[0]["args"]["_communityAddress"];
+		})[0]["args"]["communityAddress"];
 
 		communityInstance = await Community.attach(newCommunityAddress);
 		const previousCommunityNewBalance = await cUSDInstance.balanceOf(
@@ -530,7 +530,7 @@ describe("Community - Governance (2)", () => {
 
 		const newCommunityAddress = receipt.events?.filter((x: any) => {
 			return x.event == "CommunityMigrated";
-		})[0]["args"]["_communityAddress"];
+		})[0]["args"]["communityAddress"];
 
 		const newCommunityInstance = await Community.attach(
 			newCommunityAddress
@@ -575,7 +575,7 @@ describe("Community - Governance (2)", () => {
 
 		const newCommunityAddress = receipt.events?.filter((x: any) => {
 			return x.event == "CommunityMigrated";
-		})[0]["args"]["_communityAddress"];
+		})[0]["args"]["communityAddress"];
 
 		const newCommunityInstance = await Community.attach(
 			newCommunityAddress
@@ -783,7 +783,7 @@ describe("CommunityAdmin", () => {
 
 		const communityAddress = receipt.events?.filter((x: any) => {
 			return x.event == "CommunityAdded";
-		})[0]["args"]["_communityAddress"];
+		})[0]["args"]["communityAddress"];
 		communityInstance = await Community.attach(communityAddress);
 
 		(await communityInstance.baseInterval())
@@ -813,7 +813,7 @@ describe("CommunityAdmin", () => {
 
 		const communityAddress = receipt.events?.filter((x: any) => {
 			return x.event == "CommunityAdded";
-		})[0]["args"]["_communityAddress"];
+		})[0]["args"]["communityAddress"];
 		communityInstance = await Community.attach(communityAddress);
 
 		await communityAdminProxy.removeCommunity(communityAddress);
@@ -858,7 +858,7 @@ describe("Chaos test (complete flow)", async () => {
 
 		const communityAddress = receipt.events?.filter((x: any) => {
 			return x.event == "CommunityAdded";
-		})[0]["args"]["_communityAddress"];
+		})[0]["args"]["communityAddress"];
 		communityInstance = await Community.attach(communityAddress);
 		await cUSDInstance.mint(communityAddress, mintAmount.toString());
 
@@ -1127,23 +1127,26 @@ describe("Community - getFunds", () => {
 		).to.be.rejectedWith("Community: NOT_MANAGER");
 	});
 
-	it("should not be able to change communityMinTranche if not admin", async () => {
+	it("should not be able to change community tranche limits if not admin", async () => {
 		await expect(
 			communityAdminProxy
 				.connect(communityManagerA)
-				.setCommunityMinTranche(parseEther("123"))
+				.editCommunityTrancheLimits(parseEther("50"), parseEther("100"))
 		).to.be.rejectedWith("Ownable: caller is not the owner");
 	});
 
-	it("should be able to change communityMinTranche if admin", async () => {
+	it("should be able to change community tranche limits if admin", async () => {
 		await expect(
 			communityAdminProxy
 				.connect(adminAccount1)
-				.setCommunityMinTranche(parseEther("123"))
+				.editCommunityTrancheLimits(parseEther("50"), parseEther("100"))
 		).to.be.fulfilled;
 
 		expect(await communityAdminProxy.communityMinTranche()).to.be.equal(
-			parseEther("123")
+			parseEther("50")
+		);
+		expect(await communityAdminProxy.communityMaxTranche()).to.be.equal(
+			parseEther("100")
 		);
 	});
 
@@ -1151,7 +1154,10 @@ describe("Community - getFunds", () => {
 		await expect(
 			communityAdminProxy
 				.connect(communityManagerA)
-				.setCommunityMaxTranche(parseEther("123"))
+				.editCommunityTrancheLimits(
+					parseEther("123"),
+					parseEther("124")
+				)
 		).to.be.rejectedWith("Ownable: caller is not the owner");
 	});
 
@@ -1159,7 +1165,10 @@ describe("Community - getFunds", () => {
 		await expect(
 			communityAdminProxy
 				.connect(adminAccount1)
-				.setCommunityMaxTranche(parseEther("1234"))
+				.editCommunityTrancheLimits(
+					parseEther("100"),
+					parseEther("1234")
+				)
 		).to.be.fulfilled;
 
 		expect(await communityAdminProxy.communityMaxTranche()).to.be.equal(
@@ -1171,50 +1180,14 @@ describe("Community - getFunds", () => {
 		await expect(
 			communityAdminProxy
 				.connect(adminAccount1)
-				.setCommunityMinTranche(parseEther("50"))
+				.editCommunityTrancheLimits(parseEther("50"), parseEther("100"))
 		).to.be.fulfilled;
-
 		await expect(
 			communityAdminProxy
 				.connect(adminAccount1)
-				.setCommunityMaxTranche(parseEther("100"))
-		).to.be.fulfilled;
-
-		await expect(
-			communityAdminProxy
-				.connect(adminAccount1)
-				.setCommunityMinTranche(parseEther("200"))
+				.editCommunityTrancheLimits(parseEther("100"), parseEther("50"))
 		).to.be.rejectedWith(
-			"CommunityAdmin::setCommunityMinTranche: New communityMinTranche should be less then communityMaxTranche"
-		);
-
-		expect(await communityAdminProxy.communityMinTranche()).to.be.equal(
-			parseEther("50")
-		);
-		expect(await communityAdminProxy.communityMaxTranche()).to.be.equal(
-			parseEther("100")
-		);
-	});
-
-	it("should not be able to set communityMaxTranche less than communityMinTranche", async () => {
-		await expect(
-			communityAdminProxy
-				.connect(adminAccount1)
-				.setCommunityMinTranche(parseEther("50"))
-		).to.be.fulfilled;
-
-		await expect(
-			communityAdminProxy
-				.connect(adminAccount1)
-				.setCommunityMaxTranche(parseEther("100"))
-		).to.be.fulfilled;
-
-		await expect(
-			communityAdminProxy
-				.connect(adminAccount1)
-				.setCommunityMaxTranche(parseEther("25"))
-		).to.be.rejectedWith(
-			"CommunityAdmin::setCommunityMaxTranche: New communityMaxTranche should be greater then communityMinTranche"
+			"CommunityAdmin::editCommunityTrancheLimits: communityMinTranche should be less than communityMaxTranche"
 		);
 
 		expect(await communityAdminProxy.communityMinTranche()).to.be.equal(
