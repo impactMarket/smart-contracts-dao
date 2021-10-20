@@ -31,22 +31,74 @@ contract CommunityAdminImplementation is
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
+    /**
+     * @notice Triggered when a community has been added
+     *
+     * @param communityAddress  Address of the community that has been added
+     * @param firstManager      Address of the first manager
+     * @param claimAmount       Value of the claimAmount
+     * @param maxClaim          Value of the maxClaim
+     * @param baseInterval      Value of the baseInterval
+     * @param incrementInterval Value of the incrementInterval
+     *
+     * For further information regarding each parameter, see
+     * *Community* smart contract initialize method.
+     */
     event CommunityAdded(
-        address indexed _communityAddress,
-        address indexed _firstManager,
-        uint256 _claimAmount,
-        uint256 _maxClaim,
-        uint256 _baseInterval,
-        uint256 _incrementInterval
+        address indexed communityAddress,
+        address indexed firstManager,
+        uint256 claimAmount,
+        uint256 maxClaim,
+        uint256 baseInterval,
+        uint256 incrementInterval
     );
-    event CommunityRemoved(address indexed _communityAddress);
+
+    /**
+     * @notice Triggered when a community has been removed
+     *
+     * @param communityAddress  Address of the community that has been removed
+     */
+    event CommunityRemoved(address indexed communityAddress);
+
+    /**
+     * @notice Triggered when a community has been migrated
+     *
+     * @param firstManager             Address of the new community's first manager
+     * @param communityAddress         New community address
+     * @param previousCommunityAddress Old community address
+     */
     event CommunityMigrated(
-        address indexed _firstManager,
-        address indexed _communityAddress,
-        address indexed _previousCommunityAddress
+        address indexed firstManager,
+        address indexed communityAddress,
+        address indexed previousCommunityAddress
     );
-    event CommunityMinTrancheChanged(uint256 indexed _newCommunityMinTranche);
-    event CommunityMaxTrancheChanged(uint256 indexed _newCommunitMaxTranche);
+
+    /**
+     * @notice Triggered when the tranche limits have been changed
+     *
+     * @param oldCommunityMinTranche  Old communityMinTranche value
+     * @param oldCommunityMaxTranche  Old communityMaxTranche value
+     * @param newCommunityMinTranche  New communityMinTranche value
+     * @param newCommunityMaxTranche  New communityMaxTranche value
+     *
+     * For further information regarding each parameter, see
+     * *CommunityAdminImplementation* smart contract initialize method.
+     */
+    event CommunityTrancheLimitsChanged(
+        uint256 oldCommunityMinTranche,
+        uint256 oldCommunityMaxTranche,
+        uint256 newCommunityMinTranche,
+        uint256 newCommunityMaxTranche
+    );
+
+    /**
+     * @notice Triggered when an amount of an ERC20 has been transferred from this contract to an address
+     *
+     * @param token               ERC20 token address
+     * @param to                  Address of the receiver
+     * @param amount              Amount of the transaction
+     */
+    event TransferERC20(address indexed token, address indexed to, uint256 amount);
 
     modifier onlyCommunities() {
         require(_communities[msg.sender] == CommunityState.Valid, "CommunityAdmin: NOT_COMMUNITY");
@@ -116,27 +168,29 @@ contract CommunityAdminImplementation is
     }
 
     /**
-     * @dev Set the community min tranche
+     * @dev Edit community tranche limits
      */
-    function setCommunityMinTranche(uint256 newCommunityMinTranche_) external override onlyOwner {
+    function editCommunityTrancheLimits(
+        uint256 newCommunityMinTranche_,
+        uint256 newCommunityMaxTranche_
+    ) external override onlyOwner {
         require(
-            newCommunityMinTranche_ < _communityMaxTranche,
-            "CommunityAdmin::setCommunityMinTranche: New communityMinTranche should be less then communityMaxTranche"
+            newCommunityMinTranche_ < newCommunityMaxTranche_,
+            "CommunityAdmin::editCommunityTrancheLimits: communityMinTranche should be less than communityMaxTranche"
         );
-        _communityMinTranche = newCommunityMinTranche_;
-        emit CommunityMinTrancheChanged(newCommunityMinTranche_);
-    }
 
-    /**
-     * @dev Set the community max tranche
-     */
-    function setCommunityMaxTranche(uint256 newCommunityMaxTranche_) external override onlyOwner {
-        require(
-            _communityMinTranche < newCommunityMaxTranche_,
-            "CommunityAdmin::setCommunityMaxTranche: New communityMaxTranche should be greater then communityMinTranche"
-        );
+        uint256 oldCommunityMinTranche = _communityMinTranche;
+        uint256 oldCommunityMaxTranche = _communityMaxTranche;
+
+        _communityMinTranche = newCommunityMinTranche_;
         _communityMaxTranche = newCommunityMaxTranche_;
-        emit CommunityMaxTrancheChanged(newCommunityMaxTranche_);
+
+        emit CommunityTrancheLimitsChanged(
+            oldCommunityMinTranche,
+            oldCommunityMaxTranche,
+            newCommunityMinTranche_,
+            newCommunityMaxTranche_
+        );
     }
 
     /**
@@ -179,7 +233,7 @@ contract CommunityAdminImplementation is
     /**
      * @dev Migrate community by deploying a new contract. Can be used only by an admin.
      * For further information regarding each parameter, see
-     * *Community* smart contract constructor.
+     * *Community* smart contract initialize method.
      */
     function migrateCommunity(address firstManager_, ICommunity previousCommunity_)
         external
@@ -242,11 +296,13 @@ contract CommunityAdminImplementation is
     }
 
     function transfer(
-        IERC20 erc20_,
+        IERC20 token_,
         address to_,
         uint256 amount_
     ) external override onlyOwner nonReentrant {
-        erc20_.safeTransfer(to_, amount_);
+        token_.safeTransfer(to_, amount_);
+
+        emit TransferERC20(address(token_), to_, amount_);
     }
 
     function transferFromCommunity(

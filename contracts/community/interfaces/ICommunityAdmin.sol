@@ -28,8 +28,7 @@ interface ICommunityAdmin {
 
     function setTreasury(ITreasury newTreasury) external;
     function setCommunityTemplate(ICommunity communityTemplate_) external;
-    function setCommunityMinTranche(uint256 newCommunityMinTranche) external;
-    function setCommunityMaxTranche(uint256 newCommunityMaxTranche) external;
+    function editCommunityTrancheLimits(uint256 newCommunityMinTranche, uint256 newCommunityMaxTranche) external;
     function addCommunity(
         address firstManager,
         uint256 claimAmount,
@@ -40,7 +39,7 @@ interface ICommunityAdmin {
     function migrateCommunity(address firstManager, ICommunity previousCommunity) external;
     function removeCommunity(ICommunity community) external;
     function fundCommunity() external;
-    function transfer(IERC20 erc20, address to, uint256 amount) external;
+    function transfer(IERC20 token, address to, uint256 amount) external;
     function transferFromCommunity(ICommunity community, IERC20 erc20, address to, uint256 amount) external;
     function editCommunity(
         ICommunity community,

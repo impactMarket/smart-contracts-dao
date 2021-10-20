@@ -24,11 +24,52 @@ contract DonationMinerImplementation is
 {
     using SafeERC20 for IERC20;
 
-    uint256 public constant EPOCH_SIZE = 17280;
-    uint256 public constant DECAY_PRECISION = 1e6;
-
-    event RewardClaimed(address indexed donor, uint256 amount);
+    /**
+     * @notice Triggered when a donation has been added
+     *
+     * @param donor       Address of the donner
+     * @param amount      Value of the donation
+     */
     event DonationAdded(address indexed donor, uint256 amount);
+
+    /**
+     * @notice Triggered when a donor has claimed his reward
+     *
+     * @param donor       Address of the donner
+     * @param amount      Value of the reward
+     */
+    event RewardClaimed(address indexed donor, uint256 amount);
+
+    /**
+     * @notice Triggered when an amount of an ERC20 has been transferred from this contract to an address
+     *
+     * @param token               ERC20 token address
+     * @param to                  Address of the receiver
+     * @param amount              Amount of the transaction
+     */
+    event TransferERC20(address indexed token, address indexed to, uint256 amount);
+
+    /**
+     * @notice Triggered when reward period params have been edited
+     *
+     * @param oldRewardPeriodSize   Old rewardPeriodSize value
+     * @param oldDecayNumerator     Old decayNumerator value
+     * @param oldDecayDenominator   Old decayDenominator value
+     * @param newRewardPeriodSize   New rewardPeriodSize value
+     * @param newDecayNumerator     New decayNumerator value
+     * @param newDecayDenominator   New decayDenominator value
+     *
+     * For further information regarding each parameter, see
+     * *DonationMiner* smart contract initialize method.
+     */
+    event RewardPeriodParamsEdited(
+        uint256 oldRewardPeriodSize,
+        uint256 oldDecayNumerator,
+        uint256 oldDecayDenominator,
+        uint256 newRewardPeriodSize,
+        uint256 newDecayNumerator,
+        uint256 newDecayDenominator
+    );
 
     /**
      * @notice Enforces beginning rewardPeriod has started
@@ -45,16 +86,17 @@ contract DonationMinerImplementation is
         uint256 firstRewardPerBlock_,
         uint256 rewardPeriodSize_,
         uint256 startingBlock_,
-        uint256 decay_
+        uint256 decayNumerator_,
+        uint256 decayDenominator_
     ) public override initializer {
-        require(address(cUSD_) != address(0), "DonationMiner::constructor: cUSD address not set!");
-        require(address(IPCT_) != address(0), "DonationMiner::constructor: IPCT address not set!");
-        require(address(treasury_) != address(0), "DonationMiner::constructor: treasury_ not set!");
+        require(address(cUSD_) != address(0), "DonationMiner::initialize: cUSD address not set");
+        require(address(IPCT_) != address(0), "DonationMiner::initialize: IPCT address not set");
+        require(address(treasury_) != address(0), "DonationMiner::initialize: treasury_ not set");
         require(
             firstRewardPerBlock_ != 0,
-            "DonationMiner::constructor: firstRewardPerBlock not set!"
+            "DonationMiner::initialize: firstRewardPerBlock not set!"
         );
-        require(startingBlock_ != 0, "DonationMiner::constructor: startingRewardPeriod not set!");
+        require(startingBlock_ != 0, "DonationMiner::initialize: startingRewardPeriod not set!");
 
         __Ownable_init();
         __Pausable_init();
@@ -65,7 +107,8 @@ contract DonationMinerImplementation is
         _treasury = treasury_;
         _startingBlock = startingBlock_;
         _rewardPeriodSize = rewardPeriodSize_;
-        _decay = decay_;
+        _decayNumerator = decayNumerator_;
+        _decayDenominator = decayDenominator_;
 
         _rewardPeriodCount = 1;
         RewardPeriod storage firstPeriod = _rewardPeriods[1];
@@ -100,7 +143,7 @@ contract DonationMinerImplementation is
     }
 
     function decay() external view override returns (uint256) {
-        return _decay;
+        return _decayNumerator;
     }
 
     function rewardPeriods(uint256 period)
@@ -151,12 +194,27 @@ contract DonationMinerImplementation is
         amount = _rewardPeriods[rewardPeriodNumber].donations[donor];
     }
 
-    function setRewardPeriodSize(uint256 rewardPeriodSize_) external override onlyOwner {
-        _rewardPeriodSize = rewardPeriodSize_;
-    }
+    function editRewardPeriodParams(
+        uint256 newRewardPeriodSize_,
+        uint256 newDecayNumerator_,
+        uint256 newDecayDenominator_
+    ) external override onlyOwner {
+        uint256 oldRewardPeriodSize_ = _rewardPeriodSize;
+        uint256 oldDecayNumerator_ = _decayNumerator;
+        uint256 oldDecayDenominator_ = _decayDenominator;
 
-    function setDecay(uint256 decay_) external override onlyOwner {
-        _decay = decay_;
+        _rewardPeriodSize = newRewardPeriodSize_;
+        _decayNumerator = newDecayNumerator_;
+        _decayDenominator = newDecayDenominator_;
+
+        emit RewardPeriodParamsEdited(
+            oldRewardPeriodSize_,
+            oldDecayNumerator_,
+            oldDecayDenominator_,
+            newRewardPeriodSize_,
+            newDecayNumerator_,
+            newDecayDenominator_
+        );
     }
 
     /**
@@ -190,6 +248,7 @@ contract DonationMinerImplementation is
         );
 
         createRewardPeriods();
+        // Transfer the cUSD from the donor to the community
         community_.donate(msg.sender, amount_);
         createDonation(amount_);
     }
@@ -264,10 +323,9 @@ contract DonationMinerImplementation is
     }
 
     function calculateRewardPerBlock(uint256 periodNumber_) public view returns (uint256) {
-        console.log(_rewardPeriods[periodNumber_ - 1].rewardPerBlock);
-        console.log(_decay);
-        console.log(DECAY_PRECISION);
-        return (_rewardPeriods[periodNumber_ - 1].rewardPerBlock * _decay) / DECAY_PRECISION;
+        return
+            (_rewardPeriods[periodNumber_ - 1].rewardPerBlock * _decayNumerator) /
+            _decayDenominator;
     }
 
     function transfer(
@@ -276,6 +334,8 @@ contract DonationMinerImplementation is
         uint256 amount_
     ) external override onlyOwner nonReentrant {
         token_.safeTransfer(to_, amount_);
+
+        emit TransferERC20(address(token_), to_, amount_);
     }
 
     /**

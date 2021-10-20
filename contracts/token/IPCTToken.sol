@@ -15,8 +15,5 @@ contract IPCTToken is TransferrableVotingToken {
      */
     constructor(address _initialOwner)
         TransferrableVotingToken("IPCTToken", "IPCT", 18, MAX_SUPPLY, _initialOwner)
-    // solhint-disable-next-line no-empty-blocks
-    {
-        // Do nothing
-    }
+    {}
 }

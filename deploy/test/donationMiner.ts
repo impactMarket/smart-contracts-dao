@@ -59,7 +59,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		parseEther("216000"),
 		20,
 		30,
-		"998902"
+		"998902",
+		"1000000"
 	);
 
 	await donationMinerContract.transferOwnership(ownerAddress);
