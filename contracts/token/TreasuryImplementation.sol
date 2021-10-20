@@ -17,12 +17,12 @@ contract TreasuryImplementation is
     using SafeERC20 for IERC20;
 
     /**
-     * @notice Triggered when a donation has been added
+     * @notice Triggered when CommunityAdmin has been updated
      *
      * @param oldCommunityAdmin   Old communityAdmin address
      * @param newCommunityAdmin   New communityAdmin address
      */
-    event CommunityAdminChanged(
+    event CommunityAdminUpdated(
         address indexed oldCommunityAdmin,
         address indexed newCommunityAdmin
     );
@@ -59,11 +59,11 @@ contract TreasuryImplementation is
         return _communityAdmin;
     }
 
-    function setCommunityAdmin(ICommunityAdmin communityAdmin_) external override onlyOwner {
+    function updateCommunityAdmin(ICommunityAdmin communityAdmin_) external override onlyOwner {
         address oldCommunityAdminAddress = address(_communityAdmin);
         _communityAdmin = communityAdmin_;
 
-        emit CommunityAdminChanged(oldCommunityAdminAddress, address(_communityAdmin));
+        emit CommunityAdminUpdated(oldCommunityAdminAddress, address(_communityAdmin));
     }
 
     function transfer(

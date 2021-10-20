@@ -40,9 +40,9 @@ contract Community is
      * @notice Triggered when a manager has been added
      *
      * @param manager           Address of the manager that triggered the event
+     *                          or address of the CommunityAdmin if it's first manager
      * @param account           Address of the manager that has been added
      */
-
     event ManagerAdded(address indexed manager, address indexed account);
 
     /**
@@ -108,7 +108,36 @@ contract Community is
     event CommunityUnlocked(address indexed manager);
 
     /**
-     * @notice Triggered when a community has been edited
+     * @notice Triggered when a manager has requested funds for community
+     *
+     * @param manager           Address of the manager that triggered the event
+     */
+    event FundsRequested(address indexed manager);
+
+    /**
+     * @notice Triggered when someone has donated cUSD
+     *
+     * @param donor             Address of the donor
+     * @param amount            Amount of the donation
+     */
+    event Donate(address indexed donor, uint256 amount);
+
+    /**
+     * @notice Triggered when a beneficiary from previous community has joined in the current community
+     *
+     * @param beneficiary       Address of the beneficiary
+     */
+    event BeneficiaryJoined(address indexed beneficiary);
+
+    /**
+     * @notice Triggered when a manager from previous community has joined in the current community
+     *
+     * @param manager           Address of the manager
+     */
+    event ManagerJoined(address indexed manager);
+
+    /**
+     * @notice Triggered when beneficiary params has been updated
      *
      * @param oldClaimAmount       Old claimAmount value
      * @param oldMaxClaim          Old maxClaim value
@@ -124,7 +153,7 @@ contract Community is
      * For further information regarding each parameter, see
      * *Community* smart contract initialize method.
      */
-    event CommunityEdited(
+    event BeneficiaryParamsUpdated(
         uint256 oldClaimAmount,
         uint256 oldMaxClaim,
         uint256 oldDecreaseStep,
@@ -135,6 +164,28 @@ contract Community is
         uint256 newDecreaseStep,
         uint256 newBaseInterval,
         uint256 newIncrementInterval
+    );
+
+    /**
+     * @notice Triggered when communityAdmin has been updated
+     *
+     * @param oldCommunityAdmin   Old communityAdmin address
+     * @param newCommunityAdmin   New communityAdmin address
+     */
+    event CommunityAdminUpdated(
+        address indexed oldCommunityAdmin,
+        address indexed newCommunityAdmin
+    );
+
+    /**
+     * @notice Triggered when previousCommunity has been updated
+     *
+     * @param oldPreviousCommunity   Old previousCommunity address
+     * @param newPreviousCommunity   New previousCommunity address
+     */
+    event PreviousCommunityUpdated(
+        address indexed oldPreviousCommunity,
+        address indexed newPreviousCommunity
     );
 
     /**
@@ -193,6 +244,7 @@ contract Community is
         transferOwnership(msg.sender);
 
         emit ManagerAdded(msg.sender, firstManager_);
+        emit ManagerAdded(msg.sender, msg.sender);
     }
 
     modifier onlyValidBeneficiary() {
@@ -276,6 +328,65 @@ contract Community is
     // only used for backwards compatibility
     function impactMarketAddress() public pure override returns (address) {
         return address(0);
+    }
+
+    function updateCommunityAdmin(ICommunityAdmin communityAdmin_) external override onlyOwner {
+        address oldCommunityAdminAddress = address(_communityAdmin);
+        _communityAdmin = communityAdmin_;
+
+        emit CommunityAdminUpdated(oldCommunityAdminAddress, address(_communityAdmin));
+    }
+
+    function updatePreviousCommunity(ICommunity newPreviousCommunity_) external override onlyOwner {
+        address oldPreviousCommunityAddress = address(_previousCommunity);
+        _previousCommunity = newPreviousCommunity_;
+
+        emit PreviousCommunityUpdated(oldPreviousCommunityAddress, address(_previousCommunity));
+    }
+
+    /**
+     * @dev Allow community admin to update beneficiary params.
+     */
+    function updateBeneficiaryParams(
+        uint256 claimAmount_,
+        uint256 maxClaim_,
+        uint256 decreaseStep_,
+        uint256 baseInterval_,
+        uint256 incrementInterval_
+    ) external override onlyOwner {
+        require(
+            baseInterval_ > incrementInterval_,
+            "Community::constructor: baseInterval must be greater than incrementInterval"
+        );
+        require(
+            maxClaim_ > claimAmount_,
+            "Community::constructor: maxClaim must be greater than claimAmount"
+        );
+
+        uint256 oldClaimAmount = claimAmount_;
+        uint256 oldMaxClaim = maxClaim_;
+        uint256 oldDecreaseStep = decreaseStep_;
+        uint256 oldBaseInterval = baseInterval_;
+        uint256 oldIncrementInterval = incrementInterval_;
+
+        _claimAmount = claimAmount_;
+        _maxClaim = maxClaim_;
+        _decreaseStep = decreaseStep_;
+        _baseInterval = baseInterval_;
+        _incrementInterval = incrementInterval_;
+
+        emit BeneficiaryParamsUpdated(
+            oldClaimAmount,
+            oldMaxClaim,
+            oldDecreaseStep,
+            oldBaseInterval,
+            oldIncrementInterval,
+            _claimAmount,
+            _maxClaim,
+            _decreaseStep,
+            _baseInterval,
+            _incrementInterval
+        );
     }
 
     /**
@@ -390,51 +501,6 @@ contract Community is
     }
 
     /**
-     * @dev Allow community admin to edit community variables.
-     */
-    function edit(
-        uint256 claimAmount_,
-        uint256 maxClaim_,
-        uint256 decreaseStep_,
-        uint256 baseInterval_,
-        uint256 incrementInterval_
-    ) external override onlyOwner {
-        require(
-            baseInterval_ > incrementInterval_,
-            "Community::constructor: baseInterval must be greater than incrementInterval"
-        );
-        require(
-            maxClaim_ > claimAmount_,
-            "Community::constructor: maxClaim must be greater than claimAmount"
-        );
-
-        uint256 oldClaimAmount = claimAmount_;
-        uint256 oldMaxClaim = maxClaim_;
-        uint256 oldDecreaseStep = decreaseStep_;
-        uint256 oldBaseInterval = baseInterval_;
-        uint256 oldIncrementInterval = incrementInterval_;
-
-        _claimAmount = claimAmount_;
-        _maxClaim = maxClaim_;
-        _decreaseStep = decreaseStep_;
-        _baseInterval = baseInterval_;
-        _incrementInterval = incrementInterval_;
-
-        emit CommunityEdited(
-            oldClaimAmount,
-            oldMaxClaim,
-            oldDecreaseStep,
-            oldBaseInterval,
-            oldIncrementInterval,
-            _claimAmount,
-            _maxClaim,
-            _decreaseStep,
-            _baseInterval,
-            _incrementInterval
-        );
-    }
-
-    /**
      * Allow community managers to lock community claims.
      */
     function lock() external override onlyManagers {
@@ -452,11 +518,15 @@ contract Community is
 
     function requestFunds() external override onlyManagers {
         _communityAdmin.fundCommunity();
+
+        emit FundsRequested(msg.sender);
     }
 
     function donate(address sender_, uint256 amount_) external override nonReentrant {
         cUSD().safeTransferFrom(sender_, address(this), amount_);
         _privateFunds += amount_;
+
+        emit Donate(msg.sender, amount_);
     }
 
     function addTreasuryFunds(uint256 _amount) external override onlyOwner {
@@ -495,6 +565,8 @@ contract Community is
             beneficiary.claimedAmount = oldCommunity.claimed(msg.sender);
             beneficiary.claims = (previousLastInterval - _baseInterval) / _incrementInterval + 1;
         }
+
+        emit BeneficiaryJoined(msg.sender);
     }
 
     function managerJoinFromMigrated() external override {
@@ -506,6 +578,8 @@ contract Community is
             "Community::managerJoinFromMigrated: NOT_ALLOWED"
         );
         _setupRole(MANAGER_ROLE, msg.sender);
+
+        emit ManagerJoined(msg.sender);
     }
 
     function _changeBeneficiaryState(Beneficiary storage beneficiary, BeneficiaryState newState_)

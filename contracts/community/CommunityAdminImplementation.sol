@@ -74,7 +74,7 @@ contract CommunityAdminImplementation is
     );
 
     /**
-     * @notice Triggered when the tranche limits have been changed
+     * @notice Triggered when the tranche limits have been updated
      *
      * @param oldCommunityMinTranche  Old communityMinTranche value
      * @param oldCommunityMaxTranche  Old communityMaxTranche value
@@ -84,12 +84,39 @@ contract CommunityAdminImplementation is
      * For further information regarding each parameter, see
      * *CommunityAdminImplementation* smart contract initialize method.
      */
-    event CommunityTrancheLimitsChanged(
+    event CommunityTrancheLimitsUpdated(
         uint256 oldCommunityMinTranche,
         uint256 oldCommunityMaxTranche,
         uint256 newCommunityMinTranche,
         uint256 newCommunityMaxTranche
     );
+
+    /**
+     * @notice Triggered when the treasury address has been updated
+     *
+     * @param oldTreasury             Old treasury address
+     * @param newTreasury             New treasury address
+     */
+    event TreasuryUpdated(address indexed oldTreasury, address indexed newTreasury);
+
+    /**
+     * @notice Triggered when the communityTemplate address has been updated
+     *
+     * @param oldCommunityTemplate    Old communityTemplate address
+     * @param newCommunityTemplate    New communityTemplate address
+     */
+    event CommunityTemplateUpdated(
+        address indexed oldCommunityTemplate,
+        address indexed newCommunityTemplate
+    );
+
+    /**
+     * @notice Triggered when a community has been funded
+     *
+     * @param community           Address of the community
+     * @param amount              Amount of the funding
+     */
+    event CommunityFunded(address indexed community, uint256 amount);
 
     /**
      * @notice Triggered when an amount of an ERC20 has been transferred from this contract to an address
@@ -159,24 +186,30 @@ contract CommunityAdminImplementation is
         return _communityList.length();
     }
 
-    function setTreasury(ITreasury newTreasury_) external override onlyOwner {
+    function updateTreasury(ITreasury newTreasury_) external override onlyOwner {
+        address oldTreasuryAddress = address(_treasury);
         _treasury = newTreasury_;
+
+        emit TreasuryUpdated(oldTreasuryAddress, address(_treasury));
     }
 
-    function setCommunityTemplate(ICommunity communityTemplate_) external override onlyOwner {
+    function updateCommunityTemplate(ICommunity communityTemplate_) external override onlyOwner {
+        address oldCommunityTemplateAddress = address(communityTemplate_);
         _communityTemplate = communityTemplate_;
+
+        emit CommunityTemplateUpdated(oldCommunityTemplateAddress, address(communityTemplate_));
     }
 
     /**
-     * @dev Edit community tranche limits
+     * @dev Update community tranche limits
      */
-    function editCommunityTrancheLimits(
+    function updateCommunityTrancheLimits(
         uint256 newCommunityMinTranche_,
         uint256 newCommunityMaxTranche_
     ) external override onlyOwner {
         require(
             newCommunityMinTranche_ < newCommunityMaxTranche_,
-            "CommunityAdmin::editCommunityTrancheLimits: communityMinTranche should be less than communityMaxTranche"
+            "CommunityAdmin::updateCommunityTrancheLimits: communityMinTranche should be less than communityMaxTranche"
         );
 
         uint256 oldCommunityMinTranche = _communityMinTranche;
@@ -185,7 +218,7 @@ contract CommunityAdminImplementation is
         _communityMinTranche = newCommunityMinTranche_;
         _communityMaxTranche = newCommunityMaxTranche_;
 
-        emit CommunityTrancheLimitsChanged(
+        emit CommunityTrancheLimitsUpdated(
             oldCommunityMinTranche,
             oldCommunityMaxTranche,
             newCommunityMinTranche_,
@@ -204,7 +237,7 @@ contract CommunityAdminImplementation is
         uint256 maxClaim_,
         uint256 baseInterval_,
         uint256 incrementInterval_
-    ) external override onlyOwner returns (address) {
+    ) external override onlyOwner {
         address communityAddress = deployCommunity(
             firstManager_,
             claimAmount_,
@@ -216,6 +249,7 @@ contract CommunityAdminImplementation is
         require(communityAddress != address(0), "CommunityAdmin::addCommunity: NOT_VALID");
         _communities[communityAddress] = CommunityState.Valid;
         _communityList.add(communityAddress);
+
         emit CommunityAdded(
             communityAddress,
             firstManager_,
@@ -226,8 +260,6 @@ contract CommunityAdminImplementation is
         );
 
         transferToCommunity(ICommunity(communityAddress), _communityMinTranche);
-
-        return communityAddress;
     }
 
     /**
@@ -281,7 +313,6 @@ contract CommunityAdminImplementation is
     function removeCommunity(ICommunity community_) external override onlyOwner nonReentrant {
         _communities[address(community_)] = CommunityState.Removed;
         emit CommunityRemoved(address(community_));
-
         community_.transfer(_cUSD, address(_treasury), _cUSD.balanceOf(address(community_)));
     }
 
@@ -314,7 +345,7 @@ contract CommunityAdminImplementation is
         community_.transfer(erc20_, to_, amount_);
     }
 
-    function editCommunity(
+    function updateCommunityBeneficiaryParams(
         ICommunity community_,
         uint256 claimAmount_,
         uint256 maxClaim_,
@@ -322,7 +353,13 @@ contract CommunityAdminImplementation is
         uint256 baseInterval_,
         uint256 incrementInterval_
     ) external override onlyOwner {
-        community_.edit(claimAmount_, maxClaim_, decreaseStep_, baseInterval_, incrementInterval_);
+        community_.updateBeneficiaryParams(
+            claimAmount_,
+            maxClaim_,
+            decreaseStep_,
+            baseInterval_,
+            incrementInterval_
+        );
     }
 
     /**
@@ -346,6 +383,8 @@ contract CommunityAdminImplementation is
     function transferToCommunity(ICommunity community_, uint256 amount_) internal nonReentrant {
         _treasury.transfer(_cUSD, address(community_), amount_);
         community_.addTreasuryFunds(amount_);
+
+        emit CommunityFunded(address(community_), amount_);
     }
 
     function deployCommunity(
