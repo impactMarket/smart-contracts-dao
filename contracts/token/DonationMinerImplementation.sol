@@ -22,17 +22,23 @@ contract DonationMinerImplementation is
     PausableUpgradeable,
     ReentrancyGuardUpgradeable
 {
-    using EnumerableSet for EnumerableSet.UintSet;
     using SafeERC20 for IERC20;
 
     /**
      * @notice Triggered when a donation has been added
      *
-     * @param donor         Address of the donner
-     * @param rewardPeriod  Id of the current reward period
-     * @param amount        Value of the donation
+     * @param donationId  Id of the donation
+     * @param donor       Address of the donner
+     * @param amount      Value of the donation
+     * @param community   Address of the community for donateToCommunity case
+     *                    or address of the DonationMiner contract otherwise
      */
-    event DonationAdded(address indexed donor, uint256 indexed rewardPeriod, uint256 amount);
+    event DonationAdded(
+        uint256 indexed donationId,
+        address indexed donor,
+        uint256 amount,
+        address indexed community
+    );
 
     /**
      * @notice Triggered when a donor has claimed his reward
@@ -152,6 +158,10 @@ contract DonationMinerImplementation is
         return _rewardPeriodCount;
     }
 
+    function donationCount() external view override returns (uint256) {
+        return _donationCount;
+    }
+
     function decay() external view override returns (uint256) {
         return _decayNumerator;
     }
@@ -175,33 +185,37 @@ contract DonationMinerImplementation is
         donationsAmount = _rewardPeriods[period].donationsAmount;
     }
 
-    function rewardPeriodDonations(uint256 period, address donor)
+    function rewardPeriodDonorAmount(uint256 period, address donor)
         external
         view
         override
         returns (uint256)
     {
-        return _rewardPeriods[period].donations[donor];
+        return _rewardPeriods[period].donorAmounts[donor];
     }
 
     function donors(address donor)
         external
         view
         override
-        returns (uint256 rewardPeriodsLength, uint256 lastClaim)
+        returns (uint256 rewardPeriodsCount, uint256 lastClaim)
     {
-        rewardPeriodsLength = _donors[donor].rewardPeriods.length();
+        rewardPeriodsCount = _donors[donor].rewardPeriodsCount;
         lastClaim = _donors[donor].lastClaim;
     }
 
-    function donations(address donor, uint256 donationId)
+    function donorRewardPeriod(address donor, uint256 rewardPeriodIndex)
         external
         view
         override
         returns (uint256 rewardPeriodNumber, uint256 amount)
     {
-        rewardPeriodNumber = _donors[donor].rewardPeriods.at(donationId);
-        amount = _rewardPeriods[rewardPeriodNumber].donations[donor];
+        rewardPeriodNumber = _donors[donor].rewardPeriods[rewardPeriodIndex];
+        amount = _rewardPeriods[rewardPeriodNumber].donorAmounts[donor];
+    }
+
+    function donation(uint256 index) external view override returns (Donation memory) {
+        return _donations[index];
     }
 
     function updateRewardPeriodParams(
@@ -242,7 +256,7 @@ contract DonationMinerImplementation is
         // Transfer the cUSD from the donor to the treasury
         _cUSD.safeTransferFrom(msg.sender, address(_treasury), amount_);
 
-        createDonation(amount_);
+        createDonation(amount_, address(this));
     }
 
     /**
@@ -261,10 +275,9 @@ contract DonationMinerImplementation is
             communityAdmin.communities(address(community_)) == ICommunityAdmin.CommunityState.Valid,
             "DonationMiner::donateToCommunity: This is not a valid community address"
         );
-
         // Transfer the cUSD from the donor to the community
         community_.donate(msg.sender, amount_);
-        createDonation(amount_);
+        createDonation(amount_, address(community_));
     }
 
     /**
@@ -297,11 +310,11 @@ contract DonationMinerImplementation is
         uint256 index = donor.lastClaim + 1;
 
         while (index <= lastEndedRewardPeriodIndex) {
-            rewardPeriodNumber = donor.rewardPeriods.at(index);
+            rewardPeriodNumber = donor.rewardPeriods[index];
             RewardPeriod storage rewardPeriod = _rewardPeriods[rewardPeriodNumber];
 
             claimAmount +=
-                (rewardPeriod.rewardAmount * rewardPeriod.donations[msg.sender]) /
+                (rewardPeriod.rewardAmount * rewardPeriod.donorAmounts[msg.sender]) /
                 rewardPeriod.donationsAmount;
             index++;
         }
@@ -329,7 +342,7 @@ contract DonationMinerImplementation is
         // if donor have donated in current rewardPeriod
         if (lastRewardPeriod.endBlock >= block.number) {
             claimAmount +=
-                (lastRewardPeriod.rewardAmount * lastRewardPeriod.donations[donor_]) /
+                (lastRewardPeriod.rewardAmount * lastRewardPeriod.donorAmounts[donor_]) /
                 lastRewardPeriod.donationsAmount;
         }
 
@@ -375,21 +388,21 @@ contract DonationMinerImplementation is
         }
     }
 
-    function createDonation(uint256 amount_) internal {
+    //if community != address(this), the donation is sent to the community
+    function createDonation(uint256 amount_, address community_) internal {
         createRewardPeriods();
 
-        RewardPeriod storage currentPeriod = _rewardPeriods[_rewardPeriodCount];
-        currentPeriod.donationsAmount += amount_;
-        currentPeriod.donations[msg.sender] += amount_;
+        _donationCount++;
+        Donation storage donation = _donations[_donationCount];
+        donation.donor = msg.sender;
+        donation.community = community_;
+        donation.amount = amount_;
+        donation.rewardPeriod = _rewardPeriodCount;
 
-        Donor storage donor = _donors[msg.sender];
+        addAmountToCurrentRewardPeriod(amount_);
+        addCurrentRewardPeriodToDonor();
 
-        if (donor.rewardPeriods.length() == 0) {
-            donor.rewardPeriods.add(0);
-        }
-        donor.rewardPeriods.add(_rewardPeriodCount);
-
-        emit DonationAdded(msg.sender, _rewardPeriodCount, amount_);
+        emit DonationAdded(_donationCount, msg.sender, amount_, community_);
     }
 
     function getDonorLastEndedRewardPeriodIndex(Donor storage donor)
@@ -397,15 +410,29 @@ contract DonationMinerImplementation is
         view
         returns (uint256)
     {
-        if (donor.rewardPeriods.length() == 0) {
-            return 0;
-        }
-        uint256 lastDonationIndex = donor.rewardPeriods.length() - 1;
-        uint256 lastRewardPeriodIndex = donor.rewardPeriods.at(lastDonationIndex);
-        if (_rewardPeriods[lastRewardPeriodIndex].endBlock < block.number) {
-            return lastDonationIndex;
+        uint256 lastDonorRewardPeriod = donor.rewardPeriods[donor.rewardPeriodsCount];
+        if (_rewardPeriods[lastDonorRewardPeriod].endBlock < block.number) {
+            return donor.rewardPeriodsCount;
         } else {
-            return lastDonationIndex - 1;
+            return donor.rewardPeriodsCount - 1;
         }
+    }
+
+    function addCurrentRewardPeriodToDonor() internal {
+        Donor storage donor = _donors[msg.sender];
+        uint256 lastDonorRewardPeriod = donor.rewardPeriods[donor.rewardPeriodsCount];
+
+        //add current reward period id to the donor's list
+        //only if this reward period id hasn't been added yet
+        if (lastDonorRewardPeriod != _rewardPeriodCount) {
+            donor.rewardPeriodsCount++;
+            donor.rewardPeriods[donor.rewardPeriodsCount] = _rewardPeriodCount;
+        }
+    }
+
+    function addAmountToCurrentRewardPeriod(uint256 amount_) internal {
+        RewardPeriod storage currentPeriod = _rewardPeriods[_rewardPeriodCount];
+        currentPeriod.donationsAmount += amount_;
+        currentPeriod.donorAmounts[msg.sender] += amount_;
     }
 }

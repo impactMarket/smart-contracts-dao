@@ -15,10 +15,12 @@ abstract contract DonationMinerStorageV1 is IDonationMiner {
     ITreasury internal _treasury;
     uint256 internal _rewardPeriodSize;
     uint256 internal _startingBlock;
+    uint256 internal _donationCount;
     uint256 internal _rewardPeriodCount;
     uint256 internal _decayNumerator;
     uint256 internal _decayDenominator;
 
+    mapping(uint256 => Donation) internal _donations;
     mapping(uint256 => RewardPeriod) internal _rewardPeriods;
     mapping(address => Donor) internal _donors;
 }
