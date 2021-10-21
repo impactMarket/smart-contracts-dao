@@ -9,7 +9,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const { deployer } = await getNamedAccounts();
 	const chainID = await getChainId();
 
-
 	switch (chainID) {
 		case "44787": {
 			cUSDAddress = "0x874069fa1eb16d44d622f2e0ca25eea172369bc1";
@@ -35,6 +34,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	}
 };
 
-export function getCUSDAddress() {return cUSDAddress};
+export function getCUSDAddress() {
+	return cUSDAddress;
+}
 export default func;
-func.tags = ["cUSD", "Prod"];
+func.tags = ["cUSDProd", "Prod"];

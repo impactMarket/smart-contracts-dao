@@ -22,10 +22,13 @@ abstract contract CommunityStorageV1 is ICommunity {
     uint256 internal _treasuryFunds;
     uint256 internal _privateFunds;
     uint256 internal _decreaseStep;
+    uint256 internal _minTranche;
+    uint256 internal _maxTranche;
 
     ICommunity internal _previousCommunity;
     ICommunityAdmin internal _communityAdmin;
 
     mapping(address => Beneficiary) internal _beneficiaries;
     EnumerableSet.AddressSet internal _beneficiaryList;
+    EnumerableSet.AddressSet internal _managerBlockList;
 }

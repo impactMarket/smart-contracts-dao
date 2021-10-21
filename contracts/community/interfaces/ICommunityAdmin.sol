@@ -11,25 +11,17 @@ interface ICommunityAdmin {
         Valid,
         Removed
     }
-    function initialize(
-        ICommunity communityTemplate,
-        IERC20 cUSD,
-        uint256 communityMinTranche,
-        uint256 communityMaxTranche
-    ) external;
 
+    function initialize(ICommunity communityTemplate, IERC20 cUSD) external;
     function cUSD() external view returns(IERC20);
     function treasury() external view returns(ITreasury);
     function communities(address community) external view returns(CommunityState);
-    function communityMinTranche() external view returns(uint256);
-    function communityMaxTranche() external view returns(uint256);
     function communityList(uint256 index) external view returns (address);
     function communityListLength() external view returns (uint256);
 
     function updateTreasury(ITreasury newTreasury) external;
     function updateCommunityTemplate(ICommunity communityTemplate_) external;
-    function updateCommunityTrancheLimits(uint256 newCommunityMinTranche, uint256 newCommunityMaxTranche) external;
-    function updateCommunityBeneficiaryParams(
+    function updateBeneficiaryParams(
         ICommunity community,
         uint256 claimAmount,
         uint256 maxClaim,
@@ -37,19 +29,35 @@ interface ICommunityAdmin {
         uint256 baseInterval,
         uint256 incrementInterval
     ) external;
+    function updateCommunityParams(
+        ICommunity community,
+        uint256 minTranche,
+        uint256 maxTranche
+    ) external;
     function updateProxyImplementation(address communityProxy, address newLogic) external;
     function addCommunity(
         address firstManager,
         uint256 claimAmount,
         uint256 maxClaim,
+        uint256 decreaseStep,
         uint256 baseInterval,
-        uint256 incrementInterval
+        uint256 incrementInterval,
+        uint256 minTranche,
+        uint256 maxTranche,
+        address[] memory managerBlockList
     ) external;
-    function migrateCommunity(address firstManager, ICommunity previousCommunity) external;
+    function migrateCommunity(
+        address firstManager,
+        ICommunity previousCommunity,
+        address[] memory managerBlockList
+    ) external;
+    function addManagersToCommunityBlockList(ICommunity community, address[] memory managerBlockList) external;
+    function removeManagersFromCommunityBlockList(ICommunity community, address[] memory managerBlockList) external;
+    function addManagerToCommunity(ICommunity community_, address account_) external;
     function removeCommunity(ICommunity community) external;
     function fundCommunity() external;
     function transfer(IERC20 token, address to, uint256 amount) external;
-    function transferFromCommunity(ICommunity community, IERC20 erc20, address to, uint256 amount) external;
+    function transferFromCommunity(ICommunity community, IERC20 token, address to, uint256 amount) external;
 }
 
 

@@ -32,13 +32,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 			cUSDAddress = cUSDResult.address;
 		}
 	}
-
-	// const cUSDResult = await deploy("TokenMock", {
-	// 	from: deployer,
-	// 	args: ["cUSDCopy", "cUSDCopy"],
-	// 	log: true,
-	// });
-	// cUSDAddress = cUSDResult.address;
 };
 
 export function getCUSDAddress() {
