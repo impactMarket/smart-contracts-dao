@@ -161,7 +161,7 @@ def extract_community_doners(transfers, communities):
     communities_set = {comm for comm, block in communities}
     for _from, _to, value, block in transfers:
         if _to in communities_set:
-            doner_value_list.append((_from, util.from_base_18(value)))
+            doner_value_list.append((_from.lower(), util.from_base_18(value)))
 
     return doner_value_list
 

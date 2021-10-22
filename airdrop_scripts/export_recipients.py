@@ -235,7 +235,7 @@ def get_impact_market_beneficiaries(process_pool, save_path, communities, from_b
     for name in saved_files:
         with open(name) as f:
             address_claim_list = json.load(f)
-            beneficiary_claims.extend([(a, from_base_18(value)) for a, value in address_claim_list])
+            beneficiary_claims.extend([(a, from_base_18(value)) for a, value, _block in address_claim_list])
 
     with open(main_name, 'w') as f:
         json.dump(beneficiary_claims, f)

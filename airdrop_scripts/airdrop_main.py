@@ -25,6 +25,7 @@ def main(config_file_path):
     with open(config_file_path) as f:
         config_dict = json.load(f)
 
+    accounts_to_ignore = set(config_dict['walletsToIgnore'])
     save_path = os.path.expanduser(config_dict.get("savePath", '~/CELO_transfers_dir'))
     if not save_path or not os.path.exists(save_path):
         save_path = os.path.expanduser('~/CELO_transfers_dir')
@@ -116,7 +117,7 @@ def main(config_file_path):
     # 7. Impact market community Managers ##############
     print('get imarket managers (%s communities): %s - %s' % (len(communities), start_block, target_block))
     managers = get_impact_market_managers(mp_pool, save_path, communities, start_block, target_block, chunk_size=500000)
-    managers = {address for address, block in managers}
+    managers = {address.lower() for address, block in managers}
     addresses = [(address,) for address in managers]
     managers_file = os.path.join(save_path, 'managers.csv')
     with open(managers_file, 'w') as f:
@@ -127,9 +128,9 @@ def main(config_file_path):
     print('get imarket beneficiaries (%s communities): %s - %s' % (len(communities), start_block, target_block))
     beneficiaries = get_impact_market_beneficiaries(mp_pool, save_path, communities, start_block, target_block, chunk_size=5000)
     # values in beneficiaries are already converted to floats (i.e. not in base_18)
-    aggregated_beneficiareies = {a: 0 for a, v in beneficiaries}
+    aggregated_beneficiareies = {a.lower(): 0 for a, v in beneficiaries}
     for a, v in beneficiaries:
-        aggregated_beneficiareies[a] += v
+        aggregated_beneficiareies[a.lower()] += v
 
     sorted_beneficiaries = sorted(aggregated_beneficiareies.items(), key=lambda x: x[1])
     beneficiaries_file = os.path.join(save_path, 'beneficiaries.csv')
@@ -151,6 +152,7 @@ def main(config_file_path):
     others_tokens = 300 * million
     receivers = []
     # donation_multiplier = distributions['doners']
+    sorted_doners = [(a, amount) for a, amount in sorted_doners if a not in accounts_to_ignore]
     total_donations = sum([amount for _, amount in sorted_doners])
     donation_multiplier = float(doners_tokens / total_donations)
     print('donation reward multiplier == %s (total donations amount is %s) ' % (donation_multiplier, total_donations))
@@ -164,6 +166,9 @@ def main(config_file_path):
     # holder_reward = float(others_tokens / num_holders)
     # receivers.extend([(address, holder_reward) for address in fixed_amount_recievers])
 
+    sorted_holders = [(a, amount) for a, amount in sorted_holders if a not in accounts_to_ignore]
+    sorted_beneficiaries = [(a, amount) for a, amount in sorted_beneficiaries if a not in accounts_to_ignore]
+    managers = [a for a in managers if a not in accounts_to_ignore]
     # Allow an address to receive multiple rewards
     num_holders = len(sorted_holders) + len(sorted_beneficiaries) + len(managers)
     holder_reward = float(others_tokens / num_holders)
