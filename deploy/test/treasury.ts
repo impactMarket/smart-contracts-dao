@@ -13,10 +13,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const accounts: SignerWithAddress[] = await ethers.getSigners();
 	const deployer = accounts[0];
 
-	// const IPCTTimelock = await deployments.get("IPCTTimelock"); //prod
-	// const ownerAddress = IPCTTimelock.address; //prod
-	const ownerAddress = deployer.address; //dev
-
 	const ImpactProxyAdmin = await deployments.get("ImpactProxyAdmin");
 
 	const treasuryImplementationResult = await deploy(
@@ -42,8 +38,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	);
 
 	await treasuryContract.initialize(ZERO_ADDRESS);
-
-	await treasuryContract.transferOwnership(ownerAddress);
 };
 
 export default func;

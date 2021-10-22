@@ -10,9 +10,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const accounts: SignerWithAddress[] = await ethers.getSigners();
 	const deployer = accounts[0];
 
-	// const IPCTTimelock = await deployments.get("IPCTTimelock"); //prod
-	// const ownerAddress = IPCTTimelock.address; //prod
-	const ownerAddress = deployer.address; //dev
+	const IPCTTimelock = await deployments.get("IPCTTimelock"); //prod
+	const ownerAddress = IPCTTimelock.address; //prod
+	// const ownerAddress = deployer.address; //dev
 
 	// await new Promise((resolve) => setTimeout(resolve, 2000));
 
@@ -31,5 +31,5 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 };
 
 export default func;
-func.dependencies = ["GovernanceTest"];
-func.tags = ["ImpactProxyAdminTest", "Test"];
+func.dependencies = ["GovernanceProd"];
+func.tags = ["ImpactProxyAdminProd", "Prod"];

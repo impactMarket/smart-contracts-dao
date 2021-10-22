@@ -4,7 +4,6 @@ pragma solidity 0.8.5;
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "../community/interfaces/ICommunityAdmin.sol";
 import "./interfaces/TreasuryStorageV1.sol";
 
 import "hardhat/console.sol";
@@ -17,12 +16,12 @@ contract TreasuryImplementation is
     using SafeERC20 for IERC20;
 
     /**
-     * @notice Triggered when a donation has been added
+     * @notice Triggered when CommunityAdmin has been updated
      *
      * @param oldCommunityAdmin   Old communityAdmin address
      * @param newCommunityAdmin   New communityAdmin address
      */
-    event CommunityAdminChanged(
+    event CommunityAdminUpdated(
         address indexed oldCommunityAdmin,
         address indexed newCommunityAdmin
     );
@@ -36,17 +35,28 @@ contract TreasuryImplementation is
      */
     event TransferERC20(address indexed token, address indexed to, uint256 amount);
 
+    /**
+     * @notice Used to initialize a new Treasury contract
+     *
+     * @param communityAdmin_    Address of the CommunityAdmin contract
+     */
     function initialize(ICommunityAdmin communityAdmin_) public override initializer {
         __Ownable_init();
 
         _communityAdmin = communityAdmin_;
     }
 
+    /**
+     * @notice Enforces sender to be communityAdmin
+     */
     modifier onlyCommunityAdmin() {
         require(msg.sender == address(_communityAdmin), "Treasury: NOT_COMMUNITY_ADMIN");
         _;
     }
 
+    /**
+     * @notice Enforces sender to be communityAdmin or owner
+     */
     modifier onlyCommunityAdminOrOwner() {
         require(
             msg.sender == address(_communityAdmin) || msg.sender == owner(),
@@ -55,17 +65,32 @@ contract TreasuryImplementation is
         _;
     }
 
+    /**
+     * @notice Returns the CommunityAdmin contract address
+     */
     function communityAdmin() external view override returns (ICommunityAdmin) {
         return _communityAdmin;
     }
 
-    function setCommunityAdmin(ICommunityAdmin communityAdmin_) external override onlyOwner {
+    /**
+     * @notice Updates the CommunityAdmin contract address
+     *
+     * @param communityAdmin_ address of the new CommunityAdmin contract
+     */
+    function updateCommunityAdmin(ICommunityAdmin communityAdmin_) external override onlyOwner {
         address oldCommunityAdminAddress = address(_communityAdmin);
         _communityAdmin = communityAdmin_;
 
-        emit CommunityAdminChanged(oldCommunityAdminAddress, address(_communityAdmin));
+        emit CommunityAdminUpdated(oldCommunityAdminAddress, address(_communityAdmin));
     }
 
+    /**
+     * @notice Transfers an amount of an ERC20 from this contract to an address
+     *
+     * @param token_ address of the ERC20 token
+     * @param to_ address of the receiver
+     * @param amount_ amount of the transaction
+     */
     function transfer(
         IERC20 token_,
         address to_,

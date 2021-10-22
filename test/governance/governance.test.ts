@@ -26,6 +26,8 @@ const VOTING_PERIOD_BLOCKS = 10;
 const VOTING_DELAY_BLOCKS = 10;
 const PROPOSAL_THRESHOLD: BigNumberish = parseEther("100000000"); // 100 millions units (1%)
 const QUORUM_VOTES: BigNumberish = parseEther("400000000"); // 400 millions units (4%)
+const communityMinTranche = parseEther("100");
+const communityMaxTranche = parseEther("5000");
 
 // Contracts
 let IPCTDelegate: ethersTypes.ContractFactory;
@@ -120,18 +122,32 @@ describe("IPCTGovernator", function () {
 		const targets = [communityAdmin.address];
 		const values = [0];
 		const signatures = [
-			"addCommunity(address,uint256,uint256,uint256,uint256)",
+			"addCommunity(address,uint256,uint256,uint256,uint256,uint256,uint256,uint256,address[])",
 		];
 
 		const calldatas = [
 			ethers.utils.defaultAbiCoder.encode(
-				["address", "uint256", "uint256", "uint256", "uint256"],
+				[
+					"address",
+					"uint256",
+					"uint256",
+					"uint256",
+					"uint256",
+					"uint256",
+					"uint256",
+					"uint256",
+					"address[]",
+				],
 				[
 					alice.address,
 					parseEther("100"),
 					parseEther("1000"),
+					parseEther("0.01"),
 					1111,
 					111,
+					communityMinTranche,
+					communityMaxTranche,
+					[],
 				]
 			),
 		];
@@ -168,18 +184,32 @@ describe("IPCTGovernator", function () {
 		const targets = [communityAdmin.address];
 		const values = [0];
 		const signatures = [
-			"addCommunity(address,uint256,uint256,uint256,uint256)",
+			"addCommunity(address,uint256,uint256,uint256,uint256,uint256,uint256,uint256,address[])",
 		];
 
 		const calldatas = [
 			ethers.utils.defaultAbiCoder.encode(
-				["address", "uint256", "uint256", "uint256", "uint256"],
+				[
+					"address",
+					"uint256",
+					"uint256",
+					"uint256",
+					"uint256",
+					"uint256",
+					"uint256",
+					"uint256",
+					"address[]",
+				],
 				[
 					alice.address,
 					parseEther("100"),
 					parseEther("1000"),
+					parseEther("0.01"),
 					1111,
 					111,
+					communityMinTranche,
+					communityMaxTranche,
+					[],
 				]
 			),
 		];

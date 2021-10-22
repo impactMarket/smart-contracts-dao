@@ -7,18 +7,29 @@ import "./ITreasury.sol";
 
 interface IDonationMiner {
     struct RewardPeriod {
-        uint256 rewardPerBlock; // Reward tokens created per block.
-        uint256 rewardAmount; // Reward tokens from previous periods.
-        uint256 startBlock; // The block number at which reward distribution starts.
-        uint256 endBlock; // The block number at which reward distribution ends.
-        uint256 donationsAmount; // Total of donations for this rewardPeriod.
-        mapping(address => uint256) donations; // Amount donated by a donor in this rewardPeriod.
+        uint256 rewardPerBlock; //reward tokens created per block.
+        uint256 rewardAmount; //reward tokens from previous periods.
+        uint256 startBlock; //block number at which reward period starts.
+        uint256 endBlock; //block number at which reward period ends.
+        uint256 donationsAmount; //total of donations for this rewardPeriod.
+        mapping(address => uint256) donorAmounts; //amounts donated by every donor in this rewardPeriod.
     }
 
     struct Donor {
-        uint256 lastClaim;
-        uint256 rewardPeriodsCount;
-        mapping(uint256 => uint256) rewardPeriods;
+        uint256 lastClaim;  //last reward period index for which the donor has claimed the reward
+        uint256 rewardPeriodsCount; //total number of reward periods in which the donor donated
+        mapping(uint256 => uint256) rewardPeriods; //list of all reward period ids in which the donor donated
+    }
+
+
+    struct Donation {
+        address donor;  //address of the donner
+        address target;  //address of the receiver (community or treasury)
+        uint256 rewardPeriod;  //number of the reward period in which the donation was made
+        uint256 blockNumber;  //number of the block in which the donation was executed
+        uint256 amount;  //number of tokens donated
+        IERC20 token;  //address of the token
+        uint256 tokenPrice;  //the price of the token in cUSD
     }
 
     function initialize(
@@ -35,9 +46,10 @@ interface IDonationMiner {
     function IPCT() external view returns (IERC20);
     function treasury() external view returns (ITreasury);
     function rewardPeriodSize() external view returns (uint256);
-    function startingBlock() external view returns (uint256);
-    function decay() external view returns (uint256);
+    function decayNumerator() external view returns (uint256);
+    function decayDenominator() external view returns (uint256);
     function rewardPeriodCount() external view returns (uint256);
+    function donationCount() external view returns (uint256);
     function rewardPeriods(uint256 period) external view returns (
         uint256 rewardPerBlock,
         uint256 rewardAmount,
@@ -45,15 +57,24 @@ interface IDonationMiner {
         uint256 endBlock,
         uint256 donationsAmount
     );
-    function rewardPeriodDonations(uint256 period, address donor) external view returns (uint256);
+    function rewardPeriodDonorAmount(uint256 period, address donor) external view returns (uint256);
     function donors(address donor) external view returns (uint256 rewardPeriodsCount, uint256 lastClaim);
-    function donations(address donor, uint256 donationId) external view returns (uint256 rewardPeriodNumber, uint256 amount);
-
-    function editRewardPeriodParams(
+    function donorRewardPeriod(address donor, uint256 rewardPeriodIndex) external view returns (uint256);
+    function donation(uint256 index) external view returns (
+        address donor,
+        address target,
+        uint256 rewardPeriod,
+        uint256 blockNumber,
+        uint256 amount,
+        IERC20 token,
+        uint256 tokenPrice
+    );
+    function updateRewardPeriodParams(
         uint256 newRewardPeriodSize,
         uint256 newDecayNumerator,
         uint256 newDecayDenominator
     ) external;
+    function updateTreasury(ITreasury newTreasury) external;
     function donate(uint256 amount) external;
     function donateToCommunity(ICommunity community, uint256 amount) external;
     function claimRewards() external;
