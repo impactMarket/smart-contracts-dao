@@ -15,4 +15,4 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 };
 
 export default func;
-func.tags = ["Token", "Prod"];
+func.tags = ["TokenProd", "Prod"];

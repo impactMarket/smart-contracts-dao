@@ -7,6 +7,6 @@ import "../../community/interfaces/ICommunityAdmin.sol";
 interface ITreasury {
     function initialize(ICommunityAdmin communityAdmin) external;
     function communityAdmin() external view returns(ICommunityAdmin);
-    function setCommunityAdmin(ICommunityAdmin communityAdmin) external;
+    function updateCommunityAdmin(ICommunityAdmin communityAdmin) external;
     function transfer(IERC20 token, address to, uint256 amount) external;
 }

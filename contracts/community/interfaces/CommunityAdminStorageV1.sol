@@ -18,8 +18,6 @@ abstract contract CommunityAdminStorageV1 is ICommunityAdmin {
     ITreasury internal _treasury;
     ICommunity internal _communityTemplate;
     ProxyAdmin internal _communityProxyAdmin;
-    uint256 internal _communityMinTranche;
-    uint256 internal _communityMaxTranche;
 
     mapping(address => CommunityState) internal _communities;
     EnumerableSet.AddressSet internal _communityList;

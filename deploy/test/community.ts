@@ -6,9 +6,6 @@ import { getCUSDAddress } from "./cUSD";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { ethers } from "hardhat";
 
-const COMMUNITY_MIN_TRANCHE: BigNumberish = parseEther("100");
-const COMMUNITY_MAX_TRANCHE: BigNumberish = parseEther("5000");
-
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const { deployments, getNamedAccounts, ethers } = hre;
 
@@ -58,12 +55,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	await CommunityAdminContract.initialize(
 		communityResult.address,
-		cUSDAddress,
-		COMMUNITY_MIN_TRANCHE,
-		COMMUNITY_MAX_TRANCHE
+		cUSDAddress
 	);
-
-	await CommunityAdminContract.transferOwnership(ownerAddress);
 
 	const Treasury = await deployments.get("TreasuryProxy");
 
@@ -72,10 +65,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		Treasury.address
 	);
 
-	await CommunityAdminContract.setTreasury(Treasury.address);
+	await CommunityAdminContract.updateTreasury(Treasury.address);
 
-	await TreasuryContract.setCommunityAdmin(communityAdminProxyResult.address);
+	await TreasuryContract.updateCommunityAdmin(
+		communityAdminProxyResult.address
+	);
 
+	await CommunityAdminContract.transferOwnership(ownerAddress);
 	await TreasuryContract.transferOwnership(ownerAddress);
 };
 
