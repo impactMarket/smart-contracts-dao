@@ -296,7 +296,7 @@ contract DonationMinerImplementation is
      * @return token address of the token
      * @return tokenPrice the price of the token in cUSD
      */
-    function donation(uint256 index)
+    function donations(uint256 index)
         external
         view
         override

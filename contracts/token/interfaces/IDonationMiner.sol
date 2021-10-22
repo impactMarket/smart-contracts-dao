@@ -60,7 +60,7 @@ interface IDonationMiner {
     function rewardPeriodDonorAmount(uint256 period, address donor) external view returns (uint256);
     function donors(address donor) external view returns (uint256 rewardPeriodsCount, uint256 lastClaim);
     function donorRewardPeriod(address donor, uint256 rewardPeriodIndex) external view returns (uint256);
-    function donation(uint256 index) external view returns (
+    function donations(uint256 index) external view returns (
         address donor,
         address target,
         uint256 rewardPeriod,
