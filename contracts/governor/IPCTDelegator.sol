@@ -4,8 +4,6 @@ pragma solidity 0.8.5;
 import "./interfaces/IPCTDelegatorStorage.sol";
 import "./interfaces/IPCTEvents.sol";
 
-import "hardhat/console.sol";
-
 contract IPCTDelegator is IPCTDelegatorStorage, IPCTEvents {
     constructor(
         address timelock_,
