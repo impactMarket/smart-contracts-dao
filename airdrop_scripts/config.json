@@ -4,7 +4,7 @@
   "imarketStartBlock": "2627648",
   "targetBlock": "9375854",
   "oldtargetBlock": "8983266",
-  "walletsToIgnore": [],
+  "walletsToIgnore": ["0x69D174b5934ea2e20b0A31Dd848C79Ae5300a095"],
   "distributions": {
     "doners": 1,
     "holders": 1,
