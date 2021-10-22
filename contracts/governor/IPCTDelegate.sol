@@ -5,8 +5,6 @@ import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "./interfaces/IPCTDelegateStorageV1.sol";
 import "./interfaces/IPCTEvents.sol";
 
-import "hardhat/console.sol";
-
 contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
     /// @notice The name of this contract
     string public constant NAME = "IPCT";

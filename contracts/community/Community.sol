@@ -10,8 +10,6 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./interfaces/ICommunity.sol";
 import "./interfaces/ICommunityOld.sol";
 import "./interfaces/ICommunityAdmin.sol";
-
-import "hardhat/console.sol";
 import "./interfaces/CommunityStorageV1.sol";
 
 /**

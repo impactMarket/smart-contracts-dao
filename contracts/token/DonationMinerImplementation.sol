@@ -13,8 +13,6 @@ import "../community/interfaces/ICommunity.sol";
 import "../community/interfaces/ICommunityAdmin.sol";
 import "../lib/ABDKMath64x64.sol";
 
-import "hardhat/console.sol";
-
 contract DonationMinerImplementation is
     DonationMinerStorageV1,
     Initializable,
