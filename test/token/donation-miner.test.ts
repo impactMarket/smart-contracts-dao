@@ -128,12 +128,6 @@ describe("Donation Miner", () => {
 		expect(await IPCT.contract.balanceOf(signers[1].getAddress())).to.equal(
 			user1ExpectedReward
 		);
-
-		console.log(
-			`User1 donated ${formatEther(
-				user1Donation
-			)} cUSD and claimed: ${formatEther(user1ExpectedReward)} IPCT`
-		);
 	});
 
 	it("Should not be able to claim before the end of the reward period", async function () {
@@ -158,12 +152,6 @@ describe("Donation Miner", () => {
 		// Check their IPCT balance
 		expect(await IPCT.contract.balanceOf(signers[1].getAddress())).to.equal(
 			user1ExpectedReward
-		);
-
-		console.log(
-			`User1 donated ${formatEther(
-				user1Donation
-			)} cUSD and claimed: ${formatEther(user1ExpectedReward)} IPCT`
 		);
 	});
 
@@ -199,17 +187,6 @@ describe("Donation Miner", () => {
 		expect(await IPCT.contract.balanceOf(signers[2].getAddress())).to.equal(
 			user2ExpectedReward
 		);
-
-		console.log(
-			`User1 donated ${formatEther(
-				user1Donation
-			)} cUSD and claimed: ${formatEther(user1ExpectedReward)} IPCT`
-		);
-		console.log(
-			`User1 donated ${formatEther(
-				user2Donation
-			)} cUSD and claimed: ${formatEther(user2ExpectedReward)} IPCT`
-		);
 	});
 
 	it("Should claim reward and bonus reward, one donor", async function () {
@@ -235,12 +212,6 @@ describe("Donation Miner", () => {
 		// Check their IPCT balance
 		expect(await IPCT.contract.balanceOf(signers[1].getAddress())).to.equal(
 			user1ExpectedReward
-		);
-
-		console.log(
-			`User1 donated ${formatEther(
-				user1Donation
-			)} cUSD and claimed: ${formatEther(user1ExpectedReward)} IPCT`
 		);
 	});
 
@@ -279,17 +250,6 @@ describe("Donation Miner", () => {
 		expect(await IPCT.contract.balanceOf(signers[2].getAddress())).to.equal(
 			user2ExpectedReward
 		);
-
-		console.log(
-			`User1 donated ${formatEther(
-				user1Donation
-			)} cUSD and claimed: ${formatEther(user1ExpectedReward)} IPCT`
-		);
-		console.log(
-			`User1 donated ${formatEther(
-				user2Donation
-			)} cUSD and claimed: ${formatEther(user2ExpectedReward)} IPCT`
-		);
 	});
 
 	it("Should claim reward after reward period, multiple donors #2", async function () {
@@ -326,17 +286,6 @@ describe("Donation Miner", () => {
 		);
 		expect(await IPCT.contract.balanceOf(signers[2].getAddress())).to.equal(
 			user2ExpectedReward
-		);
-
-		console.log(
-			`User1 donated ${formatEther(
-				user1Donation
-			)} cUSD and claimed: ${formatEther(user1ExpectedReward)} IPCT`
-		);
-		console.log(
-			`User1 donated ${formatEther(
-				user2Donation
-			)} cUSD and claimed: ${formatEther(user2ExpectedReward)} IPCT`
 		);
 	});
 
@@ -375,17 +324,6 @@ describe("Donation Miner", () => {
 		expect(await IPCT.contract.balanceOf(signers[2].getAddress())).to.equal(
 			user2ExpectedReward
 		);
-
-		console.log(
-			`User1 donated ${formatEther(
-				user1Donation
-			)} cUSD and claimed: ${formatEther(user1ExpectedReward)} IPCT`
-		);
-		console.log(
-			`User1 donated ${formatEther(
-				user2Donation
-			)} cUSD and claimed: ${formatEther(user2ExpectedReward)} IPCT`
-		);
 	});
 
 	it("Should claim reward after reward period, multiple donors #4", async function () {
@@ -422,17 +360,6 @@ describe("Donation Miner", () => {
 		expect(await IPCT.contract.balanceOf(signers[2].getAddress())).to.equal(
 			user2ExpectedReward
 		);
-
-		console.log(
-			`User1 donated ${formatEther(
-				user1Donation
-			)} cUSD and claimed: ${formatEther(user1ExpectedReward)} IPCT`
-		);
-		console.log(
-			`User1 donated ${formatEther(
-				user2Donation
-			)} cUSD and claimed: ${formatEther(user2ExpectedReward)} IPCT`
-		);
 	});
 
 	it("Should not be able to donate to a wrong community", async function () {
@@ -453,6 +380,118 @@ describe("Donation Miner", () => {
 				.donateToCommunity(signers[1].address, user1Donation)
 		).to.be.revertedWith(
 			"DonationMiner::donateToCommunity: This is not a valid community address"
+		);
+	});
+
+	it("Should claim reward after more reward periods, one donor", async function () {
+		const { cUSD, IPCT, DonationMiner, signers } = await initialize();
+
+		const user1Donation = parseEther("100");
+		const user1ExpectedReward = parseEther("4320000");
+
+		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+
+		// Approve from user1
+		await cUSD.contract
+			.connect(signers[1])
+			.approve(DonationMiner.deployed.address, user1Donation);
+
+		await DonationMiner.contract.connect(signers[1]).donate(user1Donation);
+
+		await advanceTimeAndBlockNTimes(3 * REWARD_PERIOD_SIZE);
+
+		// Approve from user1
+		await cUSD.contract
+			.connect(signers[2])
+			.approve(DonationMiner.deployed.address, user1Donation);
+
+		await DonationMiner.contract.connect(signers[2]).donate(user1Donation);
+
+		// Claim their rewards
+		await DonationMiner.contract.connect(signers[1]).claimRewards();
+
+		// Check their IPCT balance
+		expect(await IPCT.contract.balanceOf(signers[1].getAddress())).to.equal(
+			user1ExpectedReward
+		);
+	});
+
+	it("Should donate in multiple reward periods and then claim, one donor", async function () {
+		const { cUSD, IPCT, DonationMiner, signers } = await initialize();
+
+		const user1Donation = parseEther("100");
+		const user1ExpectedReward = parseEther("8635256.64");
+
+		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+
+		// Approve from user1
+		await cUSD.contract
+			.connect(signers[1])
+			.approve(DonationMiner.deployed.address, user1Donation);
+
+		await DonationMiner.contract.connect(signers[1]).donate(user1Donation);
+
+		await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
+
+		// Approve from user1
+		await cUSD.contract
+			.connect(signers[1])
+			.approve(DonationMiner.deployed.address, user1Donation);
+
+		await DonationMiner.contract.connect(signers[1]).donate(user1Donation);
+
+		await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
+
+		// Claim their rewards
+		await DonationMiner.contract.connect(signers[1]).claimRewards();
+
+		// Check their IPCT balance
+		expect(await IPCT.contract.balanceOf(signers[1].getAddress())).to.equal(
+			user1ExpectedReward
+		);
+	});
+
+	it("Should donate and claim in multiple reward periods, one donor", async function () {
+		const { cUSD, IPCT, DonationMiner, signers } = await initialize();
+
+		const user1Donation = parseEther("100");
+		const user1ExpectedReward1 = parseEther("4320000");
+		const user1ExpectedReward2 = parseEther("8635256.64");
+
+		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+
+		// Approve from user1
+		await cUSD.contract
+			.connect(signers[1])
+			.approve(DonationMiner.deployed.address, user1Donation);
+
+		await DonationMiner.contract.connect(signers[1]).donate(user1Donation);
+
+		await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
+
+		// Approve from user1
+		await cUSD.contract
+			.connect(signers[1])
+			.approve(DonationMiner.deployed.address, user1Donation);
+
+		await DonationMiner.contract.connect(signers[1]).donate(user1Donation);
+
+		// Claim their rewards
+		await DonationMiner.contract.connect(signers[1]).claimRewards();
+
+		// Check their IPCT balance
+		expect(await IPCT.contract.balanceOf(signers[1].getAddress())).to.equal(
+			user1ExpectedReward1
+		);
+
+		await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
+
+		// Claim their rewards
+		await DonationMiner.contract.connect(signers[1]).claimRewards();
+
+		// Check their IPCT balance
+		expect(await IPCT.contract.balanceOf(signers[1].getAddress())).to.equal(
+			user1ExpectedReward2
 		);
 	});
 });
