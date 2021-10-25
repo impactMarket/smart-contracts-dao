@@ -858,9 +858,18 @@ contract Community is
                 beneficiary,
                 BeneficiaryState(oldCommunity.beneficiaries(msg.sender))
             );
-            beneficiary.lastClaim = oldCommunity.cooldown(msg.sender) - previousLastInterval;
+            // seconds to blocks conversion
+            beneficiary.lastClaim =
+                (oldCommunity.cooldown(msg.sender) -
+                    previousLastInterval -
+                    _firstBlockTimestamp()) /
+                5;
             beneficiary.claimedAmount = oldCommunity.claimed(msg.sender);
-            beneficiary.claims = (previousLastInterval - _baseInterval) / _incrementInterval + 1;
+            // seconds to blocks conversion
+            beneficiary.claims =
+                (previousLastInterval / 5 - _baseInterval) /
+                _incrementInterval +
+                1;
         }
 
         emit BeneficiaryJoined(msg.sender);
@@ -913,5 +922,20 @@ contract Community is
         }
 
         beneficiary.state = newState_;
+    }
+
+    function _firstBlockTimestamp() public view returns (uint256) {
+        if (block.chainid == 42220) {
+            //celo mainnet
+            return 1587571205;
+        } else if (block.chainid == 44787) {
+            //alfajores testnet
+            return 1594921556;
+        } else if (block.chainid == 44787) {
+            //baklava testnet
+            return 1593012289;
+        } else {
+            return block.timestamp - block.number; //local
+        }
     }
 }

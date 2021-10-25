@@ -268,7 +268,7 @@ contract CommunityAdminImplementation is
      *
      * @param firstManager_ address of the community first manager. Will be able to add others
      * @param previousCommunity_ address of the community to be migrated
-     * @param managerBlockList_    Addresses of managers that have to not be managers
+     * @param managerBlockList_ addresses of managers that have to not be managers
      */
     function migrateCommunity(
         address firstManager_,
@@ -281,7 +281,9 @@ contract CommunityAdminImplementation is
             "CommunityAdmin::migrateCommunity: NOT_VALID"
         );
 
-        uint256 maxClaim = isCommunityNewType(previousCommunity_)
+        bool isCommunityNew = isCommunityNewType(previousCommunity_);
+
+        uint256 maxClaim = isCommunityNew
             ? previousCommunity_.getInitialMaxClaim()
             : previousCommunity_.maxClaim();
 
@@ -290,18 +292,22 @@ contract CommunityAdminImplementation is
                 firstManager_,
                 previousCommunity_.claimAmount(),
                 maxClaim,
-                previousCommunity_.decreaseStep(),
-                previousCommunity_.baseInterval(),
-                previousCommunity_.incrementInterval(),
-                previousCommunity_.minTranche(),
-                previousCommunity_.maxTranche(),
+                isCommunityNew ? previousCommunity_.decreaseStep() : 1e16,
+                isCommunityNew
+                    ? previousCommunity_.baseInterval()
+                    : (previousCommunity_.baseInterval() / 5),
+                isCommunityNew
+                    ? previousCommunity_.incrementInterval()
+                    : (previousCommunity_.incrementInterval() / 5),
+                isCommunityNew ? previousCommunity_.minTranche() : 1e16,
+                isCommunityNew ? previousCommunity_.maxTranche() : 5e18,
                 previousCommunity_,
                 managerBlockList_
             )
         );
         require(address(community) != address(0), "CommunityAdmin::migrateCommunity: NOT_VALID");
 
-        if (isCommunityNewType(previousCommunity_)) {
+        if (isCommunityNew) {
             uint256 balance = _cUSD.balanceOf(address(previousCommunity_));
             previousCommunity_.transfer(_cUSD, address(community), balance);
         }
@@ -541,6 +547,10 @@ contract CommunityAdminImplementation is
         uint256 claimAmount = community_.claimAmount();
         uint256 treasuryFunds = community_.treasuryFunds();
         uint256 privateFunds = community_.privateFunds();
+
+        // `treasuryFunds` can't be zero.
+        // Otherwise, migrated communities will have zero.
+        treasuryFunds = treasuryFunds > 0 ? treasuryFunds : 1e18;
 
         uint256 trancheAmount = (1e36 * validBeneficiaries * (treasuryFunds + privateFunds)) /
             (claimAmount * treasuryFunds);

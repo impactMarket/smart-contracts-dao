@@ -507,12 +507,12 @@ contract DonationMinerImplementation is
             newPeriod.startBlock = lastPeriod.endBlock + 1;
             newPeriod.endBlock = newPeriod.startBlock + _rewardPeriodSize;
             newPeriod.rewardPerBlock = calculateRewardPerBlock();
+            uint256 rewardAmount = _rewardPeriodSize * newPeriod.rewardPerBlock;
             if (lastPeriod.donationsAmount == 0) {
-                newPeriod.rewardAmount =
-                    _rewardPeriodSize *
-                    newPeriod.rewardPerBlock +
-                    lastPeriod.rewardAmount;
+                rewardAmount += lastPeriod.rewardAmount;
             }
+
+            newPeriod.rewardAmount = rewardAmount;
 
             lastPeriod = newPeriod;
         }

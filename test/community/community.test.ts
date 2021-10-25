@@ -16,7 +16,10 @@ import {
 import type * as ethersTypes from "ethers";
 import { DeployFunction } from "hardhat-deploy/types";
 import { parseEther, formatEther } from "@ethersproject/units";
-import { advanceTimeAndBlockNTimes } from "../utils/TimeTravel";
+import {
+	advanceBlockNTimes,
+	advanceTimeAndBlockNTimes,
+} from "../utils/TimeTravel";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const {
