@@ -24,6 +24,7 @@ export default {
     hardhat: {
       hardfork: "istanbul",
       allowUnlimitedContractSize: true,
+      timeout: 100000,
       gasPrice: "auto",
 			gas: 13000000,
     },

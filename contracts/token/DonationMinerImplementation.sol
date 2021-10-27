@@ -13,6 +13,8 @@ import "../community/interfaces/ICommunity.sol";
 import "../community/interfaces/ICommunityAdmin.sol";
 import "../lib/ABDKMath64x64.sol";
 
+import "hardhat/console.sol";
+
 contract DonationMinerImplementation is
     DonationMinerStorageV1,
     Initializable,
@@ -143,7 +145,7 @@ contract DonationMinerImplementation is
         _rewardPeriodCount = 1;
         RewardPeriod storage firstPeriod = _rewardPeriods[1];
         firstPeriod.startBlock = startingBlock_;
-        firstPeriod.endBlock = startingBlock_ + _rewardPeriodSize;
+        firstPeriod.endBlock = startingBlock_ + _rewardPeriodSize - 1;
         firstPeriod.rewardPerBlock = firstRewardPerBlock_;
         firstPeriod.rewardAmount = firstRewardPerBlock_ * _rewardPeriodSize;
     }
@@ -431,7 +433,7 @@ contract DonationMinerImplementation is
             RewardPeriod storage rewardPeriod = _rewardPeriods[rewardPeriodNumber];
 
             claimAmount +=
-                (rewardPeriod.rewardAmount * rewardPeriod.donorAmounts[msg.sender]) /
+                (rewardPeriod.rewardAmount * rewardPeriod.donorAmounts[donor_]) /
                 rewardPeriod.donationsAmount;
             index++;
         }
@@ -505,15 +507,13 @@ contract DonationMinerImplementation is
             _rewardPeriodCount++;
             RewardPeriod storage newPeriod = _rewardPeriods[_rewardPeriodCount];
             newPeriod.startBlock = lastPeriod.endBlock + 1;
-            newPeriod.endBlock = newPeriod.startBlock + _rewardPeriodSize;
+            newPeriod.endBlock = newPeriod.startBlock + _rewardPeriodSize - 1;
             newPeriod.rewardPerBlock = calculateRewardPerBlock();
             uint256 rewardAmount = _rewardPeriodSize * newPeriod.rewardPerBlock;
             if (lastPeriod.donationsAmount == 0) {
                 rewardAmount += lastPeriod.rewardAmount;
             }
-
             newPeriod.rewardAmount = rewardAmount;
-
             lastPeriod = newPeriod;
         }
     }
@@ -532,10 +532,12 @@ contract DonationMinerImplementation is
     ) internal {
         initializeRewardPeriods();
 
+        _donationCount++;
         Donation storage donation = _donations[_donationCount];
         donation.donor = donor_;
         donation.target = target_;
         donation.amount = amount_;
+        donation.blockNumber = block.number;
         donation.rewardPeriod = _rewardPeriodCount;
         donation.token = _cUSD;
         donation.tokenPrice = 1e18;

@@ -56,9 +56,7 @@ let beneficiaryC: SignerWithAddress;
 let beneficiaryD: SignerWithAddress;
 
 let Community: ethersTypes.ContractFactory;
-let CommunityAdminImplementationFactory: ethersTypes.ContractFactory;
 
-// contract instances
 let communityInstance: ethersTypes.Contract;
 let communityAdminProxy: ethersTypes.Contract;
 let treasuryInstance: ethersTypes.Contract;
@@ -96,9 +94,6 @@ async function init() {
 	beneficiaryD = accounts[9];
 
 	Community = await ethers.getContractFactory("Community");
-	CommunityAdminImplementationFactory = await ethers.getContractFactory(
-		"CommunityAdminImplementation"
-	);
 }
 
 async function deploy() {
