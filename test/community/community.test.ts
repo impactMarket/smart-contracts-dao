@@ -1075,7 +1075,6 @@ describe("Chaos test (complete flow)", async () => {
 		for (let index = 0; index < maxClaimsPerUserA; index++) {
 			await waitClaimTime(communityInstanceA, beneficiaryB);
 			await beneficiaryClaim(communityInstanceA, beneficiaryB);
-			await beneficiaryClaim(communityInstanceA, beneficiaryB);
 		}
 		// beneficiary C claims it all
 		const claimAmountB = await communityInstanceB.claimAmount();
