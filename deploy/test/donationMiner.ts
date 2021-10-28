@@ -63,6 +63,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		"1000000"
 	);
 
+	const IPCT = await deployments.get("IPCTToken");
+	const IPCTContract = await ethers.getContractAt("IPCTToken", IPCT.address);
+	IPCTContract.transfer(
+		donationMinerContract.address,
+		parseEther("4000000000")
+	);
+
 	await donationMinerContract.transferOwnership(ownerAddress);
 };
 

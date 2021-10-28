@@ -11,7 +11,6 @@ import "./interfaces/ITreasury.sol";
 import "./interfaces/DonationMinerStorageV1.sol";
 import "../community/interfaces/ICommunity.sol";
 import "../community/interfaces/ICommunityAdmin.sol";
-import "../lib/ABDKMath64x64.sol";
 
 contract DonationMinerImplementation is
     DonationMinerStorageV1,
