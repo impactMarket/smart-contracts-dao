@@ -7,16 +7,18 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
-import "./interfaces/ITreasury.sol";
-import "./interfaces/DonationMinerStorageV1.sol";
+import "../token/interfaces/ITreasury.sol";
+import "../token//interfaces/DonationMinerStorageV1.sol";
 import "../community/interfaces/ICommunity.sol";
 import "../community/interfaces/ICommunityAdmin.sol";
 import "../lib/ABDKMath64x64.sol";
 
+import "./DonationMinerStorageV2Mock.sol";
+
 import "hardhat/console.sol";
 
-contract DonationMinerImplementation is
-    DonationMinerStorageV1,
+contract DonationMinerImplementationMock is
+    DonationMinerStorageV2Mock,
     Initializable,
     OwnableUpgradeable,
     PausableUpgradeable,
@@ -24,7 +26,7 @@ contract DonationMinerImplementation is
 {
     using SafeERC20 for IERC20;
 
-    uint256 public constant VERSION = 1;
+    uint256 public constant VERSION = 2;
 
     /**
      * @notice Triggered when a donation has been added
@@ -99,57 +101,11 @@ contract DonationMinerImplementation is
 
     /**
      * @notice Used to initialize a new DonationMiner contract
-     *
-     * @param cUSD_                 Address of the cUSD token
-     * @param IPCT_                 Address of the IPCT token
-     * @param treasury_             Address of the Treasury
-     * @param firstRewardPerBlock_  Number of IPCTs given for each block
-     *                              from the first reward period
-     * @param rewardPeriodSize_     Number of blocks of the reward period
-     * @param startingBlock_        First block of the first reward period
-     * @param decayNumerator_       Decay numerator used for calculating
-                                    the new reward per block based on
-                                    the previous reward per block
-     * @param decayDenominator_     Decay denominator used for calculating
-                                    the new reward per block based on
-                                    the previous reward per block
      */
-    function initialize(
-        IERC20 cUSD_,
-        IERC20 IPCT_,
-        ITreasury treasury_,
-        uint256 firstRewardPerBlock_,
-        uint256 rewardPeriodSize_,
-        uint256 startingBlock_,
-        uint256 decayNumerator_,
-        uint256 decayDenominator_
-    ) public initializer {
-        require(address(cUSD_) != address(0), "DonationMiner::initialize: cUSD address not set");
-        require(address(IPCT_) != address(0), "DonationMiner::initialize: IPCT address not set");
-        require(address(treasury_) != address(0), "DonationMiner::initialize: treasury_ not set");
-        require(
-            firstRewardPerBlock_ != 0,
-            "DonationMiner::initialize: firstRewardPerBlock not set!"
-        );
-        require(startingBlock_ != 0, "DonationMiner::initialize: startingRewardPeriod not set!");
-
+    function initialize() public initializer {
         __Ownable_init();
         __Pausable_init();
         __ReentrancyGuard_init();
-
-        _cUSD = cUSD_;
-        _IPCT = IPCT_;
-        _treasury = treasury_;
-        _rewardPeriodSize = rewardPeriodSize_;
-        _decayNumerator = decayNumerator_;
-        _decayDenominator = decayDenominator_;
-
-        _rewardPeriodCount = 1;
-        RewardPeriod storage firstPeriod = _rewardPeriods[1];
-        firstPeriod.startBlock = startingBlock_;
-        firstPeriod.endBlock = startingBlock_ + _rewardPeriodSize - 1;
-        firstPeriod.rewardPerBlock = firstRewardPerBlock_;
-        firstPeriod.rewardAmount = firstRewardPerBlock_ * _rewardPeriodSize;
     }
 
     /**
@@ -609,5 +565,23 @@ contract DonationMinerImplementation is
      */
     function isCurrentRewardPeriodInitialized() internal view returns (bool) {
         return _rewardPeriods[_rewardPeriodCount].endBlock >= block.number;
+    }
+
+    // mock extra functions
+
+    function updateTestParam1(uint256 newValue) external onlyOwner {
+        testParam1 = newValue;
+    }
+
+    function updateTestParam2(address newValue) external onlyOwner {
+        testParam2 = newValue;
+    }
+
+    function updateTestParam3(uint256 index, uint256 newValue) external onlyOwner {
+        testParam3[index] = newValue;
+    }
+
+    function updateTestParam4(address index, uint256 newValue) external onlyOwner {
+        testParam4[index] = newValue;
     }
 }
