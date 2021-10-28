@@ -3,6 +3,7 @@ pragma solidity 0.8.5;
 
 import "../governor/IPCTDelegate.sol";
 
+//used only for testing
 contract IPCTDelegateMock is IPCTDelegate {
     /**
      * @notice Function for setting the voting period

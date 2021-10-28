@@ -32,16 +32,6 @@ interface IDonationMiner {
         uint256 tokenPrice;  //the price of the token in cUSD
     }
 
-    function initialize(
-        IERC20 cUSD,
-        IERC20 IPCT,
-        ITreasury treasury,
-        uint256 firstRewardPerBlock,
-        uint256 rewardPeriodSize,
-        uint256 startingBlock,
-        uint256 decayNumerator,
-        uint256 decayDenominator
-    ) external;
     function cUSD() external view returns (IERC20);
     function IPCT() external view returns (IERC20);
     function treasury() external view returns (ITreasury);
