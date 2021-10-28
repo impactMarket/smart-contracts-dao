@@ -457,7 +457,7 @@ describe("Donation Miner", () => {
 		expect(await DonationMiner.treasury()).to.be.equal(owner.address);
 	});
 
-	it.only("Should not update params if not admin", async function () {
+	it("Should not update params if not admin", async function () {
 		await expect(
 			DonationMiner.connect(donor1).updateRewardPeriodParams(
 				2 * REWARD_PERIOD_SIZE,
@@ -1163,7 +1163,7 @@ describe("Donation Miner", () => {
 		).to.be.equal(DonationMinerImplementation.address);
 	});
 
-	it.only("Should update implementation and call new methods", async function () {
+	it("Should update implementation and call new methods", async function () {
 		const NewDonationMinerImplementationFactory =
 			await ethers.getContractFactory("DonationMinerImplementationMock");
 		const NewDonationMinerImplementation =
@@ -1202,7 +1202,7 @@ describe("Donation Miner", () => {
 		expect(await DonationMiner.testParam2()).to.be.equal(donor1.address);
 	});
 
-	it.only("Should have same storage after update implementation", async function () {
+	it("Should have same storage after update implementation", async function () {
 		const NewDonationMinerImplementationFactory =
 			await ethers.getContractFactory("DonationMinerImplementationMock");
 		const NewDonationMinerImplementation =
