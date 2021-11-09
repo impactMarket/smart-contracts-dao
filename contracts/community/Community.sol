@@ -271,9 +271,6 @@ contract Community is
         __AccessControl_init();
         __Ownable_init();
 
-        _setupRole(MANAGER_ROLE, firstManager_);
-        _setRoleAdmin(MANAGER_ROLE, MANAGER_ROLE);
-
         _claimAmount = claimAmount_;
         _baseInterval = baseInterval_;
         _incrementInterval = incrementInterval_;
@@ -285,14 +282,19 @@ contract Community is
         _decreaseStep = decreaseStep_;
         _locked = false;
 
-        for (uint256 i = 0; i < managerBlockList_.length; i++) {
-            _managerBlockList.add(managerBlockList_[i]);
-            emit ManagerAddedToBlockList(managerBlockList_[i]);
-        }
+        addManagersToBlockList(managerBlockList_);
 
         transferOwnership(msg.sender);
 
+        _setupRole(MANAGER_ROLE, firstManager_);
+        _setupRole(MANAGER_ROLE, msg.sender);
+
+        // MANAGER_ROLE is the admin for the MANAGER_ROLE
+        // so every manager is able to add or remove other managers
+        _setRoleAdmin(MANAGER_ROLE, MANAGER_ROLE);
+
         emit ManagerAdded(msg.sender, firstManager_);
+        emit ManagerAdded(msg.sender, msg.sender);
     }
 
     /**
@@ -581,7 +583,11 @@ contract Community is
         onlyManagersOrCommunityAdmin
         eligibleManager(account_)
     {
-        _setupRole(MANAGER_ROLE, account_);
+        require(
+            !hasRole(MANAGER_ROLE, account_),
+            "Community::addManager: This account already has manager role"
+        );
+        super.grantRole(MANAGER_ROLE, account_);
         emit ManagerAdded(msg.sender, account_);
     }
 
@@ -592,11 +598,29 @@ contract Community is
      */
     function removeManager(address account_) external override onlyManagersOrCommunityAdmin {
         require(
+            hasRole(MANAGER_ROLE, account_),
+            "Community::removeManager: This account doesn't have manager role"
+        );
+        require(
             account_ != address(_communityAdmin),
             "Community::removeManager: You are not allow to remove communityAdmin"
         );
-        revokeRole(MANAGER_ROLE, account_);
+        super.revokeRole(MANAGER_ROLE, account_);
         emit ManagerRemoved(msg.sender, account_);
+    }
+
+    /**
+     * @notice Enforces managers to use addManager method
+     */
+    function grantRole(bytes32 role, address account) public override {
+        require(false, "Community::grantRole: You are not allow to use this method");
+    }
+
+    /**
+     * @notice Enforces managers to use removeManager method
+     */
+    function revokeRole(bytes32 role, address account) public override {
+        require(false, "Community::revokeRole: You are not allow to use this method");
     }
 
     /**
@@ -604,14 +628,11 @@ contract Community is
      *
      * @param managerBlockList_ addresses to be added in managerBlockList
      */
-    function addManagersToBlockList(address[] memory managerBlockList_)
-        external
-        override
-        onlyOwner
-    {
+    function addManagersToBlockList(address[] memory managerBlockList_) public override onlyOwner {
         for (uint256 i = 0; i < managerBlockList_.length; i++) {
-            _managerBlockList.add(managerBlockList_[i]);
-            emit ManagerAddedToBlockList(managerBlockList_[i]);
+            if (_managerBlockList.add(managerBlockList_[i])) {
+                emit ManagerAddedToBlockList(managerBlockList_[i]);
+            }
         }
     }
 
@@ -626,8 +647,9 @@ contract Community is
         onlyOwner
     {
         for (uint256 i = 0; i < managerAllowList_.length; i++) {
-            _managerBlockList.remove(managerAllowList_[i]);
-            emit ManagerRemovedFromBlockList(managerAllowList_[i]);
+            if (_managerBlockList.remove(managerAllowList_[i])) {
+                emit ManagerRemovedFromBlockList(managerAllowList_[i]);
+            }
         }
     }
 
