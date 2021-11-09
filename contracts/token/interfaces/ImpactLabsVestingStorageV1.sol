@@ -10,10 +10,10 @@ import "./IImpactLabsVesting.sol";
  * ImpactLabsVestingStorageVx.
  */
 abstract contract ImpactLabsVestingStorageV1 is IImpactLabsVesting {
-    address internal _impactLabs;
-    IERC20 internal _IPCT;
-    IDonationMiner internal _donationMiner;
+    address public override impactLabs;
+    IERC20 public override IPCT;
+    IDonationMiner public override donationMiner;
 
-    uint256 _lastClaimedRewardPeriod;
-    uint256 _advancePayment;
+    uint256 public override lastClaimedRewardPeriod;
+    uint256 public override advancePayment;
 }
