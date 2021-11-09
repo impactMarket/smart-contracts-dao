@@ -1325,7 +1325,7 @@ describe("Community - getFunds", () => {
 		);
 	});
 
-	it.only("should get more funds if have private donations", async () => {
+	it("should get more funds if have private donations", async () => {
 		const user1Donation = parseEther("20000");
 
 		await communityInstance
