@@ -40,6 +40,7 @@ contract TreasuryImplementation is
      */
     function initialize(ICommunityAdmin communityAdmin_) public override initializer {
         __Ownable_init();
+        __ReentrancyGuard_init();
 
         _communityAdmin = communityAdmin_;
     }
