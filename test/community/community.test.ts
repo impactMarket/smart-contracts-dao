@@ -73,7 +73,7 @@ const maxClaimTen = parseEther("10");
 const fiveCents = parseEther("0.05");
 const oneCent = parseEther("0.01");
 const zeroAddress = "0x0000000000000000000000000000000000000000";
-const mintAmount = parseEther("500");
+const mintAmount = parseEther("10000");
 const communityMinTranche = parseEther("100");
 const communityMaxTranche = parseEther("5000");
 
@@ -198,7 +198,7 @@ describe("Community - Beneficiary", () => {
 		await addDefaultCommunity();
 	});
 
-	it("should be able to add beneficiary to community", async () => {
+	it("should add beneficiary to community", async () => {
 		(await communityInstance.beneficiaries(beneficiaryA.address)).state
 			.toString()
 			.should.be.equal(BeneficiaryState.NONE);
@@ -222,7 +222,7 @@ describe("Community - Beneficiary", () => {
 			.should.be.equal(fiveCents.toString());
 	});
 
-	it("should be able to lock beneficiary from community", async () => {
+	it("should lock beneficiary from community", async () => {
 		(await communityInstance.beneficiaries(beneficiaryA.address)).state
 			.toString()
 			.should.be.equal(BeneficiaryState.NONE);
@@ -240,7 +240,7 @@ describe("Community - Beneficiary", () => {
 			.should.be.equal(BeneficiaryState.Locked);
 	});
 
-	it("should not be able to lock an invalid beneficiary from community", async () => {
+	it("should not lock an invalid beneficiary from community", async () => {
 		(await communityInstance.beneficiaries(beneficiaryA.address)).state
 			.toString()
 			.should.be.equal(BeneficiaryState.NONE);
@@ -251,7 +251,7 @@ describe("Community - Beneficiary", () => {
 		).to.be.rejectedWith("NOT_YET");
 	});
 
-	it("should be able to unlock locked beneficiary from community", async () => {
+	it("should unlock locked beneficiary from community", async () => {
 		(await communityInstance.beneficiaries(beneficiaryA.address)).state
 			.toString()
 			.should.be.equal(BeneficiaryState.NONE);
@@ -275,7 +275,7 @@ describe("Community - Beneficiary", () => {
 			.should.be.equal(BeneficiaryState.Valid);
 	});
 
-	it("should not be able to unlock a not locked beneficiary from community", async () => {
+	it("should not unlock a not locked beneficiary from community", async () => {
 		(await communityInstance.beneficiaries(beneficiaryA.address)).state
 			.toString()
 			.should.be.equal(BeneficiaryState.NONE);
@@ -292,7 +292,7 @@ describe("Community - Beneficiary", () => {
 		).to.be.rejectedWith("NOT_YET");
 	});
 
-	it("should be able to remove beneficiary from community", async () => {
+	it("should remove beneficiary from community", async () => {
 		(await communityInstance.beneficiaries(beneficiaryA.address)).state
 			.toString()
 			.should.be.equal(BeneficiaryState.NONE);
@@ -491,7 +491,7 @@ describe("Community - Governance (2)", () => {
 		await addDefaultCommunity();
 	});
 
-	it("should be able to migrate funds from community if CommunityAdmin", async () => {
+	it("should migrate funds from community if CommunityAdmin", async () => {
 		const previousCommunityOldBalance = await cUSDInstance.balanceOf(
 			communityInstance.address
 		);
@@ -519,7 +519,7 @@ describe("Community - Governance (2)", () => {
 		previousCommunityNewBalance.should.be.equal(parseEther("100"));
 	});
 
-	it("should be able to call managerJoinFromMigrated", async () => {
+	it("should call managerJoinFromMigrated", async () => {
 		await communityInstance
 			.connect(communityManagerA)
 			.addManager(communityManagerB.address);
@@ -561,7 +561,7 @@ describe("Community - Governance (2)", () => {
 		).to.be.fulfilled;
 	});
 
-	it("should be able to call beneficiaryJoinFromMigrated", async () => {
+	it("should call beneficiaryJoinFromMigrated", async () => {
 		await communityInstance
 			.connect(communityManagerA)
 			.addBeneficiary(beneficiaryA.address);
@@ -612,7 +612,7 @@ describe("Community - Governance (2)", () => {
 			.should.be.equal(BeneficiaryState.NONE);
 	});
 
-	it("should not be able to migrate from invalid community", async () => {
+	it("should not migrate from invalid community", async () => {
 		await expect(
 			communityAdminProxy.migrateCommunity(
 				communityManagerA.address,
@@ -622,7 +622,7 @@ describe("Community - Governance (2)", () => {
 		).to.be.rejectedWith("NOT_VALID");
 	});
 
-	it("should not be able to migrate community if not admin", async () => {
+	it("should not migrate community if not admin", async () => {
 		await expect(
 			communityAdminProxy.connect(adminAccount2).migrateCommunity(
 				communityManagerA.address,
@@ -632,7 +632,7 @@ describe("Community - Governance (2)", () => {
 		).to.be.rejectedWith("Ownable: caller is not the owner");
 	});
 
-	it("should be able to edit community if manager", async () => {
+	it("should edit community if manager", async () => {
 		(await communityInstance.incrementInterval()).should.be.equal(
 			oneMinuteInBlocks.toString()
 		);
@@ -688,7 +688,7 @@ describe("Community - Governance (2)", () => {
 		).to.be.rejected;
 	});
 
-	it("should not be able to add manager to community if not manager", async () => {
+	it("should not add manager to community if not manager", async () => {
 		await expect(
 			communityInstance
 				.connect(communityManagerC)
@@ -696,7 +696,7 @@ describe("Community - Governance (2)", () => {
 		).to.be.rejectedWith("NOT_MANAGER");
 	});
 
-	it("should not be able to remove manager from community if not manager", async () => {
+	it("should not remove manager from community if not manager", async () => {
 		await communityInstance
 			.connect(communityManagerA)
 			.addManager(communityManagerB.address);
@@ -707,7 +707,7 @@ describe("Community - Governance (2)", () => {
 		).to.be.rejectedWith("NOT_MANAGER");
 	});
 
-	it("should be able to add manager to community if manager", async () => {
+	it("should add manager to community if manager", async () => {
 		await expect(
 			communityInstance
 				.connect(communityManagerA)
@@ -720,7 +720,7 @@ describe("Community - Governance (2)", () => {
 		).to.be.fulfilled;
 	});
 
-	it("should be able to remove manager to community if manager", async () => {
+	it("should remove manager to community if manager", async () => {
 		await expect(
 			communityInstance
 				.connect(communityManagerA)
@@ -733,7 +733,7 @@ describe("Community - Governance (2)", () => {
 		).to.be.fulfilled;
 	});
 
-	it("should be able to renounce from manager of community if manager", async () => {
+	it("should renounce from manager of community if manager", async () => {
 		await communityInstance
 			.connect(communityManagerA)
 			.addManager(communityManagerB.address);
@@ -747,13 +747,13 @@ describe("Community - Governance (2)", () => {
 		).to.be.fulfilled;
 	});
 
-	it("should be able to lock community if manager", async () => {
+	it("should lock community if manager", async () => {
 		await expect(communityInstance.connect(communityManagerA).lock())
 			.to.emit(communityInstance, "CommunityLocked")
 			.withArgs(communityManagerA.address);
 	});
 
-	it("should be able to lock community if manager", async () => {
+	it("should lock community if manager", async () => {
 		await expect(communityInstance.connect(communityManagerA).lock())
 			.to.emit(communityInstance, "CommunityLocked")
 			.withArgs(communityManagerA.address);
@@ -772,7 +772,7 @@ describe("CommunityAdmin", () => {
 		await deploy();
 	});
 
-	it("should be able to add a community if admin", async () => {
+	it("should add a community if admin", async () => {
 		await cUSDInstance.mint(
 			treasuryInstance.address,
 			mintAmount.toString()
@@ -806,7 +806,7 @@ describe("CommunityAdmin", () => {
 		(await communityInstance.maxClaim()).should.be.equal(maxClaimTen);
 	});
 
-	it("should be able to remove a community if admin", async () => {
+	it("should remove a community if admin", async () => {
 		await cUSDInstance.mint(
 			treasuryInstance.address,
 			mintAmount.toString()
@@ -834,7 +834,7 @@ describe("CommunityAdmin", () => {
 		await communityAdminProxy.removeCommunity(communityAddress);
 	});
 
-	it("should not be able to create a community with invalid values", async () => {
+	it("should not create a community with invalid values", async () => {
 		await expect(
 			communityAdminProxy.addCommunity(
 				communityManagerA.address,
@@ -1142,19 +1142,19 @@ describe("Community - getFunds", () => {
 		await addDefaultCommunity();
 	});
 
-	it("should be able to get funds if manager", async () => {
+	it("should get funds if manager", async () => {
 		await expect(
 			communityInstance.connect(communityManagerA).requestFunds()
 		).to.be.fulfilled;
 	});
 
-	it("should not be able to get funds if not manager", async () => {
+	it("should not get funds if not manager", async () => {
 		await expect(
 			communityInstance.connect(beneficiaryA).requestFunds()
 		).to.be.rejectedWith("Community: NOT_MANAGER");
 	});
 
-	it("should not be able to change community tranche limits if not admin", async () => {
+	it("should not change community tranche limits if not admin", async () => {
 		await expect(
 			communityAdminProxy
 				.connect(communityManagerA)
@@ -1166,7 +1166,7 @@ describe("Community - getFunds", () => {
 		).to.be.rejectedWith("Ownable: caller is not the owner");
 	});
 
-	it("should be able to change community tranche limits if admin", async () => {
+	it("should change community tranche limits if admin", async () => {
 		await expect(
 			communityAdminProxy
 				.connect(adminAccount1)
@@ -1185,7 +1185,7 @@ describe("Community - getFunds", () => {
 		);
 	});
 
-	it("should not be able to change communityMaxTranche if not admin", async () => {
+	it("should not change communityMaxTranche if not admin", async () => {
 		await expect(
 			communityAdminProxy
 				.connect(communityManagerA)
@@ -1197,7 +1197,7 @@ describe("Community - getFunds", () => {
 		).to.be.rejectedWith("Ownable: caller is not the owner");
 	});
 
-	it("should be able to change communityMaxTranche if admin", async () => {
+	it("should change communityMaxTranche if admin", async () => {
 		await expect(
 			communityAdminProxy
 				.connect(adminAccount1)
@@ -1213,7 +1213,7 @@ describe("Community - getFunds", () => {
 		);
 	});
 
-	it("should not be able to set communityMinTranche greater than communityMaxTranche", async () => {
+	it("should not set communityMinTranche greater than communityMaxTranche", async () => {
 		await expect(
 			communityAdminProxy
 				.connect(adminAccount1)
@@ -1255,7 +1255,7 @@ describe("Community - getFunds", () => {
 		).to.be.equal(communityMinTranche.mul(2));
 	});
 
-	it("should be able to donate directly in the community", async () => {
+	it("should donate directly in the community", async () => {
 		const user1Donation = 1;
 
 		await cUSDInstance.mint(adminAccount1.address, user1Donation);
@@ -1277,7 +1277,7 @@ describe("Community - getFunds", () => {
 		);
 	});
 
-	it("should not be able to requestFunds if you have more then communityMinTranche", async () => {
+	it("should not requestFunds if you have more then communityMinTranche", async () => {
 		const user1Donation = 1;
 
 		await cUSDInstance.mint(adminAccount1.address, parseEther("100"));
@@ -1302,7 +1302,7 @@ describe("Community - getFunds", () => {
 		).to.be.equal(communityMinTranche.add(user1Donation));
 	});
 
-	it("should be able to transfer funds if admin", async () => {
+	it("should transfer funds if admin", async () => {
 		const userInitialBalance = await cUSDInstance.balanceOf(
 			adminAccount1.address
 		);
@@ -1325,7 +1325,7 @@ describe("Community - getFunds", () => {
 		);
 	});
 
-	it("should be able get more funds if have private donations", async () => {
+	it.only("should get more funds if have private donations", async () => {
 		const user1Donation = parseEther("20000");
 
 		await communityInstance
@@ -1349,6 +1349,6 @@ describe("Community - getFunds", () => {
 
 		expect(
 			await cUSDInstance.balanceOf(communityInstance.address)
-		).to.be.equal(parseEther("200.45"));
+		).to.be.equal(parseEther("501.95"));
 	});
 });

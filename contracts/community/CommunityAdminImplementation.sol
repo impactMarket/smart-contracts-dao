@@ -12,6 +12,8 @@ import "./interfaces/CommunityAdminStorageV1.sol";
 import "./Community.sol";
 import "../token/interfaces/ITreasury.sol";
 
+import "hardhat/console.sol";
+
 /**
  * @notice Welcome to CommunityAdmin, the main contract. This is an
  * administrative (for now) contract where the admins have control
@@ -552,8 +554,9 @@ contract CommunityAdminImplementation is
         // Otherwise, migrated communities will have zero.
         treasuryFunds = treasuryFunds > 0 ? treasuryFunds : 1e18;
 
-        uint256 trancheAmount = (1e36 * validBeneficiaries * (treasuryFunds + privateFunds)) /
-            (claimAmount * treasuryFunds);
+        uint256 trancheAmount = (validBeneficiaries *
+            claimAmount *
+            (treasuryFunds + privateFunds)) / treasuryFunds;
 
         if (trancheAmount < community_.minTranche()) {
             trancheAmount = community_.minTranche();
