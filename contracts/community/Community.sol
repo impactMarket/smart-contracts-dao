@@ -270,6 +270,7 @@ contract Community is
 
         __AccessControl_init();
         __Ownable_init();
+        __ReentrancyGuard_init();
 
         _claimAmount = claimAmount_;
         _baseInterval = baseInterval_;
@@ -875,23 +876,37 @@ contract Community is
             beneficiary.claimedAmount = oldBeneficiaryClaimedAmount;
         } else {
             ICommunityOld oldCommunity = ICommunityOld(address(_previousCommunity));
-            uint256 previousLastInterval = oldCommunity.lastInterval(msg.sender);
+            uint256 oldBeneficiaryLastInterval = oldCommunity.lastInterval(msg.sender);
             _changeBeneficiaryState(
                 beneficiary,
                 BeneficiaryState(oldCommunity.beneficiaries(msg.sender))
             );
-            // seconds to blocks conversion
-            beneficiary.lastClaim =
-                (oldCommunity.cooldown(msg.sender) -
-                    previousLastInterval -
-                    _firstBlockTimestamp()) /
-                5;
+
+            uint256 oldBeneficiaryCooldown = oldCommunity.cooldown(msg.sender);
+
+            if (oldBeneficiaryCooldown >= oldBeneficiaryLastInterval + _firstBlockTimestamp()) {
+                // seconds to blocks conversion
+                beneficiary.lastClaim =
+                    (oldBeneficiaryCooldown - oldBeneficiaryLastInterval - _firstBlockTimestamp()) /
+                    5;
+            } else {
+                beneficiary.lastClaim = 0;
+            }
+
+            //            //todo: check this logic
+            //            beneficiary.lastClaim = 0;
+
             beneficiary.claimedAmount = oldCommunity.claimed(msg.sender);
-            // seconds to blocks conversion
-            beneficiary.claims =
-                (previousLastInterval / 5 - _baseInterval) /
-                _incrementInterval +
-                1;
+
+            uint256 previousBaseInterval = oldCommunity.baseInterval();
+            if (oldBeneficiaryLastInterval >= previousBaseInterval) {
+                beneficiary.claims =
+                    (oldBeneficiaryLastInterval - previousBaseInterval) /
+                    oldCommunity.incrementInterval() +
+                    1;
+            } else {
+                beneficiary.claims = 0;
+            }
         }
 
         emit BeneficiaryJoined(msg.sender);
@@ -936,6 +951,10 @@ contract Community is
         _beneficiaryList.add(msg.sender);
 
         if (newState_ == BeneficiaryState.Valid) {
+            require(
+                _maxClaim - _decreaseStep >= _claimAmount,
+                "Community::_changeBeneficiaryState: This community has reached the maximum number of valid beneficiaries"
+            );
             _validBeneficiaryCount++;
             _maxClaim -= _decreaseStep;
         } else if (beneficiary.state == BeneficiaryState.Valid) {

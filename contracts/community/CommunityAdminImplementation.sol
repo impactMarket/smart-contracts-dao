@@ -132,6 +132,7 @@ contract CommunityAdminImplementation is
      */
     function initialize(ICommunity communityTemplate_, IERC20 cUSD_) external override initializer {
         __Ownable_init();
+        __ReentrancyGuard_init();
 
         _communityTemplate = communityTemplate_;
         _cUSD = cUSD_;
@@ -285,39 +286,46 @@ contract CommunityAdminImplementation is
 
         bool isCommunityNew = isCommunityNewType(previousCommunity_);
 
-        uint256 maxClaim = isCommunityNew
-            ? previousCommunity_.getInitialMaxClaim()
-            : previousCommunity_.maxClaim();
-
-        ICommunity community = ICommunity(
-            deployCommunity(
+        address newCommunityAddress;
+        if (isCommunityNew) {
+            newCommunityAddress = deployCommunity(
                 firstManager_,
                 previousCommunity_.claimAmount(),
-                maxClaim,
-                isCommunityNew ? previousCommunity_.decreaseStep() : 1e16,
-                isCommunityNew
-                    ? previousCommunity_.baseInterval()
-                    : (previousCommunity_.baseInterval() / 5),
-                isCommunityNew
-                    ? previousCommunity_.incrementInterval()
-                    : (previousCommunity_.incrementInterval() / 5),
-                isCommunityNew ? previousCommunity_.minTranche() : 1e16,
-                isCommunityNew ? previousCommunity_.maxTranche() : 5e18,
+                previousCommunity_.getInitialMaxClaim(),
+                previousCommunity_.decreaseStep(),
+                previousCommunity_.baseInterval(),
+                previousCommunity_.incrementInterval(),
+                previousCommunity_.minTranche(),
+                previousCommunity_.maxTranche(),
                 previousCommunity_,
                 managerBlockList_
-            )
-        );
-        require(address(community) != address(0), "CommunityAdmin::migrateCommunity: NOT_VALID");
+            );
+        } else {
+            newCommunityAddress = deployCommunity(
+                firstManager_,
+                previousCommunity_.claimAmount(),
+                previousCommunity_.maxClaim(),
+                1e16,
+                (previousCommunity_.baseInterval() / 5),
+                (previousCommunity_.incrementInterval() / 5),
+                1e16,
+                5e18,
+                previousCommunity_,
+                managerBlockList_
+            );
+        }
+
+        require(newCommunityAddress != address(0), "CommunityAdmin::migrateCommunity: NOT_VALID");
 
         if (isCommunityNew) {
             uint256 balance = _cUSD.balanceOf(address(previousCommunity_));
-            previousCommunity_.transfer(_cUSD, address(community), balance);
+            previousCommunity_.transfer(_cUSD, newCommunityAddress, balance);
         }
 
-        _communities[address(community)] = CommunityState.Valid;
-        _communityList.add(address(community));
+        _communities[newCommunityAddress] = CommunityState.Valid;
+        _communityList.add(newCommunityAddress);
 
-        emit CommunityMigrated(firstManager_, address(community), address(previousCommunity_));
+        emit CommunityMigrated(firstManager_, newCommunityAddress, address(previousCommunity_));
     }
 
     /**
