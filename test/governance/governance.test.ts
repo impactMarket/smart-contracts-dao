@@ -122,24 +122,23 @@ describe("IPCTGovernator", function () {
 		const targets = [communityAdmin.address];
 		const values = [0];
 		const signatures = [
-			"addCommunity(address,uint256,uint256,uint256,uint256,uint256,uint256,uint256,address[])",
+			"addCommunity(address[],uint256,uint256,uint256,uint256,uint256,uint256,uint256)",
 		];
 
 		const calldatas = [
 			ethers.utils.defaultAbiCoder.encode(
 				[
-					"address",
-					"uint256",
-					"uint256",
-					"uint256",
-					"uint256",
-					"uint256",
-					"uint256",
-					"uint256",
 					"address[]",
+					"uint256",
+					"uint256",
+					"uint256",
+					"uint256",
+					"uint256",
+					"uint256",
+					"uint256",
 				],
 				[
-					alice.address,
+					[alice.address],
 					parseEther("100"),
 					parseEther("1000"),
 					parseEther("0.01"),
@@ -147,7 +146,6 @@ describe("IPCTGovernator", function () {
 					111,
 					communityMinTranche,
 					communityMaxTranche,
-					[],
 				]
 			),
 		];
@@ -184,24 +182,23 @@ describe("IPCTGovernator", function () {
 		const targets = [communityAdmin.address];
 		const values = [0];
 		const signatures = [
-			"addCommunity(address,uint256,uint256,uint256,uint256,uint256,uint256,uint256,address[])",
+			"addCommunity(address[],uint256,uint256,uint256,uint256,uint256,uint256,uint256)",
 		];
 
 		const calldatas = [
 			ethers.utils.defaultAbiCoder.encode(
 				[
-					"address",
-					"uint256",
-					"uint256",
-					"uint256",
-					"uint256",
-					"uint256",
-					"uint256",
-					"uint256",
 					"address[]",
+					"uint256",
+					"uint256",
+					"uint256",
+					"uint256",
+					"uint256",
+					"uint256",
+					"uint256",
 				],
 				[
-					alice.address,
+					[alice.address],
 					parseEther("100"),
 					parseEther("1000"),
 					parseEther("0.01"),
@@ -209,7 +206,6 @@ describe("IPCTGovernator", function () {
 					111,
 					communityMinTranche,
 					communityMaxTranche,
-					[],
 				]
 			),
 		];

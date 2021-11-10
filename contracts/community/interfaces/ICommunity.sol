@@ -21,7 +21,7 @@ interface ICommunity {
     }
 
     function initialize(
-        address firstManager,
+        address[] memory managers,
         uint256 claimAmount,
         uint256 maxClaim,
         uint256 decreaseStep,
@@ -29,8 +29,7 @@ interface ICommunity {
         uint256 incrementInterval,
         uint256 minTranche,
         uint256 maxTranche,
-        ICommunity previousCommunity,
-        address[] memory managerBlockList
+        ICommunity previousCommunity
     ) external;
     function previousCommunity() external view returns(ICommunity);
     function claimAmount() external view returns(uint256);
@@ -74,8 +73,6 @@ interface ICommunity {
     function transfer(IERC20 token, address to, uint256 amount) external;
     function addManager(address managerAddress) external;
     function removeManager(address managerAddress) external;
-    function addManagersToBlockList(address[] memory managerBlockList) external;
-    function removeManagersFromBlockList(address[] memory managerBlockList) external;
     function addBeneficiary(address beneficiaryAddress) external;
     function lockBeneficiary(address beneficiaryAddress) external;
     function unlockBeneficiary(address beneficiaryAddress) external;
@@ -87,6 +84,5 @@ interface ICommunity {
     function unlock() external;
     function requestFunds() external;
     function beneficiaryJoinFromMigrated() external;
-    function managerJoinFromMigrated() external;
     function getInitialMaxClaim() external view returns (uint256);
 }

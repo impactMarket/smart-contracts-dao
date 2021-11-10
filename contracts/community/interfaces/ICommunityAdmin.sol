@@ -36,23 +36,19 @@ interface ICommunityAdmin {
     ) external;
     function updateProxyImplementation(address communityProxy, address newLogic) external;
     function addCommunity(
-        address firstManager,
+        address[] memory managers,
         uint256 claimAmount,
         uint256 maxClaim,
         uint256 decreaseStep,
         uint256 baseInterval,
         uint256 incrementInterval,
         uint256 minTranche,
-        uint256 maxTranche,
-        address[] memory managerBlockList
+        uint256 maxTranche
     ) external;
     function migrateCommunity(
-        address firstManager,
-        ICommunity previousCommunity,
-        address[] memory managerBlockList
+        address[] memory managers,
+        ICommunity previousCommunity
     ) external;
-    function addManagersToCommunityBlockList(ICommunity community, address[] memory managerBlockList) external;
-    function removeManagersFromCommunityBlockList(ICommunity community, address[] memory managerBlockList) external;
     function addManagerToCommunity(ICommunity community_, address account_) external;
     function removeCommunity(ICommunity community) external;
     function fundCommunity() external;
