@@ -196,19 +196,19 @@ contract CommunityAdminImplementation is
         address oldTreasuryAddress = address(_treasury);
         _treasury = newTreasury_;
 
-        emit TreasuryUpdated(oldTreasuryAddress, address(_treasury));
+        emit TreasuryUpdated(oldTreasuryAddress, address(newTreasury_));
     }
 
     /**
      * @notice Updates the address of the the communityTemplate
      *
-     * @param newCommunityTemplate address of the new communityTemplate contract
+     * @param newCommunityTemplate_ address of the new communityTemplate contract
      */
-    function updateCommunityTemplate(ICommunity newCommunityTemplate) external override onlyOwner {
-        address oldCommunityTemplateAddress = address(newCommunityTemplate);
-        _communityTemplate = newCommunityTemplate;
+    function updateCommunityTemplate(ICommunity newCommunityTemplate_) external override onlyOwner {
+        address oldCommunityTemplateAddress = address(_communityTemplate);
+        _communityTemplate = newCommunityTemplate_;
 
-        emit CommunityTemplateUpdated(oldCommunityTemplateAddress, address(newCommunityTemplate));
+        emit CommunityTemplateUpdated(oldCommunityTemplateAddress, address(newCommunityTemplate_));
     }
 
     /**
@@ -275,11 +275,12 @@ contract CommunityAdminImplementation is
         onlyOwner
         nonReentrant
     {
-        _communities[address(previousCommunity_)] = CommunityState.Removed;
         require(
-            address(previousCommunity_) != address(0),
-            "CommunityAdmin::migrateCommunity: NOT_VALID"
+            _communities[address(previousCommunity_)] != CommunityState.Migrated,
+            "CommunityAdmin::migrateCommunity: this community has been migrated"
         );
+
+        _communities[address(previousCommunity_)] = CommunityState.Migrated;
 
         bool isCommunityNew = isCommunityNewType(previousCommunity_);
 
@@ -343,22 +344,32 @@ contract CommunityAdminImplementation is
      * @param community_ address of the community
      */
     function removeCommunity(ICommunity community_) external override onlyOwner nonReentrant {
+        require(
+            _communities[address(community_)] == CommunityState.Valid,
+            "CommunityAdmin::removeCommunity: this isn't a valid community"
+        );
         _communities[address(community_)] = CommunityState.Removed;
-        emit CommunityRemoved(address(community_));
+
         community_.transfer(_cUSD, address(_treasury), _cUSD.balanceOf(address(community_)));
+        emit CommunityRemoved(address(community_));
     }
 
     /**
      * @dev Funds an existing community if it hasn't enough funds
      */
     function fundCommunity() external override onlyCommunities {
+        ICommunity community = ICommunity(msg.sender);
+        uint256 balance = _cUSD.balanceOf(msg.sender);
         require(
-            _cUSD.balanceOf(msg.sender) <= ICommunity(msg.sender).minTranche(),
+            balance < community.minTranche(),
             "CommunityAdmin::fundCommunity: this community has enough funds"
         );
+
         uint256 trancheAmount = calculateCommunityTrancheAmount(ICommunity(msg.sender));
 
-        transferToCommunity(ICommunity(msg.sender), trancheAmount);
+        if (trancheAmount > balance) {
+            transferToCommunity(community, trancheAmount - balance);
+        }
     }
 
     /**
@@ -523,6 +534,8 @@ contract CommunityAdminImplementation is
         uint256 claimAmount = community_.claimAmount();
         uint256 treasuryFunds = community_.treasuryFunds();
         uint256 privateFunds = community_.privateFunds();
+        uint256 minTranche = community_.minTranche();
+        uint256 maxTranche = community_.maxTranche();
 
         // `treasuryFunds` can't be zero.
         // Otherwise, migrated communities will have zero.
@@ -532,12 +545,10 @@ contract CommunityAdminImplementation is
             claimAmount *
             (treasuryFunds + privateFunds)) / treasuryFunds;
 
-        if (trancheAmount < community_.minTranche()) {
-            trancheAmount = community_.minTranche();
-        }
-
-        if (trancheAmount > community_.maxTranche()) {
-            trancheAmount = community_.maxTranche();
+        if (trancheAmount < minTranche) {
+            trancheAmount = minTranche;
+        } else if (trancheAmount > maxTranche) {
+            trancheAmount = maxTranche;
         }
 
         return trancheAmount;

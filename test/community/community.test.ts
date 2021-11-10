@@ -567,13 +567,22 @@ describe("Community - Governance (2)", () => {
 			.should.be.equal(BeneficiaryState.NONE);
 	});
 
-	it("should not migrate from invalid community", async () => {
+	it("should not migrate an migrated community", async () => {
 		await expect(
 			communityAdminProxy.migrateCommunity(
 				[communityManagerA.address],
-				zeroAddress
+				communityInstance.address
 			)
-		).to.be.rejectedWith("NOT_VALID");
+		).to.be.fulfilled;
+
+		await expect(
+			communityAdminProxy.migrateCommunity(
+				[communityManagerA.address],
+				communityInstance.address
+			)
+		).to.be.rejectedWith(
+			"CommunityAdmin::migrateCommunity: this community has been migrated"
+		);
 	});
 
 	it("should not migrate community if not admin", async () => {
@@ -1091,9 +1100,19 @@ describe("Community - getFunds", () => {
 	});
 
 	it("should get funds if manager", async () => {
+		await communityInstance
+			.connect(communityManagerA)
+			.addBeneficiary(beneficiaryA.address);
+
+		communityInstance.connect(beneficiaryA).claim();
+
 		await expect(
 			communityInstance.connect(communityManagerA).requestFunds()
 		).to.be.fulfilled;
+
+		expect(
+			await cUSDInstance.balanceOf(communityInstance.address)
+		).to.be.equal(communityMinTranche);
 	});
 
 	it("should not get funds if not manager", async () => {
@@ -1195,12 +1214,19 @@ describe("Community - getFunds", () => {
 		expect(
 			await cUSDInstance.balanceOf(communityInstance.address)
 		).to.be.equal(communityMinTranche);
+
+		await communityInstance
+			.connect(communityManagerA)
+			.addBeneficiary(beneficiaryA.address);
+
+		communityInstance.connect(beneficiaryA).claim();
+
 		await expect(
 			communityInstance.connect(communityManagerA).requestFunds()
 		).to.be.fulfilled;
 		expect(
 			await cUSDInstance.balanceOf(communityInstance.address)
-		).to.be.equal(communityMinTranche.mul(2));
+		).to.be.equal(communityMinTranche);
 	});
 
 	it("should donate directly in the community", async () => {
@@ -1273,7 +1299,7 @@ describe("Community - getFunds", () => {
 		);
 	});
 
-	it("should get more funds if have private donations", async () => {
+	it.only("should get more funds if have private donations", async () => {
 		const user1Donation = parseEther("20000");
 
 		await communityInstance
@@ -1297,6 +1323,6 @@ describe("Community - getFunds", () => {
 
 		expect(
 			await cUSDInstance.balanceOf(communityInstance.address)
-		).to.be.equal(parseEther("501.95"));
+		).to.be.equal(parseEther("402"));
 	});
 });

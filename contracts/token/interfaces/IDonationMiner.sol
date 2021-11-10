@@ -8,7 +8,7 @@ import "./ITreasury.sol";
 interface IDonationMiner {
     struct RewardPeriod {
         uint256 rewardPerBlock; //reward tokens created per block.
-        uint256 rewardAmount; //reward tokens from previous periods.
+        uint256 rewardAmount; //reward tokens from previous periods + reward tokens from this reward period
         uint256 startBlock; //block number at which reward period starts.
         uint256 endBlock; //block number at which reward period ends.
         uint256 donationsAmount; //total of donations for this rewardPeriod.

@@ -74,13 +74,13 @@ contract TreasuryImplementation is
     /**
      * @notice Updates the CommunityAdmin contract address
      *
-     * @param communityAdmin_ address of the new CommunityAdmin contract
+     * @param newCommunityAdmin_ address of the new CommunityAdmin contract
      */
-    function updateCommunityAdmin(ICommunityAdmin communityAdmin_) external override onlyOwner {
+    function updateCommunityAdmin(ICommunityAdmin newCommunityAdmin_) external override onlyOwner {
         address oldCommunityAdminAddress = address(_communityAdmin);
-        _communityAdmin = communityAdmin_;
+        _communityAdmin = newCommunityAdmin_;
 
-        emit CommunityAdminUpdated(oldCommunityAdminAddress, address(_communityAdmin));
+        emit CommunityAdminUpdated(oldCommunityAdminAddress, address(newCommunityAdmin_));
     }
 
     /**
