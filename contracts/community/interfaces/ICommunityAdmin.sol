@@ -9,7 +9,8 @@ interface ICommunityAdmin {
     enum CommunityState {
         NONE,
         Valid,
-        Removed
+        Removed,
+        Migrated
     }
 
     function initialize(ICommunity communityTemplate, IERC20 cUSD) external;

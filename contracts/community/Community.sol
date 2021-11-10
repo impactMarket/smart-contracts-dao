@@ -452,7 +452,7 @@ contract Community is
 
         addManager(address(_communityAdmin));
 
-        emit CommunityAdminUpdated(oldCommunityAdminAddress, address(_communityAdmin));
+        emit CommunityAdminUpdated(oldCommunityAdminAddress, address(newCommunityAdmin_));
     }
 
     /** Updates the address of the previousCommunity
@@ -463,7 +463,7 @@ contract Community is
         address oldPreviousCommunityAddress = address(_previousCommunity);
         _previousCommunity = newPreviousCommunity_;
 
-        emit PreviousCommunityUpdated(oldPreviousCommunityAddress, address(_previousCommunity));
+        emit PreviousCommunityUpdated(oldPreviousCommunityAddress, address(newPreviousCommunity_));
     }
 
     /** Updates beneficiary params
@@ -508,11 +508,11 @@ contract Community is
             oldDecreaseStep,
             oldBaseInterval,
             oldIncrementInterval,
-            _claimAmount,
-            _maxClaim,
-            _decreaseStep,
-            _baseInterval,
-            _incrementInterval
+            claimAmount_,
+            maxClaim_,
+            decreaseStep_,
+            baseInterval_,
+            incrementInterval_
         );
     }
 
@@ -537,7 +537,7 @@ contract Community is
         _minTranche = minTranche_;
         _maxTranche = maxTranche_;
 
-        emit CommunityParamsUpdated(oldMinTranche, oldMaxTranche, _minTranche, _maxTranche);
+        emit CommunityParamsUpdated(oldMinTranche, oldMaxTranche, minTranche_, maxTranche_);
     }
 
     /**

@@ -360,7 +360,7 @@ contract DonationMinerImplementation is
         address oldTreasuryAddress = address(_treasury);
         _treasury = newTreasury_;
 
-        emit TreasuryUpdated(oldTreasuryAddress, address(_treasury));
+        emit TreasuryUpdated(oldTreasuryAddress, address(newTreasury_));
     }
 
     /**
@@ -407,12 +407,14 @@ contract DonationMinerImplementation is
         donor.lastClaim = getDonorLastEndedRewardPeriodIndex(donor);
 
         if (claimAmount > 0) {
-            require(
-                _IPCT.balanceOf(address(this)) >= claimAmount,
-                "DonationMiner::claimRewards: ERR_REWARD_TOKEN_BALANCE"
-            );
-            _IPCT.safeTransfer(msg.sender, claimAmount);
+            return;
         }
+
+        if (claimAmount > _IPCT.balanceOf(address(this))) {
+            claimAmount = _IPCT.balanceOf(address(this));
+        }
+
+        _IPCT.safeTransfer(msg.sender, claimAmount);
 
         emit RewardClaimed(msg.sender, claimAmount);
     }
