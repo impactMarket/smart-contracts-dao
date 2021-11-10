@@ -52,20 +52,6 @@ contract Community is
     event ManagerRemoved(address indexed manager, address indexed account);
 
     /**
-     * @notice Triggered when a address has been added to managerBlockList
-     *
-     * @param account           Address that has been added to managerBlockList
-     */
-    event ManagerAddedToBlockList(address indexed account);
-
-    /**
-     * @notice Triggered when a address has been removed from managerBlockList
-     *
-     * @param account           Address that has been removed from managerBlockList
-     */
-    event ManagerRemovedFromBlockList(address indexed account);
-
-    /**
      * @notice Triggered when a beneficiary has been added
      *
      * @param manager           Address of the manager that triggered the event
@@ -140,13 +126,6 @@ contract Community is
      * @param beneficiary       Address of the beneficiary
      */
     event BeneficiaryJoined(address indexed beneficiary);
-
-    /**
-     * @notice Triggered when a manager from previous community has joined in the current community
-     *
-     * @param manager           Address of the manager
-     */
-    event ManagerJoined(address indexed manager);
 
     /**
      * @notice Triggered when beneficiary params has been updated
@@ -230,7 +209,7 @@ contract Community is
     /**
      * @notice Used to initialize a new Community contract
      *
-     * @param firstManager_        Community's first manager.
+     * @param managers_            Community's initial managers.
      *                             Will be able to add others
      * @param claimAmount_         Base amount to be claim by the beneficiary
      * @param maxClaim_            Limit that a beneficiary can claim in total
@@ -240,10 +219,9 @@ contract Community is
      * @param previousCommunity_   Previous smart contract address of community
      * @param minTranche_          Minimum amount that the community will receive when requesting funds
      * @param maxTranche_          Maximum amount that the community will receive when requesting funds
-     * @param managerBlockList_    Addresses that have to not be managers
      */
     function initialize(
-        address firstManager_,
+        address[] memory managers_,
         uint256 claimAmount_,
         uint256 maxClaim_,
         uint256 decreaseStep_,
@@ -251,8 +229,7 @@ contract Community is
         uint256 incrementInterval_,
         uint256 minTranche_,
         uint256 maxTranche_,
-        ICommunity previousCommunity_,
-        address[] memory managerBlockList_
+        ICommunity previousCommunity_
     ) external override initializer {
         require(
             baseInterval_ > incrementInterval_,
@@ -283,19 +260,18 @@ contract Community is
         _decreaseStep = decreaseStep_;
         _locked = false;
 
-        addManagersToBlockList(managerBlockList_);
-
         transferOwnership(msg.sender);
-
-        _setupRole(MANAGER_ROLE, firstManager_);
-        _setupRole(MANAGER_ROLE, msg.sender);
 
         // MANAGER_ROLE is the admin for the MANAGER_ROLE
         // so every manager is able to add or remove other managers
         _setRoleAdmin(MANAGER_ROLE, MANAGER_ROLE);
 
-        emit ManagerAdded(msg.sender, firstManager_);
+        _setupRole(MANAGER_ROLE, msg.sender);
         emit ManagerAdded(msg.sender, msg.sender);
+
+        for (uint256 i = 0; i < managers_.length; i++) {
+            addManager(managers_[i]);
+        }
     }
 
     /**
@@ -312,19 +288,8 @@ contract Community is
     /**
      * @notice Enforces sender to have manager role
      */
-    modifier onlyManagersOrCommunityAdmin() {
-        require(
-            hasRole(MANAGER_ROLE, msg.sender) || msg.sender == address(_communityAdmin),
-            "Community: NOT_MANAGER"
-        );
-        _;
-    }
-
-    /**
-     * @notice Enforces account to not be in block list
-     */
-    modifier eligibleManager(address account_) {
-        require(!_managerBlockList.contains(account_), "Community: This address is blocked");
+    modifier onlyManagers() {
+        require(hasRole(MANAGER_ROLE, msg.sender), "Community: NOT_MANAGER");
         _;
     }
 
@@ -485,6 +450,8 @@ contract Community is
         address oldCommunityAdminAddress = address(_communityAdmin);
         _communityAdmin = newCommunityAdmin_;
 
+        addManager(address(_communityAdmin));
+
         emit CommunityAdminUpdated(oldCommunityAdminAddress, address(_communityAdmin));
     }
 
@@ -578,18 +545,11 @@ contract Community is
      *
      * @param account_ address of the manager to be added
      */
-    function addManager(address account_)
-        external
-        override
-        onlyManagersOrCommunityAdmin
-        eligibleManager(account_)
-    {
-        require(
-            !hasRole(MANAGER_ROLE, account_),
-            "Community::addManager: This account already has manager role"
-        );
-        super.grantRole(MANAGER_ROLE, account_);
-        emit ManagerAdded(msg.sender, account_);
+    function addManager(address account_) public override onlyManagers {
+        if (!hasRole(MANAGER_ROLE, account_)) {
+            super.grantRole(MANAGER_ROLE, account_);
+            emit ManagerAdded(msg.sender, account_);
+        }
     }
 
     /**
@@ -597,7 +557,7 @@ contract Community is
      *
      * @param account_ address of the manager to be removed
      */
-    function removeManager(address account_) external override onlyManagersOrCommunityAdmin {
+    function removeManager(address account_) external override onlyManagers {
         require(
             hasRole(MANAGER_ROLE, account_),
             "Community::removeManager: This account doesn't have manager role"
@@ -625,36 +585,6 @@ contract Community is
     }
 
     /**
-     * @notice Adds addresses to managerBlockList
-     *
-     * @param managerBlockList_ addresses to be added in managerBlockList
-     */
-    function addManagersToBlockList(address[] memory managerBlockList_) public override onlyOwner {
-        for (uint256 i = 0; i < managerBlockList_.length; i++) {
-            if (_managerBlockList.add(managerBlockList_[i])) {
-                emit ManagerAddedToBlockList(managerBlockList_[i]);
-            }
-        }
-    }
-
-    /**
-     * @notice Remove addresses from managerBlockList
-     *
-     * @param managerAllowList_ addresses to be removed from managerBlockList
-     */
-    function removeManagersFromBlockList(address[] memory managerAllowList_)
-        external
-        override
-        onlyOwner
-    {
-        for (uint256 i = 0; i < managerAllowList_.length; i++) {
-            if (_managerBlockList.remove(managerAllowList_[i])) {
-                emit ManagerRemovedFromBlockList(managerAllowList_[i]);
-            }
-        }
-    }
-
-    /**
      * @notice Adds a new beneficiary
      *
      * @param beneficiaryAddress_ address of the beneficiary to be added
@@ -662,7 +592,7 @@ contract Community is
     function addBeneficiary(address beneficiaryAddress_)
         external
         override
-        onlyManagersOrCommunityAdmin
+        onlyManagers
         nonReentrant
     {
         Beneficiary storage beneficiary = _beneficiaries[beneficiaryAddress_];
@@ -685,11 +615,7 @@ contract Community is
      *
      * @param beneficiaryAddress_ address of the beneficiary to be locked
      */
-    function lockBeneficiary(address beneficiaryAddress_)
-        external
-        override
-        onlyManagersOrCommunityAdmin
-    {
+    function lockBeneficiary(address beneficiaryAddress_) external override onlyManagers {
         Beneficiary storage beneficiary = _beneficiaries[beneficiaryAddress_];
 
         require(beneficiary.state == BeneficiaryState.Valid, "Community::lockBeneficiary: NOT_YET");
@@ -702,11 +628,7 @@ contract Community is
      *
      * @param beneficiaryAddress_ address of the beneficiary to be unlocked
      */
-    function unlockBeneficiary(address beneficiaryAddress_)
-        external
-        override
-        onlyManagersOrCommunityAdmin
-    {
+    function unlockBeneficiary(address beneficiaryAddress_) external override onlyManagers {
         Beneficiary storage beneficiary = _beneficiaries[beneficiaryAddress_];
 
         require(
@@ -722,11 +644,7 @@ contract Community is
      *
      * @param beneficiaryAddress_ address of the beneficiary to be removed
      */
-    function removeBeneficiary(address beneficiaryAddress_)
-        external
-        override
-        onlyManagersOrCommunityAdmin
-    {
+    function removeBeneficiary(address beneficiaryAddress_) external override onlyManagers {
         Beneficiary storage beneficiary = _beneficiaries[beneficiaryAddress_];
 
         require(
@@ -786,7 +704,7 @@ contract Community is
     /**
      * @notice Locks the community claims
      */
-    function lock() external override onlyManagersOrCommunityAdmin {
+    function lock() external override onlyManagers {
         _locked = true;
         emit CommunityLocked(msg.sender);
     }
@@ -794,7 +712,7 @@ contract Community is
     /**
      * @notice Unlocks the community claims
      */
-    function unlock() external override onlyManagersOrCommunityAdmin {
+    function unlock() external override onlyManagers {
         _locked = false;
         emit CommunityUnlocked(msg.sender);
     }
@@ -802,7 +720,7 @@ contract Community is
     /**
      * @notice Requests treasury funds from the communityAdmin
      */
-    function requestFunds() external override onlyManagersOrCommunityAdmin {
+    function requestFunds() external override onlyManagers {
         _communityAdmin.fundCommunity();
 
         emit FundsRequested(msg.sender);
@@ -893,9 +811,6 @@ contract Community is
                 beneficiary.lastClaim = 0;
             }
 
-            //            //todo: check this logic
-            //            beneficiary.lastClaim = 0;
-
             beneficiary.claimedAmount = oldCommunity.claimed(msg.sender);
 
             uint256 previousBaseInterval = oldCommunity.baseInterval();
@@ -910,22 +825,6 @@ contract Community is
         }
 
         emit BeneficiaryJoined(msg.sender);
-    }
-
-    /**
-     * @notice Allows a manager from the previousCommunity to join in this community
-     */
-    function managerJoinFromMigrated() external override eligibleManager(msg.sender) {
-        require(
-            IAccessControlUpgradeable(address(_previousCommunity)).hasRole(
-                MANAGER_ROLE,
-                msg.sender
-            ),
-            "Community::managerJoinFromMigrated: NOT_ALLOWED"
-        );
-        _setupRole(MANAGER_ROLE, msg.sender);
-
-        emit ManagerJoined(msg.sender);
     }
 
     /**

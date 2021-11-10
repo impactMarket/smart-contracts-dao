@@ -35,7 +35,7 @@ contract CommunityAdminImplementation is
      * @notice Triggered when a community has been added
      *
      * @param communityAddress  Address of the community that has been added
-     * @param firstManager      Address of the first manager
+     * @param managers          Addresses of the initial managers
      * @param claimAmount       Value of the claimAmount
      * @param maxClaim          Value of the maxClaim
      * @param decreaseStep      Value of the decreaseStep
@@ -49,7 +49,7 @@ contract CommunityAdminImplementation is
      */
     event CommunityAdded(
         address indexed communityAddress,
-        address indexed firstManager,
+        address[] managers,
         uint256 claimAmount,
         uint256 maxClaim,
         uint256 decreaseStep,
@@ -69,12 +69,12 @@ contract CommunityAdminImplementation is
     /**
      * @notice Triggered when a community has been migrated
      *
-     * @param firstManager             Address of the new community's first manager
+     * @param managers                 Addresses of the new community's initial managers
      * @param communityAddress         New community address
      * @param previousCommunityAddress Old community address
      */
     event CommunityMigrated(
-        address indexed firstManager,
+        address[] managers,
         address indexed communityAddress,
         address indexed previousCommunityAddress
     );
@@ -214,7 +214,7 @@ contract CommunityAdminImplementation is
     /**
      * @notice Adds a new community
      *
-     * @param firstManager_ address of the community first manager. Will be able to add others
+     * @param managers_ addresses of the community managers
      * @param claimAmount_ base amount to be claim by the beneficiary
      * @param maxClaim_ limit that a beneficiary can claim at in total
      * @param decreaseStep_ value decreased from maxClaim for every beneficiary added
@@ -222,21 +222,19 @@ contract CommunityAdminImplementation is
      * @param incrementInterval_ increment interval used in each claim
      * @param minTranche_ minimum amount that the community will receive when requesting funds
      * @param maxTranche_ maximum amount that the community will receive when requesting funds
-     * @param managerBlockList_    Addresses of managers that have to not be managers
      */
     function addCommunity(
-        address firstManager_,
+        address[] memory managers_,
         uint256 claimAmount_,
         uint256 maxClaim_,
         uint256 decreaseStep_,
         uint256 baseInterval_,
         uint256 incrementInterval_,
         uint256 minTranche_,
-        uint256 maxTranche_,
-        address[] memory managerBlockList_
+        uint256 maxTranche_
     ) external override onlyOwner {
         address communityAddress = deployCommunity(
-            firstManager_,
+            managers_,
             claimAmount_,
             maxClaim_,
             decreaseStep_,
@@ -244,8 +242,7 @@ contract CommunityAdminImplementation is
             incrementInterval_,
             minTranche_,
             maxTranche_,
-            ICommunity(address(0)),
-            managerBlockList_
+            ICommunity(address(0))
         );
         require(communityAddress != address(0), "CommunityAdmin::addCommunity: NOT_VALID");
         _communities[communityAddress] = CommunityState.Valid;
@@ -253,7 +250,7 @@ contract CommunityAdminImplementation is
 
         emit CommunityAdded(
             communityAddress,
-            firstManager_,
+            managers_,
             claimAmount_,
             maxClaim_,
             decreaseStep_,
@@ -269,15 +266,15 @@ contract CommunityAdminImplementation is
     /**
      * @notice Migrates a community by deploying a new contract.
      *
-     * @param firstManager_ address of the community first manager. Will be able to add others
+     * @param managers_ address of the community managers
      * @param previousCommunity_ address of the community to be migrated
-     * @param managerBlockList_ addresses of managers that have to not be managers
      */
-    function migrateCommunity(
-        address firstManager_,
-        ICommunity previousCommunity_,
-        address[] memory managerBlockList_
-    ) external override onlyOwner nonReentrant {
+    function migrateCommunity(address[] memory managers_, ICommunity previousCommunity_)
+        external
+        override
+        onlyOwner
+        nonReentrant
+    {
         _communities[address(previousCommunity_)] = CommunityState.Removed;
         require(
             address(previousCommunity_) != address(0),
@@ -289,7 +286,7 @@ contract CommunityAdminImplementation is
         address newCommunityAddress;
         if (isCommunityNew) {
             newCommunityAddress = deployCommunity(
-                firstManager_,
+                managers_,
                 previousCommunity_.claimAmount(),
                 previousCommunity_.getInitialMaxClaim(),
                 previousCommunity_.decreaseStep(),
@@ -297,12 +294,11 @@ contract CommunityAdminImplementation is
                 previousCommunity_.incrementInterval(),
                 previousCommunity_.minTranche(),
                 previousCommunity_.maxTranche(),
-                previousCommunity_,
-                managerBlockList_
+                previousCommunity_
             );
         } else {
             newCommunityAddress = deployCommunity(
-                firstManager_,
+                managers_,
                 previousCommunity_.claimAmount(),
                 previousCommunity_.maxClaim(),
                 1e16,
@@ -310,8 +306,7 @@ contract CommunityAdminImplementation is
                 (previousCommunity_.incrementInterval() / 5),
                 1e16,
                 5e18,
-                previousCommunity_,
-                managerBlockList_
+                previousCommunity_
             );
         }
 
@@ -325,33 +320,7 @@ contract CommunityAdminImplementation is
         _communities[newCommunityAddress] = CommunityState.Valid;
         _communityList.add(newCommunityAddress);
 
-        emit CommunityMigrated(firstManager_, newCommunityAddress, address(previousCommunity_));
-    }
-
-    /**
-     * @notice Adds addresses to community managerBlockList
-     *
-     * @param community_ address of the community
-     * @param managerBlockList_ addresses to be added in community managerBlockList
-     */
-    function addManagersToCommunityBlockList(
-        ICommunity community_,
-        address[] memory managerBlockList_
-    ) external override onlyOwner {
-        community_.addManagersToBlockList(managerBlockList_);
-    }
-
-    /**
-     * @notice Removes addresses from community managerBlockList
-     *
-     * @param community_ address of the community
-     * @param managerAllowList_ addresses to be removed from community managerBlockList
-     */
-    function removeManagersFromCommunityBlockList(
-        ICommunity community_,
-        address[] memory managerAllowList_
-    ) external override onlyOwner {
-        community_.removeManagersFromBlockList(managerAllowList_);
+        emit CommunityMigrated(managers_, newCommunityAddress, address(previousCommunity_));
     }
 
     /**
@@ -499,7 +468,7 @@ contract CommunityAdminImplementation is
     /**
      * @dev Internal implementation of deploying a new community
      *
-     * @param firstManager_ address of the community first manager. Will be able to add others
+     * @param managers_ addresses of the community managers
      * @param claimAmount_ base amount to be claim by the beneficiary
      * @param maxClaim_ limit that a beneficiary can claim at in total
      * @param decreaseStep_ value decreased from maxClaim for every beneficiary added
@@ -508,10 +477,9 @@ contract CommunityAdminImplementation is
      * @param minTranche_ minimum amount that the community will receive when requesting funds
      * @param maxTranche_ maximum amount that the community will receive when requesting funds
      * @param previousCommunity_ address of the previous community. Used for migrating communities
-     * @param managerBlockList_ addresses that have to not be managers
      */
     function deployCommunity(
-        address firstManager_,
+        address[] memory managers_,
         uint256 claimAmount_,
         uint256 maxClaim_,
         uint256 decreaseStep_,
@@ -519,15 +487,14 @@ contract CommunityAdminImplementation is
         uint256 incrementInterval_,
         uint256 minTranche_,
         uint256 maxTranche_,
-        ICommunity previousCommunity_,
-        address[] memory managerBlockList_
-    ) internal onlyOwner returns (address) {
+        ICommunity previousCommunity_
+    ) internal returns (address) {
         TransparentUpgradeableProxy community = new TransparentUpgradeableProxy(
             address(_communityTemplate),
             address(_communityProxyAdmin),
             abi.encodeWithSignature(
-                "initialize(address,uint256,uint256,uint256,uint256,uint256,uint256,uint256,address,address[])",
-                firstManager_,
+                "initialize(address[],uint256,uint256,uint256,uint256,uint256,uint256,uint256,address)",
+                managers_,
                 claimAmount_,
                 maxClaim_,
                 decreaseStep_,
@@ -535,8 +502,7 @@ contract CommunityAdminImplementation is
                 incrementInterval_,
                 minTranche_,
                 maxTranche_,
-                address(previousCommunity_),
-                managerBlockList_
+                address(previousCommunity_)
             )
         );
 

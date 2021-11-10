@@ -1278,15 +1278,14 @@ describe("Donation Miner + Community", () => {
 		await cUSD.mint(Treasury.address, mintAmount.toString());
 
 		const tx = await CommunityAdmin.addCommunity(
-			owner.address,
+			[owner.address],
 			claimAmountTwo.toString(),
 			maxClaimTen.toString(),
 			oneCent.toString(),
 			threeMinutesInBlocks.toString(),
 			oneMinuteInBlocks.toString(),
 			communityMinTranche,
-			communityMaxTranche,
-			[]
+			communityMaxTranche
 		);
 
 		let receipt = await tx.wait();

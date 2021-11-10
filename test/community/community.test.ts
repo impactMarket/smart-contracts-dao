@@ -117,15 +117,14 @@ async function deploy() {
 
 async function addDefaultCommunity() {
 	const tx = await communityAdminProxy.addCommunity(
-		communityManagerA.address,
+		[communityManagerA.address],
 		claimAmountTwo.toString(),
 		maxClaimTen.toString(),
 		oneCent.toString(),
 		threeMinutesInBlocks.toString(),
 		oneMinuteInBlocks.toString(),
 		communityMinTranche,
-		communityMaxTranche,
-		[]
+		communityMaxTranche
 	);
 
 	let receipt = await tx.wait();
@@ -497,9 +496,8 @@ describe("Community - Governance (2)", () => {
 		);
 
 		const newTx = await communityAdminProxy.migrateCommunity(
-			communityManagerA.address,
-			communityInstance.address,
-			[]
+			[communityManagerA.address],
+			communityInstance.address
 		);
 
 		let receipt = await newTx.wait();
@@ -519,48 +517,6 @@ describe("Community - Governance (2)", () => {
 		previousCommunityNewBalance.should.be.equal(parseEther("100"));
 	});
 
-	it("should call managerJoinFromMigrated", async () => {
-		await communityInstance
-			.connect(communityManagerA)
-			.addManager(communityManagerB.address);
-
-		const newTx = await communityAdminProxy.migrateCommunity(
-			communityManagerA.address,
-			communityInstance.address,
-			[]
-		);
-
-		let receipt = await newTx.wait();
-
-		const newCommunityAddress = receipt.events?.filter((x: any) => {
-			return x.event == "CommunityMigrated";
-		})[0]["args"]["communityAddress"];
-
-		const newCommunityInstance = await Community.attach(
-			newCommunityAddress
-		);
-		await expect(
-			newCommunityInstance
-				.connect(communityManagerC)
-				.managerJoinFromMigrated()
-		).to.be.rejectedWith("Community::managerJoinFromMigrated: NOT_ALLOWED");
-		await expect(
-			newCommunityInstance
-				.connect(communityManagerB)
-				.addManager(communityManagerC.address)
-		).to.be.rejectedWith("Community: NOT_MANAGER");
-		await expect(
-			newCommunityInstance
-				.connect(communityManagerB)
-				.managerJoinFromMigrated()
-		).to.be.fulfilled;
-		await expect(
-			newCommunityInstance
-				.connect(communityManagerB)
-				.addManager(communityManagerC.address)
-		).to.be.fulfilled;
-	});
-
 	it("should call beneficiaryJoinFromMigrated", async () => {
 		await communityInstance
 			.connect(communityManagerA)
@@ -571,9 +527,8 @@ describe("Community - Governance (2)", () => {
 			.addBeneficiary(beneficiaryB.address);
 
 		const newTx = await communityAdminProxy.migrateCommunity(
-			communityManagerA.address,
-			communityInstance.address,
-			[]
+			[communityManagerA.address],
+			communityInstance.address
 		);
 
 		let receipt = await newTx.wait();
@@ -615,9 +570,8 @@ describe("Community - Governance (2)", () => {
 	it("should not migrate from invalid community", async () => {
 		await expect(
 			communityAdminProxy.migrateCommunity(
-				communityManagerA.address,
-				zeroAddress,
-				[]
+				[communityManagerA.address],
+				zeroAddress
 			)
 		).to.be.rejectedWith("NOT_VALID");
 	});
@@ -625,9 +579,8 @@ describe("Community - Governance (2)", () => {
 	it("should not migrate community if not admin", async () => {
 		await expect(
 			communityAdminProxy.connect(adminAccount2).migrateCommunity(
-				communityManagerA.address,
-				cUSDInstance.address, // wrong on purpose,
-				[]
+				[communityManagerA.address],
+				cUSDInstance.address // wrong on purpose,
 			)
 		).to.be.rejectedWith("Ownable: caller is not the owner");
 	});
@@ -779,15 +732,14 @@ describe("CommunityAdmin", () => {
 		);
 
 		const tx = await communityAdminProxy.addCommunity(
-			communityManagerA.address,
+			[communityManagerA.address],
 			claimAmountTwo.toString(),
 			maxClaimTen.toString(),
 			oneCent.toString(),
 			threeMinutesInBlocks.toString(),
 			oneMinuteInBlocks.toString(),
 			communityMinTranche,
-			communityMaxTranche,
-			[]
+			communityMaxTranche
 		);
 
 		let receipt = await tx.wait();
@@ -813,15 +765,14 @@ describe("CommunityAdmin", () => {
 		);
 
 		const tx = await communityAdminProxy.addCommunity(
-			communityManagerA.address,
+			[communityManagerA.address],
 			claimAmountTwo.toString(),
 			maxClaimTen.toString(),
 			oneCent.toString(),
 			threeMinutesInBlocks.toString(),
 			oneMinuteInBlocks.toString(),
 			communityMinTranche,
-			communityMaxTranche,
-			[]
+			communityMaxTranche
 		);
 
 		let receipt = await tx.wait();
@@ -837,28 +788,26 @@ describe("CommunityAdmin", () => {
 	it("should not create a community with invalid values", async () => {
 		await expect(
 			communityAdminProxy.addCommunity(
-				communityManagerA.address,
+				[communityManagerA.address],
 				claimAmountTwo.toString(),
 				maxClaimTen.toString(),
 				oneCent.toString(),
 				oneMinuteInBlocks.toString(),
 				threeMinutesInBlocks.toString(),
 				communityMinTranche,
-				communityMaxTranche,
-				[]
+				communityMaxTranche
 			)
 		).to.be.rejected;
 		await expect(
 			communityAdminProxy.addCommunity(
-				communityManagerA.address,
+				[communityManagerA.address],
 				maxClaimTen.toString(), // it's supposed to be wrong!
 				claimAmountTwo.toString(),
 				oneCent.toString(),
 				threeMinutesInBlocks.toString(),
 				oneMinuteInBlocks.toString(),
 				communityMinTranche,
-				communityMaxTranche,
-				[]
+				communityMaxTranche
 			)
 		).to.be.rejected;
 	});
@@ -870,15 +819,14 @@ describe("Chaos test (complete flow)", async () => {
 		communityManager: SignerWithAddress
 	): Promise<ethersTypes.Contract> => {
 		const tx = await communityAdminProxy.addCommunity(
-			communityManager.address,
+			[communityManager.address],
 			claimAmountTwo.toString(),
 			maxClaimTen.toString(),
 			oneCent.toString(),
 			threeMinutesInBlocks.toString(),
 			oneMinuteInBlocks.toString(),
 			communityMinTranche,
-			communityMaxTranche,
-			[]
+			communityMaxTranche
 		);
 
 		let receipt = await tx.wait();
