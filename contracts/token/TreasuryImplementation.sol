@@ -7,9 +7,9 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/TreasuryStorageV1.sol";
 
 contract TreasuryImplementation is
-    TreasuryStorageV1,
     OwnableUpgradeable,
-    ReentrancyGuardUpgradeable
+    ReentrancyGuardUpgradeable,
+    TreasuryStorageV1
 {
     using SafeERC20 for IERC20;
 

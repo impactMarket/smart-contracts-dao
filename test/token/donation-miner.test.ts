@@ -1180,7 +1180,7 @@ describe("Donation Miner", () => {
 			DonationMiner.address
 		);
 
-		await DonationMiner.initialize();
+		// await DonationMiner.initialize();
 
 		expect(await DonationMiner.getVersion()).to.be.equal(2);
 		expect(await DonationMiner.owner()).to.be.equal(owner.address);
@@ -1228,7 +1228,7 @@ describe("Donation Miner", () => {
 			DonationMiner.address
 		);
 
-		await DonationMiner.initialize();
+		// await DonationMiner.initialize();
 
 		await expect(DonationMiner.updateTestParam1(200)).to.be.fulfilled;
 		await expect(DonationMiner.updateTestParam2(donor1.address)).to.be

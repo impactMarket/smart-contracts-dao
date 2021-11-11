@@ -7,12 +7,11 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "./interfaces/ICommunity.sol";
-import "./interfaces/ICommunityOld.sol";
-import "./interfaces/ICommunityAdmin.sol";
-import "./interfaces/CommunityStorageV1.sol";
-
-import "hardhat/console.sol";
+import "../community/interfaces/ICommunity.sol";
+import "../community/interfaces/ICommunityOld.sol";
+import "../community/interfaces/ICommunityAdmin.sol";
+import "../community/interfaces/CommunityStorageV1.sol";
+import "./CommunityStorageV2Mock.sol";
 
 /**
  * @notice Welcome to the Community contract. For each community
@@ -22,12 +21,12 @@ import "hardhat/console.sol";
  * of having everything in one single contract.
  *Each community has it's own members and and managers.
  */
-contract Community is
+contract CommunityMock is
     Initializable,
     AccessControlUpgradeable,
     OwnableUpgradeable,
     ReentrancyGuardUpgradeable,
-    CommunityStorageV1
+    CommunityStorageV2Mock
 {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -209,70 +208,11 @@ contract Community is
 
     /**
      * @notice Used to initialize a new Community contract
-     *
-     * @param managers_            Community's initial managers.
-     *                             Will be able to add others
-     * @param claimAmount_         Base amount to be claim by the beneficiary
-     * @param maxClaim_            Limit that a beneficiary can claim in total
-     * @param decreaseStep_        Value decreased from maxClaim each time a beneficiary is added
-     * @param baseInterval_        Base interval to start claiming
-     * @param incrementInterval_   Increment interval used in each claim
-     * @param previousCommunity_   Previous smart contract address of community
-     * @param minTranche_          Minimum amount that the community will receive when requesting funds
-     * @param maxTranche_          Maximum amount that the community will receive when requesting funds
      */
-    function initialize(
-        address[] memory managers_,
-        uint256 claimAmount_,
-        uint256 maxClaim_,
-        uint256 decreaseStep_,
-        uint256 baseInterval_,
-        uint256 incrementInterval_,
-        uint256 minTranche_,
-        uint256 maxTranche_,
-        ICommunity previousCommunity_
-    ) external initializer {
-        require(
-            baseInterval_ > incrementInterval_,
-            "Community::initialize: baseInterval must be greater than incrementInterval"
-        );
-        require(
-            maxClaim_ > claimAmount_,
-            "Community::initialize: maxClaim must be greater than claimAmount"
-        );
-
-        require(
-            minTranche_ <= maxTranche_,
-            "Community::initialize: minTranche should not be greater than maxTranche"
-        );
-
-        __AccessControl_init();
-        __Ownable_init();
-        __ReentrancyGuard_init();
-
-        claimAmount = claimAmount_;
-        baseInterval = baseInterval_;
-        incrementInterval = incrementInterval_;
-        maxClaim = maxClaim_;
-        minTranche = minTranche_;
-        maxTranche = maxTranche_;
-        previousCommunity = previousCommunity_;
-        communityAdmin = ICommunityAdmin(msg.sender);
-        decreaseStep = decreaseStep_;
-        locked = false;
-
-        transferOwnership(msg.sender);
-
-        // MANAGER_ROLE is the admin for the MANAGER_ROLE
-        // so every manager is able to add or remove other managers
-        _setRoleAdmin(MANAGER_ROLE, MANAGER_ROLE);
-
-        _setupRole(MANAGER_ROLE, msg.sender);
-        emit ManagerAdded(msg.sender, msg.sender);
-
-        for (uint256 i = 0; i < managers_.length; i++) {
-            addManager(managers_[i]);
-        }
+    function initialize() external initializer {
+        //        __AccessControl_init();
+        //        __Ownable_init();
+        //        __ReentrancyGuard_init();
     }
 
     /**
@@ -307,6 +247,32 @@ contract Community is
     function cUSD() public view override returns (IERC20) {
         return communityAdmin.cUSD();
     }
+
+    //    /**
+    //     * @notice Returns details of a beneficiary
+    //     *
+    //     * @param beneficiary_ address of the beneficiary
+    //     * @return state beneficiary state
+    //     * @return claims total number of claims
+    //     * @return claimedAmount total amount of cUSD received
+    //     * @return lastClaim block number of the last claim
+    //     */
+    //    function beneficiaries(address beneficiary_)
+    //        external
+    //        view
+    //        override
+    //        returns (
+    //            BeneficiaryState state,
+    //            uint256 claims,
+    //            uint256 claimedAmount,
+    //            uint256 lastClaim
+    //        )
+    //    {
+    //        state = beneficiaries[beneficiary_].state;
+    //        claims = beneficiaries[beneficiary_].claims;
+    //        claimedAmount = beneficiaries[beneficiary_].claimedAmount;
+    //        lastClaim = beneficiaries[beneficiary_].lastClaim;
+    //    }
 
     /**
      * @notice Returns the length of the beneficiaryList
