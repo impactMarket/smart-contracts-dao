@@ -81,6 +81,13 @@ contract ImpactLabsVestingImplementation is
     }
 
     /**
+     * @notice Returns the current implementation version
+     */
+    function getVersion() external pure override returns (uint256) {
+        return 1;
+    }
+
+    /**
      * @notice Transfers IPCT to ImpactLabs
      * it will not be transferred IPCTs to ImpactLabs until
      * the entire amount payed in advance will be covered
