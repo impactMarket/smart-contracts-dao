@@ -31,8 +31,7 @@ contract Community is
     using EnumerableSet for EnumerableSet.AddressSet;
 
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
-    uint256 public constant DEFAULT_AMOUNT = 5e16;
-    uint256 public constant VERSION = 1;
+    uint256 private constant DEFAULT_AMOUNT = 5e16;
 
     /**
      * @notice Triggered when a manager has been added
@@ -230,7 +229,7 @@ contract Community is
         uint256 minTranche_,
         uint256 maxTranche_,
         ICommunity previousCommunity_
-    ) external override initializer {
+    ) external initializer {
         require(
             baseInterval_ > incrementInterval_,
             "Community::initialize: baseInterval must be greater than incrementInterval"
@@ -249,16 +248,16 @@ contract Community is
         __Ownable_init();
         __ReentrancyGuard_init();
 
-        _claimAmount = claimAmount_;
-        _baseInterval = baseInterval_;
-        _incrementInterval = incrementInterval_;
-        _maxClaim = maxClaim_;
-        _minTranche = minTranche_;
-        _maxTranche = maxTranche_;
-        _previousCommunity = previousCommunity_;
-        _communityAdmin = ICommunityAdmin(msg.sender);
-        _decreaseStep = decreaseStep_;
-        _locked = false;
+        claimAmount = claimAmount_;
+        baseInterval = baseInterval_;
+        incrementInterval = incrementInterval_;
+        maxClaim = maxClaim_;
+        minTranche = minTranche_;
+        maxTranche = maxTranche_;
+        previousCommunity = previousCommunity_;
+        communityAdmin = ICommunityAdmin(msg.sender);
+        decreaseStep = decreaseStep_;
+        locked = false;
 
         transferOwnership(msg.sender);
 
@@ -275,11 +274,18 @@ contract Community is
     }
 
     /**
+     * @notice Returns the current implementation version
+     */
+    function getVersion() external pure override returns (uint256) {
+        return 1;
+    }
+
+    /**
      * @notice Enforces sender to be a valid beneficiary
      */
     modifier onlyValidBeneficiary() {
         require(
-            _beneficiaries[msg.sender].state == BeneficiaryState.Valid,
+            beneficiaries[msg.sender].state == BeneficiaryState.Valid,
             "Community: NOT_VALID_BENEFICIARY"
         );
         _;
@@ -294,134 +300,43 @@ contract Community is
     }
 
     /**
-     * @notice Returns the previousCommunity address
-     */
-    function previousCommunity() external view override returns (ICommunity) {
-        return _previousCommunity;
-    }
-
-    /**
-     * @notice Returns the claimAmount value
-     */
-    function claimAmount() external view override returns (uint256) {
-        return _claimAmount;
-    }
-
-    /**
-     * @notice Returns the baseInterval value
-     */
-    function baseInterval() external view override returns (uint256) {
-        return _baseInterval;
-    }
-
-    /**
-     * @notice Returns the incrementInterval value
-     */
-    function incrementInterval() external view override returns (uint256) {
-        return _incrementInterval;
-    }
-
-    /**
-     * @notice Returns the maxClaim value
-     */
-    function maxClaim() external view override returns (uint256) {
-        return _maxClaim;
-    }
-
-    /**
-     * @notice Returns the number of valid beneficiaries
-     */
-    function validBeneficiaryCount() external view override returns (uint256) {
-        return _validBeneficiaryCount;
-    }
-
-    /**
-     * @notice Returns the minTranche value
-     */
-    function minTranche() external view override returns (uint256) {
-        return _minTranche;
-    }
-
-    /**
-     * @notice Returns the maxTranche value
-     */
-    function maxTranche() external view override returns (uint256) {
-        return _maxTranche;
-    }
-
-    /**
-     * @notice Returns the total amount of cUSD from treasury
-     */
-    function treasuryFunds() external view override returns (uint256) {
-        return _treasuryFunds;
-    }
-
-    /**
-     * @notice Returns the total amount of cUSD donated for this community
-     */
-    function privateFunds() external view override returns (uint256) {
-        return _privateFunds;
-    }
-
-    /**
-     * @notice Returns the CommunityAdmin contract address
-     */
-    function communityAdmin() external view override returns (ICommunityAdmin) {
-        return _communityAdmin;
-    }
-
-    /**
      * @notice Returns the cUSD contract address
      */
     function cUSD() public view override returns (IERC20) {
-        return _communityAdmin.cUSD();
+        return communityAdmin.cUSD();
     }
 
-    /**
-     * @notice Returns true if the community is locked
-     */
-    function locked() external view override returns (bool) {
-        return _locked;
-    }
-
-    /**
-     * @notice Returns details of a beneficiary
-     *
-     * @param beneficiary_ address of the beneficiary
-     * @return state beneficiary state
-     * @return claims total number of claims
-     * @return claimedAmount total amount of cUSD received
-     * @return lastClaim block number of the last claim
-     */
-    function beneficiaries(address beneficiary_)
-        external
-        view
-        override
-        returns (
-            BeneficiaryState state,
-            uint256 claims,
-            uint256 claimedAmount,
-            uint256 lastClaim
-        )
-    {
-        state = _beneficiaries[beneficiary_].state;
-        claims = _beneficiaries[beneficiary_].claims;
-        claimedAmount = _beneficiaries[beneficiary_].claimedAmount;
-        lastClaim = _beneficiaries[beneficiary_].lastClaim;
-    }
-
-    /**
-     * @notice Returns the decreaseStep value
-     */
-    function decreaseStep() external view override returns (uint256) {
-        return _decreaseStep;
-    }
+    //    /**
+    //     * @notice Returns details of a beneficiary
+    //     *
+    //     * @param beneficiary_ address of the beneficiary
+    //     * @return state beneficiary state
+    //     * @return claims total number of claims
+    //     * @return claimedAmount total amount of cUSD received
+    //     * @return lastClaim block number of the last claim
+    //     */
+    //    function beneficiaries(address beneficiary_)
+    //        external
+    //        view
+    //        override
+    //        returns (
+    //            BeneficiaryState state,
+    //            uint256 claims,
+    //            uint256 claimedAmount,
+    //            uint256 lastClaim
+    //        )
+    //    {
+    //        state = beneficiaries[beneficiary_].state;
+    //        claims = beneficiaries[beneficiary_].claims;
+    //        claimedAmount = beneficiaries[beneficiary_].claimedAmount;
+    //        lastClaim = beneficiaries[beneficiary_].lastClaim;
+    //    }
 
     /**
      * @notice Returns the length of the beneficiaryList
      */
     function beneficiaryListLength() external view override returns (uint256) {
-        return _beneficiaryList.length();
+        return beneficiaryList.length();
     }
 
     /**
@@ -430,8 +345,8 @@ contract Community is
      * @param index_ index value
      * @return address of the beneficiary
      */
-    function beneficiaryList(uint256 index_) external view override returns (address) {
-        return _beneficiaryList.at(index_);
+    function beneficiaryListAt(uint256 index_) external view override returns (address) {
+        return beneficiaryList.at(index_);
     }
 
     /**
@@ -447,10 +362,10 @@ contract Community is
      * @param newCommunityAdmin_ address of the new communityAdmin
      */
     function updateCommunityAdmin(ICommunityAdmin newCommunityAdmin_) external override onlyOwner {
-        address oldCommunityAdminAddress = address(_communityAdmin);
-        _communityAdmin = newCommunityAdmin_;
+        address oldCommunityAdminAddress = address(communityAdmin);
+        communityAdmin = newCommunityAdmin_;
 
-        addManager(address(_communityAdmin));
+        addManager(address(communityAdmin));
 
         emit CommunityAdminUpdated(oldCommunityAdminAddress, address(newCommunityAdmin_));
     }
@@ -460,8 +375,8 @@ contract Community is
      * @param newPreviousCommunity_ address of the new previousCommunity
      */
     function updatePreviousCommunity(ICommunity newPreviousCommunity_) external override onlyOwner {
-        address oldPreviousCommunityAddress = address(_previousCommunity);
-        _previousCommunity = newPreviousCommunity_;
+        address oldPreviousCommunityAddress = address(previousCommunity);
+        previousCommunity = newPreviousCommunity_;
 
         emit PreviousCommunityUpdated(oldPreviousCommunityAddress, address(newPreviousCommunity_));
     }
@@ -490,17 +405,17 @@ contract Community is
             "Community::constructor: maxClaim must be greater than claimAmount"
         );
 
-        uint256 oldClaimAmount = _claimAmount;
-        uint256 oldMaxClaim = _maxClaim;
-        uint256 oldDecreaseStep = _decreaseStep;
-        uint256 oldBaseInterval = _baseInterval;
-        uint256 oldIncrementInterval = _incrementInterval;
+        uint256 oldClaimAmount = claimAmount;
+        uint256 oldMaxClaim = maxClaim;
+        uint256 oldDecreaseStep = decreaseStep;
+        uint256 oldBaseInterval = baseInterval;
+        uint256 oldIncrementInterval = incrementInterval;
 
-        _claimAmount = claimAmount_;
-        _maxClaim = maxClaim_;
-        _decreaseStep = decreaseStep_;
-        _baseInterval = baseInterval_;
-        _incrementInterval = incrementInterval_;
+        claimAmount = claimAmount_;
+        maxClaim = maxClaim_;
+        decreaseStep = decreaseStep_;
+        baseInterval = baseInterval_;
+        incrementInterval = incrementInterval_;
 
         emit BeneficiaryParamsUpdated(
             oldClaimAmount,
@@ -531,11 +446,11 @@ contract Community is
             "Community::updateCommunityParams: minTranche should not be greater than maxTranche"
         );
 
-        uint256 oldMinTranche = _minTranche;
-        uint256 oldMaxTranche = _maxTranche;
+        uint256 oldMinTranche = minTranche;
+        uint256 oldMaxTranche = maxTranche;
 
-        _minTranche = minTranche_;
-        _maxTranche = maxTranche_;
+        minTranche = minTranche_;
+        maxTranche = maxTranche_;
 
         emit CommunityParamsUpdated(oldMinTranche, oldMaxTranche, minTranche_, maxTranche_);
     }
@@ -563,7 +478,7 @@ contract Community is
             "Community::removeManager: This account doesn't have manager role"
         );
         require(
-            account_ != address(_communityAdmin),
+            account_ != address(communityAdmin),
             "Community::removeManager: You are not allow to remove communityAdmin"
         );
         super.revokeRole(MANAGER_ROLE, account_);
@@ -595,7 +510,7 @@ contract Community is
         onlyManagers
         nonReentrant
     {
-        Beneficiary storage beneficiary = _beneficiaries[beneficiaryAddress_];
+        Beneficiary storage beneficiary = beneficiaries[beneficiaryAddress_];
         require(
             beneficiary.state == BeneficiaryState.NONE,
             "Community::addBeneficiary: Beneficiary exists"
@@ -616,7 +531,7 @@ contract Community is
      * @param beneficiaryAddress_ address of the beneficiary to be locked
      */
     function lockBeneficiary(address beneficiaryAddress_) external override onlyManagers {
-        Beneficiary storage beneficiary = _beneficiaries[beneficiaryAddress_];
+        Beneficiary storage beneficiary = beneficiaries[beneficiaryAddress_];
 
         require(beneficiary.state == BeneficiaryState.Valid, "Community::lockBeneficiary: NOT_YET");
         _changeBeneficiaryState(beneficiary, BeneficiaryState.Locked);
@@ -629,7 +544,7 @@ contract Community is
      * @param beneficiaryAddress_ address of the beneficiary to be unlocked
      */
     function unlockBeneficiary(address beneficiaryAddress_) external override onlyManagers {
-        Beneficiary storage beneficiary = _beneficiaries[beneficiaryAddress_];
+        Beneficiary storage beneficiary = beneficiaries[beneficiaryAddress_];
 
         require(
             beneficiary.state == BeneficiaryState.Locked,
@@ -645,7 +560,7 @@ contract Community is
      * @param beneficiaryAddress_ address of the beneficiary to be removed
      */
     function removeBeneficiary(address beneficiaryAddress_) external override onlyManagers {
-        Beneficiary storage beneficiary = _beneficiaries[beneficiaryAddress_];
+        Beneficiary storage beneficiary = beneficiaries[beneficiaryAddress_];
 
         require(
             beneficiary.state == BeneficiaryState.Valid ||
@@ -660,21 +575,21 @@ contract Community is
      * @dev Transfers cUSD to a valid beneficiary
      */
     function claim() external override onlyValidBeneficiary nonReentrant {
-        Beneficiary storage beneficiary = _beneficiaries[msg.sender];
+        Beneficiary storage beneficiary = beneficiaries[msg.sender];
 
-        require(!_locked, "LOCKED");
+        require(!locked, "LOCKED");
         require(claimCooldown(msg.sender) <= block.number, "Community::claim: NOT_YET");
         require(
-            (beneficiary.claimedAmount + _claimAmount) <= _maxClaim,
+            (beneficiary.claimedAmount + claimAmount) <= maxClaim,
             "Community::claim: MAX_CLAIM"
         );
 
-        beneficiary.claimedAmount += _claimAmount;
+        beneficiary.claimedAmount += claimAmount;
         beneficiary.claims++;
         beneficiary.lastClaim = block.number;
 
-        cUSD().safeTransfer(msg.sender, _claimAmount);
-        emit BeneficiaryClaim(msg.sender, _claimAmount);
+        cUSD().safeTransfer(msg.sender, claimAmount);
+        emit BeneficiaryClaim(msg.sender, claimAmount);
     }
 
     /**
@@ -684,11 +599,11 @@ contract Community is
      * @return uint256 number of blocks for the lastInterval
      */
     function lastInterval(address beneficiaryAddress_) public view override returns (uint256) {
-        Beneficiary storage beneficiary = _beneficiaries[beneficiaryAddress_];
+        Beneficiary storage beneficiary = beneficiaries[beneficiaryAddress_];
         if (beneficiary.claims == 0) {
             return 0;
         }
-        return _baseInterval + (beneficiary.claims - 1) * _incrementInterval;
+        return baseInterval + (beneficiary.claims - 1) * incrementInterval;
     }
 
     /**
@@ -698,14 +613,14 @@ contract Community is
      * @return uint256 number of block when the beneficiary can claim
      */
     function claimCooldown(address beneficiaryAddress_) public view override returns (uint256) {
-        return _beneficiaries[beneficiaryAddress_].lastClaim + lastInterval(beneficiaryAddress_);
+        return beneficiaries[beneficiaryAddress_].lastClaim + lastInterval(beneficiaryAddress_);
     }
 
     /**
      * @notice Locks the community claims
      */
     function lock() external override onlyManagers {
-        _locked = true;
+        locked = true;
         emit CommunityLocked(msg.sender);
     }
 
@@ -713,7 +628,7 @@ contract Community is
      * @notice Unlocks the community claims
      */
     function unlock() external override onlyManagers {
-        _locked = false;
+        locked = false;
         emit CommunityUnlocked(msg.sender);
     }
 
@@ -721,7 +636,7 @@ contract Community is
      * @notice Requests treasury funds from the communityAdmin
      */
     function requestFunds() external override onlyManagers {
-        _communityAdmin.fundCommunity();
+        communityAdmin.fundCommunity();
 
         emit FundsRequested(msg.sender);
     }
@@ -735,7 +650,7 @@ contract Community is
      */
     function donate(address sender_, uint256 amount_) external override nonReentrant {
         cUSD().safeTransferFrom(sender_, address(this), amount_);
-        _privateFunds += amount_;
+        privateFunds += amount_;
 
         emit Donate(msg.sender, amount_);
     }
@@ -744,10 +659,10 @@ contract Community is
      * @notice Increases the treasuryFunds value
      * Used by communityAdmin after an amount of cUSD are sent from the treasury
      *
-     * @param amount_ amount to be added to _treasuryFunds
+     * @param amount_ amount to be added to treasuryFunds
      */
     function addTreasuryFunds(uint256 amount_) external override onlyOwner {
-        _treasuryFunds += amount_;
+        treasuryFunds += amount_;
     }
 
     /**
@@ -772,7 +687,7 @@ contract Community is
      */
     function beneficiaryJoinFromMigrated() external override {
         // no need to check if it's a beneficiary, as the state is copied
-        Beneficiary storage beneficiary = _beneficiaries[msg.sender];
+        Beneficiary storage beneficiary = beneficiaries[msg.sender];
 
         require(
             beneficiary.state == BeneficiaryState.NONE,
@@ -780,20 +695,20 @@ contract Community is
         );
 
         //if the previousCommunity is deployed with the new type of smart contract
-        if (_previousCommunity.impactMarketAddress() == address(0)) {
+        if (previousCommunity.impactMarketAddress() == address(0)) {
             (
                 BeneficiaryState oldBeneficiaryState,
                 uint256 oldBeneficiaryClaims,
                 uint256 oldBeneficiaryClaimedAmount,
                 uint256 oldBeneficiaryLastClaim
-            ) = _previousCommunity.beneficiaries(msg.sender);
+            ) = previousCommunity.beneficiaries(msg.sender);
 
             _changeBeneficiaryState(beneficiary, oldBeneficiaryState);
             beneficiary.claims = oldBeneficiaryClaims;
             beneficiary.lastClaim = oldBeneficiaryLastClaim;
             beneficiary.claimedAmount = oldBeneficiaryClaimedAmount;
         } else {
-            ICommunityOld oldCommunity = ICommunityOld(address(_previousCommunity));
+            ICommunityOld oldCommunity = ICommunityOld(address(previousCommunity));
             uint256 oldBeneficiaryLastInterval = oldCommunity.lastInterval(msg.sender);
             _changeBeneficiaryState(
                 beneficiary,
@@ -831,7 +746,7 @@ contract Community is
      * @notice Returns the initial maxClaim
      */
     function getInitialMaxClaim() external view override returns (uint256) {
-        return _maxClaim + _validBeneficiaryCount * _decreaseStep;
+        return maxClaim + validBeneficiaryCount * decreaseStep;
     }
 
     /**
@@ -847,18 +762,18 @@ contract Community is
             return;
         }
 
-        _beneficiaryList.add(msg.sender);
+        beneficiaryList.add(msg.sender);
 
         if (newState_ == BeneficiaryState.Valid) {
             require(
-                _maxClaim - _decreaseStep >= _claimAmount,
+                maxClaim - decreaseStep >= claimAmount,
                 "Community::_changeBeneficiaryState: This community has reached the maximum number of valid beneficiaries"
             );
-            _validBeneficiaryCount++;
-            _maxClaim -= _decreaseStep;
+            validBeneficiaryCount++;
+            maxClaim -= decreaseStep;
         } else if (beneficiary.state == BeneficiaryState.Valid) {
-            _validBeneficiaryCount--;
-            _maxClaim += _decreaseStep;
+            validBeneficiaryCount--;
+            maxClaim += decreaseStep;
         }
 
         beneficiary.state = newState_;

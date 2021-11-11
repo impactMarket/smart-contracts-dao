@@ -695,7 +695,8 @@ describe("Community - Governance (2)", () => {
 		).to.be.fulfilled;
 	});
 
-	it("should renounce from manager of community if manager", async () => {
+	it.only("should renounce from manager of community if manager", async () => {
+		console.log(await communityInstance.MANAGER_ROLE());
 		await communityInstance
 			.connect(communityManagerA)
 			.addManager(communityManagerB.address);
@@ -1299,7 +1300,7 @@ describe("Community - getFunds", () => {
 		);
 	});
 
-	it.only("should get more funds if have private donations", async () => {
+	it("should get more funds if have private donations", async () => {
 		const user1Donation = parseEther("20000");
 
 		await communityInstance

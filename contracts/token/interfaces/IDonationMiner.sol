@@ -32,6 +32,7 @@ interface IDonationMiner {
         uint256 tokenPrice;  //the price of the token in cUSD
     }
 
+    function getVersion() external returns(uint256);
     function cUSD() external view returns (IERC20);
     function IPCT() external view returns (IERC20);
     function treasury() external view returns (ITreasury);
