@@ -78,6 +78,7 @@ const zeroAddress = "0x0000000000000000000000000000000000000000";
 const mintAmount = parseEther("10000");
 const communityMinTranche = parseEther("100");
 const communityMaxTranche = parseEther("5000");
+const managerRole = keccak256(ethers.utils.toUtf8Bytes("MANAGER_ROLE"));
 
 async function init() {
 	const accounts: SignerWithAddress[] = await ethers.getSigners();
@@ -705,10 +706,7 @@ describe("Community - Governance (2)", () => {
 		await expect(
 			communityInstance
 				.connect(communityManagerB)
-				.renounceRole(
-					keccak256(ethers.utils.toUtf8Bytes("MANAGER_ROLE")),
-					communityManagerB.address
-				)
+				.renounceRole(managerRole, communityManagerB.address)
 		).to.be.fulfilled;
 	});
 
