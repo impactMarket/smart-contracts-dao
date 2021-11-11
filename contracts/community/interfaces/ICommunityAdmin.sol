@@ -59,8 +59,3 @@ interface ICommunityAdmin {
     function transfer(IERC20 token, address to, uint256 amount) external;
     function transferFromCommunity(ICommunity community, IERC20 token, address to, uint256 amount) external;
 }
-
-
-
-
-

@@ -7,9 +7,9 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "./interfaces/ICommunity.sol";
-import "./interfaces/CommunityAdminStorageV1.sol";
-import "./Community.sol";
+import "../community/interfaces/ICommunity.sol";
+import "../community/interfaces/CommunityAdminStorageV1.sol";
+import "../community/Community.sol";
 import "../token/interfaces/ITreasury.sol";
 
 import "hardhat/console.sol";
@@ -20,7 +20,7 @@ import "hardhat/console.sol";
  * over the list of communities. Being only able to add and
  * remove communities
  */
-contract CommunityAdminImplementation is
+contract CommunityAdminImplementationMock is
     Initializable,
     OwnableUpgradeable,
     ReentrancyGuardUpgradeable,
@@ -123,19 +123,10 @@ contract CommunityAdminImplementation is
 
     /**
      * @notice Used to initialize a new CommunityAdmin contract
-     *
-     * @param communityTemplate_    Address of the Community implementation
-     *                              used for deploying new communities
-     * @param cUSD_                 Address of the cUSD token
      */
-    function initialize(ICommunity communityTemplate_, IERC20 cUSD_) external initializer {
+    function initialize() external initializer {
         __Ownable_init();
         __ReentrancyGuard_init();
-
-        communityTemplate = communityTemplate_;
-        cUSD = cUSD_;
-
-        communityProxyAdmin = new ProxyAdmin();
     }
 
     /**
@@ -144,6 +135,20 @@ contract CommunityAdminImplementation is
     function getVersion() external pure override returns (uint256) {
         return 1;
     }
+
+    //    /**
+    //     * @notice Returns the state of a community
+    //     *
+    //     * @param communityAddress_ address of the community
+    //     */
+    //    function communities(address communityAddress_)
+    //        external
+    //        view
+    //        override
+    //        returns (CommunityState)
+    //    {
+    //        return communities[communityAddress_];
+    //    }
 
     /**
      * @notice Returns the address of a community from communityList

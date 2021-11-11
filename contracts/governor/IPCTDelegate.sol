@@ -473,7 +473,7 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
         uint256 oldVotingDelay = votingDelay;
         votingDelay = newVotingDelay;
 
-        emit VotingDelaySet(oldVotingDelay, votingDelay);
+        emit VotingDelaySet(oldVotingDelay, newVotingDelay);
     }
 
     /**
@@ -501,7 +501,7 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
         uint256 oldVotingPeriod = votingPeriod;
         votingPeriod = newVotingPeriod;
 
-        emit VotingPeriodSet(oldVotingPeriod, votingPeriod);
+        emit VotingPeriodSet(oldVotingPeriod, newVotingPeriod);
     }
 
     /**
@@ -518,7 +518,7 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
         uint256 oldProposalThreshold = proposalThreshold;
         proposalThreshold = newProposalThreshold;
 
-        emit ProposalThresholdSet(oldProposalThreshold, proposalThreshold);
+        emit ProposalThresholdSet(oldProposalThreshold, newProposalThreshold);
     }
 
     /**
@@ -559,7 +559,7 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
         pendingAdmin = address(0);
 
         emit NewAdmin(oldAdmin, admin);
-        emit NewPendingAdmin(oldPendingAdmin, pendingAdmin);
+        emit NewPendingAdmin(oldPendingAdmin, address(0));
     }
 
     function add256(uint256 a, uint256 b) internal pure returns (uint256) {

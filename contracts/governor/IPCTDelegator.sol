@@ -50,7 +50,7 @@ contract IPCTDelegator is IPCTDelegatorStorage, IPCTEvents {
         address oldImplementation = implementation;
         implementation = implementation_;
 
-        emit NewImplementation(oldImplementation, implementation);
+        emit NewImplementation(oldImplementation, implementation_);
     }
 
     /**

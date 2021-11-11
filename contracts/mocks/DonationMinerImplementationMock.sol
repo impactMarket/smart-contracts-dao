@@ -18,11 +18,11 @@ import "./DonationMinerStorageV2Mock.sol";
 import "hardhat/console.sol";
 
 contract DonationMinerImplementationMock is
-    DonationMinerStorageV2Mock,
     Initializable,
     OwnableUpgradeable,
     PausableUpgradeable,
-    ReentrancyGuardUpgradeable
+    ReentrancyGuardUpgradeable,
+    DonationMinerStorageV2Mock
 {
     using SafeERC20 for IERC20;
 
