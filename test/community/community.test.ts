@@ -699,21 +699,16 @@ describe("Community - Governance (2)", () => {
 
 	// const keccak256 = require('keccak256');
 	it.only("should renounce from manager of community if manager", async () => {
-		console.log("keccak256()");
-		console.log(
-			keccak256(ethers.utils.formatBytes32String("MANAGER_ROLE"))
-		);
-		console.log("keccak256()");
-
 		await communityInstance
 			.connect(communityManagerA)
 			.addManager(communityManagerB.address);
 		await expect(
-			communityInstance.connect(communityManagerB).renounceRole(
-				// "0x87a584bc91724ca0dfe20cc68817468f1f020e0b3eb4c1a6dfdc04cc93e5b38f",
-				"0x241ecf16d79d0f8dbfb92cbc07fe17840425976cf0667f022fe9877caa831b08",
-				communityManagerB.address
-			)
+			communityInstance
+				.connect(communityManagerB)
+				.renounceRole(
+					keccak256(ethers.utils.toUtf8Bytes("MANAGER_ROLE")),
+					communityManagerB.address
+				)
 		).to.be.fulfilled;
 	});
 
