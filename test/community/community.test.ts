@@ -698,8 +698,7 @@ describe("Community - Governance (2)", () => {
 		).to.be.fulfilled;
 	});
 
-	// const keccak256 = require('keccak256');
-	it.only("should renounce from manager of community if manager", async () => {
+	it("should renounce from manager of community if manager", async () => {
 		await communityInstance
 			.connect(communityManagerA)
 			.addManager(communityManagerB.address);
