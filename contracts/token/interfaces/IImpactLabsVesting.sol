@@ -7,6 +7,7 @@ import "./ITreasury.sol";
 import "./IDonationMiner.sol";
 
 interface IImpactLabsVesting {
+    function getVersion() external pure returns (uint256);
     function impactLabs() external view returns (address);
     function IPCT() external view returns (IERC20);
     function donationMiner() external view returns (IDonationMiner);
