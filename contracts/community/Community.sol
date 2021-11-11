@@ -30,7 +30,7 @@ contract Community is
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
+    bytes32 private constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
     uint256 private constant DEFAULT_AMOUNT = 5e16;
 
     /**

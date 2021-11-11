@@ -20,6 +20,8 @@ import {
 	advanceBlockNTimes,
 	advanceTimeAndBlockNTimes,
 } from "../utils/TimeTravel";
+import { Bytes, keccak256 } from "ethers/lib/utils";
+import { BytesLike } from "@ethersproject/bytes/src.ts/index";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const {
@@ -695,8 +697,14 @@ describe("Community - Governance (2)", () => {
 		).to.be.fulfilled;
 	});
 
+	// const keccak256 = require('keccak256');
 	it.only("should renounce from manager of community if manager", async () => {
-		console.log(await communityInstance.MANAGER_ROLE());
+		console.log("keccak256()");
+		console.log(
+			keccak256(ethers.utils.formatBytes32String("MANAGER_ROLE"))
+		);
+		console.log("keccak256()");
+
 		await communityInstance
 			.connect(communityManagerA)
 			.addManager(communityManagerB.address);
@@ -704,7 +712,7 @@ describe("Community - Governance (2)", () => {
 			communityInstance
 				.connect(communityManagerB)
 				.renounceRole(
-					await communityInstance.MANAGER_ROLE(),
+					"0x241ecf16d79d0f8dbfb92cbc07fe17840425976cf0667f022fe9877caa831b08",
 					communityManagerB.address
 				)
 		).to.be.fulfilled;
