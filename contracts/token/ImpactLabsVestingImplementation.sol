@@ -9,11 +9,11 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/ImpactLabsVestingStorageV1.sol";
 
 contract ImpactLabsVestingImplementation is
-    ImpactLabsVestingStorageV1,
     Initializable,
     OwnableUpgradeable,
     PausableUpgradeable,
-    ReentrancyGuardUpgradeable
+    ReentrancyGuardUpgradeable,
+    ImpactLabsVestingStorageV1
 {
     using SafeERC20 for IERC20;
 
