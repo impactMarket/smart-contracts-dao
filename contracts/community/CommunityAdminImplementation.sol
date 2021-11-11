@@ -26,8 +26,6 @@ contract CommunityAdminImplementation is
     OwnableUpgradeable,
     ReentrancyGuardUpgradeable
 {
-    uint256 public constant VERSION = 1;
-
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -119,7 +117,7 @@ contract CommunityAdminImplementation is
      * @notice Enforces sender to be a valid community
      */
     modifier onlyCommunities() {
-        require(_communities[msg.sender] == CommunityState.Valid, "CommunityAdmin: NOT_COMMUNITY");
+        require(communities[msg.sender] == CommunityState.Valid, "CommunityAdmin: NOT_COMMUNITY");
         _;
     }
 
@@ -130,52 +128,45 @@ contract CommunityAdminImplementation is
      *                              used for deploying new communities
      * @param cUSD_                 Address of the cUSD token
      */
-    function initialize(ICommunity communityTemplate_, IERC20 cUSD_) external override initializer {
+    function initialize(ICommunity communityTemplate_, IERC20 cUSD_) external initializer {
         __Ownable_init();
         __ReentrancyGuard_init();
 
-        _communityTemplate = communityTemplate_;
-        _cUSD = cUSD_;
+        communityTemplate = communityTemplate_;
+        cUSD = cUSD_;
 
-        _communityProxyAdmin = new ProxyAdmin();
+        communityProxyAdmin = new ProxyAdmin();
     }
 
     /**
-     * @notice Returns the cUsd contract address
+     * @notice Returns the current implementation version
      */
-    function cUSD() external view override returns (IERC20) {
-        return _cUSD;
+    function getVersion() external pure override returns (uint256) {
+        return 1;
     }
 
-    /**
-     * @notice Returns the CommunityAdmin contract address
-     */
-    function treasury() external view override returns (ITreasury) {
-        return _treasury;
-    }
+    //    /**
+    //     * @notice Returns the state of a community
+    //     *
+    //     * @param communityAddress_ address of the community
+    //     */
+    //    function communities(address communityAddress_)
+    //        external
+    //        view
+    //        override
+    //        returns (CommunityState)
+    //    {
+    //        return communities[communityAddress_];
+    //    }
 
     /**
-     * @notice Returns the state of a community
-     *
-     * @param communityAddress_ address of the community
-     */
-    function communities(address communityAddress_)
-        external
-        view
-        override
-        returns (CommunityState)
-    {
-        return _communities[communityAddress_];
-    }
-
-    /**
-     * @notice Returns the address of a community from _communityList
+     * @notice Returns the address of a community from communityList
      *
      * @param index index of the community
      * @return address of the community
      */
-    function communityList(uint256 index) external view override returns (address) {
-        return _communityList.at(index);
+    function communityListAt(uint256 index) external view override returns (address) {
+        return communityList.at(index);
     }
 
     /**
@@ -184,7 +175,7 @@ contract CommunityAdminImplementation is
      * @return uint256 number of communities
      */
     function communityListLength() external view override returns (uint256) {
-        return _communityList.length();
+        return communityList.length();
     }
 
     /**
@@ -193,8 +184,8 @@ contract CommunityAdminImplementation is
      * @param newTreasury_ address of the new treasury contract
      */
     function updateTreasury(ITreasury newTreasury_) external override onlyOwner {
-        address oldTreasuryAddress = address(_treasury);
-        _treasury = newTreasury_;
+        address oldTreasuryAddress = address(treasury);
+        treasury = newTreasury_;
 
         emit TreasuryUpdated(oldTreasuryAddress, address(newTreasury_));
     }
@@ -205,8 +196,8 @@ contract CommunityAdminImplementation is
      * @param newCommunityTemplate_ address of the new communityTemplate contract
      */
     function updateCommunityTemplate(ICommunity newCommunityTemplate_) external override onlyOwner {
-        address oldCommunityTemplateAddress = address(_communityTemplate);
-        _communityTemplate = newCommunityTemplate_;
+        address oldCommunityTemplateAddress = address(communityTemplate);
+        communityTemplate = newCommunityTemplate_;
 
         emit CommunityTemplateUpdated(oldCommunityTemplateAddress, address(newCommunityTemplate_));
     }
@@ -245,8 +236,8 @@ contract CommunityAdminImplementation is
             ICommunity(address(0))
         );
         require(communityAddress != address(0), "CommunityAdmin::addCommunity: NOT_VALID");
-        _communities[communityAddress] = CommunityState.Valid;
-        _communityList.add(communityAddress);
+        communities[communityAddress] = CommunityState.Valid;
+        communityList.add(communityAddress);
 
         emit CommunityAdded(
             communityAddress,
@@ -276,11 +267,11 @@ contract CommunityAdminImplementation is
         nonReentrant
     {
         require(
-            _communities[address(previousCommunity_)] != CommunityState.Migrated,
+            communities[address(previousCommunity_)] != CommunityState.Migrated,
             "CommunityAdmin::migrateCommunity: this community has been migrated"
         );
 
-        _communities[address(previousCommunity_)] = CommunityState.Migrated;
+        communities[address(previousCommunity_)] = CommunityState.Migrated;
 
         bool isCommunityNew = isCommunityNewType(previousCommunity_);
 
@@ -314,12 +305,12 @@ contract CommunityAdminImplementation is
         require(newCommunityAddress != address(0), "CommunityAdmin::migrateCommunity: NOT_VALID");
 
         if (isCommunityNew) {
-            uint256 balance = _cUSD.balanceOf(address(previousCommunity_));
-            previousCommunity_.transfer(_cUSD, newCommunityAddress, balance);
+            uint256 balance = cUSD.balanceOf(address(previousCommunity_));
+            previousCommunity_.transfer(cUSD, newCommunityAddress, balance);
         }
 
-        _communities[newCommunityAddress] = CommunityState.Valid;
-        _communityList.add(newCommunityAddress);
+        communities[newCommunityAddress] = CommunityState.Valid;
+        communityList.add(newCommunityAddress);
 
         emit CommunityMigrated(managers_, newCommunityAddress, address(previousCommunity_));
     }
@@ -345,12 +336,12 @@ contract CommunityAdminImplementation is
      */
     function removeCommunity(ICommunity community_) external override onlyOwner nonReentrant {
         require(
-            _communities[address(community_)] == CommunityState.Valid,
+            communities[address(community_)] == CommunityState.Valid,
             "CommunityAdmin::removeCommunity: this isn't a valid community"
         );
-        _communities[address(community_)] = CommunityState.Removed;
+        communities[address(community_)] = CommunityState.Removed;
 
-        community_.transfer(_cUSD, address(_treasury), _cUSD.balanceOf(address(community_)));
+        community_.transfer(cUSD, address(treasury), cUSD.balanceOf(address(community_)));
         emit CommunityRemoved(address(community_));
     }
 
@@ -359,7 +350,7 @@ contract CommunityAdminImplementation is
      */
     function fundCommunity() external override onlyCommunities {
         ICommunity community = ICommunity(msg.sender);
-        uint256 balance = _cUSD.balanceOf(msg.sender);
+        uint256 balance = cUSD.balanceOf(msg.sender);
         require(
             balance < community.minTranche(),
             "CommunityAdmin::fundCommunity: this community has enough funds"
@@ -457,7 +448,7 @@ contract CommunityAdminImplementation is
         override
         onlyOwner
     {
-        _communityProxyAdmin.upgrade(
+        communityProxyAdmin.upgrade(
             TransparentUpgradeableProxy(payable(communityProxy_)),
             newCommunityTemplate_
         );
@@ -470,7 +461,7 @@ contract CommunityAdminImplementation is
      * @param amount_ amount of the transaction
      */
     function transferToCommunity(ICommunity community_, uint256 amount_) internal nonReentrant {
-        _treasury.transfer(_cUSD, address(community_), amount_);
+        treasury.transfer(cUSD, address(community_), amount_);
         community_.addTreasuryFunds(amount_);
 
         emit CommunityFunded(address(community_), amount_);
@@ -501,8 +492,8 @@ contract CommunityAdminImplementation is
         ICommunity previousCommunity_
     ) internal returns (address) {
         TransparentUpgradeableProxy community = new TransparentUpgradeableProxy(
-            address(_communityTemplate),
-            address(_communityProxyAdmin),
+            address(communityTemplate),
+            address(communityProxyAdmin),
             abi.encodeWithSignature(
                 "initialize(address[],uint256,uint256,uint256,uint256,uint256,uint256,uint256,address)",
                 managers_,

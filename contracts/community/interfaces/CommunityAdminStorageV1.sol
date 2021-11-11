@@ -14,11 +14,11 @@ import "../../token/interfaces/ITreasury.sol";
  * CommunityAdminStorageVX.
  */
 abstract contract CommunityAdminStorageV1 is ICommunityAdmin {
-    IERC20 internal _cUSD;
-    ITreasury internal _treasury;
-    ICommunity internal _communityTemplate;
-    ProxyAdmin internal _communityProxyAdmin;
+    IERC20 public override cUSD;
+    ITreasury public override treasury;
+    ICommunity public override communityTemplate;
+    ProxyAdmin public override communityProxyAdmin;
 
-    mapping(address => CommunityState) internal _communities;
-    EnumerableSet.AddressSet internal _communityList;
+    mapping(address => CommunityState) public override communities;
+    EnumerableSet.AddressSet internal communityList;
 }

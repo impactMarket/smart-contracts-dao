@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.5;
 
+import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./ICommunity.sol";
 import "../../token/interfaces/ITreasury.sol";
@@ -13,11 +14,13 @@ interface ICommunityAdmin {
         Migrated
     }
 
-    function initialize(ICommunity communityTemplate, IERC20 cUSD) external;
+    function getVersion() external returns(uint256);
     function cUSD() external view returns(IERC20);
     function treasury() external view returns(ITreasury);
     function communities(address community) external view returns(CommunityState);
-    function communityList(uint256 index) external view returns (address);
+    function communityTemplate() external view returns(ICommunity);
+    function communityProxyAdmin() external view returns(ProxyAdmin);
+    function communityListAt(uint256 index) external view returns (address);
     function communityListLength() external view returns (uint256);
 
     function updateTreasury(ITreasury newTreasury) external;

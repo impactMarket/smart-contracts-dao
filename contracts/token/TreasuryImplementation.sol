@@ -38,18 +38,25 @@ contract TreasuryImplementation is
      *
      * @param communityAdmin_    Address of the CommunityAdmin contract
      */
-    function initialize(ICommunityAdmin communityAdmin_) public override initializer {
+    function initialize(ICommunityAdmin communityAdmin_) public initializer {
         __Ownable_init();
         __ReentrancyGuard_init();
 
-        _communityAdmin = communityAdmin_;
+        communityAdmin = communityAdmin_;
+    }
+
+    /**
+     * @notice Returns the current implementation version
+     */
+    function getVersion() external pure override returns (uint256) {
+        return 1;
     }
 
     /**
      * @notice Enforces sender to be communityAdmin
      */
     modifier onlyCommunityAdmin() {
-        require(msg.sender == address(_communityAdmin), "Treasury: NOT_COMMUNITY_ADMIN");
+        require(msg.sender == address(communityAdmin), "Treasury: NOT_COMMUNITY_ADMIN");
         _;
     }
 
@@ -58,17 +65,10 @@ contract TreasuryImplementation is
      */
     modifier onlyCommunityAdminOrOwner() {
         require(
-            msg.sender == address(_communityAdmin) || msg.sender == owner(),
+            msg.sender == address(communityAdmin) || msg.sender == owner(),
             "Treasury: NOT_COMMUNITY_ADMIN AND NOT_OWNER"
         );
         _;
-    }
-
-    /**
-     * @notice Returns the CommunityAdmin contract address
-     */
-    function communityAdmin() external view override returns (ICommunityAdmin) {
-        return _communityAdmin;
     }
 
     /**
@@ -77,8 +77,8 @@ contract TreasuryImplementation is
      * @param newCommunityAdmin_ address of the new CommunityAdmin contract
      */
     function updateCommunityAdmin(ICommunityAdmin newCommunityAdmin_) external override onlyOwner {
-        address oldCommunityAdminAddress = address(_communityAdmin);
-        _communityAdmin = newCommunityAdmin_;
+        address oldCommunityAdminAddress = address(communityAdmin);
+        communityAdmin = newCommunityAdmin_;
 
         emit CommunityAdminUpdated(oldCommunityAdminAddress, address(newCommunityAdmin_));
     }

@@ -366,7 +366,7 @@ describe("Donation Miner", () => {
 	}
 
 	it("Should have correct values", async function () {
-		expect(await DonationMiner.VERSION()).to.be.equal(1);
+		expect(await DonationMiner.getVersion()).to.be.equal(1);
 		expect(await DonationMiner.owner()).to.equal(owner.address);
 		expect(await DonationMiner.cUSD()).to.equal(cUSD.address);
 		expect(await DonationMiner.IPCT()).to.equal(IPCT.address);
@@ -438,6 +438,7 @@ describe("Donation Miner", () => {
 
 		//verify rewardPeriods method
 		const rewardPeriod1 = await DonationMiner.rewardPeriods(1);
+
 		expect(rewardPeriod1.rewardPerBlock).to.equal(parseEther("216000"));
 		expect(rewardPeriod1.rewardAmount).to.equal(parseEther("4320000"));
 		expect(rewardPeriod1.startBlock).to.equal(30);
@@ -1181,7 +1182,7 @@ describe("Donation Miner", () => {
 
 		await DonationMiner.initialize();
 
-		expect(await DonationMiner.VERSION()).to.be.equal(2);
+		expect(await DonationMiner.getVersion()).to.be.equal(2);
 		expect(await DonationMiner.owner()).to.be.equal(owner.address);
 		expect(await DonationMiner.cUSD()).to.equal(cUSD.address);
 		expect(await DonationMiner.IPCT()).to.equal(IPCT.address);
