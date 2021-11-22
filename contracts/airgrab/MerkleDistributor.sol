@@ -12,7 +12,7 @@ contract MerkleDistributor is IMerkleDistributor, Ownable {
     address public immutable override token;
     bytes32 public immutable override merkleRoot;
     uint256 public claimPeriodEndBlock;
-    uint256 public constant CLAIM_PERIOD_BLOCKS = 17280 * 365;
+    uint256 private constant CLAIM_PERIOD_BLOCKS = 17280 * 365;
 
     // This is a packed array of booleans.
     mapping(uint256 => uint256) private claimedBitMap;
