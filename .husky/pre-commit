@@ -4,4 +4,4 @@
 
 yarn test
 yarn prettier:write
-git add -A .
+#git add -A .
