@@ -44,10 +44,20 @@ contract MerkleDistributor is IMerkleDistributor, Ownable {
         return claimedWord & mask == mask;
     }
 
-    function _setClaimed(uint256 index) private {
+    function _setClaimed(uint256 index) private returns (bool) {
         uint256 claimedWordIndex = index / 256;
         uint256 claimedBitIndex = index % 256;
-        claimedBitMap[claimedWordIndex] = claimedBitMap[claimedWordIndex] | (1 << claimedBitIndex);
+        uint256 claimedWord = claimedBitMap[claimedWordIndex];
+        uint256 mask = (1 << claimedBitIndex);
+
+        if (claimedWord & mask == mask) {
+            // If already claimed signify failure
+            return false;
+        } else {
+            // Else claim and return success
+            claimedBitMap[claimedWordIndex] = claimedWord | mask;
+            return true;
+        }
     }
 
     function claim(
@@ -56,7 +66,8 @@ contract MerkleDistributor is IMerkleDistributor, Ownable {
         uint256 amount,
         bytes32[] calldata merkleProof
     ) external override withinClaimPeriod {
-        require(!isClaimed(index), "MerkleDistributor: Drop already claimed.");
+        // Set it claimed (returns false if already claimed)
+        require(_setClaimed(index), "MerkleDistributor: Drop already claimed.");
 
         // Verify the merkle proof.
         bytes32 node = keccak256(abi.encodePacked(index, account, amount));
