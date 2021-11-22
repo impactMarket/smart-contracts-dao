@@ -1,12 +1,14 @@
 //SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.5;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IMerkleDistributor.sol";
 
 contract MerkleDistributor is IMerkleDistributor, Ownable {
+    using SafeERC20 for IERC20;
+
     address public immutable override token;
     bytes32 public immutable override merkleRoot;
     uint256 public claimPeriodEndBlock;
@@ -63,19 +65,15 @@ contract MerkleDistributor is IMerkleDistributor, Ownable {
             "MerkleDistributor: Invalid proof."
         );
 
-        // Mark it claimed and send the token.
-        _setClaimed(index);
-        require(IERC20(token).transfer(account, amount), "MerkleDistributor: Transfer failed.");
+        // Send the token
+        IERC20(token).safeTransfer(account, amount);
 
         emit Claimed(index, account, amount);
     }
 
     function withdrawUnclaimed() external override onlyOwner claimPeriodEnded {
         uint256 unclaimedBalance = IERC20(token).balanceOf(address(this));
-        require(
-            IERC20(token).transfer(msg.sender, unclaimedBalance),
-            "MerkleDistributor: Withdrawal failed."
-        );
+        IERC20(token).safeTransfer(msg.sender, unclaimedBalance);
         emit Withdrawn(msg.sender, unclaimedBalance);
     }
 }
