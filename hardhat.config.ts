@@ -68,7 +68,15 @@ export default {
       blockGasLimit: 13000000,  
     }
   },
-  solidity: "0.8.5",
+  solidity: { 
+    version: "0.8.5",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200
+      }
+    }
+  },
   namedAccounts: {
     deployer: {
       default: 0
