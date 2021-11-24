@@ -152,7 +152,7 @@ async function addDefaultCommunity() {
 	communityInstance = await Community.attach(communityAddress);
 }
 
-describe("Community - Setup", () => {
+describe("CommunityAdmin", () => {
 	before(async function () {
 		await init();
 	});
@@ -197,7 +197,92 @@ describe("Community - Setup", () => {
 		(await communityInstance.decreaseStep()).should.be.equal(oneCent);
 	});
 
-	//*******************************************************************************************
+	it("should add a community if admin", async () => {
+		await cUSDInstance.mint(
+			treasuryInstance.address,
+			mintAmount.toString()
+		);
+
+		const tx = await communityAdminProxy.addCommunity(
+			[communityManagerA.address],
+			claimAmountTwo.toString(),
+			maxClaimTen.toString(),
+			oneCent.toString(),
+			threeMinutesInBlocks.toString(),
+			oneMinuteInBlocks.toString(),
+			communityMinTranche,
+			communityMaxTranche
+		);
+
+		let receipt = await tx.wait();
+
+		const communityAddress = receipt.events?.filter((x: any) => {
+			return x.event == "CommunityAdded";
+		})[0]["args"]["communityAddress"];
+		communityInstance = await Community.attach(communityAddress);
+
+		(await communityInstance.baseInterval())
+			.toString()
+			.should.be.equal(threeMinutesInBlocks.toString());
+		(await communityInstance.incrementInterval())
+			.toString()
+			.should.be.equal(oneMinuteInBlocks.toString());
+		(await communityInstance.maxClaim()).should.be.equal(maxClaimTen);
+	});
+
+	it("should remove a community if admin", async () => {
+		await cUSDInstance.mint(
+			treasuryInstance.address,
+			mintAmount.toString()
+		);
+
+		const tx = await communityAdminProxy.addCommunity(
+			[communityManagerA.address],
+			claimAmountTwo.toString(),
+			maxClaimTen.toString(),
+			oneCent.toString(),
+			threeMinutesInBlocks.toString(),
+			oneMinuteInBlocks.toString(),
+			communityMinTranche,
+			communityMaxTranche
+		);
+
+		let receipt = await tx.wait();
+
+		const communityAddress = receipt.events?.filter((x: any) => {
+			return x.event == "CommunityAdded";
+		})[0]["args"]["communityAddress"];
+		communityInstance = await Community.attach(communityAddress);
+
+		await communityAdminProxy.removeCommunity(communityAddress);
+	});
+
+	it("should not create a community with invalid values", async () => {
+		await expect(
+			communityAdminProxy.addCommunity(
+				[communityManagerA.address],
+				claimAmountTwo.toString(),
+				maxClaimTen.toString(),
+				oneCent.toString(),
+				oneMinuteInBlocks.toString(),
+				threeMinutesInBlocks.toString(),
+				communityMinTranche,
+				communityMaxTranche
+			)
+		).to.be.rejected;
+		await expect(
+			communityAdminProxy.addCommunity(
+				[communityManagerA.address],
+				maxClaimTen.toString(), // it's supposed to be wrong!
+				claimAmountTwo.toString(),
+				oneCent.toString(),
+				threeMinutesInBlocks.toString(),
+				oneMinuteInBlocks.toString(),
+				communityMinTranche,
+				communityMaxTranche
+			)
+		).to.be.rejected;
+	});
 
 	it("Should transfer founds from communityAdmin to address if admin", async function () {
 		expect(
@@ -244,6 +329,82 @@ describe("Community - Setup", () => {
 		expect(await cUSDInstance.balanceOf(adminAccount2.address)).to.be.equal(
 			parseEther("0")
 		);
+	});
+
+	it("Should not update CommunityAdmin implementation if not owner", async function () {
+		const CommunityAdminMockFactory = await ethers.getContractFactory(
+			"CommunityAdminImplementationMock"
+		);
+
+		const newCommunityAdminImplementation =
+			await CommunityAdminMockFactory.deploy();
+
+		await expect(
+			impactProxyAdmin
+				.connect(adminAccount2)
+				.upgrade(
+					communityAdminProxy.address,
+					newCommunityAdminImplementation.address
+				)
+		).to.be.rejectedWith("Ownable: caller is not the owner");
+	});
+
+	it("Should have same storage after update communityAdmin implementation", async function () {
+		const CommunityAdminMockFactory = await ethers.getContractFactory(
+			"CommunityAdminImplementationMock"
+		);
+
+		const newCommunityAdminImplementation =
+			await CommunityAdminMockFactory.deploy();
+
+		await expect(
+			impactProxyAdmin.upgrade(
+				communityAdminProxy.address,
+				newCommunityAdminImplementation.address
+			)
+		).to.be.fulfilled;
+
+		const oldCommunityImplementation =
+			await communityAdminProxy.communityTemplate();
+		expect(await communityAdminProxy.owner()).to.be.equal(
+			adminAccount1.address
+		);
+		expect(await communityAdminProxy.cUSD()).to.be.equal(
+			cUSDInstance.address
+		);
+		expect(await communityAdminProxy.treasury()).to.be.equal(
+			treasuryInstance.address
+		);
+		expect(await communityAdminProxy.communityTemplate()).to.be.equal(
+			oldCommunityImplementation
+		);
+		expect(
+			await communityAdminProxy.communities(communityInstance.address)
+		).to.be.equal(CommunityState.Valid);
+		expect(await communityAdminProxy.communityListLength()).to.be.equal(1);
+		expect(await communityAdminProxy.communityListAt(0)).to.be.equal(
+			communityInstance.address
+		);
+	});
+});
+
+describe("Community", () => {
+	before(async function () {
+		await init();
+	});
+
+	beforeEach(async () => {
+		await deploy();
+
+		await cUSDInstance.mint(
+			treasuryInstance.address,
+			mintAmount.toString()
+		);
+
+		await addDefaultCommunity();
+	});
+
+	it("should return correct values", async () => {
 	});
 
 	it("Should transfer founds from community to address if admin", async function () {
@@ -309,24 +470,6 @@ describe("Community - Setup", () => {
 		);
 	});
 
-	it("Should not update CommunityAdmin implementation if not owner", async function () {
-		const CommunityAdminMockFactory = await ethers.getContractFactory(
-			"CommunityAdminImplementationMock"
-		);
-
-		const newCommunityAdminImplementation =
-			await CommunityAdminMockFactory.deploy();
-
-		await expect(
-			impactProxyAdmin
-				.connect(adminAccount2)
-				.upgrade(
-					communityAdminProxy.address,
-					newCommunityAdminImplementation.address
-				)
-		).to.be.rejectedWith("Ownable: caller is not the owner");
-	});
-
 	it("Should not update Community implementation if not owner #1", async function () {
 		const CommunityMockFactory = await ethers.getContractFactory(
 			"CommunityMock"
@@ -359,44 +502,6 @@ describe("Community - Setup", () => {
 					newCommunityImplementation.address
 				)
 		).to.be.rejectedWith("Ownable: caller is not the owner");
-	});
-
-	it("Should have same storage after update communityAdmin implementation", async function () {
-		const CommunityAdminMockFactory = await ethers.getContractFactory(
-			"CommunityAdminImplementationMock"
-		);
-
-		const newCommunityAdminImplementation =
-			await CommunityAdminMockFactory.deploy();
-
-		await expect(
-			impactProxyAdmin.upgrade(
-				communityAdminProxy.address,
-				newCommunityAdminImplementation.address
-			)
-		).to.be.fulfilled;
-
-		const oldCommunityImplementation =
-			await communityAdminProxy.communityTemplate();
-		expect(await communityAdminProxy.owner()).to.be.equal(
-			adminAccount1.address
-		);
-		expect(await communityAdminProxy.cUSD()).to.be.equal(
-			cUSDInstance.address
-		);
-		expect(await communityAdminProxy.treasury()).to.be.equal(
-			treasuryInstance.address
-		);
-		expect(await communityAdminProxy.communityTemplate()).to.be.equal(
-			oldCommunityImplementation
-		);
-		expect(
-			await communityAdminProxy.communities(communityInstance.address)
-		).to.be.equal(CommunityState.Valid);
-		expect(await communityAdminProxy.communityListLength()).to.be.equal(1);
-		expect(await communityAdminProxy.communityListAt(0)).to.be.equal(
-			communityInstance.address
-		);
 	});
 
 	it("Should have same storage after update community implementation", async function () {
@@ -1030,102 +1135,6 @@ describe("Community - Governance (2)", () => {
 		await expect(communityInstance.connect(communityManagerA).unlock())
 			.to.emit(communityInstance, "CommunityUnlocked")
 			.withArgs(communityManagerA.address);
-	});
-});
-
-describe("CommunityAdmin", () => {
-	before(async function () {
-		await init();
-	});
-	beforeEach(async () => {
-		await deploy();
-	});
-
-	it("should add a community if admin", async () => {
-		await cUSDInstance.mint(
-			treasuryInstance.address,
-			mintAmount.toString()
-		);
-
-		const tx = await communityAdminProxy.addCommunity(
-			[communityManagerA.address],
-			claimAmountTwo.toString(),
-			maxClaimTen.toString(),
-			oneCent.toString(),
-			threeMinutesInBlocks.toString(),
-			oneMinuteInBlocks.toString(),
-			communityMinTranche,
-			communityMaxTranche
-		);
-
-		let receipt = await tx.wait();
-
-		const communityAddress = receipt.events?.filter((x: any) => {
-			return x.event == "CommunityAdded";
-		})[0]["args"]["communityAddress"];
-		communityInstance = await Community.attach(communityAddress);
-
-		(await communityInstance.baseInterval())
-			.toString()
-			.should.be.equal(threeMinutesInBlocks.toString());
-		(await communityInstance.incrementInterval())
-			.toString()
-			.should.be.equal(oneMinuteInBlocks.toString());
-		(await communityInstance.maxClaim()).should.be.equal(maxClaimTen);
-	});
-
-	it("should remove a community if admin", async () => {
-		await cUSDInstance.mint(
-			treasuryInstance.address,
-			mintAmount.toString()
-		);
-
-		const tx = await communityAdminProxy.addCommunity(
-			[communityManagerA.address],
-			claimAmountTwo.toString(),
-			maxClaimTen.toString(),
-			oneCent.toString(),
-			threeMinutesInBlocks.toString(),
-			oneMinuteInBlocks.toString(),
-			communityMinTranche,
-			communityMaxTranche
-		);
-
-		let receipt = await tx.wait();
-
-		const communityAddress = receipt.events?.filter((x: any) => {
-			return x.event == "CommunityAdded";
-		})[0]["args"]["communityAddress"];
-		communityInstance = await Community.attach(communityAddress);
-
-		await communityAdminProxy.removeCommunity(communityAddress);
-	});
-
-	it("should not create a community with invalid values", async () => {
-		await expect(
-			communityAdminProxy.addCommunity(
-				[communityManagerA.address],
-				claimAmountTwo.toString(),
-				maxClaimTen.toString(),
-				oneCent.toString(),
-				oneMinuteInBlocks.toString(),
-				threeMinutesInBlocks.toString(),
-				communityMinTranche,
-				communityMaxTranche
-			)
-		).to.be.rejected;
-		await expect(
-			communityAdminProxy.addCommunity(
-				[communityManagerA.address],
-				maxClaimTen.toString(), // it's supposed to be wrong!
-				claimAmountTwo.toString(),
-				oneCent.toString(),
-				threeMinutesInBlocks.toString(),
-				oneMinuteInBlocks.toString(),
-				communityMinTranche,
-				communityMaxTranche
-			)
-		).to.be.rejected;
 	});
 });
 

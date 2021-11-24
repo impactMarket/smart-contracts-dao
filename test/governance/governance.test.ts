@@ -9,6 +9,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumberish } from "ethers";
 import { advanceBlockNTimes, advanceNSeconds } from "../utils/TimeTravel";
 import { parseEther } from "@ethersproject/units";
+import {zeroOutAddresses} from "hardhat/internal/hardhat-network/stack-traces/library-utils";
 
 const {
 	expectRevert,
@@ -46,7 +47,7 @@ let communityAdmin: ethersTypes.Contract;
 let treasury: ethersTypes.Contract;
 let cUSD: ethersTypes.Contract;
 
-describe("IPCTGovernator", function () {
+describe.only("IPCTGovernator", function () {
 	before(async function () {
 		IPCTDelegate = await ethers.getContractFactory("IPCTDelegate");
 
@@ -171,12 +172,12 @@ describe("IPCTGovernator", function () {
 
 		await expect(ipctDelegator.connect(alice).queue(1)).to.be.fulfilled;
 
-		await network.provider.send("evm_increaseTime", [TWO_DAYS_SECONDS]);
+		await advanceNSeconds(TWO_DAYS_SECONDS);
 
 		await expect(ipctDelegator.connect(alice).execute(1)).to.be.fulfilled;
 	});
 
-	it("should create community 2", async function () {
+	it("should update community implementation", async function () {
 		await ipctToken.transfer(ipctDelegator.address, parseEther("1234"));
 
 		const targets = [communityAdmin.address];
@@ -234,5 +235,51 @@ describe("IPCTGovernator", function () {
 		await advanceNSeconds(TWO_DAYS_SECONDS);
 
 		await expect(ipctDelegator.connect(alice).execute(1)).to.be.fulfilled;
+
+
+		//***************************************************************************
+
+		let communityAddress: string = await communityAdmin.communityListAt(0);
+
+		const signatures2 = [
+			"updateCommunityTemplate(address)",
+		];
+
+		const calldatas2 = [
+			ethers.utils.defaultAbiCoder.encode(
+				[
+					"address"
+				],
+				[
+					communityAddress
+				]
+			),
+		];
+
+
+		await expect(
+			ipctDelegator.propose(
+				targets,
+				values,
+				signatures2,
+				calldatas2,
+				descriptions
+			)
+		).to.be.fulfilled;
+
+		await advanceBlockNTimes(VOTING_DELAY_BLOCKS);
+
+		await expect(ipctDelegator.castVote(2, 1)).to.be.fulfilled;
+		await expect(ipctDelegator.connect(alice).castVote(2, 1)).to.be
+			.fulfilled;
+
+		await advanceBlockNTimes(VOTING_PERIOD_BLOCKS);
+
+		await expect(ipctDelegator.connect(alice).queue(2)).to.be.fulfilled;
+
+		await advanceNSeconds(TWO_DAYS_SECONDS);
+
+		await expect(ipctDelegator.connect(alice).execute(2)).to.be.fulfilled;
+
 	});
 });

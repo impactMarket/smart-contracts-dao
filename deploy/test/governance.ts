@@ -63,6 +63,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		],
 		log: true,
 	});
+
+	const IPCT = await deployments.get("IPCTToken");
+	const IPCTContract = await ethers.getContractAt("IPCTToken", IPCT.address);
+	IPCTContract.transfer(delegatorResult.address, parseEther("3000000000"));
 };
 
 func.dependencies = ["TokenTest"];

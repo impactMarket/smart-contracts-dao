@@ -11,8 +11,6 @@ import "../token/interfaces/ITreasury.sol";
 import "../token//interfaces/DonationMinerStorageV1.sol";
 import "../community/interfaces/ICommunity.sol";
 import "../community/interfaces/ICommunityAdmin.sol";
-import "../lib/ABDKMath64x64.sol";
-
 import "./DonationMinerStorageV2Mock.sol";
 
 import "hardhat/console.sol";
@@ -110,35 +108,6 @@ contract DonationMinerImplementationMock is
         return 2;
     }
 
-    //    /**
-    //     * @notice Returns the details of a reward period
-    //     *
-    //     * @param period index of the reward period
-    //     * @return rewardPerBlock number of IPCTs rewarded for each block of this reward period
-    //     * @return rewardAmount total number of IPCTs available for this reward period
-    //     * @return startBlock first block of this reward period
-    //     * @return endBlock last block of this reward period
-    //     * @return donationsAmount total donations amount of this reward period
-    //     */
-    //    function rewardPeriods(uint256 period)
-    //        external
-    //        view
-    //        override
-    //        returns (
-    //            uint256 rewardPerBlock,
-    //            uint256 rewardAmount,
-    //            uint256 startBlock,
-    //            uint256 endBlock,
-    //            uint256 donationsAmount
-    //        )
-    //    {
-    //        rewardPerBlock = rewardPeriods[period].rewardPerBlock;
-    //        rewardAmount = rewardPeriods[period].rewardAmount;
-    //        startBlock = rewardPeriods[period].startBlock;
-    //        endBlock = rewardPeriods[period].endBlock;
-    //        donationsAmount = rewardPeriods[period].donationsAmount;
-    //    }
-
     /**
      * @notice Returns the amount of cUSD donated by a user in a reward period
      *
@@ -155,23 +124,6 @@ contract DonationMinerImplementationMock is
         return rewardPeriods[period].donorAmounts[donor];
     }
 
-    //    /**
-    //     * @notice Returns the details of a donor
-    //     *
-    //     * @param donor address of the donor
-    //     * @return rewardPeriodsCount number of reward periods in which the user has donated
-    //     * @return lastClaim index of the last reward period for which the user has claimed
-    //     */
-    //    function donors(address donor)
-    //        external
-    //        view
-    //        override
-    //        returns (uint256 rewardPeriodsCount, uint256 lastClaim)
-    //    {
-    //        rewardPeriodsCount = donors[donor].rewardPeriodsCount;
-    //        lastClaim = donors[donor].lastClaim;
-    //    }
-
     /**
      * @notice Returns a reward period number from a donor reward period list
      *
@@ -187,41 +139,6 @@ contract DonationMinerImplementationMock is
     {
         return donors[donor].rewardPeriods[rewardPeriodIndex];
     }
-
-    //    /**
-    //     * @notice Returns the details of a donation contract address
-    //     *
-    //     * @param index donation index
-    //     * @return donor address of the donner
-    //     * @return target address of the receiver (community or treasury)
-    //     * @return rewardPeriod number of the reward period in which the donation was made
-    //     * @return blockNumber number of the block in which the donation was executed
-    //     * @return amount amount of the donation
-    //     * @return token address of the token
-    //     * @return tokenPrice the price of the token in cUSD
-    //     */
-    //    function donations(uint256 index)
-    //        external
-    //        view
-    //        override
-    //        returns (
-    //            address donor,
-    //            address target,
-    //            uint256 rewardPeriod,
-    //            uint256 blockNumber,
-    //            uint256 amount,
-    //            IERC20 token,
-    //            uint256 tokenPrice
-    //        )
-    //    {
-    //        donor = donations[index].donor;
-    //        target = donations[index].target;
-    //        rewardPeriod = donations[index].rewardPeriod;
-    //        blockNumber = donations[index].blockNumber;
-    //        amount = donations[index].amount;
-    //        token = donations[index].token;
-    //        tokenPrice = donations[index].tokenPrice;
-    //    }
 
     /**
      * @notice Updates reward period default params
