@@ -9,7 +9,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumberish } from "ethers";
 import { advanceBlockNTimes, advanceNSeconds } from "../utils/TimeTravel";
 import { parseEther } from "@ethersproject/units";
-import {zeroOutAddresses} from "hardhat/internal/hardhat-network/stack-traces/library-utils";
+import { zeroOutAddresses } from "hardhat/internal/hardhat-network/stack-traces/library-utils";
 
 const {
 	expectRevert,
@@ -236,26 +236,18 @@ describe.only("IPCTGovernator", function () {
 
 		await expect(ipctDelegator.connect(alice).execute(1)).to.be.fulfilled;
 
-
 		//***************************************************************************
 
-		let communityAddress: string = await communityAdmin.communityListAt(0);
+		let communityTemplateNewAddress: string = "0xf41B47c54dEFF12f8fE830A411a09D865eBb120E";
 
-		const signatures2 = [
-			"updateCommunityTemplate(address)",
-		];
+		const signatures2 = ["updateCommunityTemplate(address)"];
 
 		const calldatas2 = [
 			ethers.utils.defaultAbiCoder.encode(
-				[
-					"address"
-				],
-				[
-					communityAddress
-				]
+				["address"],
+				[communityTemplateNewAddress]
 			),
 		];
-
 
 		await expect(
 			ipctDelegator.propose(
@@ -281,5 +273,6 @@ describe.only("IPCTGovernator", function () {
 
 		await expect(ipctDelegator.connect(alice).execute(2)).to.be.fulfilled;
 
+		expect(await communityAdmin.communityTemplate()).to.be.equal(communityTemplateNewAddress);
 	});
 });

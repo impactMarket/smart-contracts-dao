@@ -404,8 +404,7 @@ describe("Community", () => {
 		await addDefaultCommunity();
 	});
 
-	it("should return correct values", async () => {
-	});
+	it("should return correct values", async () => {});
 
 	it("Should transfer founds from community to address if admin", async function () {
 		expect(
