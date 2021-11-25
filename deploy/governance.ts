@@ -39,16 +39,22 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	const Token = await deployments.get("IPCTToken");
 
+	await new Promise((resolve) => setTimeout(resolve, 6000));
+
 	const delegateResult = await deploy("IPCTDelegate", {
 		from: deployer,
 		log: true,
 	});
+
+	await new Promise((resolve) => setTimeout(resolve, 6000));
 
 	const timelockResult = await deploy("IPCTTimelock", {
 		from: deployer,
 		args: [delegatorAddress, TWO_DAYS_SECONDS],
 		log: true,
 	});
+
+	await new Promise((resolve) => setTimeout(resolve, 6000));
 
 	const delegatorResult = await deploy("IPCTDelegator", {
 		from: deployer,
