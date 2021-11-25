@@ -6,7 +6,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// @ts-ignore
-	const { deployments, getNamedAccounts, ethers } = hre;
+	const { deployments, ethers } = hre;
 	const { deploy } = deployments;
 
 	const accounts: SignerWithAddress[] = await ethers.getSigners();
@@ -47,10 +47,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		donationMinerProxyResult.address
 	);
 
-	//for testing we need that rewardPeriodSize to be a small number
-	//to have the same reward for a period, will change the values for
-	//firstRewardPerBlock (250) with  216000 (250 * 864)
-	//and rewardPeriodSize (17280) with  20 (17280 / 864)
 	await donationMinerContract.initialize(
 		cUSDAddress,
 		Token.address,
@@ -60,6 +56,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		9455225,
 		"998902",
 		"1000000"
+	);
+
+	const IPCT = await deployments.get("IPCTToken");
+	const IPCTContract = await ethers.getContractAt("IPCTToken", IPCT.address);
+	IPCTContract.transfer(
+		donationMinerContract.address,
+		parseEther("4000000000")
 	);
 
 	await donationMinerContract.transferOwnership(ownerAddress);

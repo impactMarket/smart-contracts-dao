@@ -8,7 +8,7 @@ import type * as ethersTypes from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumberish } from "ethers";
 import { advanceBlockNTimes, advanceNSeconds } from "../utils/TimeTravel";
-import { parseEther } from "@ethersproject/units";
+import { parseEther, formatEther } from "@ethersproject/units";
 import { zeroOutAddresses } from "hardhat/internal/hardhat-network/stack-traces/library-utils";
 
 const {
@@ -45,9 +45,10 @@ let ipctDelegator: ethersTypes.Contract;
 let ipctTimelock: ethersTypes.Contract;
 let communityAdmin: ethersTypes.Contract;
 let treasury: ethersTypes.Contract;
+let impactLabsVesting: ethersTypes.Contract;
 let cUSD: ethersTypes.Contract;
 
-describe.only("IPCTGovernator", function () {
+describe("IPCTGovernator", function () {
 	before(async function () {
 		IPCTDelegate = await ethers.getContractFactory("IPCTDelegate");
 
@@ -97,6 +98,14 @@ describe.only("IPCTGovernator", function () {
 			treasuryDeployment.address
 		);
 
+		const impactLabsVestingDeployment = await deployments.get(
+			"ImpactLabsVestingProxy"
+		);
+		impactLabsVesting = await ethers.getContractAt(
+			"ImpactLabsVestingImplementation",
+			impactLabsVestingDeployment.address
+		);
+
 		const cUSDDeployment = await deployments.get("TokenMock");
 		cUSD = await ethers.getContractAt("TokenMock", cUSDDeployment.address);
 
@@ -105,21 +114,19 @@ describe.only("IPCTGovernator", function () {
 		await ipctDelegator._setVotingPeriod(VOTING_PERIOD_BLOCKS);
 		await ipctDelegator._setVotingDelay(VOTING_PERIOD_BLOCKS);
 
-		await ipctToken.transfer(alice.address, parseEther("100000000"));
-		await ipctToken.transfer(bob.address, parseEther("100000000"));
-		await ipctToken.transfer(carol.address, parseEther("100000000"));
+		await ipctToken.transfer(alice.address, parseEther("40000000"));
+		// await ipctToken.transfer(bob.address, parseEther("100000000"));
+		// await ipctToken.transfer(carol.address, parseEther("100000000"));
 
 		await ipctToken.delegate(owner.address);
-		await ipctToken.connect(alice).delegate(alice.address);
-		await ipctToken.connect(bob).delegate(bob.address);
-		await ipctToken.connect(carol).delegate(carol.address);
+		await ipctToken.connect(alice).delegate(owner.address);
+		// await ipctToken.connect(bob).delegate(bob.address);
+		// await ipctToken.connect(carol).delegate(carol.address);
 
 		await communityAdmin.transferOwnership(ipctTimelock.address);
 	});
 
 	it("should create community", async function () {
-		await ipctToken.transfer(ipctDelegator.address, parseEther("1234"));
-
 		const targets = [communityAdmin.address];
 		const values = [0];
 		const signatures = [
@@ -165,6 +172,7 @@ describe.only("IPCTGovernator", function () {
 		await advanceBlockNTimes(VOTING_DELAY_BLOCKS);
 
 		await expect(ipctDelegator.castVote(1, 1)).to.be.fulfilled;
+
 		await expect(ipctDelegator.connect(alice).castVote(1, 1)).to.be
 			.fulfilled;
 
@@ -178,8 +186,6 @@ describe.only("IPCTGovernator", function () {
 	});
 
 	it("should update community implementation", async function () {
-		await ipctToken.transfer(ipctDelegator.address, parseEther("1234"));
-
 		const targets = [communityAdmin.address];
 		const values = [0];
 		const signatures = [
@@ -238,7 +244,8 @@ describe.only("IPCTGovernator", function () {
 
 		//***************************************************************************
 
-		let communityTemplateNewAddress: string = "0xf41B47c54dEFF12f8fE830A411a09D865eBb120E";
+		let communityTemplateNewAddress: string =
+			"0xf41B47c54dEFF12f8fE830A411a09D865eBb120E";
 
 		const signatures2 = ["updateCommunityTemplate(address)"];
 
@@ -262,8 +269,8 @@ describe.only("IPCTGovernator", function () {
 		await advanceBlockNTimes(VOTING_DELAY_BLOCKS);
 
 		await expect(ipctDelegator.castVote(2, 1)).to.be.fulfilled;
-		await expect(ipctDelegator.connect(alice).castVote(2, 1)).to.be
-			.fulfilled;
+		// await expect(ipctDelegator.connect(alice).castVote(2, 1)).to.be
+		// 	.fulfilled;
 
 		await advanceBlockNTimes(VOTING_PERIOD_BLOCKS);
 
@@ -273,6 +280,8 @@ describe.only("IPCTGovernator", function () {
 
 		await expect(ipctDelegator.connect(alice).execute(2)).to.be.fulfilled;
 
-		expect(await communityAdmin.communityTemplate()).to.be.equal(communityTemplateNewAddress);
+		expect(await communityAdmin.communityTemplate()).to.be.equal(
+			communityTemplateNewAddress
+		);
 	});
 });

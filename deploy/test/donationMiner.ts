@@ -6,7 +6,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// @ts-ignore
-	const { deployments, getNamedAccounts, ethers } = hre;
+	const { deployments, ethers } = hre;
 	const { deploy } = deployments;
 
 	const accounts: SignerWithAddress[] = await ethers.getSigners();
@@ -20,7 +20,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// const IPCTTimelock = await deployments.get("IPCTTimelock"); //prod
 	// const ownerAddress = IPCTTimelock.address; //prod
 	const ownerAddress = deployer.address; //dev
-	// const cUSDAddress = getCUSDAddress(); //prod
 	const cUSDAddress = getCUSDAddress();
 
 	const donationMinerImplementationResult = await deploy(
@@ -65,6 +64,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	const IPCT = await deployments.get("IPCTToken");
 	const IPCTContract = await ethers.getContractAt("IPCTToken", IPCT.address);
+
 	IPCTContract.transfer(
 		donationMinerContract.address,
 		parseEther("4000000000")
