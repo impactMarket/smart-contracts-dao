@@ -14,7 +14,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const ownerAddress = IPCTTimelock.address; //prod
 	// const ownerAddress = deployer.address; //dev
 
-	// await new Promise((resolve) => setTimeout(resolve, 2000));
+	await new Promise((resolve) => setTimeout(resolve, 6000));
 
 	const ImpactProxyAdminResult = await deploy("ImpactProxyAdmin", {
 		from: deployer.address,

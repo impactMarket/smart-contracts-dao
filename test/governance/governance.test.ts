@@ -124,9 +124,11 @@ describe("IPCTGovernator", function () {
 		// await ipctToken.connect(carol).delegate(carol.address);
 
 		await communityAdmin.transferOwnership(ipctTimelock.address);
+
+		console.log(formatEther(await ipctToken.balanceOf(owner.address)));
 	});
 
-	it("should create community", async function () {
+	it.only("should create community", async function () {
 		const targets = [communityAdmin.address];
 		const values = [0];
 		const signatures = [

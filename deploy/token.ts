@@ -7,6 +7,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const { deploy } = deployments;
 	const { deployer } = await getNamedAccounts();
 
+	await new Promise((resolve) => setTimeout(resolve, 6000));
+
 	await deploy("IPCTToken", {
 		from: deployer,
 		args: [deployer],

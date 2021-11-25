@@ -19,11 +19,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const IPCTTimelock = await deployments.get("IPCTTimelock"); //prod
 	const ownerAddress = IPCTTimelock.address; //prod
 	// const ownerAddress = deployer.address; //dev
+	const impactLabsAddress = deployer.address; //dev
 
 	const donationMiner = await deployments.get("DonationMinerProxy");
 
 	const IPCT = await deployments.get("IPCTToken");
 	const IPCTContract = await ethers.getContractAt("IPCTToken", IPCT.address);
+
+	await new Promise((resolve) => setTimeout(resolve, 6000));
 
 	const impactLabsVestingImplementationResult = await deploy(
 		"ImpactLabsVestingImplementation",
@@ -34,6 +37,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 			// gasLimit: 13000000,
 		}
 	);
+
+	await new Promise((resolve) => setTimeout(resolve, 6000));
 
 	const impactLabsVestingProxyResult = await deploy(
 		"ImpactLabsVestingProxy",
@@ -59,7 +64,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	);
 
 	await impactLabsVestingContract.initialize(
-		ownerAddress,
+		impactLabsAddress,
 		IPCT.address,
 		donationMiner.address,
 		IMPACT_LABS_ADVANCE_PAYMENT

@@ -18,6 +18,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// const ownerAddress = deployer.address; //dev
 	const cUSDAddress = getCUSDAddress();
 
+	await new Promise((resolve) => setTimeout(resolve, 6000));
+
 	const communityAdminImplementationResult = await deploy(
 		"CommunityAdminImplementation",
 		{
@@ -27,6 +29,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 			// gasLimit: 13000000,
 		}
 	);
+
+	await new Promise((resolve) => setTimeout(resolve, 6000));
 
 	const communityAdminProxyResult = await deploy("CommunityAdminProxy", {
 		from: deployer.address,
@@ -42,6 +46,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		"CommunityAdminImplementation",
 		communityAdminProxyResult.address
 	);
+
+	await new Promise((resolve) => setTimeout(resolve, 6000));
 
 	const communityResult = await deploy("Community", {
 		from: deployer.address,

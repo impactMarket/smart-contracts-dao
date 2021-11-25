@@ -22,6 +22,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// const ownerAddress = deployer.address; //dev
 	const cUSDAddress = getCUSDAddress();
 
+	await new Promise((resolve) => setTimeout(resolve, 6000));
+
 	const donationMinerImplementationResult = await deploy(
 		"DonationMinerImplementation",
 		{
@@ -31,6 +33,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 			// gasLimit: 13000000,
 		}
 	);
+
+	await new Promise((resolve) => setTimeout(resolve, 6000));
 
 	const donationMinerProxyResult = await deploy("DonationMinerProxy", {
 		from: deployer.address,
