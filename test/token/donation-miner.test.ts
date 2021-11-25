@@ -13,7 +13,7 @@ import { BigNumber } from "@ethersproject/bignumber";
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 
-const STARTING_DELAY = 10;
+const STARTING_DELAY = 9;
 const REWARD_PERIOD_SIZE = 20;
 
 let owner: SignerWithAddress;
@@ -97,9 +97,6 @@ const deploy = deployments.createFixture(async () => {
 	await cUSD.mint(donor2.address, parseEther("10000000"));
 	await cUSD.mint(donor3.address, parseEther("100000000"));
 	await cUSD.mint(donor4.address, parseEther("100000000"));
-
-	// transfer to the DonationMiner some IPCT
-	await IPCT.transfer(DonationMiner.address, parseEther("4000000000"));
 });
 
 async function showRewardPeriods(DonationMiner: any) {

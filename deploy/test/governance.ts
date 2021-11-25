@@ -9,6 +9,8 @@ const VOTING_DELAY_BLOCKS = 720; // about 1 hour
 const PROPOSAL_THRESHOLD: BigNumberish = parseEther("100000000"); // 100 millions units (1%)
 const QUORUM_VOTES: BigNumberish = parseEther("100000000"); // 100 millions units (1%)
 
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+
 async function getContractAddress(
 	hre: HardhatRuntimeEnvironment,
 	deployer: string,
@@ -53,7 +55,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		args: [
 			timelockAddress,
 			Token.address,
-			Token.address,
+			ZERO_ADDRESS,
 			timelockAddress,
 			delegateAddress,
 			VOTING_PERIOD_BLOCKS,

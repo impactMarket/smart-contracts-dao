@@ -70,10 +70,10 @@ describe("Impact Labs Vesting", () => {
 
 	it("Should transfer IPCTs on initialization", async function () {
 		expect(await IPCT.balanceOf(owner.address)).to.be.equal(
-			parseEther("100000000")
+			parseEther("100000001")
 		);
 		expect(await ImpactLabsVesting.advancePayment()).to.be.equal(
-			parseEther("100000000")
+			parseEther("100000001")
 		);
 
 		await advanceBlockNTimes(REWARD_PERIOD_SIZE);
@@ -81,10 +81,10 @@ describe("Impact Labs Vesting", () => {
 		await ImpactLabsVesting.claim();
 
 		expect(await IPCT.balanceOf(owner.address)).to.be.equal(
-			parseEther("100000000")
+			parseEther("100000001")
 		);
 		expect(await ImpactLabsVesting.advancePayment()).to.be.equal(
-			parseEther("96760000")
+			parseEther("96760001")
 		);
 	});
 });

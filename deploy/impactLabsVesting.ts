@@ -4,11 +4,11 @@ import { parseEther } from "@ethersproject/units";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 const IMPACT_LABS_AMOUNT = parseEther("3000000000");
-const IMPACT_LABS_ADVANCE_PAYMENT = parseEther("100000000");
+const IMPACT_LABS_ADVANCE_PAYMENT = parseEther("100000001");
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// @ts-ignore
-	const { deployments, getNamedAccounts, ethers } = hre;
+	const { deployments, ethers } = hre;
 	const { deploy } = deployments;
 
 	const accounts: SignerWithAddress[] = await ethers.getSigners();
