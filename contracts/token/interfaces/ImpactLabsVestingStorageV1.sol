@@ -11,7 +11,7 @@ import "./IImpactLabsVesting.sol";
  */
 abstract contract ImpactLabsVestingStorageV1 is IImpactLabsVesting {
     address public override impactLabs;
-    IERC20 public override IPCT;
+    IERC20 public override PACT;
     IDonationMiner public override donationMiner;
 
     uint256 public override lastClaimedRewardPeriod;

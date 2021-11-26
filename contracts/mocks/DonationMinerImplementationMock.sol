@@ -229,11 +229,11 @@ contract DonationMinerImplementationMock is
             return;
         }
 
-        if (claimAmount > IPCT.balanceOf(address(this))) {
-            claimAmount = IPCT.balanceOf(address(this));
+        if (claimAmount > PACT.balanceOf(address(this))) {
+            claimAmount = PACT.balanceOf(address(this));
         }
 
-        IPCT.safeTransfer(msg.sender, claimAmount);
+        PACT.safeTransfer(msg.sender, claimAmount);
 
         emit RewardClaimed(msg.sender, claimAmount);
     }
@@ -292,7 +292,7 @@ contract DonationMinerImplementationMock is
     }
 
     /**
-     * @notice Calculates the number of IPCTs given for each block in current reward period
+     * @notice Calculates the number of PACTs given for each block in current reward period
      *
      * @return uint256 current reward per block
      */

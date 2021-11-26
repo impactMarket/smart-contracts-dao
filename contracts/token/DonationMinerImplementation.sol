@@ -98,9 +98,9 @@ contract DonationMinerImplementation is
      * @notice Used to initialize a new DonationMiner contract
      *
      * @param cUSD_                 Address of the cUSD token
-     * @param IPCT_                 Address of the PACT Token
+     * @param PACT_                 Address of the PACT Token
      * @param treasury_             Address of the Treasury
-     * @param firstRewardPerBlock_  Number of IPCTs given for each block
+     * @param firstRewardPerBlock_  Number of PACTs given for each block
      *                              from the first reward period
      * @param rewardPeriodSize_     Number of blocks of the reward period
      * @param startingBlock_        First block of the first reward period
@@ -113,7 +113,7 @@ contract DonationMinerImplementation is
      */
     function initialize(
         IERC20 cUSD_,
-        IERC20 IPCT_,
+        IERC20 PACT_,
         ITreasury treasury_,
         uint256 firstRewardPerBlock_,
         uint256 rewardPeriodSize_,
@@ -122,7 +122,7 @@ contract DonationMinerImplementation is
         uint256 decayDenominator_
     ) public initializer {
         require(address(cUSD_) != address(0), "DonationMiner::initialize: cUSD address not set");
-        require(address(IPCT_) != address(0), "DonationMiner::initialize: IPCT address not set");
+        require(address(PACT_) != address(0), "DonationMiner::initialize: PACT address not set");
         require(address(treasury_) != address(0), "DonationMiner::initialize: treasury_ not set");
         require(
             firstRewardPerBlock_ != 0,
@@ -135,7 +135,7 @@ contract DonationMinerImplementation is
         __ReentrancyGuard_init();
 
         cUSD = cUSD_;
-        IPCT = IPCT_;
+        PACT = PACT_;
         treasury = treasury_;
         rewardPeriodSize = rewardPeriodSize_;
         decayNumerator = decayNumerator_;
@@ -277,11 +277,11 @@ contract DonationMinerImplementation is
             return;
         }
 
-        if (claimAmount > IPCT.balanceOf(address(this))) {
-            claimAmount = IPCT.balanceOf(address(this));
+        if (claimAmount > PACT.balanceOf(address(this))) {
+            claimAmount = PACT.balanceOf(address(this));
         }
 
-        IPCT.safeTransfer(msg.sender, claimAmount);
+        PACT.safeTransfer(msg.sender, claimAmount);
 
         emit RewardClaimed(msg.sender, claimAmount);
     }
@@ -340,7 +340,7 @@ contract DonationMinerImplementation is
     }
 
     /**
-     * @notice Calculates the number of IPCTs given for each block in current reward period
+     * @notice Calculates the number of PACTs given for each block in current reward period
      *
      * @return uint256 current reward per block
      */
