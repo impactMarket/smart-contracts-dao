@@ -1,13 +1,23 @@
 //SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.4;
 
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/IPCTDelegateStorageV1.sol";
 import "./interfaces/IPCTEvents.sol";
 
-contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
+contract IPCTDelegate is
+    IPCTEvents,
+    Initializable,
+    OwnableUpgradeable,
+    ReentrancyGuardUpgradeable,
+    IPCTDelegateStorageV1
+{
+    using SafeERC20 for IERC20;
+
     /// @notice The name of this contract
-    string public constant NAME = "IPCT";
+    string public constant NAME = "PACT";
 
     /// @notice The minimum setable proposal threshold
     uint256 public constant MIN_PROPOSAL_THRESHOLD = 100_000_000e18; // 100,000,000 Tokens
@@ -16,7 +26,7 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
     uint256 public constant MAX_PROPOSAL_THRESHOLD = 500_000_000e18; // 500,000,000 Tokens
 
     /// @notice The minimum setable voting period
-    uint256 public constant MIN_VOTING_PERIOD = 17280; // About 24 hours
+    uint256 public constant MIN_VOTING_PERIOD = 720; // About 1 hour
 
     /// @notice The max setable voting period
     uint256 public constant MAX_VOTING_PERIOD = 241920; // About 2 weeks
@@ -37,11 +47,6 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
     /// @notice The EIP-712 typehash for the ballot struct used by the contract
     bytes32 public constant BALLOT_TYPEHASH = keccak256("Ballot(uint256 proposalId,uint8 support)");
 
-    modifier adminOnly() {
-        require(msg.sender == admin, "Only admin can call");
-        _;
-    }
-
     /**
      * @notice Used to initialize the contract during delegator contructor
      * @param timelock_ The address of the Timelock
@@ -60,7 +65,7 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
         uint256 votingDelay_,
         uint256 proposalThreshold_,
         uint256 quorumVotes_
-    ) public initializer adminOnly {
+    ) public initializer {
         require(
             TimelockInterface(timelock_).admin() == address(this),
             "IPCT::initialize: timelock admin is not assigned to IPCTDelegate"
@@ -85,7 +90,9 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
             "IPCT::initialize: timelock admin is not assigned to IPCTDelegate"
         );
 
-        admin = msg.sender;
+        __Ownable_init();
+        __ReentrancyGuard_init();
+
         token = IHasVotes(token_);
         releaseToken = IHasVotes(releaseToken_);
         votingPeriod = votingPeriod_;
@@ -408,6 +415,8 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
         bytes32 r,
         bytes32 s
     ) external {
+        require(v == 27 || v == 28, "IPCT::castVoteBySig: invalid v value");
+        require(s < 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A1, "IPCT::castVoteBySig: invalid s value");
         bytes32 domainSeparator = keccak256(
             abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(NAME)), getChainIdInternal(), address(this))
         );
@@ -462,10 +471,10 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
     }
 
     /**
-     * @notice Admin function for setting the voting delay
+     * @notice Owner function for setting the voting delay
      * @param newVotingDelay new voting delay, in blocks
      */
-    function _setVotingDelay(uint256 newVotingDelay) external virtual adminOnly {
+    function _setVotingDelay(uint256 newVotingDelay) external virtual onlyOwner {
         require(
             newVotingDelay >= MIN_VOTING_DELAY && newVotingDelay <= MAX_VOTING_DELAY,
             "IPCT::_setVotingDelay: invalid voting delay"
@@ -477,10 +486,10 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
     }
 
     /**
-     * @notice Admin function for setting the quorum votes
+     * @notice Owner function for setting the quorum votes
      * @param newQuorumVotes new quorum votes
      */
-    function _setQuorumVotes(uint256 newQuorumVotes) external adminOnly {
+    function _setQuorumVotes(uint256 newQuorumVotes) external onlyOwner {
         require(newQuorumVotes >= proposalThreshold, "IPCT::_setQuorumVotes: invalid quorum votes");
 
         uint256 oldQuorumVotes = votingDelay;
@@ -490,10 +499,10 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
     }
 
     /**
-     * @notice Admin function for setting the voting period
+     * @notice Owner function for setting the voting period
      * @param newVotingPeriod new voting period, in blocks
      */
-    function _setVotingPeriod(uint256 newVotingPeriod) external virtual adminOnly {
+    function _setVotingPeriod(uint256 newVotingPeriod) external virtual onlyOwner {
         require(
             newVotingPeriod >= MIN_VOTING_PERIOD && newVotingPeriod <= MAX_VOTING_PERIOD,
             "IPCT::_setVotingPeriod: invalid voting period"
@@ -505,11 +514,11 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
     }
 
     /**
-     * @notice Admin function for setting the proposal threshold
+     * @notice Owner function for setting the proposal threshold
      * @dev newProposalThreshold must be greater than the hardcoded min
      * @param newProposalThreshold new proposal threshold
      */
-    function _setProposalThreshold(uint256 newProposalThreshold) external adminOnly {
+    function _setProposalThreshold(uint256 newProposalThreshold) external onlyOwner {
         require(
             newProposalThreshold >= MIN_PROPOSAL_THRESHOLD &&
                 newProposalThreshold <= MAX_PROPOSAL_THRESHOLD,
@@ -522,44 +531,20 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
     }
 
     /**
-     * @notice Begins transfer of admin rights. The newPendingAdmin must call `_acceptAdmin` to finalize the transfer.
-     * @dev Admin function to begin change of admin. The newPendingAdmin must call `_acceptAdmin` to finalize the transfer.
-     * @param newPendingAdmin New pending admin.
+     * @notice Transfers an amount of an ERC20 from this contract to an address
+     *
+     * @param token_ address of the ERC20 token
+     * @param to_ address of the receiver
+     * @param amount_ amount of the transaction
      */
-    function _setPendingAdmin(address newPendingAdmin) external adminOnly {
-        // Save current value, if any, for inclusion in log
-        address oldPendingAdmin = pendingAdmin;
+    function transfer(
+        IERC20 token_,
+        address to_,
+        uint256 amount_
+    ) external onlyOwner nonReentrant {
+        token_.safeTransfer(to_, amount_);
 
-        // Store pendingAdmin with value newPendingAdmin
-        pendingAdmin = newPendingAdmin;
-
-        // Emit NewPendingAdmin(oldPendingAdmin, newPendingAdmin)
-        emit NewPendingAdmin(oldPendingAdmin, newPendingAdmin);
-    }
-
-    /**
-     * @notice Accepts transfer of admin rights. msg.sender must be pendingAdmin
-     * @dev Admin function for pending admin to accept role and update admin
-     */
-    function _acceptAdmin() external {
-        // Check caller is pendingAdmin and pendingAdmin ≠ address(0)
-        require(
-            msg.sender == pendingAdmin && msg.sender != address(0),
-            "IPCT:_acceptAdmin: pending admin only"
-        );
-
-        // Save current values for inclusion in log
-        address oldAdmin = admin;
-        address oldPendingAdmin = pendingAdmin;
-
-        // Store admin with value pendingAdmin
-        admin = pendingAdmin;
-
-        // Clear the pending value
-        pendingAdmin = address(0);
-
-        emit NewAdmin(oldAdmin, admin);
-        emit NewPendingAdmin(oldPendingAdmin, address(0));
+        emit TransferERC20(address(token_), to_, amount_);
     }
 
     function add256(uint256 a, uint256 b) internal pure returns (uint256) {

@@ -23,10 +23,10 @@ chai.use(chaiAsPromised);
 const expect = chai.expect;
 
 const TWO_DAYS_SECONDS = 2 * 24 * 60 * 60; // 2 days
-const VOTING_PERIOD_BLOCKS = 10;
-const VOTING_DELAY_BLOCKS = 10;
+const VOTING_PERIOD_BLOCKS = 720;
+const VOTING_DELAY_BLOCKS = 1;
 const PROPOSAL_THRESHOLD: BigNumberish = parseEther("100000000"); // 100 millions units (1%)
-const QUORUM_VOTES: BigNumberish = parseEther("400000000"); // 400 millions units (4%)
+const QUORUM_VOTES: BigNumberish = parseEther("100000000"); // 400 millions units (4%)
 const communityMinTranche = parseEther("100");
 const communityMaxTranche = parseEther("5000");
 
@@ -42,13 +42,15 @@ let carol: SignerWithAddress;
 // contract instances
 let pactToken: ethersTypes.Contract;
 let ipctDelegator: ethersTypes.Contract;
+let ipctDelegate: ethersTypes.Contract;
 let ipctTimelock: ethersTypes.Contract;
 let communityAdmin: ethersTypes.Contract;
 let treasury: ethersTypes.Contract;
 let impactLabsVesting: ethersTypes.Contract;
 let cUSD: ethersTypes.Contract;
+let ImpactProxyAdmin: ethersTypes.Contract;
 
-describe("IPCTGovernator", function () {
+describe.only("IPCTGovernator", function () {
 	before(async function () {
 		IPCTDelegate = await ethers.getContractFactory("IPCTDelegate");
 
@@ -61,7 +63,7 @@ describe("IPCTGovernator", function () {
 	});
 
 	beforeEach(async function () {
-		await deployments.fixture("Test", { fallbackToGlobal: false });
+		await deployments.fixture("Test", {fallbackToGlobal: false});
 
 		const pactTokenDeployment = await deployments.get("PACTToken");
 		pactToken = await ethers.getContractAt(
@@ -75,6 +77,12 @@ describe("IPCTGovernator", function () {
 			ipctTimelockDeployment.address
 		);
 
+		const ipctDelegateDeployment = await deployments.get("IPCTDelegate");
+		ipctDelegate = await ethers.getContractAt(
+			"IPCTDelegate",
+			ipctDelegateDeployment.address
+		);
+
 		const ipctDelegatorDeployment = await deployments.get("IPCTDelegator");
 		ipctDelegator = await ethers.getContractAt(
 			"IPCTDelegator",
@@ -82,7 +90,6 @@ describe("IPCTGovernator", function () {
 		);
 
 		ipctDelegator = await IPCTDelegate.attach(ipctDelegator.address);
-		ipctDelegator._setVotingPeriod(5);
 
 		const communityAdminDeployment = await deployments.get(
 			"CommunityAdminProxy"
@@ -106,13 +113,17 @@ describe("IPCTGovernator", function () {
 			impactLabsVestingDeployment.address
 		);
 
+		ImpactProxyAdmin = await ethers.getContractAt(
+			"ImpactProxyAdmin",
+			(
+				await deployments.get("ImpactProxyAdmin")
+			).address
+		);
+
 		const cUSDDeployment = await deployments.get("TokenMock");
 		cUSD = await ethers.getContractAt("TokenMock", cUSDDeployment.address);
 
 		await cUSD.mint(treasury.address, parseEther("1000"));
-
-		await ipctDelegator._setVotingPeriod(VOTING_PERIOD_BLOCKS);
-		await ipctDelegator._setVotingDelay(VOTING_PERIOD_BLOCKS);
 
 		await pactToken.transfer(alice.address, parseEther("40000000"));
 		// await pactToken.transfer(bob.address, parseEther("100000000"));
@@ -126,7 +137,8 @@ describe("IPCTGovernator", function () {
 		await communityAdmin.transferOwnership(ipctTimelock.address);
 	});
 
-	it("should create community", async function () {
+
+	async function createCommunityProposal() {
 		const targets = [communityAdmin.address];
 		const values = [0];
 		const signatures = [
@@ -168,6 +180,10 @@ describe("IPCTGovernator", function () {
 				descriptions
 			)
 		).to.be.fulfilled;
+	}
+
+	it("should create community", async function () {
+		await createCommunityProposal();
 
 		await advanceBlockNTimes(VOTING_DELAY_BLOCKS);
 
@@ -186,47 +202,7 @@ describe("IPCTGovernator", function () {
 	});
 
 	it("should update community implementation", async function () {
-		const targets = [communityAdmin.address];
-		const values = [0];
-		const signatures = [
-			"addCommunity(address[],uint256,uint256,uint256,uint256,uint256,uint256,uint256)",
-		];
-
-		const calldatas = [
-			ethers.utils.defaultAbiCoder.encode(
-				[
-					"address[]",
-					"uint256",
-					"uint256",
-					"uint256",
-					"uint256",
-					"uint256",
-					"uint256",
-					"uint256",
-				],
-				[
-					[alice.address],
-					parseEther("100"),
-					parseEther("1000"),
-					parseEther("0.01"),
-					1111,
-					111,
-					communityMinTranche,
-					communityMaxTranche,
-				]
-			),
-		];
-		const descriptions = "description";
-
-		await expect(
-			ipctDelegator.propose(
-				targets,
-				values,
-				signatures,
-				calldatas,
-				descriptions
-			)
-		).to.be.fulfilled;
+		await createCommunityProposal();
 
 		await advanceBlockNTimes(VOTING_DELAY_BLOCKS);
 
@@ -244,6 +220,10 @@ describe("IPCTGovernator", function () {
 
 		//***************************************************************************
 
+		const targets2 = [communityAdmin.address];
+		const values2 = [0];
+		const descriptions2 = "description";
+
 		let communityTemplateNewAddress: string =
 			"0xf41B47c54dEFF12f8fE830A411a09D865eBb120E";
 
@@ -258,11 +238,11 @@ describe("IPCTGovernator", function () {
 
 		await expect(
 			ipctDelegator.propose(
-				targets,
-				values,
+				targets2,
+				values2,
 				signatures2,
 				calldatas2,
-				descriptions
+				descriptions2
 			)
 		).to.be.fulfilled;
 
@@ -283,5 +263,123 @@ describe("IPCTGovernator", function () {
 		expect(await communityAdmin.communityTemplate()).to.be.equal(
 			communityTemplateNewAddress
 		);
+	});
+
+	it("should update params if owner", async function () {
+		await expect(ipctDelegator._setVotingDelay(123)).to.be.fulfilled;
+		await expect(ipctDelegator._setVotingPeriod(730)).to.be.fulfilled;
+		await expect(ipctDelegator._setQuorumVotes(QUORUM_VOTES.mul(2))).to.be.fulfilled;
+		await expect(ipctDelegator._setProposalThreshold(PROPOSAL_THRESHOLD.mul(2))).to.be.fulfilled;
+	});
+
+	it("should not update params if not owner", async function () {
+		await expect(ipctDelegator.connect(alice)._setVotingDelay(0)).to.be.rejectedWith("Ownable: caller is not the owner");
+		await expect(ipctDelegator.connect(alice)._setVotingPeriod(0)).to.be.rejectedWith("Ownable: caller is not the owner");
+		await expect(ipctDelegator.connect(alice)._setQuorumVotes(0)).to.be.rejectedWith("Ownable: caller is not the owner");
+		await expect(ipctDelegator.connect(alice)._setProposalThreshold(0)).to.be.rejectedWith("Ownable: caller is not the owner");
+	});
+
+	it("should update delegate if owner", async function () {
+		const NewIPCTDelegateFactory =
+			await ethers.getContractFactory("IPCTDelegate");
+		const newIPCTDelegate =
+			await NewIPCTDelegateFactory.deploy();
+
+		expect(
+			await ImpactProxyAdmin.getProxyImplementation(ipctDelegator.address)
+		).to.be.equal(ipctDelegate.address);
+		await expect(
+			ImpactProxyAdmin.upgrade(
+				ipctDelegator.address,
+				newIPCTDelegate.address
+			)
+		).to.be.fulfilled;
+		expect(
+			await ImpactProxyAdmin.getProxyImplementation(ipctDelegator.address)
+		).to.be.equal(newIPCTDelegate.address);
+	});
+
+	it("should not update delegate if not owner", async function () {
+		await ImpactProxyAdmin.transferOwnership(ipctTimelock.address);
+
+		const NewIPCTDelegateFactory =
+			await ethers.getContractFactory("IPCTDelegate");
+		const newIPCTDelegate =
+			await NewIPCTDelegateFactory.deploy();
+
+		expect(
+			await ImpactProxyAdmin.getProxyImplementation(ipctDelegator.address)
+		).to.be.equal(ipctDelegate.address);
+		await expect(
+			ImpactProxyAdmin.upgrade(
+				ipctDelegator.address,
+				newIPCTDelegate.address
+			)
+		).to.be.rejectedWith("Ownable: caller is not the owner");
+		expect(
+			await ImpactProxyAdmin.getProxyImplementation(ipctDelegator.address)
+		).to.be.equal(ipctDelegate.address);
+	});
+
+	it("should update delegate if timelock is owner", async function () {
+		await ImpactProxyAdmin.transferOwnership(ipctTimelock.address);
+
+		const NewIPCTDelegateFactory =
+			await ethers.getContractFactory("IPCTDelegate");
+		const newIPCTDelegate =
+			await NewIPCTDelegateFactory.deploy();
+
+		expect(
+			await ImpactProxyAdmin.getProxyImplementation(ipctDelegator.address)
+		).to.be.equal(ipctDelegate.address);
+
+		const targets = [ImpactProxyAdmin.address];
+		const values = [0];
+		const signatures = [
+			"upgrade(address,address)",
+		];
+
+		const calldatas = [
+			ethers.utils.defaultAbiCoder.encode(
+				[
+					"address",
+					"address"
+				],
+				[
+					ipctDelegator.address,
+					newIPCTDelegate.address
+				]
+			),
+		];
+		const descriptions = "description";
+
+		await expect(
+			ipctDelegator.propose(
+				targets,
+				values,
+				signatures,
+				calldatas,
+				descriptions
+			)
+		).to.be.fulfilled;
+
+		await advanceBlockNTimes(VOTING_DELAY_BLOCKS);
+
+		await expect(ipctDelegator.castVote(1, 1)).to.be.fulfilled;
+
+		await expect(ipctDelegator.connect(alice).castVote(1, 1)).to.be
+			.fulfilled;
+
+		await advanceBlockNTimes(VOTING_PERIOD_BLOCKS);
+
+		await expect(ipctDelegator.connect(alice).queue(1)).to.be.fulfilled;
+
+		await advanceNSeconds(TWO_DAYS_SECONDS);
+
+		await expect(ipctDelegator.connect(alice).execute(1)).to.be.fulfilled;
+
+		expect(
+			await ImpactProxyAdmin.getProxyImplementation(ipctDelegator.address)
+		).to.be.equal(newIPCTDelegate.address);
 	});
 });

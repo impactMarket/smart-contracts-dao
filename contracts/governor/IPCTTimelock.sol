@@ -3,6 +3,8 @@ pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
+import "hardhat/console.sol";
+
 contract IPCTTimelock {
     using SafeMath for uint256;
 
@@ -35,7 +37,7 @@ contract IPCTTimelock {
     );
 
     uint256 public constant GRACE_PERIOD = 14 days;
-    uint256 public constant MINIMUM_DELAY = 2 days;
+    uint256 public constant MINIMUM_DELAY = 1 hours;
     uint256 public constant MAXIMUM_DELAY = 30 days;
 
     address public admin;
@@ -160,7 +162,7 @@ contract IPCTTimelock {
 
         // solium-disable-next-line security/no-call-value
         (bool success, bytes memory returnData) = target.call{value: value}(callData);
-        require(success, "Timelock::executeTransaction: Transaction execution reverted. Reason: ");
+        require(success, "Timelock::executeTransaction: Transaction execution reverted.");
 
         emit ExecuteTransaction(txHash, target, value, signature, data, eta);
 

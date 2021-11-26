@@ -2,7 +2,6 @@
 pragma solidity 0.8.4;
 
 import "@ubeswap/governance/contracts/interfaces/IHasVotes.sol";
-import "./IPCTDelegatorStorage.sol";
 import "./TimelockInterface.sol";
 
 /**
@@ -11,7 +10,7 @@ import "./TimelockInterface.sol";
  * contract which implements IPCTDelegateStorageV1 and following the naming convention
  * IPCTDelegateStorageVX.
  */
-contract IPCTDelegateStorageV1 is IPCTDelegatorStorage {
+contract IPCTDelegateStorageV1 {
     /// @notice The delay before voting on a proposal may take place, once proposed, in blocks
     uint256 public votingDelay;
 
