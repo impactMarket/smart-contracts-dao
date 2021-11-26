@@ -98,7 +98,7 @@ contract DonationMinerImplementation is
      * @notice Used to initialize a new DonationMiner contract
      *
      * @param cUSD_                 Address of the cUSD token
-     * @param IPCT_                 Address of the IPCT token
+     * @param IPCT_                 Address of the PACT Token
      * @param treasury_             Address of the Treasury
      * @param firstRewardPerBlock_  Number of IPCTs given for each block
      *                              from the first reward period

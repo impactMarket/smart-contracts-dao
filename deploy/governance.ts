@@ -37,7 +37,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const timelockAddress = await getContractAddress(hre, deployer, 1);
 	const delegatorAddress = await getContractAddress(hre, deployer, 2);
 
-	const Token = await deployments.get("IPCTToken");
+	const Token = await deployments.get("PACTToken");
 
 	await new Promise((resolve) => setTimeout(resolve, 6000));
 
@@ -72,8 +72,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		log: true,
 	});
 
-	const IPCT = await deployments.get("IPCTToken");
-	const IPCTContract = await ethers.getContractAt("IPCTToken", IPCT.address);
+	const IPCT = await deployments.get("PACTToken");
+	const IPCTContract = await ethers.getContractAt("PACTToken", IPCT.address);
 	IPCTContract.transfer(delegatorResult.address, parseEther("2000000000"));
 };
 

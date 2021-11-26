@@ -12,7 +12,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const accounts: SignerWithAddress[] = await ethers.getSigners();
 	const deployer = accounts[0];
 
-	const Token = await deployments.get("IPCTToken");
+	const Token = await deployments.get("PACTToken");
 	const Treasury = await deployments.get("TreasuryProxy");
 
 	const ImpactProxyAdmin = await deployments.get("ImpactProxyAdmin");
@@ -62,8 +62,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		"1000000"
 	);
 
-	const IPCT = await deployments.get("IPCTToken");
-	const IPCTContract = await ethers.getContractAt("IPCTToken", IPCT.address);
+	const IPCT = await deployments.get("PACTToken");
+	const IPCTContract = await ethers.getContractAt("PACTToken", IPCT.address);
 	IPCTContract.transfer(
 		donationMinerContract.address,
 		parseEther("4000000000")

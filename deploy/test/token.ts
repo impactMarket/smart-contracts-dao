@@ -7,7 +7,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const { deploy } = deployments;
 	const { deployer } = await getNamedAccounts();
 
-	await deploy("IPCTToken", {
+	await deploy("PACTToken", {
 		from: deployer,
 		args: [deployer],
 		log: true,

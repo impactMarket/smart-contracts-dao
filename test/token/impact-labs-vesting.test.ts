@@ -47,9 +47,9 @@ const deploy = deployments.createFixture(async () => {
 	);
 
 	IPCT = await ethers.getContractAt(
-		"IPCTToken",
+		"PACTToken",
 		(
-			await deployments.get("IPCTToken")
+			await deployments.get("PACTToken")
 		).address
 	);
 
