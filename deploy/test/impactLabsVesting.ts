@@ -23,8 +23,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	const donationMiner = await deployments.get("DonationMinerProxy");
 
-	const IPCT = await deployments.get("IPCTToken");
-	const IPCTContract = await ethers.getContractAt("IPCTToken", IPCT.address);
+	const IPCT = await deployments.get("PACTToken");
+	const IPCTContract = await ethers.getContractAt("PACTToken", IPCT.address);
 
 	const impactLabsVestingImplementationResult = await deploy(
 		"ImpactLabsVestingImplementation",

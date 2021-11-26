@@ -8,7 +8,7 @@
   * UBE holders
   * Moola Markets users
   * MOO holders
-1. 10% of 10 Billion IPCT tokens to be given to airdrop recipients, so 1 Billion in total
+1. 10% of 10 Billion PACT Tokens to be given to airdrop recipients, so 1 Billion in total
   * Donors will receive a scaled amount based on their donation amount (7%)
   * Others will receive a fixed amount per valid address (3%)
   * Leave these parameters adjustable so we can tweak the amounts to match 1 Billion

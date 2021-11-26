@@ -48,7 +48,7 @@ contract ImpactLabsVestingImplementation is
      * !!! before calling this method, you must ensure that there is enough IPCTs on the contract address
      *
      * @param impactLabs_           Address of the ImpactLabs
-     * @param IPCT_                 Address of the IPCT token
+     * @param IPCT_                 Address of the PACT Token
      * @param advancePayment_       The amount of IPCT that will be given in advance to ImpactLabs
      */
     function initialize(

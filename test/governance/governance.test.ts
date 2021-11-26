@@ -40,7 +40,7 @@ let bob: SignerWithAddress;
 let carol: SignerWithAddress;
 
 // contract instances
-let ipctToken: ethersTypes.Contract;
+let pactToken: ethersTypes.Contract;
 let ipctDelegator: ethersTypes.Contract;
 let ipctTimelock: ethersTypes.Contract;
 let communityAdmin: ethersTypes.Contract;
@@ -63,10 +63,10 @@ describe("IPCTGovernator", function () {
 	beforeEach(async function () {
 		await deployments.fixture("Test", { fallbackToGlobal: false });
 
-		const ipctTokenDeployment = await deployments.get("IPCTToken");
-		ipctToken = await ethers.getContractAt(
-			"IPCTToken",
-			ipctTokenDeployment.address
+		const pactTokenDeployment = await deployments.get("PACTToken");
+		pactToken = await ethers.getContractAt(
+			"PACTToken",
+			pactTokenDeployment.address
 		);
 
 		const ipctTimelockDeployment = await deployments.get("IPCTTimelock");
@@ -114,21 +114,19 @@ describe("IPCTGovernator", function () {
 		await ipctDelegator._setVotingPeriod(VOTING_PERIOD_BLOCKS);
 		await ipctDelegator._setVotingDelay(VOTING_PERIOD_BLOCKS);
 
-		await ipctToken.transfer(alice.address, parseEther("40000000"));
-		// await ipctToken.transfer(bob.address, parseEther("100000000"));
-		// await ipctToken.transfer(carol.address, parseEther("100000000"));
+		await pactToken.transfer(alice.address, parseEther("40000000"));
+		// await pactToken.transfer(bob.address, parseEther("100000000"));
+		// await pactToken.transfer(carol.address, parseEther("100000000"));
 
-		await ipctToken.delegate(owner.address);
-		await ipctToken.connect(alice).delegate(owner.address);
-		// await ipctToken.connect(bob).delegate(bob.address);
-		// await ipctToken.connect(carol).delegate(carol.address);
+		await pactToken.delegate(owner.address);
+		await pactToken.connect(alice).delegate(owner.address);
+		// await pactToken.connect(bob).delegate(bob.address);
+		// await pactToken.connect(carol).delegate(carol.address);
 
 		await communityAdmin.transferOwnership(ipctTimelock.address);
-
-		console.log(formatEther(await ipctToken.balanceOf(owner.address)));
 	});
 
-	it.only("should create community", async function () {
+	it("should create community", async function () {
 		const targets = [communityAdmin.address];
 		const values = [0];
 		const signatures = [

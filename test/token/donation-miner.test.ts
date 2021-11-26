@@ -13,7 +13,7 @@ import { BigNumber } from "@ethersproject/bignumber";
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 
-const STARTING_DELAY = 9;
+const STARTING_DELAY = 5;
 const REWARD_PERIOD_SIZE = 20;
 
 let owner: SignerWithAddress;
@@ -79,9 +79,9 @@ const deploy = deployments.createFixture(async () => {
 	);
 
 	IPCT = await ethers.getContractAt(
-		"IPCTToken",
+		"PACTToken",
 		(
-			await deployments.get("IPCTToken")
+			await deployments.get("PACTToken")
 		).address
 	);
 

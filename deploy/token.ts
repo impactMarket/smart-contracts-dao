@@ -9,7 +9,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	await new Promise((resolve) => setTimeout(resolve, 6000));
 
-	await deploy("IPCTToken", {
+	await deploy("PACTToken", {
 		from: deployer,
 		args: [deployer],
 		log: true,
