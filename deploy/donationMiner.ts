@@ -22,8 +22,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// const ownerAddress = deployer.address; //dev
 	const cUSDAddress = getCUSDAddress();
 
-	await new Promise((resolve) => setTimeout(resolve, 6000));
-
 	const donationMinerImplementationResult = await deploy(
 		"DonationMinerImplementation",
 		{
@@ -46,6 +44,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		// gasLimit: 13000000,
 	});
 
+	await new Promise((resolve) => setTimeout(resolve, 6000));
+
 	const donationMinerContract = await ethers.getContractAt(
 		"DonationMinerImplementation",
 		donationMinerProxyResult.address
@@ -62,6 +62,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		"1000000"
 	);
 
+	await new Promise((resolve) => setTimeout(resolve, 6000));
+
 	const IPCT = await deployments.get("PACTToken");
 	const IPCTContract = await ethers.getContractAt("PACTToken", IPCT.address);
 	IPCTContract.transfer(
@@ -70,6 +72,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	);
 
 	await donationMinerContract.transferOwnership(ownerAddress);
+
+	await new Promise((resolve) => setTimeout(resolve, 6000));
 };
 
 export default func;

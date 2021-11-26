@@ -1,93 +1,10 @@
 //SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.4;
 
-import "./interfaces/IPCTDelegatorStorage.sol";
-import "./interfaces/IPCTEvents.sol";
+import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
-contract IPCTDelegator is IPCTDelegatorStorage, IPCTEvents {
-    constructor(
-        address timelock_,
-        address token_,
-        address releaseToken_,
-        address admin_,
-        address implementation_,
-        uint256 votingPeriod_,
-        uint256 votingDelay_,
-        uint256 proposalThreshold_,
-        uint256 quorumVotes_
-    ) {
-        // Admin set to msg.sender for initialization
-        admin = msg.sender;
-
-        delegateTo(
-            implementation_,
-            abi.encodeWithSignature(
-                "initialize(address,address,address,uint256,uint256,uint256,uint256)",
-                timelock_,
-                token_,
-                releaseToken_,
-                votingPeriod_,
-                votingDelay_,
-                proposalThreshold_,
-                quorumVotes_
-            )
-        );
-        _setImplementation(implementation_);
-        admin = admin_;
-    }
-
-    /**
-     * @notice Called by the admin to update the implementation of the delegator
-     * @param implementation_ The address of the new implementation for delegation
-     */
-    function _setImplementation(address implementation_) public {
-        require(msg.sender == admin, "IPCTDelegator::_setImplementation: admin only");
-        require(
-            implementation_ != address(0),
-            "IPCTDelegator::_setImplementation: invalid implementation address"
-        );
-
-        address oldImplementation = implementation;
-        implementation = implementation_;
-
-        emit NewImplementation(oldImplementation, implementation_);
-    }
-
-    /**
-     * @notice Internal method to delegate execution to another contract
-     * @dev It returns to the external caller whatever the implementation returns or forwards reverts
-     * @param callee The contract to delegatecall
-     * @param data The raw data to delegatecall
-     */
-    function delegateTo(address callee, bytes memory data) internal {
-        (bool success, bytes memory returnData) = callee.delegatecall(data);
-        assembly {
-            if eq(success, 0) {
-                revert(add(returnData, 0x20), returndatasize())
-            }
-        }
-    }
-
-    /**
-     * @dev Delegates execution to an implementation contract.
-     * It returns to the external caller whatever the implementation returns
-     * or forwards reverts.
-     */
-    fallback() external {
-        // delegate all other functions to current implementation
-        (bool success, ) = implementation.delegatecall(msg.data);
-
-        assembly {
-            let free_mem_ptr := mload(0x40)
-            returndatacopy(free_mem_ptr, 0, returndatasize())
-
-            switch success
-            case 0 {
-                revert(free_mem_ptr, returndatasize())
-            }
-            default {
-                return(free_mem_ptr, returndatasize())
-            }
-        }
-    }
+contract IPCTDelegator is TransparentUpgradeableProxy {
+    constructor(address logic_, address proxyAdmin_)
+        TransparentUpgradeableProxy(logic_, proxyAdmin_, "")
+    {}
 }
