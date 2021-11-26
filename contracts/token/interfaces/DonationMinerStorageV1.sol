@@ -11,7 +11,7 @@ import "./IDonationMiner.sol";
  */
 abstract contract DonationMinerStorageV1 is IDonationMiner {
     IERC20 public override cUSD;
-    IERC20 public override IPCT;
+    IERC20 public override PACT;
     ITreasury public override treasury;
     uint256 public override rewardPeriodSize;
     uint256 public override donationCount;

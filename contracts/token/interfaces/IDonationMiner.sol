@@ -34,7 +34,7 @@ interface IDonationMiner {
 
     function getVersion() external returns(uint256);
     function cUSD() external view returns (IERC20);
-    function IPCT() external view returns (IERC20);
+    function PACT() external view returns (IERC20);
     function treasury() external view returns (ITreasury);
     function rewardPeriodSize() external view returns (uint256);
     function decayNumerator() external view returns (uint256);
