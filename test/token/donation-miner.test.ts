@@ -13,7 +13,7 @@ import { BigNumber } from "@ethersproject/bignumber";
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 
-const STARTING_DELAY = 5;
+const STARTING_DELAY = 100;
 const REWARD_PERIOD_SIZE = 20;
 
 let owner: SignerWithAddress;
@@ -255,14 +255,14 @@ describe("Donation Miner", () => {
 		const rewardPeriod1 = await DonationMiner.rewardPeriods(1);
 		expect(rewardPeriod1.rewardPerBlock).to.equal(parseEther("216000"));
 		expect(rewardPeriod1.rewardAmount).to.equal(parseEther("4320000"));
-		expect(rewardPeriod1.startBlock).to.equal(30);
-		expect(rewardPeriod1.endBlock).to.equal(49);
+		expect(rewardPeriod1.startBlock).to.equal(130);
+		expect(rewardPeriod1.endBlock).to.equal(149);
 		expect(rewardPeriod1.donationsAmount).to.equal(0);
 		const rewardPeriod2 = await DonationMiner.rewardPeriods(2);
 		expect(rewardPeriod2.rewardPerBlock).to.equal(parseEther("215762.832"));
 		expect(rewardPeriod2.rewardAmount).to.equal(parseEther("8635256.64"));
-		expect(rewardPeriod2.startBlock).to.equal(50);
-		expect(rewardPeriod2.endBlock).to.equal(69);
+		expect(rewardPeriod2.startBlock).to.equal(150);
+		expect(rewardPeriod2.endBlock).to.equal(169);
 		expect(rewardPeriod2.donationsAmount).to.equal(
 			user1Donation1.add(user2Donation).add(user1Donation2)
 		);
@@ -273,8 +273,8 @@ describe("Donation Miner", () => {
 		expect(rewardPeriod3.rewardAmount).to.equal(
 			parseEther("4310518.48820928")
 		);
-		expect(rewardPeriod3.startBlock).to.equal(70);
-		expect(rewardPeriod3.endBlock).to.equal(89);
+		expect(rewardPeriod3.startBlock).to.equal(170);
+		expect(rewardPeriod3.endBlock).to.equal(189);
 		expect(rewardPeriod3.donationsAmount).to.equal(
 			user1Donation3.add(user3Donation)
 		);
@@ -285,8 +285,8 @@ describe("Donation Miner", () => {
 		expect(rewardPeriod4.rewardAmount).to.equal(
 			parseEther("4305785.53890922621056")
 		);
-		expect(rewardPeriod4.startBlock).to.equal(90);
-		expect(rewardPeriod4.endBlock).to.equal(109);
+		expect(rewardPeriod4.startBlock).to.equal(190);
+		expect(rewardPeriod4.endBlock).to.equal(209);
 		expect(rewardPeriod4.donationsAmount).to.equal(0);
 		const rewardPeriod5 = await DonationMiner.rewardPeriods(5);
 		expect(rewardPeriod5.rewardPerBlock).to.equal(
@@ -295,8 +295,8 @@ describe("Donation Miner", () => {
 		expect(rewardPeriod5.rewardAmount).to.equal(
 			parseEther("8606843.325296730090740800")
 		);
-		expect(rewardPeriod5.startBlock).to.equal(110);
-		expect(rewardPeriod5.endBlock).to.equal(129);
+		expect(rewardPeriod5.startBlock).to.equal(210);
+		expect(rewardPeriod5.endBlock).to.equal(229);
 		expect(rewardPeriod5.donationsAmount).to.equal(user4Donation);
 
 		//verify donations method
@@ -305,8 +305,8 @@ describe("Donation Miner", () => {
 		expect(donation1.target).to.equal(Treasury.address);
 		expect(donation1.rewardPeriod).to.equal(2);
 		expect(donation1.blockNumber.toNumber())
-			.to.be.greaterThanOrEqual(50)
-			.lessThanOrEqual(69);
+			.to.be.greaterThanOrEqual(150)
+			.lessThanOrEqual(169);
 		expect(donation1.amount).to.equal(user1Donation1);
 		expect(donation1.token).to.equal(cUSD.address);
 		expect(donation1.tokenPrice).to.equal(parseEther("1"));
@@ -315,8 +315,8 @@ describe("Donation Miner", () => {
 		expect(donation2.target).to.equal(Treasury.address);
 		expect(donation2.rewardPeriod).to.equal(2);
 		expect(donation2.blockNumber.toNumber())
-			.to.be.greaterThanOrEqual(50)
-			.lessThanOrEqual(69);
+			.to.be.greaterThanOrEqual(150)
+			.lessThanOrEqual(169);
 		expect(donation2.amount).to.equal(user2Donation);
 		expect(donation2.token).to.equal(cUSD.address);
 		expect(donation2.tokenPrice).to.equal(parseEther("1"));
@@ -325,8 +325,8 @@ describe("Donation Miner", () => {
 		expect(donation3.target).to.equal(Treasury.address);
 		expect(donation3.rewardPeriod).to.equal(2);
 		expect(donation3.blockNumber.toNumber())
-			.to.be.greaterThanOrEqual(50)
-			.lessThanOrEqual(69);
+			.to.be.greaterThanOrEqual(150)
+			.lessThanOrEqual(169);
 		expect(donation3.amount).to.equal(user1Donation2);
 		expect(donation3.token).to.equal(cUSD.address);
 		expect(donation3.tokenPrice).to.equal(parseEther("1"));
@@ -335,8 +335,8 @@ describe("Donation Miner", () => {
 		expect(donation4.target).to.equal(Treasury.address);
 		expect(donation4.rewardPeriod).to.equal(3);
 		expect(donation4.blockNumber.toNumber())
-			.to.be.greaterThanOrEqual(70)
-			.lessThanOrEqual(89);
+			.to.be.greaterThanOrEqual(170)
+			.lessThanOrEqual(189);
 		expect(donation4.amount).to.equal(user1Donation3);
 		expect(donation4.token).to.equal(cUSD.address);
 		expect(donation4.tokenPrice).to.equal(parseEther("1"));
@@ -345,8 +345,8 @@ describe("Donation Miner", () => {
 		expect(donation5.target).to.equal(Treasury.address);
 		expect(donation5.rewardPeriod).to.equal(3);
 		expect(donation5.blockNumber.toNumber())
-			.to.be.greaterThanOrEqual(70)
-			.lessThanOrEqual(89);
+			.to.be.greaterThanOrEqual(170)
+			.lessThanOrEqual(189);
 		expect(donation5.amount).to.equal(user3Donation);
 		expect(donation5.token).to.equal(cUSD.address);
 		expect(donation5.tokenPrice).to.equal(parseEther("1"));
@@ -355,8 +355,8 @@ describe("Donation Miner", () => {
 		expect(donation6.target).to.equal(Treasury.address);
 		expect(donation6.rewardPeriod).to.equal(5);
 		expect(donation6.blockNumber.toNumber())
-			.to.be.greaterThanOrEqual(110)
-			.lessThanOrEqual(129);
+			.to.be.greaterThanOrEqual(210)
+			.lessThanOrEqual(229);
 		expect(donation6.amount).to.equal(user4Donation);
 		expect(donation6.token).to.equal(cUSD.address);
 		expect(donation6.tokenPrice).to.equal(parseEther("1"));
@@ -438,15 +438,35 @@ describe("Donation Miner", () => {
 
 		expect(rewardPeriod1.rewardPerBlock).to.equal(parseEther("216000"));
 		expect(rewardPeriod1.rewardAmount).to.equal(parseEther("4320000"));
-		expect(rewardPeriod1.startBlock).to.equal(30);
-		expect(rewardPeriod1.endBlock).to.equal(49);
+		expect(rewardPeriod1.startBlock).to.equal(130);
+		expect(rewardPeriod1.endBlock).to.equal(149);
 		expect(rewardPeriod1.donationsAmount).to.equal(user1Donation1);
 		const rewardPeriod2 = await DonationMiner.rewardPeriods(2);
 		expect(rewardPeriod2.rewardPerBlock).to.equal(parseEther("21600"));
 		expect(rewardPeriod2.rewardAmount).to.equal(parseEther("864000"));
-		expect(rewardPeriod2.startBlock).to.equal(50);
-		expect(rewardPeriod2.endBlock).to.equal(89);
+		expect(rewardPeriod2.startBlock).to.equal(150);
+		expect(rewardPeriod2.endBlock).to.equal(189);
 		expect(rewardPeriod2.donationsAmount).to.equal(user1Donation1);
+	});
+
+	it("Should update first reward params if admin", async function () {
+		await expect(DonationMiner.updateFirstRewardPeriodParams(100, 200)).to.be.fulfilled;
+		const rewardPeriod1 = await DonationMiner.rewardPeriods(1);
+
+		expect(rewardPeriod1.rewardPerBlock).to.equal(200);
+		expect(rewardPeriod1.rewardAmount).to.equal(4000);
+		expect(rewardPeriod1.startBlock).to.equal(100);
+		expect(rewardPeriod1.endBlock).to.equal(119);
+		expect(rewardPeriod1.donationsAmount).to.equal(0);
+	});
+
+	it("Should not update first reward params if not admin", async function () {
+		await expect(DonationMiner.connect(donor1).updateFirstRewardPeriodParams(100, 200)).to.be.rejectedWith("Ownable: caller is not the owner");
+	});
+
+	it("Should not update first reward params after startingBlock", async function () {
+		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await expect(DonationMiner.updateFirstRewardPeriodParams(100, 200)).to.be.rejectedWith("DonationMiner::updateFirstRewardPeriodParams: DonationMiner has already started");
 	});
 
 	it("Should update treasury if admin", async function () {
@@ -1330,8 +1350,8 @@ describe("Donation Miner + Community", () => {
 		expect(donation1.target).to.equal(Community.address);
 		expect(donation1.rewardPeriod).to.equal(1);
 		expect(donation1.blockNumber.toNumber())
-			.to.be.greaterThanOrEqual(30)
-			.lessThanOrEqual(49);
+			.to.be.greaterThanOrEqual(130)
+			.lessThanOrEqual(149);
 		expect(donation1.amount).to.equal(user1Donation);
 		expect(donation1.token).to.equal(cUSD.address);
 		expect(donation1.tokenPrice).to.equal(parseEther("1"));

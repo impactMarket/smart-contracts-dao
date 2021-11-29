@@ -416,7 +416,10 @@ contract IPCTDelegate is
         bytes32 s
     ) external {
         require(v == 27 || v == 28, "IPCT::castVoteBySig: invalid v value");
-        require(s < 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A1, "IPCT::castVoteBySig: invalid s value");
+        require(
+            s < 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A1,
+            "IPCT::castVoteBySig: invalid s value"
+        );
         bytes32 domainSeparator = keccak256(
             abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(NAME)), getChainIdInternal(), address(this))
         );

@@ -16,7 +16,7 @@ import { BigNumber } from "@ethersproject/bignumber";
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 
-const STARTING_DELAY = 10;
+const STARTING_DELAY = 100;
 const REWARD_PERIOD_SIZE = 20;
 
 let owner: SignerWithAddress;
@@ -69,6 +69,8 @@ describe("Impact Labs Vesting", () => {
 	});
 
 	it("Should transfer IPCTs on initialization", async function () {
+		await advanceBlockNTimes(STARTING_DELAY);
+
 		expect(await IPCT.balanceOf(owner.address)).to.be.equal(
 			parseEther("100000001")
 		);

@@ -65,6 +65,10 @@ interface IDonationMiner {
         uint256 newDecayNumerator,
         uint256 newDecayDenominator
     ) external;
+    function updateFirstRewardPeriodParams(
+        uint256 startingBlock,
+        uint256 firstRewardPerBlock
+    ) external;
     function updateTreasury(ITreasury newTreasury) external;
     function donate(uint256 amount) external;
     function donateToCommunity(ICommunity community, uint256 amount) external;
