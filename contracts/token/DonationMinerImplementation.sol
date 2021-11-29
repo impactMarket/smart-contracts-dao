@@ -238,14 +238,18 @@ contract DonationMinerImplementation is
      * @param startingBlock_ value of new startingBlock
      * @param firstRewardPerBlock_ value of new firstRewardPerBlock
      */
-    function updateFirstRewardPeriodParams(
-        uint256 startingBlock_,
-        uint256 firstRewardPerBlock_
-    ) external override onlyOwner {
+    function updateFirstRewardPeriodParams(uint256 startingBlock_, uint256 firstRewardPerBlock_)
+        external
+        override
+        onlyOwner
+    {
         uint256 oldStartingBlock_ = rewardPeriods[1].startBlock;
         uint256 oldFirstRewardPerBlock_ = rewardPeriods[1].rewardPerBlock;
 
-        require(oldStartingBlock_ > block.number, "DonationMiner::updateFirstRewardPeriodParams: DonationMiner has already started");
+        require(
+            oldStartingBlock_ > block.number,
+            "DonationMiner::updateFirstRewardPeriodParams: DonationMiner has already started"
+        );
 
         initFirstPeriod(startingBlock_, firstRewardPerBlock_);
 

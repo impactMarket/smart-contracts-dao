@@ -450,7 +450,8 @@ describe("Donation Miner", () => {
 	});
 
 	it("Should update first reward params if admin", async function () {
-		await expect(DonationMiner.updateFirstRewardPeriodParams(100, 200)).to.be.fulfilled;
+		await expect(DonationMiner.updateFirstRewardPeriodParams(100, 200)).to
+			.be.fulfilled;
 		const rewardPeriod1 = await DonationMiner.rewardPeriods(1);
 
 		expect(rewardPeriod1.rewardPerBlock).to.equal(200);
@@ -461,12 +462,21 @@ describe("Donation Miner", () => {
 	});
 
 	it("Should not update first reward params if not admin", async function () {
-		await expect(DonationMiner.connect(donor1).updateFirstRewardPeriodParams(100, 200)).to.be.rejectedWith("Ownable: caller is not the owner");
+		await expect(
+			DonationMiner.connect(donor1).updateFirstRewardPeriodParams(
+				100,
+				200
+			)
+		).to.be.rejectedWith("Ownable: caller is not the owner");
 	});
 
 	it("Should not update first reward params after startingBlock", async function () {
 		await advanceTimeAndBlockNTimes(STARTING_DELAY);
-		await expect(DonationMiner.updateFirstRewardPeriodParams(100, 200)).to.be.rejectedWith("DonationMiner::updateFirstRewardPeriodParams: DonationMiner has already started");
+		await expect(
+			DonationMiner.updateFirstRewardPeriodParams(100, 200)
+		).to.be.rejectedWith(
+			"DonationMiner::updateFirstRewardPeriodParams: DonationMiner has already started"
+		);
 	});
 
 	it("Should update treasury if admin", async function () {
