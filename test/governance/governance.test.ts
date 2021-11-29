@@ -50,7 +50,7 @@ let impactLabsVesting: ethersTypes.Contract;
 let cUSD: ethersTypes.Contract;
 let ImpactProxyAdmin: ethersTypes.Contract;
 
-describe.only("IPCTGovernator", function () {
+describe("IPCTGovernator", function () {
 	before(async function () {
 		IPCTDelegate = await ethers.getContractFactory("IPCTDelegate");
 
@@ -63,7 +63,7 @@ describe.only("IPCTGovernator", function () {
 	});
 
 	beforeEach(async function () {
-		await deployments.fixture("Test", {fallbackToGlobal: false});
+		await deployments.fixture("Test", { fallbackToGlobal: false });
 
 		const pactTokenDeployment = await deployments.get("PACTToken");
 		pactToken = await ethers.getContractAt(
@@ -136,7 +136,6 @@ describe.only("IPCTGovernator", function () {
 
 		await communityAdmin.transferOwnership(ipctTimelock.address);
 	});
-
 
 	async function createCommunityProposal() {
 		const targets = [communityAdmin.address];
@@ -268,22 +267,33 @@ describe.only("IPCTGovernator", function () {
 	it("should update params if owner", async function () {
 		await expect(ipctDelegator._setVotingDelay(123)).to.be.fulfilled;
 		await expect(ipctDelegator._setVotingPeriod(730)).to.be.fulfilled;
-		await expect(ipctDelegator._setQuorumVotes(QUORUM_VOTES.mul(2))).to.be.fulfilled;
-		await expect(ipctDelegator._setProposalThreshold(PROPOSAL_THRESHOLD.mul(2))).to.be.fulfilled;
+		await expect(ipctDelegator._setQuorumVotes(QUORUM_VOTES.mul(2))).to.be
+			.fulfilled;
+		await expect(
+			ipctDelegator._setProposalThreshold(PROPOSAL_THRESHOLD.mul(2))
+		).to.be.fulfilled;
 	});
 
 	it("should not update params if not owner", async function () {
-		await expect(ipctDelegator.connect(alice)._setVotingDelay(0)).to.be.rejectedWith("Ownable: caller is not the owner");
-		await expect(ipctDelegator.connect(alice)._setVotingPeriod(0)).to.be.rejectedWith("Ownable: caller is not the owner");
-		await expect(ipctDelegator.connect(alice)._setQuorumVotes(0)).to.be.rejectedWith("Ownable: caller is not the owner");
-		await expect(ipctDelegator.connect(alice)._setProposalThreshold(0)).to.be.rejectedWith("Ownable: caller is not the owner");
+		await expect(
+			ipctDelegator.connect(alice)._setVotingDelay(0)
+		).to.be.rejectedWith("Ownable: caller is not the owner");
+		await expect(
+			ipctDelegator.connect(alice)._setVotingPeriod(0)
+		).to.be.rejectedWith("Ownable: caller is not the owner");
+		await expect(
+			ipctDelegator.connect(alice)._setQuorumVotes(0)
+		).to.be.rejectedWith("Ownable: caller is not the owner");
+		await expect(
+			ipctDelegator.connect(alice)._setProposalThreshold(0)
+		).to.be.rejectedWith("Ownable: caller is not the owner");
 	});
 
 	it("should update delegate if owner", async function () {
-		const NewIPCTDelegateFactory =
-			await ethers.getContractFactory("IPCTDelegate");
-		const newIPCTDelegate =
-			await NewIPCTDelegateFactory.deploy();
+		const NewIPCTDelegateFactory = await ethers.getContractFactory(
+			"IPCTDelegate"
+		);
+		const newIPCTDelegate = await NewIPCTDelegateFactory.deploy();
 
 		expect(
 			await ImpactProxyAdmin.getProxyImplementation(ipctDelegator.address)
@@ -302,10 +312,10 @@ describe.only("IPCTGovernator", function () {
 	it("should not update delegate if not owner", async function () {
 		await ImpactProxyAdmin.transferOwnership(ipctTimelock.address);
 
-		const NewIPCTDelegateFactory =
-			await ethers.getContractFactory("IPCTDelegate");
-		const newIPCTDelegate =
-			await NewIPCTDelegateFactory.deploy();
+		const NewIPCTDelegateFactory = await ethers.getContractFactory(
+			"IPCTDelegate"
+		);
+		const newIPCTDelegate = await NewIPCTDelegateFactory.deploy();
 
 		expect(
 			await ImpactProxyAdmin.getProxyImplementation(ipctDelegator.address)
@@ -324,10 +334,10 @@ describe.only("IPCTGovernator", function () {
 	it("should update delegate if timelock is owner", async function () {
 		await ImpactProxyAdmin.transferOwnership(ipctTimelock.address);
 
-		const NewIPCTDelegateFactory =
-			await ethers.getContractFactory("IPCTDelegate");
-		const newIPCTDelegate =
-			await NewIPCTDelegateFactory.deploy();
+		const NewIPCTDelegateFactory = await ethers.getContractFactory(
+			"IPCTDelegate"
+		);
+		const newIPCTDelegate = await NewIPCTDelegateFactory.deploy();
 
 		expect(
 			await ImpactProxyAdmin.getProxyImplementation(ipctDelegator.address)
@@ -335,20 +345,12 @@ describe.only("IPCTGovernator", function () {
 
 		const targets = [ImpactProxyAdmin.address];
 		const values = [0];
-		const signatures = [
-			"upgrade(address,address)",
-		];
+		const signatures = ["upgrade(address,address)"];
 
 		const calldatas = [
 			ethers.utils.defaultAbiCoder.encode(
-				[
-					"address",
-					"address"
-				],
-				[
-					ipctDelegator.address,
-					newIPCTDelegate.address
-				]
+				["address", "address"],
+				[ipctDelegator.address, newIPCTDelegate.address]
 			),
 		];
 		const descriptions = "description";

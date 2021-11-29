@@ -57,7 +57,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		Treasury.address,
 		parseEther("216000"),
 		20,
-		30,
+		130,
 		"998902",
 		"1000000"
 	);

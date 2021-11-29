@@ -79,6 +79,24 @@ contract DonationMinerImplementation is
     );
 
     /**
+     * @notice Triggered when the first reward period params have been updated
+     *
+     * @param oldStartingBlock        Old oldStartingBlock value
+     * @param oldFirstRewardPerBlock  Old oldFirstRewardPerBlock value
+     * @param newStartingBlock        New newStartingBlock value
+     * @param newFirstRewardPerBlock  New newFirstRewardPerBlock value
+     *
+     * For further information regarding each parameter, see
+     * *DonationMiner* smart contract initialize method.
+     */
+    event FirstRewardPeriodParamsUpdated(
+        uint256 oldStartingBlock,
+        uint256 oldFirstRewardPerBlock,
+        uint256 newStartingBlock,
+        uint256 newFirstRewardPerBlock
+    );
+
+    /**
      * @notice Triggered when the treasury address has been updated
      *
      * @param oldTreasury             Old treasury address
@@ -142,11 +160,7 @@ contract DonationMinerImplementation is
         decayDenominator = decayDenominator_;
 
         rewardPeriodCount = 1;
-        RewardPeriod storage firstPeriod = rewardPeriods[1];
-        firstPeriod.startBlock = startingBlock_;
-        firstPeriod.endBlock = startingBlock_ + rewardPeriodSize - 1;
-        firstPeriod.rewardPerBlock = firstRewardPerBlock_;
-        firstPeriod.rewardAmount = firstRewardPerBlock_ * rewardPeriodSize;
+        initFirstPeriod(startingBlock_, firstRewardPerBlock_);
     }
 
     /**
@@ -215,6 +229,31 @@ contract DonationMinerImplementation is
             newRewardPeriodSize_,
             newDecayNumerator_,
             newDecayDenominator_
+        );
+    }
+
+    /**
+     * @notice Updates first reward period default params
+     *
+     * @param startingBlock_ value of new startingBlock
+     * @param firstRewardPerBlock_ value of new firstRewardPerBlock
+     */
+    function updateFirstRewardPeriodParams(
+        uint256 startingBlock_,
+        uint256 firstRewardPerBlock_
+    ) external override onlyOwner {
+        uint256 oldStartingBlock_ = rewardPeriods[1].startBlock;
+        uint256 oldFirstRewardPerBlock_ = rewardPeriods[1].rewardPerBlock;
+
+        require(oldStartingBlock_ > block.number, "DonationMiner::updateFirstRewardPeriodParams: DonationMiner has already started");
+
+        initFirstPeriod(startingBlock_, firstRewardPerBlock_);
+
+        emit FirstRewardPeriodParamsUpdated(
+            oldStartingBlock_,
+            oldFirstRewardPerBlock_,
+            startingBlock_,
+            firstRewardPerBlock_
         );
     }
 
@@ -478,5 +517,13 @@ contract DonationMinerImplementation is
      */
     function isCurrentRewardPeriodInitialized() internal view returns (bool) {
         return rewardPeriods[rewardPeriodCount].endBlock >= block.number;
+    }
+
+    function initFirstPeriod(uint256 startingBlock_, uint256 firstRewardPerBlock_) internal {
+        RewardPeriod storage firstPeriod = rewardPeriods[1];
+        firstPeriod.startBlock = startingBlock_;
+        firstPeriod.endBlock = startingBlock_ + rewardPeriodSize - 1;
+        firstPeriod.rewardPerBlock = firstRewardPerBlock_;
+        firstPeriod.rewardAmount = firstRewardPerBlock_ * rewardPeriodSize;
     }
 }

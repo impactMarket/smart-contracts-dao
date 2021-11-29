@@ -27,10 +27,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	const delegatorResult = await deploy("IPCTDelegator", {
 		from: deployer,
-		args: [
-			delegateResult.address,
-			ImpactProxyAdminContract.address,
-		],
+		args: [delegateResult.address, ImpactProxyAdminContract.address],
 		log: true,
 	});
 
@@ -52,15 +49,17 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		VOTING_PERIOD_BLOCKS,
 		VOTING_DELAY_BLOCKS,
 		PROPOSAL_THRESHOLD,
-		QUORUM_VOTES,
+		QUORUM_VOTES
 	);
 
 	const IPCT = await deployments.get("PACTToken");
 	const IPCTContract = await ethers.getContractAt("PACTToken", IPCT.address);
-	await IPCTContract.transfer(delegatorResult.address, parseEther("2000000000"));
+	await IPCTContract.transfer(
+		delegatorResult.address,
+		parseEther("2000000000")
+	);
 	const airgrabAddress = delegatorResult.address;
 	await IPCTContract.transfer(airgrabAddress, parseEther("1000000000"));
-
 
 	// only for prod
 	// await delegate.transferOwnership(timelockResult.address);
