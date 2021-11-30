@@ -66,10 +66,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	const IPCT = await deployments.get("PACTToken");
 	const IPCTContract = await ethers.getContractAt("PACTToken", IPCT.address);
-	IPCTContract.transfer(
+	await IPCTContract.transfer(
 		donationMinerContract.address,
 		parseEther("4000000000")
 	);
+
+	await new Promise((resolve) => setTimeout(resolve, 6000));
 
 	await donationMinerContract.transferOwnership(ownerAddress);
 

@@ -47,26 +47,26 @@ contract ImpactLabsVestingImplementation is
      * @notice Used to initialize a new ImpactLabsVesting contract
      * !!! before calling this method, you must ensure that there is enough PACTs on the contract address
      *
-     * @param impactLabs_           Address of the ImpactLabs
-     * @param PACT_                 Address of the PACT Token
-     * @param advancePayment_       The amount of PACT that will be given in advance to ImpactLabs
+     * @param _impactLabs           Address of the ImpactLabs
+     * @param _PACT                 Address of the PACT Token
+     * @param _advancePayment       The amount of PACT that will be given in advance to ImpactLabs
      */
     function initialize(
-        address impactLabs_,
-        IERC20 PACT_,
-        IDonationMiner donationMiner_,
-        uint256 advancePayment_
+        address _impactLabs,
+        IERC20 _PACT,
+        IDonationMiner _donationMiner,
+        uint256 _advancePayment
     ) public initializer {
         require(
-            address(impactLabs_) != address(0),
+            address(_impactLabs) != address(0),
             "ImpactLabsVesting::initialize: impactLabs_ address not set"
         );
         require(
-            address(PACT_) != address(0),
+            address(_PACT) != address(0),
             "ImpactLabsVesting::initialize: PACT address not set"
         );
         require(
-            address(donationMiner_) != address(0),
+            address(_donationMiner) != address(0),
             "ImpactLabsVesting::initialize: donationMiner_ address not set"
         );
 
@@ -74,12 +74,12 @@ contract ImpactLabsVestingImplementation is
         __Pausable_init();
         __ReentrancyGuard_init();
 
-        impactLabs = impactLabs_;
-        PACT = PACT_;
-        donationMiner = donationMiner_;
-        advancePayment = advancePayment_;
+        impactLabs = _impactLabs;
+        PACT = _PACT;
+        donationMiner = _donationMiner;
+        advancePayment = _advancePayment;
 
-        transferToImpactLabs(advancePayment_);
+        transferToImpactLabs(_advancePayment);
     }
 
     /**
@@ -95,75 +95,79 @@ contract ImpactLabsVestingImplementation is
      * the entire amount payed in advance will be covered
      */
     function claim() external override whenNotPaused nonReentrant {
-        uint256 index = lastClaimedRewardPeriod + 1;
-        uint256 rewardPeriodCount = donationMiner.rewardPeriodCount();
+        uint256 _index = lastClaimedRewardPeriod + 1;
+        uint256 _rewardPeriodCount = donationMiner.rewardPeriodCount();
 
-        uint256 rewardPerBlock;
-        uint256 rewardAmount;
-        uint256 startBlock;
-        uint256 endBlock;
-        uint256 claimAmount;
+        uint256 _rewardPerBlock;
+        uint256 _startBlock;
+        uint256 _endBlock;
+        uint256 _claimAmount;
 
-        while (index <= rewardPeriodCount) {
-            (rewardPerBlock, , startBlock, endBlock, ) = donationMiner.rewardPeriods(index);
+        while (_index <= _rewardPeriodCount) {
+            (_rewardPerBlock, , _startBlock, _endBlock, ) = donationMiner.rewardPeriods(_index);
 
-            if (endBlock >= block.number) {
+            if (_endBlock >= block.number) {
                 break;
             }
 
-            claimAmount += ((endBlock - startBlock + 1) * rewardPerBlock * 3) / 4;
-            index++;
+            _claimAmount += ((_endBlock - _startBlock + 1) * _rewardPerBlock * 3) / 4;
+            _index++;
         }
 
         // if advancePayment is zero it means that all the entire amount payed in advance has been covered
         if (advancePayment == 0) {
-            transferToImpactLabs(claimAmount);
-        } else if (advancePayment >= claimAmount) {
+            transferToImpactLabs(_claimAmount);
+        } else if (advancePayment >= _claimAmount) {
             // if the claim amount is lesser than the amount of PACTs that is still given in advance
             // it decrease advancePayment value
             // it doesn't transfer PACTs to ImpactLabs
-            advancePayment -= claimAmount;
-            emit AdvancePaymentDecreased(claimAmount, advancePayment);
+            advancePayment -= _claimAmount;
+            emit AdvancePaymentDecreased(_claimAmount, advancePayment);
         } else {
             // if the claim amount is greater than the amount of PACTs that is still given in advance
             // it decrease advancePayment to 0
             // it transfer the difference to ImpactLabs
-            uint256 toTransfer = claimAmount - advancePayment;
+            uint256 toTransfer = _claimAmount - advancePayment;
             advancePayment = 0;
 
-            emit AdvancePaymentDecreased(claimAmount - toTransfer, 0);
+            emit AdvancePaymentDecreased(_claimAmount - toTransfer, 0);
             transferToImpactLabs(toTransfer);
         }
 
-        lastClaimedRewardPeriod = rewardPeriodCount;
+        lastClaimedRewardPeriod = _rewardPeriodCount;
     }
 
     /**
      * @notice Transfers an amount of an ERC20 from this contract to an address
      *
-     * @param token_ address of the ERC20 token
-     * @param to_ address of the receiver
-     * @param amount_ amount of the transaction
+     * @param _token address of the ERC20 token
+     * @param _to address of the receiver
+     * @param _amount amount of the transaction
      */
     function transfer(
-        IERC20 token_,
-        address to_,
-        uint256 amount_
+        IERC20 _token,
+        address _to,
+        uint256 _amount
     ) external override onlyOwner nonReentrant {
-        token_.safeTransfer(to_, amount_);
+        _token.safeTransfer(_to, _amount);
 
-        emit TransferERC20(address(token_), to_, amount_);
+        emit TransferERC20(address(_token), _to, _amount);
     }
 
-    function transferToImpactLabs(uint256 amount) internal nonReentrant {
-        if (amount > 0) {
+    /**
+     * @notice Transfers an amount of PACTs from this contract to impactLabs address
+     *
+     * @param _amount amount of the transaction
+     */
+    function transferToImpactLabs(uint256 _amount) internal nonReentrant {
+        if (_amount > 0) {
             require(
-                PACT.balanceOf(address(this)) >= amount,
+                PACT.balanceOf(address(this)) >= _amount,
                 "ImpactLabsVesting::transferToImpactLabs: ERR_REWARD_TOKEN_BALANCE"
             );
-            PACT.safeTransfer(impactLabs, amount);
+            PACT.safeTransfer(impactLabs, _amount);
         }
 
-        emit Claimed(amount);
+        emit Claimed(_amount);
     }
 }

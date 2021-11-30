@@ -36,13 +36,13 @@ contract TreasuryImplementation is
     /**
      * @notice Used to initialize a new Treasury contract
      *
-     * @param communityAdmin_    Address of the CommunityAdmin contract
+     * @param _communityAdmin    Address of the CommunityAdmin contract
      */
-    function initialize(ICommunityAdmin communityAdmin_) public initializer {
+    function initialize(ICommunityAdmin _communityAdmin) public initializer {
         __Ownable_init();
         __ReentrancyGuard_init();
 
-        communityAdmin = communityAdmin_;
+        communityAdmin = _communityAdmin;
     }
 
     /**
@@ -74,29 +74,29 @@ contract TreasuryImplementation is
     /**
      * @notice Updates the CommunityAdmin contract address
      *
-     * @param newCommunityAdmin_ address of the new CommunityAdmin contract
+     * @param _newCommunityAdmin address of the new CommunityAdmin contract
      */
-    function updateCommunityAdmin(ICommunityAdmin newCommunityAdmin_) external override onlyOwner {
-        address oldCommunityAdminAddress = address(communityAdmin);
-        communityAdmin = newCommunityAdmin_;
+    function updateCommunityAdmin(ICommunityAdmin _newCommunityAdmin) external override onlyOwner {
+        address _oldCommunityAdminAddress = address(communityAdmin);
+        communityAdmin = _newCommunityAdmin;
 
-        emit CommunityAdminUpdated(oldCommunityAdminAddress, address(newCommunityAdmin_));
+        emit CommunityAdminUpdated(_oldCommunityAdminAddress, address(_newCommunityAdmin));
     }
 
     /**
      * @notice Transfers an amount of an ERC20 from this contract to an address
      *
-     * @param token_ address of the ERC20 token
-     * @param to_ address of the receiver
-     * @param amount_ amount of the transaction
+     * @param _token address of the ERC20 token
+     * @param _to address of the receiver
+     * @param _amount amount of the transaction
      */
     function transfer(
-        IERC20 token_,
-        address to_,
-        uint256 amount_
+        IERC20 _token,
+        address _to,
+        uint256 _amount
     ) external override onlyCommunityAdminOrOwner nonReentrant {
-        token_.safeTransfer(to_, amount_);
+        _token.safeTransfer(_to, _amount);
 
-        emit TransferERC20(address(token_), to_, amount_);
+        emit TransferERC20(address(_token), _to, _amount);
     }
 }

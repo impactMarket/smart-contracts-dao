@@ -856,7 +856,10 @@ describe("Community - Claim", () => {
 			await communityInstance.baseInterval()
 		).toNumber();
 		await advanceTimeAndBlockNTimes(baseInterval + 1);
+		expect((await communityInstance.beneficiaries(beneficiaryA.address)).claimedAmount).to.be.equal(0);
 		await communityInstance.connect(beneficiaryA).claim();
+		expect((await communityInstance.beneficiaries(beneficiaryA.address)).claimedAmount).to.be.equal(claimAmountTwo);
+
 		(await cUSDInstance.balanceOf(beneficiaryA.address)).should.be.equal(
 			claimAmountTwo.add(fiveCents)
 		);
