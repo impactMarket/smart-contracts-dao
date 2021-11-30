@@ -511,7 +511,10 @@ contract Community is
     function lockBeneficiary(address _beneficiaryAddress) external override onlyManagers {
         Beneficiary storage _beneficiary = beneficiaries[_beneficiaryAddress];
 
-        require(_beneficiary.state == BeneficiaryState.Valid, "Community::lockBeneficiary: NOT_YET");
+        require(
+            _beneficiary.state == BeneficiaryState.Valid,
+            "Community::lockBeneficiary: NOT_YET"
+        );
         _changeBeneficiaryState(_beneficiary, BeneficiaryState.Locked);
         emit BeneficiaryLocked(msg.sender, _beneficiaryAddress);
     }
@@ -698,7 +701,9 @@ contract Community is
             if (_oldBeneficiaryCooldown >= _oldBeneficiaryLastInterval + _firstBlockTimestamp()) {
                 // seconds to blocks conversion
                 _beneficiary.lastClaim =
-                    (_oldBeneficiaryCooldown - _oldBeneficiaryLastInterval - _firstBlockTimestamp()) /
+                    (_oldBeneficiaryCooldown -
+                        _oldBeneficiaryLastInterval -
+                        _firstBlockTimestamp()) /
                     5;
             } else {
                 _beneficiary.lastClaim = 0;

@@ -856,9 +856,15 @@ describe("Community - Claim", () => {
 			await communityInstance.baseInterval()
 		).toNumber();
 		await advanceTimeAndBlockNTimes(baseInterval + 1);
-		expect((await communityInstance.beneficiaries(beneficiaryA.address)).claimedAmount).to.be.equal(0);
+		expect(
+			(await communityInstance.beneficiaries(beneficiaryA.address))
+				.claimedAmount
+		).to.be.equal(0);
 		await communityInstance.connect(beneficiaryA).claim();
-		expect((await communityInstance.beneficiaries(beneficiaryA.address)).claimedAmount).to.be.equal(claimAmountTwo);
+		expect(
+			(await communityInstance.beneficiaries(beneficiaryA.address))
+				.claimedAmount
+		).to.be.equal(claimAmountTwo);
 
 		(await cUSDInstance.balanceOf(beneficiaryA.address)).should.be.equal(
 			claimAmountTwo.add(fiveCents)
@@ -984,7 +990,7 @@ describe("Community - Governance (2)", () => {
 		).state.should.be.equal(BeneficiaryState.NONE);
 	});
 
-	it("should not migrate an migrated community", async () => {
+	it("should not migrate a migrated community", async () => {
 		await expect(
 			communityAdminProxy.migrateCommunity(
 				[communityManagerA.address],
