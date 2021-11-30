@@ -3,8 +3,13 @@ import chai from "chai";
 // @ts-ignore
 import chaiAsPromised from "chai-as-promised";
 // @ts-ignore
-import {deployments, ethers, getNamedAccounts, network} from "hardhat";
-import {advanceBlockNTimes, advanceTimeAndBlockNTimes, advanceToBlockN, getBlockNumber} from "../utils/TimeTravel";
+import { deployments, ethers, getNamedAccounts, network } from "hardhat";
+import {
+	advanceBlockNTimes,
+	advanceTimeAndBlockNTimes,
+	advanceToBlockN,
+	getBlockNumber,
+} from "../utils/TimeTravel";
 import { parseEther, formatEther } from "@ethersproject/units";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import * as ethersTypes from "ethers";
@@ -1042,7 +1047,7 @@ describe("Donation Miner", () => {
 		).to.be.equal(0);
 	});
 
-	xit("Should donate and claim in 365 reward periods, one donor", async function () {
+	it("Should donate and claim in 365 reward periods, one donor", async function () {
 		const user1Donation = parseEther("100");
 		const user1ExpectedReward1 = parseEther("409340576.103595678060756720");
 		const user1ExpectedReward2 = parseEther("776093059.949132023166703940");
@@ -1132,13 +1137,11 @@ describe("Donation Miner", () => {
 		);
 	});
 
-	async function ceva(chunk: number, rewardExpected: string){
+	async function chunkAdvance(chunk: number, rewardExpected: string) {
 		// next 100 reward periods
 		await advanceBlockNTimes(chunk - 3);
 		// Approve
-		await cUSD
-			.connect(donor1)
-			.approve(DonationMiner.address, 1);
+		await cUSD.connect(donor1).approve(DonationMiner.address, 1);
 
 		await DonationMiner.connect(donor1).donate(1);
 
@@ -1150,7 +1153,7 @@ describe("Donation Miner", () => {
 		expect(balance).to.equal(parseEther(rewardExpected));
 	}
 
-	it.only("Should donate and claim 9 years, one donor", async function () {
+	it("Should donate and claim 9 years, one donor", async function () {
 		DonationMiner.updateRewardPeriodParams(1, "998902", "1000000");
 		DonationMiner.updateFirstRewardPeriodParams(100, parseEther("4320000"));
 
@@ -1158,51 +1161,55 @@ describe("Donation Miner", () => {
 		const donationMinerBalanceAfterYears = "172123165.751064729263201498";
 
 		const rewardsExpected = [
-			"409340576.103595678060798039",  //expected reward after 100 reward periods
-			"776093059.94913202316686679",  //expected reward after 200 reward periods
-			"1104688347.734209420766572907",  //expected reward after 300 reward periods
-			"1399096341.982540592262911097",  //expected reward after 400 reward periods
-			"1662873913.662196456097768485",  //expected reward after 500 reward periods
-			"1899207874.290068870157876585",  //same
-			"2110953477.187225761950977078",  //same
-			"2300668913.035562447870713304",  //same
-			"2470646216.491565483377240333",  //same
-			"2622938957.253426122132404016",  //same
-			"2759387050.129323467016702699",  //same
-			"2881638983.848098055022759696",  //same
-			"2991171737.168241272970393118",  //same
-			"3089308622.900371541408347231",  //same
-			"3177235275.42459022849801764",  //same
-			"3256013974.854864809324442669",  //same
-			"3326596480.906896403926653355",  //same
-			"3389835531.521008737569776406",  //same
-			"3446495145.15992050241565029",  //same
-			"3497259851.247939281325456866",  //same
-			"3542742960.268525733626106372",  //same
-			"3583493973.43487201937061561",  //same
-			"3620005221.452945965627504535",  //same
-			"3652717812.58278341622161101",  //same
-			"3682026961.859143070198300815",  //same
-			"3708286765.856155340619929348",  //same
-			"3731814480.681972715447758805",  //same
-			"3752894354.887734786939502388",  //same
-			"3771781063.597887457030261245",  //same
-			"3788702785.351077642798093441",  //same
-			"3803863958.824275942395743896",  //same
-			"3817447752.745309832749613474"   //expected reward after 3200 reward periods
+			"409340576.103595678060798039", //expected reward after 100 reward periods
+			"776093059.94913202316686679", //expected reward after 200 reward periods
+			"1104688347.734209420766572907", //expected reward after 300 reward periods
+			"1399096341.982540592262911097", //expected reward after 400 reward periods
+			"1662873913.662196456097768485", //expected reward after 500 reward periods
+			"1899207874.290068870157876585", //same
+			"2110953477.187225761950977078", //same
+			"2300668913.035562447870713304", //same
+			"2470646216.491565483377240333", //same
+			"2622938957.253426122132404016", //same
+			"2759387050.129323467016702699", //same
+			"2881638983.848098055022759696", //same
+			"2991171737.168241272970393118", //same
+			"3089308622.900371541408347231", //same
+			"3177235275.42459022849801764", //same
+			"3256013974.854864809324442669", //same
+			"3326596480.906896403926653355", //same
+			"3389835531.521008737569776406", //same
+			"3446495145.15992050241565029", //same
+			"3497259851.247939281325456866", //same
+			"3542742960.268525733626106372", //same
+			"3583493973.43487201937061561", //same
+			"3620005221.452945965627504535", //same
+			"3652717812.58278341622161101", //same
+			"3682026961.859143070198300815", //same
+			"3708286765.856155340619929348", //same
+			"3731814480.681972715447758805", //same
+			"3752894354.887734786939502388", //same
+			"3771781063.597887457030261245", //same
+			"3788702785.351077642798093441", //same
+			"3803863958.824275942395743896", //same
+			"3817447752.745309832749613474", //expected reward after 3200 reward periods
 		];
 
 		await advanceToBlockN(100);
 
 		// 9 years = 3285 rewardPeriods
-		for(let i = 0; i<32;i++) {
-			await ceva(100, rewardsExpected[i]);
+		for (let i = 0; i < 32; i++) {
+			await chunkAdvance(100, rewardsExpected[i]);
 		}
 
-		await ceva(85, rewardAfter9Years);
+		await chunkAdvance(85, rewardAfter9Years);
 
-		expect(await PACT.balanceOf(donor1.address)).to.be.equal(parseEther(rewardAfter9Years));
-		expect(await PACT.balanceOf(DonationMiner.address)).to.be.equal(parseEther(donationMinerBalanceAfterYears));
+		expect(await PACT.balanceOf(donor1.address)).to.be.equal(
+			parseEther(rewardAfter9Years)
+		);
+		expect(await PACT.balanceOf(DonationMiner.address)).to.be.equal(
+			parseEther(donationMinerBalanceAfterYears)
+		);
 	});
 
 	//*******************************************************************************************

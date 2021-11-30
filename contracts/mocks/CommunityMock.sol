@@ -216,8 +216,8 @@ contract CommunityMock is
     }
 
     /**
-      * @notice Returns the current implementation version
-      */
+     * @notice Returns the current implementation version
+     */
     function getVersion() external pure override returns (uint256) {
         return 1;
     }
@@ -353,9 +353,9 @@ contract CommunityMock is
      * @param _maxTranche maximum amount that the community will receive when requesting funds
      */
     function updateCommunityParams(uint256 _minTranche, uint256 _maxTranche)
-    external
-    override
-    onlyOwner
+        external
+        override
+        onlyOwner
     {
         require(
             _minTranche <= _maxTranche,
@@ -421,10 +421,10 @@ contract CommunityMock is
      * @param _beneficiaryAddress address of the beneficiary to be added
      */
     function addBeneficiary(address _beneficiaryAddress)
-    external
-    override
-    onlyManagers
-    nonReentrant
+        external
+        override
+        onlyManagers
+        nonReentrant
     {
         Beneficiary storage _beneficiary = beneficiaries[_beneficiaryAddress];
         require(
@@ -451,7 +451,10 @@ contract CommunityMock is
     function lockBeneficiary(address _beneficiaryAddress) external override onlyManagers {
         Beneficiary storage _beneficiary = beneficiaries[_beneficiaryAddress];
 
-        require(_beneficiary.state == BeneficiaryState.Valid, "Community::lockBeneficiary: NOT_YET");
+        require(
+            _beneficiary.state == BeneficiaryState.Valid,
+            "Community::lockBeneficiary: NOT_YET"
+        );
         _changeBeneficiaryState(_beneficiary, BeneficiaryState.Locked);
         emit BeneficiaryLocked(msg.sender, _beneficiaryAddress);
     }
@@ -482,7 +485,7 @@ contract CommunityMock is
 
         require(
             _beneficiary.state == BeneficiaryState.Valid ||
-            _beneficiary.state == BeneficiaryState.Locked,
+                _beneficiary.state == BeneficiaryState.Locked,
             "Community::removeBeneficiary: NOT_YET"
         );
         _changeBeneficiaryState(_beneficiary, BeneficiaryState.Removed);
@@ -615,10 +618,10 @@ contract CommunityMock is
         //if the previousCommunity is deployed with the new type of smart contract
         if (previousCommunity.impactMarketAddress() == address(0)) {
             (
-            BeneficiaryState _oldBeneficiaryState,
-            uint256 _oldBeneficiaryClaims,
-            uint256 _oldBeneficiaryClaimedAmount,
-            uint256 _oldBeneficiaryLastClaim
+                BeneficiaryState _oldBeneficiaryState,
+                uint256 _oldBeneficiaryClaims,
+                uint256 _oldBeneficiaryClaimedAmount,
+                uint256 _oldBeneficiaryLastClaim
             ) = previousCommunity.beneficiaries(msg.sender);
 
             _changeBeneficiaryState(_beneficiary, _oldBeneficiaryState);
@@ -638,8 +641,10 @@ contract CommunityMock is
             if (_oldBeneficiaryCooldown >= _oldBeneficiaryLastInterval + _firstBlockTimestamp()) {
                 // seconds to blocks conversion
                 _beneficiary.lastClaim =
-                (_oldBeneficiaryCooldown - _oldBeneficiaryLastInterval - _firstBlockTimestamp()) /
-                5;
+                    (_oldBeneficiaryCooldown -
+                        _oldBeneficiaryLastInterval -
+                        _firstBlockTimestamp()) /
+                    5;
             } else {
                 _beneficiary.lastClaim = 0;
             }
@@ -649,9 +654,9 @@ contract CommunityMock is
             uint256 _previousBaseInterval = _oldCommunity.baseInterval();
             if (_oldBeneficiaryLastInterval >= _previousBaseInterval) {
                 _beneficiary.claims =
-                (_oldBeneficiaryLastInterval - _previousBaseInterval) /
-                _oldCommunity.incrementInterval() +
-                1;
+                    (_oldBeneficiaryLastInterval - _previousBaseInterval) /
+                    _oldCommunity.incrementInterval() +
+                    1;
             } else {
                 _beneficiary.claims = 0;
             }
@@ -676,7 +681,7 @@ contract CommunityMock is
      * @param _newState new state
      */
     function _changeBeneficiaryState(Beneficiary storage _beneficiary, BeneficiaryState _newState)
-    internal
+        internal
     {
         if (_beneficiary.state == _newState) {
             return;

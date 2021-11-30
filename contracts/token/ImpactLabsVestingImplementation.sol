@@ -94,7 +94,7 @@ contract ImpactLabsVestingImplementation is
      * it will not be transferred PACTs to ImpactLabs until
      * the entire amount payed in advance will be covered
      */
-    function claim() external override whenNotPaused nonReentrant {
+    function claim() external override whenNotPaused {
         uint256 _index = lastClaimedRewardPeriod + 1;
         uint256 _rewardPeriodCount = donationMiner.rewardPeriodCount();
 
@@ -107,6 +107,7 @@ contract ImpactLabsVestingImplementation is
             (_rewardPerBlock, , _startBlock, _endBlock, ) = donationMiner.rewardPeriods(_index);
 
             if (_endBlock >= block.number) {
+                _rewardPeriodCount--;
                 break;
             }
 

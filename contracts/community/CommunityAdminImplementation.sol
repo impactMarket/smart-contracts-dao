@@ -485,14 +485,14 @@ contract CommunityAdminImplementation is
             address(communityProxyAdmin),
             abi.encodeWithSignature(
                 "initialize(address[],uint256,uint256,uint256,uint256,uint256,uint256,uint256,address)",
-                    _managers,
-                    _claimAmount,
-                    _maxClaim,
-                    _decreaseStep,
-                    _baseInterval,
-                    _incrementInterval,
-                    _minTranche,
-                    _maxTranche,
+                _managers,
+                _claimAmount,
+                _maxClaim,
+                _decreaseStep,
+                _baseInterval,
+                _incrementInterval,
+                _minTranche,
+                _maxTranche,
                 address(_previousCommunity)
             )
         );
@@ -522,7 +522,7 @@ contract CommunityAdminImplementation is
         _treasuryFunds = _treasuryFunds > 0 ? _treasuryFunds : 1e18;
 
         uint256 _trancheAmount = (_validBeneficiaries *
-        _claimAmount *
+            _claimAmount *
             (_treasuryFunds + _privateFunds)) / _treasuryFunds;
 
         if (_trancheAmount < _minTranche) {

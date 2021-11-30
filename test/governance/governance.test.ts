@@ -10,7 +10,7 @@ import { BigNumberish } from "ethers";
 import { advanceBlockNTimes, advanceNSeconds } from "../utils/TimeTravel";
 import { parseEther, formatEther } from "@ethersproject/units";
 import { zeroOutAddresses } from "hardhat/internal/hardhat-network/stack-traces/library-utils";
-import {BigNumber} from "@ethersproject/bignumber";
+import { BigNumber } from "@ethersproject/bignumber";
 
 const {
 	expectRevert,
@@ -104,12 +104,16 @@ describe("IPCTGovernator", function () {
 
 		donationMiner = await ethers.getContractAt(
 			"DonationMinerImplementation",
-			(await deployments.get("DonationMinerProxy")).address
+			(
+				await deployments.get("DonationMinerProxy")
+			).address
 		);
 
 		proxyAdmin = await ethers.getContractAt(
 			"ImpactProxyAdmin",
-			(await deployments.get("ImpactProxyAdmin")).address
+			(
+				await deployments.get("ImpactProxyAdmin")
+			).address
 		);
 
 		const treasuryDeployment = await deployments.get("TreasuryProxy");
@@ -400,17 +404,19 @@ describe("IPCTGovernator", function () {
 
 	it("should update donation miner", async function () {
 		donationMiner.transferOwnership(ipctTimelock.address);
-		const donationMinerImplementationFactory = await ethers.getContractFactory(
-			"DonationMinerImplementation"
-		);
-		const newDonationMinerImplementation = await donationMinerImplementationFactory.deploy();
+		const donationMinerImplementationFactory =
+			await ethers.getContractFactory("DonationMinerImplementation");
+		const newDonationMinerImplementation =
+			await donationMinerImplementationFactory.deploy();
 
 		const donationMinerProxyFactory = await ethers.getContractFactory(
 			"DonationMinerProxy"
 		);
 
-		const newDonationMinerProxy = await donationMinerProxyFactory.deploy(newDonationMinerImplementation.address, proxyAdmin.address);
-
+		const newDonationMinerProxy = await donationMinerProxyFactory.deploy(
+			newDonationMinerImplementation.address,
+			proxyAdmin.address
+		);
 
 		const newDonationMinerContract = await ethers.getContractAt(
 			"DonationMinerImplementation",
@@ -438,8 +444,12 @@ describe("IPCTGovernator", function () {
 
 		const calldatas = [
 			ethers.utils.defaultAbiCoder.encode(
-				["address","address","uint256"],
-				[pactToken.address,newDonationMinerProxy.address,parseEther("4000000000")]
+				["address", "address", "uint256"],
+				[
+					pactToken.address,
+					newDonationMinerProxy.address,
+					parseEther("4000000000"),
+				]
 			),
 		];
 
@@ -465,15 +475,21 @@ describe("IPCTGovernator", function () {
 
 		await expect(ipctDelegator.connect(alice).execute(1)).to.be.fulfilled;
 
-		expect(await(pactToken.balanceOf(newDonationMinerContract.address))).to.be.equal(parseEther("4000000000"));
-		expect(await(pactToken.balanceOf(donationMiner.address))).to.be.equal(parseEther("0"));
+		expect(
+			await pactToken.balanceOf(newDonationMinerContract.address)
+		).to.be.equal(parseEther("4000000000"));
+		expect(await pactToken.balanceOf(donationMiner.address)).to.be.equal(
+			parseEther("0")
+		);
 	});
 
 	it("should transfer token from treasury", async function () {
 		treasury.transferOwnership(ipctTimelock.address);
 
-		const treasuryInitialBalance: BigNumber = await cUSD.balanceOf(treasury.address);
-		const bobInitialBalance : BigNumber= await cUSD.balanceOf(bob.address);
+		const treasuryInitialBalance: BigNumber = await cUSD.balanceOf(
+			treasury.address
+		);
+		const bobInitialBalance: BigNumber = await cUSD.balanceOf(bob.address);
 		const amount = "123456";
 
 		const targets = [treasury.address];
@@ -484,8 +500,8 @@ describe("IPCTGovernator", function () {
 
 		const calldatas = [
 			ethers.utils.defaultAbiCoder.encode(
-				["address","address","uint256"],
-				[cUSD.address,bob.address,amount]
+				["address", "address", "uint256"],
+				[cUSD.address, bob.address, amount]
 			),
 		];
 
@@ -511,16 +527,23 @@ describe("IPCTGovernator", function () {
 
 		await expect(ipctDelegator.connect(alice).execute(1)).to.be.fulfilled;
 
-		expect(await(cUSD.balanceOf(treasury.address))).to.be.equal(treasuryInitialBalance.sub(amount));
-		expect(await(cUSD.balanceOf(bob.address))).to.be.equal(bobInitialBalance.add(amount));
+		expect(await cUSD.balanceOf(treasury.address)).to.be.equal(
+			treasuryInitialBalance.sub(amount)
+		);
+		expect(await cUSD.balanceOf(bob.address)).to.be.equal(
+			bobInitialBalance.add(amount)
+		);
 	});
-
 
 	it("should transfer token from delegator", async function () {
 		ipctDelegator.transferOwnership(ipctTimelock.address);
 
-		const delegatorInitialBalance: BigNumber = await pactToken.balanceOf(ipctDelegator.address);
-		const bobInitialBalance : BigNumber= await pactToken.balanceOf(bob.address);
+		const delegatorInitialBalance: BigNumber = await pactToken.balanceOf(
+			ipctDelegator.address
+		);
+		const bobInitialBalance: BigNumber = await pactToken.balanceOf(
+			bob.address
+		);
 		const amount = "123456";
 
 		const targets = [ipctDelegator.address];
@@ -531,8 +554,8 @@ describe("IPCTGovernator", function () {
 
 		const calldatas = [
 			ethers.utils.defaultAbiCoder.encode(
-				["address","address","uint256"],
-				[pactToken.address,bob.address,amount]
+				["address", "address", "uint256"],
+				[pactToken.address, bob.address, amount]
 			),
 		];
 
@@ -558,7 +581,11 @@ describe("IPCTGovernator", function () {
 
 		await expect(ipctDelegator.connect(alice).execute(1)).to.be.fulfilled;
 
-		expect(await(pactToken.balanceOf(ipctDelegator.address))).to.be.equal(delegatorInitialBalance.sub(amount));
-		expect(await(pactToken.balanceOf(bob.address))).to.be.equal(bobInitialBalance.add(amount));
+		expect(await pactToken.balanceOf(ipctDelegator.address)).to.be.equal(
+			delegatorInitialBalance.sub(amount)
+		);
+		expect(await pactToken.balanceOf(bob.address)).to.be.equal(
+			bobInitialBalance.add(amount)
+		);
 	});
 });

@@ -337,7 +337,11 @@ contract IPCTDelegate is
      * @param _voter The address of the voter
      * @return The voting receipt
      */
-    function getReceipt(uint256 _proposalId, address _voter) external view returns (Receipt memory) {
+    function getReceipt(uint256 _proposalId, address _voter)
+        external
+        view
+        returns (Receipt memory)
+    {
         return proposalReceipts[_proposalId][_voter];
     }
 
@@ -356,7 +360,9 @@ contract IPCTDelegate is
             return ProposalState.Pending;
         } else if (block.number <= _proposal.endBlock) {
             return ProposalState.Active;
-        } else if (_proposal.forVotes <= _proposal.againstVotes || _proposal.forVotes < quorumVotes) {
+        } else if (
+            _proposal.forVotes <= _proposal.againstVotes || _proposal.forVotes < quorumVotes
+        ) {
             return ProposalState.Defeated;
         } else if (_proposal.eta == 0) {
             return ProposalState.Succeeded;
@@ -493,7 +499,10 @@ contract IPCTDelegate is
      * @param _newQuorumVotes new quorum votes
      */
     function _setQuorumVotes(uint256 _newQuorumVotes) external onlyOwner {
-        require(_newQuorumVotes >= proposalThreshold, "IPCT::_setQuorumVotes: invalid quorum votes");
+        require(
+            _newQuorumVotes >= proposalThreshold,
+            "IPCT::_setQuorumVotes: invalid quorum votes"
+        );
 
         uint256 _oldQuorumVotes = votingDelay;
         quorumVotes = _newQuorumVotes;

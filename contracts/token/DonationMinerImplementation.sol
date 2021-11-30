@@ -300,7 +300,8 @@ contract DonationMinerImplementation is
     {
         ICommunityAdmin _communityAdmin = treasury.communityAdmin();
         require(
-            _communityAdmin.communities(address(_community)) == ICommunityAdmin.CommunityState.Valid,
+            _communityAdmin.communities(address(_community)) ==
+                ICommunityAdmin.CommunityState.Valid,
             "DonationMiner::donateToCommunity: This is not a valid community address"
         );
         // Transfer the cUSD from the donor to the community
@@ -335,7 +336,12 @@ contract DonationMinerImplementation is
      * @param _donorAddress address of the donor
      * @return uint256 sum of all donor's rewards that has not been claimed yet
      */
-    function calculateClaimableRewards(address _donorAddress) public view override returns (uint256) {
+    function calculateClaimableRewards(address _donorAddress)
+        public
+        view
+        override
+        returns (uint256)
+    {
         Donor storage _donor = donors[_donorAddress];
         uint256 _claimAmount;
         uint256 _rewardPeriodNumber;
