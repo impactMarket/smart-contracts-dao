@@ -32,44 +32,44 @@ interface ICommunity {
     function communityAdmin() external view returns(ICommunityAdmin);
     function cUSD() external view  returns(IERC20);
     function locked() external view returns(bool);
-    function beneficiaries(address beneficiaryAddress) external view returns(
+    function beneficiaries(address _beneficiaryAddress) external view returns(
         BeneficiaryState state,
         uint256 claims,
         uint256 claimedAmount,
         uint256 lastClaim
     );
     function decreaseStep() external view returns(uint);
-    function beneficiaryListAt(uint256 index) external view returns (address);
+    function beneficiaryListAt(uint256 _index) external view returns (address);
     function beneficiaryListLength() external view returns (uint256);
     function impactMarketAddress() external pure returns (address);
     function minTranche() external view returns(uint256);
     function maxTranche() external view returns(uint256);
 
-    function updateCommunityAdmin(ICommunityAdmin communityAdmin) external;
-    function updatePreviousCommunity(ICommunity newPreviousCommunity) external;
+    function updateCommunityAdmin(ICommunityAdmin _communityAdmin) external;
+    function updatePreviousCommunity(ICommunity _newPreviousCommunity) external;
     function updateBeneficiaryParams(
-        uint256 claimAmount,
-        uint256 maxClaim,
-        uint256 decreaseStep,
-        uint256 baseInterval,
-        uint256 incrementInterval
+        uint256 _claimAmount,
+        uint256 _maxClaim,
+        uint256 _decreaseStep,
+        uint256 _baseInterval,
+        uint256 _incrementInterval
     ) external;
     function updateCommunityParams(
-        uint256 minTranche,
-        uint256 maxTranche
+        uint256 _minTranche,
+        uint256 _maxTranche
     ) external;
-    function donate(address sender, uint256 amount) external;
-    function addTreasuryFunds(uint256 amount) external;
-    function transfer(IERC20 token, address to, uint256 amount) external;
-    function addManager(address managerAddress) external;
-    function removeManager(address managerAddress) external;
-    function addBeneficiary(address beneficiaryAddress) external;
-    function lockBeneficiary(address beneficiaryAddress) external;
-    function unlockBeneficiary(address beneficiaryAddress) external;
-    function removeBeneficiary(address beneficiaryAddress) external;
+    function donate(address _sender, uint256 _amount) external;
+    function addTreasuryFunds(uint256 _amount) external;
+    function transfer(IERC20 _token, address _to, uint256 _amount) external;
+    function addManager(address _managerAddress) external;
+    function removeManager(address _managerAddress) external;
+    function addBeneficiary(address _beneficiaryAddress) external;
+    function lockBeneficiary(address _beneficiaryAddress) external;
+    function unlockBeneficiary(address _beneficiaryAddress) external;
+    function removeBeneficiary(address _beneficiaryAddress) external;
     function claim() external;
-    function lastInterval(address beneficiaryAddress) external view returns (uint256);
-    function claimCooldown(address beneficiaryAddress) external view returns (uint256);
+    function lastInterval(address _beneficiaryAddress) external view returns (uint256);
+    function claimCooldown(address _beneficiaryAddress) external view returns (uint256);
     function lock() external;
     function unlock() external;
     function requestFunds() external;

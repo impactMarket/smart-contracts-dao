@@ -58,10 +58,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		impactLabsVestingProxyResult.address
 	);
 
-	IPCTContract.transfer(
+	await IPCTContract.transfer(
 		impactLabsVestingProxyResult.address,
 		IMPACT_LABS_AMOUNT
 	);
+
+	await new Promise((resolve) => setTimeout(resolve, 6000));
 
 	await impactLabsVestingContract.initialize(
 		impactLabsAddress,

@@ -542,7 +542,7 @@ contract CommunityAdminImplementationMock is
      * @param community_ address of the community
      * @return bool true if the community is deployed with the new type of smart contract
      */
-    function isCommunityNewType(ICommunity community_) internal view returns (bool) {
+    function isCommunityNewType(ICommunity community_) internal pure returns (bool) {
         return community_.impactMarketAddress() == address(0);
     }
 }

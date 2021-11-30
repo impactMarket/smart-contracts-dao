@@ -37,12 +37,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		log: true,
 	});
 
-	const delegate = await ethers.getContractAt(
+	const governance = await ethers.getContractAt(
 		"IPCTDelegate",
 		delegatorResult.address
 	);
 
-	await delegate.initialize(
+	await governance.initialize(
 		timelockResult.address,
 		Token.address,
 		ZERO_ADDRESS,
@@ -62,7 +62,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	await IPCTContract.transfer(airgrabAddress, parseEther("1000000000"));
 
 	// only for prod
-	// await delegate.transferOwnership(timelockResult.address);
+	// await governance.transferOwnership(timelockResult.address);
 	// const ImpactProxyAdmin = await ethers.getContractAt(
 	// 	"ImpactProxyAdmin",
 	// 	ImpactProxyAdminContract.address
