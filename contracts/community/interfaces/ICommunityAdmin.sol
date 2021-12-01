@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.5;
+pragma solidity 0.8.4;
 
+import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./ICommunity.sol";
 import "../../token/interfaces/ITreasury.sol";
@@ -9,58 +10,57 @@ interface ICommunityAdmin {
     enum CommunityState {
         NONE,
         Valid,
-        Removed
+        Removed,
+        Migrated
     }
 
-    function initialize(ICommunity communityTemplate, IERC20 cUSD) external;
+    function getVersion() external returns(uint256);
     function cUSD() external view returns(IERC20);
     function treasury() external view returns(ITreasury);
-    function communities(address community) external view returns(CommunityState);
-    function communityList(uint256 index) external view returns (address);
+    function communities(address _community) external view returns(CommunityState);
+    function communityTemplate() external view returns(ICommunity);
+    function communityProxyAdmin() external view returns(ProxyAdmin);
+    function communityListAt(uint256 _index) external view returns (address);
     function communityListLength() external view returns (uint256);
 
-    function updateTreasury(ITreasury newTreasury) external;
-    function updateCommunityTemplate(ICommunity communityTemplate_) external;
+    function updateTreasury(ITreasury _newTreasury) external;
+    function updateCommunityTemplate(ICommunity _communityTemplate_) external;
     function updateBeneficiaryParams(
-        ICommunity community,
-        uint256 claimAmount,
-        uint256 maxClaim,
-        uint256 decreaseStep,
-        uint256 baseInterval,
-        uint256 incrementInterval
+        ICommunity _community,
+        uint256 _claimAmount,
+        uint256 _maxClaim,
+        uint256 _decreaseStep,
+        uint256 _baseInterval,
+        uint256 _incrementInterval
     ) external;
     function updateCommunityParams(
-        ICommunity community,
-        uint256 minTranche,
-        uint256 maxTranche
+        ICommunity _community,
+        uint256 _minTranche,
+        uint256 _maxTranche
     ) external;
-    function updateProxyImplementation(address communityProxy, address newLogic) external;
+    function updateProxyImplementation(address _communityProxy, address _newLogic) external;
     function addCommunity(
-        address firstManager,
-        uint256 claimAmount,
-        uint256 maxClaim,
-        uint256 decreaseStep,
-        uint256 baseInterval,
-        uint256 incrementInterval,
-        uint256 minTranche,
-        uint256 maxTranche,
-        address[] memory managerBlockList
+        address[] memory _managers,
+        uint256 _claimAmount,
+        uint256 _maxClaim,
+        uint256 _decreaseStep,
+        uint256 _baseInterval,
+        uint256 _incrementInterval,
+        uint256 _minTranche,
+        uint256 _maxTranche
     ) external;
     function migrateCommunity(
-        address firstManager,
-        ICommunity previousCommunity,
-        address[] memory managerBlockList
+        address[] memory _managers,
+        ICommunity _previousCommunity
     ) external;
-    function addManagersToCommunityBlockList(ICommunity community, address[] memory managerBlockList) external;
-    function removeManagersFromCommunityBlockList(ICommunity community, address[] memory managerBlockList) external;
-    function addManagerToCommunity(ICommunity community_, address account_) external;
-    function removeCommunity(ICommunity community) external;
+    function addManagerToCommunity(ICommunity _community_, address _account_) external;
+    function removeCommunity(ICommunity _community) external;
     function fundCommunity() external;
-    function transfer(IERC20 token, address to, uint256 amount) external;
-    function transferFromCommunity(ICommunity community, IERC20 token, address to, uint256 amount) external;
+    function transfer(IERC20 _token, address _to, uint256 _amount) external;
+    function transferFromCommunity(
+        ICommunity _community,
+        IERC20 _token,
+        address _to,
+        uint256 _amount
+    ) external;
 }
-
-
-
-
-

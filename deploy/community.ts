@@ -1,13 +1,11 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
-import { BigNumberish } from "ethers";
-import { parseEther } from "@ethersproject/units";
 import { getCUSDAddress } from "./cUSD";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { ethers } from "hardhat";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
-	const { deployments, getNamedAccounts, ethers } = hre;
+	const { deployments, ethers } = hre;
 
 	const { deploy } = deployments;
 
@@ -18,7 +16,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const IPCTTimelock = await deployments.get("IPCTTimelock"); //prod
 	const ownerAddress = IPCTTimelock.address; //prod
 	// const ownerAddress = deployer.address; //dev
-	// const cUSDAddress = getCUSDAddress(); //prod
 	const cUSDAddress = getCUSDAddress();
 
 	const communityAdminImplementationResult = await deploy(
@@ -31,6 +28,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		}
 	);
 
+	await new Promise((resolve) => setTimeout(resolve, 6000));
+
 	const communityAdminProxyResult = await deploy("CommunityAdminProxy", {
 		from: deployer.address,
 		args: [
@@ -40,6 +39,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		log: true,
 		// gasLimit: 13000000,
 	});
+
+	await new Promise((resolve) => setTimeout(resolve, 6000));
 
 	const CommunityAdminContract = await ethers.getContractAt(
 		"CommunityAdminImplementation",
@@ -53,10 +54,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		// gasLimit: 13000000,
 	});
 
+	await new Promise((resolve) => setTimeout(resolve, 6000));
+
 	await CommunityAdminContract.initialize(
 		communityResult.address,
 		cUSDAddress
 	);
+
+	await new Promise((resolve) => setTimeout(resolve, 6000));
 
 	const Treasury = await deployments.get("TreasuryProxy");
 
@@ -67,12 +72,16 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	await CommunityAdminContract.updateTreasury(Treasury.address);
 
+	await new Promise((resolve) => setTimeout(resolve, 6000));
+
 	await TreasuryContract.updateCommunityAdmin(
 		communityAdminProxyResult.address
 	);
 
 	await CommunityAdminContract.transferOwnership(ownerAddress);
+	await new Promise((resolve) => setTimeout(resolve, 6000));
 	await TreasuryContract.transferOwnership(ownerAddress);
+	await new Promise((resolve) => setTimeout(resolve, 6000));
 };
 
 func.dependencies = [

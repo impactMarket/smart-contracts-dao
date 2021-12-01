@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.5;
+pragma solidity 0.8.4;
 
 import "./ITreasury.sol";
 
@@ -10,5 +10,5 @@ import "./ITreasury.sol";
  * TreasuryStorageVX.
  */
 abstract contract TreasuryStorageV1 is ITreasury {
-    ICommunityAdmin internal _communityAdmin;
+    ICommunityAdmin public override communityAdmin;
 }

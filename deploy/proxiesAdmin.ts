@@ -4,17 +4,13 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// @ts-ignore
-	const { deployments, getNamedAccounts, ethers } = hre;
+	const { deployments, ethers } = hre;
 	const { deploy } = deployments;
 
 	const accounts: SignerWithAddress[] = await ethers.getSigners();
 	const deployer = accounts[0];
 
-	const IPCTTimelock = await deployments.get("IPCTTimelock"); //prod
-	const ownerAddress = IPCTTimelock.address; //prod
-	// const ownerAddress = deployer.address; //dev
-
-	// await new Promise((resolve) => setTimeout(resolve, 2000));
+	await new Promise((resolve) => setTimeout(resolve, 6000));
 
 	const ImpactProxyAdminResult = await deploy("ImpactProxyAdmin", {
 		from: deployer.address,
@@ -22,14 +18,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		log: true,
 	});
 
-	const ImpactProxyAdmin = await ethers.getContractAt(
-		"ImpactProxyAdmin",
-		ImpactProxyAdminResult.address
-	);
-
-	await ImpactProxyAdmin.transferOwnership(ownerAddress);
+	await new Promise((resolve) => setTimeout(resolve, 6000));
 };
 
 export default func;
-func.dependencies = ["GovernanceProd"];
 func.tags = ["ImpactProxyAdminProd", "Prod"];

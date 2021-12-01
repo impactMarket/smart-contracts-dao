@@ -1,5 +1,6 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
+import { parseEther } from "@ethersproject/units";
 
 let cUSDAddress: string;
 

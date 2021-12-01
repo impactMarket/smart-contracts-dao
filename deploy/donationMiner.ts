@@ -6,13 +6,13 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// @ts-ignore
-	const { deployments, getNamedAccounts, ethers } = hre;
+	const { deployments, ethers } = hre;
 	const { deploy } = deployments;
 
 	const accounts: SignerWithAddress[] = await ethers.getSigners();
 	const deployer = accounts[0];
 
-	const Token = await deployments.get("IPCTToken");
+	const Token = await deployments.get("PACTToken");
 	const Treasury = await deployments.get("TreasuryProxy");
 
 	const ImpactProxyAdmin = await deployments.get("ImpactProxyAdmin");
@@ -32,6 +32,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		}
 	);
 
+	await new Promise((resolve) => setTimeout(resolve, 6000));
+
 	const donationMinerProxyResult = await deploy("DonationMinerProxy", {
 		from: deployer.address,
 		args: [
@@ -42,15 +44,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		// gasLimit: 13000000,
 	});
 
+	await new Promise((resolve) => setTimeout(resolve, 6000));
+
 	const donationMinerContract = await ethers.getContractAt(
 		"DonationMinerImplementation",
 		donationMinerProxyResult.address
 	);
 
-	//for testing we need that rewardPeriodSize to be a small number
-	//to have the same reward for a period, will change the values for
-	//firstRewardPerBlock (250) with  216000 (250 * 864)
-	//and rewardPeriodSize (17280) with  20 (17280 / 864)
 	await donationMinerContract.initialize(
 		cUSDAddress,
 		Token.address,
@@ -62,7 +62,20 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		"1000000"
 	);
 
+	await new Promise((resolve) => setTimeout(resolve, 6000));
+
+	const IPCT = await deployments.get("PACTToken");
+	const IPCTContract = await ethers.getContractAt("PACTToken", IPCT.address);
+	await IPCTContract.transfer(
+		donationMinerContract.address,
+		parseEther("4000000000")
+	);
+
+	await new Promise((resolve) => setTimeout(resolve, 6000));
+
 	await donationMinerContract.transferOwnership(ownerAddress);
+
+	await new Promise((resolve) => setTimeout(resolve, 6000));
 };
 
 export default func;

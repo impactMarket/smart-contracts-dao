@@ -1,16 +1,18 @@
 //SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.5;
+pragma solidity 0.8.4;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IMerkleDistributor.sol";
 
 contract MerkleDistributor is IMerkleDistributor, Ownable {
+    using SafeERC20 for IERC20;
+
     address public immutable override token;
     bytes32 public immutable override merkleRoot;
     uint256 public claimPeriodEndBlock;
-    uint256 public constant CLAIM_PERIOD_BLOCKS = 17280 * 365;
+    uint256 private constant CLAIM_PERIOD_BLOCKS = 17280 * 365;
 
     // This is a packed array of booleans.
     mapping(uint256 => uint256) private claimedBitMap;
@@ -28,54 +30,61 @@ contract MerkleDistributor is IMerkleDistributor, Ownable {
         _;
     }
 
-    constructor(address token_, bytes32 merkleRoot_) {
-        token = token_;
-        merkleRoot = merkleRoot_;
+    constructor(address _token, bytes32 _merkleRoot) {
+        token = _token;
+        merkleRoot = _merkleRoot;
         claimPeriodEndBlock = block.number + CLAIM_PERIOD_BLOCKS;
     }
 
-    function isClaimed(uint256 index) public view override returns (bool) {
-        uint256 claimedWordIndex = index / 256;
-        uint256 claimedBitIndex = index % 256;
-        uint256 claimedWord = claimedBitMap[claimedWordIndex];
-        uint256 mask = (1 << claimedBitIndex);
-        return claimedWord & mask == mask;
+    function isClaimed(uint256 _index) public view override returns (bool) {
+        uint256 _claimedWordIndex = _index / 256;
+        uint256 _claimedBitIndex = _index % 256;
+        uint256 _claimedWord = claimedBitMap[_claimedWordIndex];
+        uint256 _mask = (1 << _claimedBitIndex);
+        return _claimedWord & _mask == _mask;
     }
 
-    function _setClaimed(uint256 index) private {
-        uint256 claimedWordIndex = index / 256;
-        uint256 claimedBitIndex = index % 256;
-        claimedBitMap[claimedWordIndex] = claimedBitMap[claimedWordIndex] | (1 << claimedBitIndex);
+    function _setClaimed(uint256 _index) private returns (bool) {
+        uint256 _claimedWordIndex = _index / 256;
+        uint256 _claimedBitIndex = _index % 256;
+        uint256 _claimedWord = claimedBitMap[_claimedWordIndex];
+        uint256 _mask = (1 << _claimedBitIndex);
+
+        if (_claimedWord & _mask == _mask) {
+            // If already claimed signify failure
+            return false;
+        } else {
+            // Else claim and return success
+            claimedBitMap[_claimedWordIndex] = _claimedWord | _mask;
+            return true;
+        }
     }
 
     function claim(
-        uint256 index,
-        address account,
-        uint256 amount,
-        bytes32[] calldata merkleProof
+        uint256 _index,
+        address _account,
+        uint256 _amount,
+        bytes32[] calldata _merkleProof
     ) external override withinClaimPeriod {
-        require(!isClaimed(index), "MerkleDistributor: Drop already claimed.");
+        // Set it claimed (returns false if already claimed)
+        require(_setClaimed(_index), "MerkleDistributor: Drop already claimed.");
 
         // Verify the merkle proof.
-        bytes32 node = keccak256(abi.encodePacked(index, account, amount));
+        bytes32 _node = keccak256(abi.encodePacked(_index, _account, _amount));
         require(
-            MerkleProof.verify(merkleProof, merkleRoot, node),
+            MerkleProof.verify(_merkleProof, merkleRoot, _node),
             "MerkleDistributor: Invalid proof."
         );
 
-        // Mark it claimed and send the token.
-        _setClaimed(index);
-        require(IERC20(token).transfer(account, amount), "MerkleDistributor: Transfer failed.");
+        // Send the token
+        IERC20(token).safeTransfer(_account, _amount);
 
-        emit Claimed(index, account, amount);
+        emit Claimed(_index, _account, _amount);
     }
 
     function withdrawUnclaimed() external override onlyOwner claimPeriodEnded {
-        uint256 unclaimedBalance = IERC20(token).balanceOf(address(this));
-        require(
-            IERC20(token).transfer(msg.sender, unclaimedBalance),
-            "MerkleDistributor: Withdrawal failed."
-        );
-        emit Withdrawn(msg.sender, unclaimedBalance);
+        uint256 _unclaimedBalance = IERC20(token).balanceOf(address(this));
+        IERC20(token).safeTransfer(msg.sender, _unclaimedBalance);
+        emit Withdrawn(msg.sender, _unclaimedBalance);
     }
 }
