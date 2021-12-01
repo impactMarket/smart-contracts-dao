@@ -1554,7 +1554,7 @@ describe("Community - getFunds", () => {
 		);
 	});
 
-	it.only("should transfer funds to community", async () => {
+	it("should transfer funds to community", async () => {
 		expect(
 			await cUSDInstance.balanceOf(communityInstance.address)
 		).to.be.equal(communityMinTranche);
@@ -1573,7 +1573,7 @@ describe("Community - getFunds", () => {
 		).to.be.equal(communityMinTranche);
 	});
 
-	it.only("should not transfer funds more then safety limit", async () => {
+	it("should not transfer funds more then safety limit", async () => {
 		expect(
 			await cUSDInstance.balanceOf(communityInstance.address)
 		).to.be.equal(communityMinTranche);
