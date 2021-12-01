@@ -210,6 +210,10 @@ contract CommunityAdminImplementation is
         uint256 _minTranche,
         uint256 _maxTranche
     ) external override onlyOwner {
+        require(
+            _managers.length > 0,
+            "CommunityAdmin::addCommunity: Community should have at least one manager"
+        );
         address _communityAddress = deployCommunity(
             _managers,
             _claimAmount,

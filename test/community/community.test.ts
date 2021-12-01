@@ -233,6 +233,23 @@ describe("CommunityAdmin", () => {
 		(await communityInstance.maxClaim()).should.be.equal(maxClaimTen);
 	});
 
+	it("should not add a community without managers", async () => {
+		await expect(
+			communityAdminProxy.addCommunity(
+				[],
+				claimAmountTwo.toString(),
+				maxClaimTen.toString(),
+				oneCent.toString(),
+				threeMinutesInBlocks.toString(),
+				oneMinuteInBlocks.toString(),
+				communityMinTranche,
+				communityMaxTranche
+			)
+		).to.be.rejectedWith(
+			"CommunityAdmin::addCommunity: Community should have at least one manager"
+		);
+	});
+
 	it("should remove a community if admin", async () => {
 		await cUSDInstance.mint(
 			treasuryInstance.address,
