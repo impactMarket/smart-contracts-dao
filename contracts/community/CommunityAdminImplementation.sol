@@ -12,8 +12,6 @@ import "./interfaces/CommunityAdminStorageV1.sol";
 import "./Community.sol";
 import "../token/interfaces/ITreasury.sol";
 
-import "hardhat/console.sol";
-
 /**
  * @notice Welcome to CommunityAdmin, the main contract. This is an
  * administrative (for now) contract where the admins have control

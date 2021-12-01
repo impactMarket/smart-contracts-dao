@@ -12,8 +12,6 @@ import "./interfaces/DonationMinerStorageV1.sol";
 import "../community/interfaces/ICommunity.sol";
 import "../community/interfaces/ICommunityAdmin.sol";
 
-import "hardhat/console.sol";
-
 contract DonationMinerImplementation is
     Initializable,
     OwnableUpgradeable,

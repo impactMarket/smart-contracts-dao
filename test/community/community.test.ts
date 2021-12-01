@@ -40,7 +40,7 @@ enum BeneficiaryState {
 	NONE = 0,
 	Valid = 1,
 	Locked = 2,
-	Removed = 3,
+	Removed = 3
 }
 
 enum CommunityState {
@@ -65,8 +65,11 @@ let beneficiaryC: SignerWithAddress;
 let beneficiaryD: SignerWithAddress;
 
 let Community: ethersTypes.ContractFactory;
+let OldCommunity: ethersTypes.ContractFactory;
 
 let communityInstance: ethersTypes.Contract;
+let newCommunityInstance: ethersTypes.Contract;
+let oldCommunityInstance: ethersTypes.Contract;
 let communityAdminProxy: ethersTypes.Contract;
 let treasuryInstance: ethersTypes.Contract;
 let cUSDInstance: ethersTypes.Contract;
@@ -1648,5 +1651,184 @@ describe("Community - getFunds", () => {
 		expect(
 			await cUSDInstance.balanceOf(communityInstance.address)
 		).to.be.equal(parseEther("402"));
+	});
+});
+
+describe("Old Community", () => {
+	before(async function () {
+		await init();
+
+		OldCommunity = await ethers.getContractFactory(
+			"CommunityOld"
+		);
+	});
+
+	beforeEach(async () => {
+		await deploy();
+
+		await cUSDInstance.mint(
+			treasuryInstance.address,
+			mintAmount.toString()
+		);
+
+		await addDefaultCommunity();
+
+		oldCommunityInstance = await OldCommunity.deploy(
+			communityManagerA.address,
+			claimAmountTwo,
+			maxClaimTen,
+			threeMinutesInBlocks,
+			oneMinuteInBlocks,
+			zeroAddress,
+			cUSDInstance.address,
+			adminAccount1.address
+		);
+
+		await cUSDInstance.mint(
+			oldCommunityInstance.address,
+			mintAmount.toString()
+		);
+
+		oldCommunityInstance.connect(communityManagerA).addBeneficiary(beneficiaryA.address);
+		oldCommunityInstance.connect(communityManagerA).addBeneficiary(beneficiaryB.address);
+		oldCommunityInstance.connect(communityManagerA).addBeneficiary(beneficiaryC.address);
+
+		oldCommunityInstance.connect(communityManagerA).addManager(communityManagerB.address);
+		oldCommunityInstance.connect(communityManagerB).addManager(communityManagerC.address);
+		oldCommunityInstance.connect(communityManagerC).removeManager(communityManagerB.address);
+	});
+
+	async function migrateCommunity(){
+		const newTx = await communityAdminProxy.migrateCommunity(
+			[communityManagerA.address],
+			oldCommunityInstance.address
+		);
+
+		let receipt = await newTx.wait();
+
+		const newCommunityAddress = receipt.events?.filter((x: any) => {
+			return x.event == "CommunityMigrated";
+		})[0]["args"]["communityAddress"];
+
+		newCommunityInstance = await Community.attach(newCommunityAddress);
+
+		await cUSDInstance.mint(
+			newCommunityInstance.address,
+			mintAmount.toString()
+		);
+	}
+
+	it("should migrate an old community is owner", async () => {
+		await expect(
+			communityAdminProxy.migrateCommunity(
+				[communityManagerA.address],
+				oldCommunityInstance.address
+			)
+		).to.be.fulfilled;
+	});
+
+	it("should migrate an old community if not owner", async () => {
+		await expect(
+			communityAdminProxy.connect(adminAccount2).migrateCommunity(
+				[communityManagerA.address],
+				oldCommunityInstance.address
+			)
+		).to.be.rejectedWith("Ownable: caller is not the owner");
+	});
+
+	it("should migrate an old community twice", async () => {
+		await expect(
+			communityAdminProxy.migrateCommunity(
+				[communityManagerA.address],
+				oldCommunityInstance.address
+			)
+		).to.be.fulfilled;
+		await expect(
+			communityAdminProxy.migrateCommunity(
+				[communityManagerA.address],
+				oldCommunityInstance.address
+			)
+		).to.be.rejectedWith("CommunityAdmin::migrateCommunity: this community has been migrated");
+	});
+
+	it("should join from migrated if valid beneficiary", async () => {
+		await migrateCommunity();
+		expect(
+			(await newCommunityInstance.beneficiaries(beneficiaryA.address)).state
+		).to.be.equal(BeneficiaryState.NONE);
+		await expect(newCommunityInstance.connect(beneficiaryA).beneficiaryJoinFromMigrated()).to.be.fulfilled;
+		expect(
+			(await newCommunityInstance.beneficiaries(beneficiaryA.address)).state
+		).to.be.equal(BeneficiaryState.Valid);
+	});
+
+	it("should not join from migrated twice if beneficiary", async () => {
+		await migrateCommunity();
+		expect(
+			(await newCommunityInstance.beneficiaries(beneficiaryA.address)).state
+		).to.be.equal(BeneficiaryState.NONE);
+		await expect(newCommunityInstance.connect(beneficiaryA).beneficiaryJoinFromMigrated()).to.be.fulfilled;
+		expect(
+			(await newCommunityInstance.beneficiaries(beneficiaryA.address)).state
+		).to.be.equal(BeneficiaryState.Valid);
+
+		await expect(newCommunityInstance.connect(beneficiaryA).beneficiaryJoinFromMigrated()).to.be.rejectedWith("Community::beneficiaryJoinFromMigrated: Beneficiary exists");
+	});
+
+	it("should join from migrated if locked beneficiary", async () => {
+		await migrateCommunity();
+		await oldCommunityInstance.connect(communityManagerA).lockBeneficiary(beneficiaryA.address);
+
+		expect(
+			(await newCommunityInstance.beneficiaries(beneficiaryA.address)).state
+		).to.be.equal(BeneficiaryState.NONE);
+		await expect(newCommunityInstance.connect(beneficiaryA).beneficiaryJoinFromMigrated()).to.be.fulfilled;
+		expect(
+			(await newCommunityInstance.beneficiaries(beneficiaryA.address)).state
+		).to.be.equal(BeneficiaryState.Locked);
+	});
+
+	it("should join from migrated if removed beneficiary", async () => {
+		await migrateCommunity();
+		await oldCommunityInstance.connect(communityManagerA).removeBeneficiary(beneficiaryA.address);
+
+		expect(
+			(await newCommunityInstance.beneficiaries(beneficiaryA.address)).state
+		).to.be.equal(BeneficiaryState.NONE);
+		await expect(newCommunityInstance.connect(beneficiaryA).beneficiaryJoinFromMigrated()).to.be.fulfilled;
+		expect(
+			(await newCommunityInstance.beneficiaries(beneficiaryA.address)).state
+		).to.be.equal(BeneficiaryState.Removed);
+	});
+
+	it("should join from migrated if not beneficiary", async () => {
+		await migrateCommunity();
+
+		expect(
+			(await newCommunityInstance.beneficiaries(beneficiaryD.address)).state
+		).to.be.equal(BeneficiaryState.NONE);
+		await expect(newCommunityInstance.connect(beneficiaryD).beneficiaryJoinFromMigrated()).to.be.fulfilled;
+		expect(
+			(await newCommunityInstance.beneficiaries(beneficiaryD.address)).state
+		).to.be.equal(BeneficiaryState.NONE);
+	});
+
+	it("should copy beneficiary details from old community", async () => {
+		await migrateCommunity();
+		await newCommunityInstance.connect(communityManagerA).addBeneficiary(beneficiaryB.address);
+		await oldCommunityInstance.connect(beneficiaryA).claim();
+
+		await expect(newCommunityInstance.connect(beneficiaryA).beneficiaryJoinFromMigrated()).to.be.fulfilled;
+
+		const beneficiaryADetails = await newCommunityInstance.beneficiaries(beneficiaryA.address);
+		expect(beneficiaryADetails.claims).to.be.equal(1);
+		expect(beneficiaryADetails.claimedAmount).to.be.equal(claimAmountTwo);
+		expect(beneficiaryADetails.lastClaim).to.be.equal(8);
+
+		await newCommunityInstance.connect(communityManagerA).addBeneficiary(beneficiaryC.address);
+
+		expect(await newCommunityInstance.beneficiaryListAt(0)).to.be.equal(beneficiaryB.address);
+		expect(await newCommunityInstance.beneficiaryListAt(1)).to.be.equal(beneficiaryA.address);
+		expect(await newCommunityInstance.beneficiaryListAt(2)).to.be.equal(beneficiaryC.address);
 	});
 });

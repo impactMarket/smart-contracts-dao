@@ -13,8 +13,6 @@ import "../community/interfaces/ICommunity.sol";
 import "../community/interfaces/ICommunityAdmin.sol";
 import "./DonationMinerStorageV2Mock.sol";
 
-import "hardhat/console.sol";
-
 contract DonationMinerImplementationMock is
     Initializable,
     OwnableUpgradeable,

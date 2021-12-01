@@ -1047,7 +1047,7 @@ describe("Donation Miner", () => {
 		).to.be.equal(0);
 	});
 
-	it("Should donate and claim in 365 reward periods, one donor", async function () {
+	xit("Should donate and claim in 365 reward periods, one donor", async function () {
 		const user1Donation = parseEther("100");
 		const user1ExpectedReward1 = parseEther("409340576.103595678060756720");
 		const user1ExpectedReward2 = parseEther("776093059.949132023166703940");
@@ -1153,7 +1153,7 @@ describe("Donation Miner", () => {
 		expect(balance).to.equal(parseEther(rewardExpected));
 	}
 
-	it("Should donate and claim 9 years, one donor", async function () {
+	xit("Should donate and claim 9 years, one donor", async function () {
 		DonationMiner.updateRewardPeriodParams(1, "998902", "1000000");
 		DonationMiner.updateFirstRewardPeriodParams(100, parseEther("4320000"));
 

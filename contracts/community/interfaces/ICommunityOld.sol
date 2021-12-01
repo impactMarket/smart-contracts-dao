@@ -25,4 +25,5 @@ interface ICommunityOld {
     function lock() external;
     function unlock() external;
     function migrateFunds(address _newCommunity, address _newCommunityManager) external;
+    function hasRole(bytes32 role, address account) external view returns(bool);
 }
