@@ -1554,7 +1554,7 @@ describe("Community - getFunds", () => {
 		);
 	});
 
-	it("should transfer funds to community", async () => {
+	it.only("should transfer funds to community", async () => {
 		expect(
 			await cUSDInstance.balanceOf(communityInstance.address)
 		).to.be.equal(communityMinTranche);
@@ -1571,6 +1571,29 @@ describe("Community - getFunds", () => {
 		expect(
 			await cUSDInstance.balanceOf(communityInstance.address)
 		).to.be.equal(communityMinTranche);
+	});
+
+	it.only("should not transfer funds more then safety limit", async () => {
+		expect(
+			await cUSDInstance.balanceOf(communityInstance.address)
+		).to.be.equal(communityMinTranche);
+
+		await treasuryInstance.transfer(
+			cUSDInstance.address,
+			adminAccount1.address,
+			await cUSDInstance.balanceOf(treasuryInstance.address)
+		);
+		await cUSDInstance.mint(treasuryInstance.address, parseEther("10"));
+
+		await communityInstance
+			.connect(communityManagerA)
+			.addBeneficiary(beneficiaryA.address);
+
+		communityInstance.connect(beneficiaryA).claim();
+
+		await expect(
+			communityInstance.connect(communityManagerA).requestFunds()
+		).to.be.rejectedWith("CommunityAdmin::fundCommunity: Not enough funds");
 	});
 
 	it("should donate directly in the community", async () => {
