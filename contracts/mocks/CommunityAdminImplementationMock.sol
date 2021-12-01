@@ -12,8 +12,6 @@ import "../community/interfaces/CommunityAdminStorageV1.sol";
 import "../community/Community.sol";
 import "../token/interfaces/ITreasury.sol";
 
-import "hardhat/console.sol";
-
 /**
  * @notice Welcome to CommunityAdmin, the main contract. This is an
  * administrative (for now) contract where the admins have control
@@ -542,7 +540,7 @@ contract CommunityAdminImplementationMock is
      * @param community_ address of the community
      * @return bool true if the community is deployed with the new type of smart contract
      */
-    function isCommunityNewType(ICommunity community_) internal view returns (bool) {
+    function isCommunityNewType(ICommunity community_) internal pure returns (bool) {
         return community_.impactMarketAddress() == address(0);
     }
 }

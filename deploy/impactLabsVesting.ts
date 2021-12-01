@@ -26,8 +26,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const IPCT = await deployments.get("PACTToken");
 	const IPCTContract = await ethers.getContractAt("PACTToken", IPCT.address);
 
-	await new Promise((resolve) => setTimeout(resolve, 6000));
-
 	const impactLabsVestingImplementationResult = await deploy(
 		"ImpactLabsVestingImplementation",
 		{
@@ -53,15 +51,19 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		}
 	);
 
+	await new Promise((resolve) => setTimeout(resolve, 6000));
+
 	const impactLabsVestingContract = await ethers.getContractAt(
 		"ImpactLabsVestingImplementation",
 		impactLabsVestingProxyResult.address
 	);
 
-	IPCTContract.transfer(
+	await IPCTContract.transfer(
 		impactLabsVestingProxyResult.address,
 		IMPACT_LABS_AMOUNT
 	);
+
+	await new Promise((resolve) => setTimeout(resolve, 6000));
 
 	await impactLabsVestingContract.initialize(
 		impactLabsAddress,
@@ -70,7 +72,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		IMPACT_LABS_ADVANCE_PAYMENT
 	);
 
+	await new Promise((resolve) => setTimeout(resolve, 6000));
+
 	await impactLabsVestingContract.transferOwnership(ownerAddress);
+
+	await new Promise((resolve) => setTimeout(resolve, 6000));
 };
 
 export default func;

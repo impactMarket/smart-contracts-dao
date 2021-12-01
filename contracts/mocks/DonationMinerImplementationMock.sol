@@ -13,8 +13,6 @@ import "../community/interfaces/ICommunity.sol";
 import "../community/interfaces/ICommunityAdmin.sol";
 import "./DonationMinerStorageV2Mock.sol";
 
-import "hardhat/console.sol";
-
 contract DonationMinerImplementationMock is
     Initializable,
     OwnableUpgradeable,
@@ -77,6 +75,24 @@ contract DonationMinerImplementationMock is
         uint256 newRewardPeriodSize,
         uint256 newDecayNumerator,
         uint256 newDecayDenominator
+    );
+
+    /**
+     * @notice Triggered when the first reward period params have been updated
+     *
+     * @param oldStartingBlock        Old oldStartingBlock value
+     * @param oldFirstRewardPerBlock  Old oldFirstRewardPerBlock value
+     * @param newStartingBlock        New newStartingBlock value
+     * @param newFirstRewardPerBlock  New newFirstRewardPerBlock value
+     *
+     * For further information regarding each parameter, see
+     * *DonationMiner* smart contract initialize method.
+     */
+    event FirstRewardPeriodParamsUpdated(
+        uint256 oldStartingBlock,
+        uint256 oldFirstRewardPerBlock,
+        uint256 newStartingBlock,
+        uint256 newFirstRewardPerBlock
     );
 
     /**
@@ -167,6 +183,32 @@ contract DonationMinerImplementationMock is
             newRewardPeriodSize_,
             newDecayNumerator_,
             newDecayDenominator_
+        );
+    }
+
+    /**
+     * @notice Updates first reward period default params
+     *
+     * @param startingBlock_ value of new startingBlock
+     * @param firstRewardPerBlock_ value of new firstRewardPerBlock
+     */
+    function updateFirstRewardPeriodParams(uint256 startingBlock_, uint256 firstRewardPerBlock_)
+        external
+        override
+        onlyOwner
+    {
+        uint256 oldStartingBlock_ = rewardPeriods[1].startBlock;
+        uint256 oldFirstRewardPerBlock_ = rewardPeriods[1].rewardPerBlock;
+
+        require(oldStartingBlock_ > block.number);
+
+        initFirstPeriod(startingBlock_, firstRewardPerBlock_);
+
+        emit FirstRewardPeriodParamsUpdated(
+            oldStartingBlock_,
+            oldFirstRewardPerBlock_,
+            startingBlock_,
+            firstRewardPerBlock_
         );
     }
 
@@ -448,5 +490,13 @@ contract DonationMinerImplementationMock is
 
     function updateTestParam4(address index, uint256 newValue) external onlyOwner {
         testParam4[index] = newValue;
+    }
+
+    function initFirstPeriod(uint256 startingBlock_, uint256 firstRewardPerBlock_) internal {
+        RewardPeriod storage firstPeriod = rewardPeriods[1];
+        firstPeriod.startBlock = startingBlock_;
+        firstPeriod.endBlock = startingBlock_ + rewardPeriodSize - 1;
+        firstPeriod.rewardPerBlock = firstRewardPerBlock_;
+        firstPeriod.rewardAmount = firstRewardPerBlock_ * rewardPeriodSize;
     }
 }

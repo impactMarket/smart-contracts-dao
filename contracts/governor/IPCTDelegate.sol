@@ -1,13 +1,23 @@
 //SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.4;
 
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/IPCTDelegateStorageV1.sol";
 import "./interfaces/IPCTEvents.sol";
 
-contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
+contract IPCTDelegate is
+    IPCTEvents,
+    Initializable,
+    OwnableUpgradeable,
+    ReentrancyGuardUpgradeable,
+    IPCTDelegateStorageV1
+{
+    using SafeERC20 for IERC20;
+
     /// @notice The name of this contract
-    string public constant NAME = "IPCT";
+    string public constant NAME = "PACT";
 
     /// @notice The minimum setable proposal threshold
     uint256 public constant MIN_PROPOSAL_THRESHOLD = 100_000_000e18; // 100,000,000 Tokens
@@ -16,7 +26,7 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
     uint256 public constant MAX_PROPOSAL_THRESHOLD = 500_000_000e18; // 500,000,000 Tokens
 
     /// @notice The minimum setable voting period
-    uint256 public constant MIN_VOTING_PERIOD = 17280; // About 24 hours
+    uint256 public constant MIN_VOTING_PERIOD = 720; // About 1 hour
 
     /// @notice The max setable voting period
     uint256 public constant MAX_VOTING_PERIOD = 241920; // About 2 weeks
@@ -37,64 +47,61 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
     /// @notice The EIP-712 typehash for the ballot struct used by the contract
     bytes32 public constant BALLOT_TYPEHASH = keccak256("Ballot(uint256 proposalId,uint8 support)");
 
-    modifier adminOnly() {
-        require(msg.sender == admin, "Only admin can call");
-        _;
-    }
-
     /**
      * @notice Used to initialize the contract during delegator contructor
-     * @param timelock_ The address of the Timelock
-     * @param token_ The address of the voting token
-     * @param releaseToken_ The address of the "Release" voting token. If none, specify the zero address.
-     * @param votingPeriod_ The initial voting period
-     * @param votingDelay_ The initial voting delay
-     * @param proposalThreshold_ The initial proposal threshold
-     * @param quorumVotes_ The initial quorum votes
+     * @param _timelock The address of the Timelock
+     * @param _token The address of the voting token
+     * @param _releaseToken The address of the "Release" voting token. If none, specify the zero address.
+     * @param _votingPeriod The initial voting period
+     * @param _votingDelay The initial voting delay
+     * @param _proposalThreshold The initial proposal threshold
+     * @param _quorumVotes The initial quorum votes
      */
     function initialize(
-        address timelock_,
-        address token_,
-        address releaseToken_,
-        uint256 votingPeriod_,
-        uint256 votingDelay_,
-        uint256 proposalThreshold_,
-        uint256 quorumVotes_
-    ) public initializer adminOnly {
+        address _timelock,
+        address _token,
+        address _releaseToken,
+        uint256 _votingPeriod,
+        uint256 _votingDelay,
+        uint256 _proposalThreshold,
+        uint256 _quorumVotes
+    ) public initializer {
         require(
-            TimelockInterface(timelock_).admin() == address(this),
+            TimelockInterface(_timelock).admin() == address(this),
             "IPCT::initialize: timelock admin is not assigned to IPCTDelegate"
         );
         require(
-            votingPeriod_ >= MIN_VOTING_PERIOD && votingPeriod_ <= MAX_VOTING_PERIOD,
+            _votingPeriod >= MIN_VOTING_PERIOD && _votingPeriod <= MAX_VOTING_PERIOD,
             "IPCT::initialize: invalid voting period"
         );
         require(
-            votingDelay_ >= MIN_VOTING_DELAY && votingDelay_ <= MAX_VOTING_DELAY,
+            _votingDelay >= MIN_VOTING_DELAY && _votingDelay <= MAX_VOTING_DELAY,
             "IPCT::initialize: invalid voting delay"
         );
         require(
-            proposalThreshold_ >= MIN_PROPOSAL_THRESHOLD &&
-                proposalThreshold_ <= MAX_PROPOSAL_THRESHOLD,
+            _proposalThreshold >= MIN_PROPOSAL_THRESHOLD &&
+                _proposalThreshold <= MAX_PROPOSAL_THRESHOLD,
             "IPCT::initialize: invalid proposal threshold"
         );
-        require(quorumVotes_ >= proposalThreshold_, "IPCT::initialize: invalid quorum votes");
-        timelock = TimelockInterface(timelock_);
+        require(_quorumVotes >= _proposalThreshold, "IPCT::initialize: invalid quorum votes");
+        timelock = TimelockInterface(_timelock);
         require(
             timelock.admin() == address(this),
             "IPCT::initialize: timelock admin is not assigned to IPCTDelegate"
         );
 
-        admin = msg.sender;
-        token = IHasVotes(token_);
-        releaseToken = IHasVotes(releaseToken_);
-        votingPeriod = votingPeriod_;
-        votingDelay = votingDelay_;
-        proposalThreshold = proposalThreshold_;
-        quorumVotes = quorumVotes_;
+        __Ownable_init();
+        __ReentrancyGuard_init();
+
+        token = IHasVotes(_token);
+        releaseToken = IHasVotes(_releaseToken);
+        votingPeriod = _votingPeriod;
+        votingDelay = _votingDelay;
+        proposalThreshold = _proposalThreshold;
+        quorumVotes = _quorumVotes;
 
         // Create dummy proposal
-        Proposal memory dummyProposal = Proposal({
+        Proposal memory _dummyProposal = Proposal({
             id: proposalCount,
             proposer: address(this),
             eta: 0,
@@ -108,16 +115,16 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
         });
         proposalCount++;
 
-        proposals[dummyProposal.id] = dummyProposal;
-        latestProposalIds[dummyProposal.proposer] = dummyProposal.id;
+        proposals[_dummyProposal.id] = _dummyProposal;
+        latestProposalIds[_dummyProposal.proposer] = _dummyProposal.id;
 
         emit ProposalCreated(
-            dummyProposal.id,
+            _dummyProposal.id,
             address(this),
-            proposalTargets[dummyProposal.id],
-            proposalValues[dummyProposal.id],
-            proposalSignatures[dummyProposal.id],
-            proposalCalldatas[dummyProposal.id],
+            proposalTargets[_dummyProposal.id],
+            proposalValues[_dummyProposal.id],
+            proposalSignatures[_dummyProposal.id],
+            proposalCalldatas[_dummyProposal.id],
             0,
             0,
             ""
@@ -126,36 +133,36 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
 
     /**
      * @notice Function used to propose a new proposal. Sender must have delegates above the proposal threshold.
-     * @param targets Target addresses for proposal calls.
-     * @param values Eth values for proposal calls.
-     * @param signatures Function signatures for proposal calls.
-     * @param calldatas Calldatas for proposal calls.
-     * @param description String description of the proposal.
+     * @param _targets Target addresses for proposal calls.
+     * @param _values Eth values for proposal calls.
+     * @param _signatures Function signatures for proposal calls.
+     * @param _calldatas Calldatas for proposal calls.
+     * @param _description String description of the proposal.
      * @return Proposal id of new proposal.
      */
     function propose(
-        address[] memory targets,
-        uint256[] memory values,
-        string[] memory signatures,
-        bytes[] memory calldatas,
-        string memory description
+        address[] memory _targets,
+        uint256[] memory _values,
+        string[] memory _signatures,
+        bytes[] memory _calldatas,
+        string memory _description
     ) public returns (uint256) {
         require(
             getPriorVotes(msg.sender, sub256(block.number, 1)) > proposalThreshold,
             "IPCT::propose: proposer votes below proposal threshold"
         );
         require(
-            targets.length == values.length &&
-                targets.length == signatures.length &&
-                targets.length == calldatas.length,
+            _targets.length == _values.length &&
+                _targets.length == _signatures.length &&
+                _targets.length == _calldatas.length,
             "IPCT::propose: proposal function information arity mismatch"
         );
-        require(targets.length != 0, "IPCT::propose: must provide actions");
-        require(targets.length <= PROPOSAL_MAX_OPERATIONS, "IPCT::propose: too many actions");
+        require(_targets.length != 0, "IPCT::propose: must provide actions");
+        require(_targets.length <= PROPOSAL_MAX_OPERATIONS, "IPCT::propose: too many actions");
 
-        uint256 latestProposalId = latestProposalIds[msg.sender];
-        if (latestProposalId != 0) {
-            ProposalState proposersLatestProposalState = state(latestProposalId);
+        uint256 _latestProposalId = latestProposalIds[msg.sender];
+        if (_latestProposalId != 0) {
+            ProposalState proposersLatestProposalState = state(_latestProposalId);
             require(
                 proposersLatestProposalState != ProposalState.Active,
                 "IPCT::propose: one live proposal per proposer, found an already active proposal"
@@ -166,15 +173,15 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
             );
         }
 
-        uint256 startBlock = add256(block.number, votingDelay);
-        uint256 endBlock = add256(startBlock, votingPeriod);
+        uint256 _startBlock = add256(block.number, votingDelay);
+        uint256 _endBlock = add256(_startBlock, votingPeriod);
 
-        Proposal memory newProposal = Proposal({
+        Proposal memory _newProposal = Proposal({
             id: proposalCount,
             proposer: msg.sender,
             eta: 0,
-            startBlock: startBlock,
-            endBlock: endBlock,
+            startBlock: _startBlock,
+            endBlock: _endBlock,
             forVotes: 0,
             againstVotes: 0,
             abstainVotes: 0,
@@ -183,130 +190,130 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
         });
         proposalCount++;
 
-        proposals[newProposal.id] = newProposal;
-        proposalTargets[newProposal.id] = targets;
-        proposalValues[newProposal.id] = values;
-        proposalSignatures[newProposal.id] = signatures;
-        proposalCalldatas[newProposal.id] = calldatas;
-        latestProposalIds[newProposal.proposer] = newProposal.id;
+        proposals[_newProposal.id] = _newProposal;
+        proposalTargets[_newProposal.id] = _targets;
+        proposalValues[_newProposal.id] = _values;
+        proposalSignatures[_newProposal.id] = _signatures;
+        proposalCalldatas[_newProposal.id] = _calldatas;
+        latestProposalIds[_newProposal.proposer] = _newProposal.id;
 
         emit ProposalCreated(
-            newProposal.id,
+            _newProposal.id,
             msg.sender,
-            targets,
-            values,
-            signatures,
-            calldatas,
-            startBlock,
-            endBlock,
-            description
+            _targets,
+            _values,
+            _signatures,
+            _calldatas,
+            _startBlock,
+            _endBlock,
+            _description
         );
-        return newProposal.id;
+        return _newProposal.id;
     }
 
     /**
      * @notice Queues a proposal of state succeeded
-     * @param proposalId The id of the proposal to queue
+     * @param _proposalId The id of the proposal to queue
      */
-    function queue(uint256 proposalId) external {
+    function queue(uint256 _proposalId) external {
         require(
-            state(proposalId) == ProposalState.Succeeded,
+            state(_proposalId) == ProposalState.Succeeded,
             "IPCT::queue: proposal can only be queued if it is succeeded"
         );
-        Proposal storage proposal = proposals[proposalId];
-        uint256 eta = add256(block.timestamp, timelock.delay());
-        for (uint256 i = 0; i < proposalTargets[proposalId].length; i++) {
+        Proposal storage _proposal = proposals[_proposalId];
+        uint256 _eta = add256(block.timestamp, timelock.delay());
+        for (uint256 i = 0; i < proposalTargets[_proposalId].length; i++) {
             queueOrRevertInternal(
-                proposalTargets[proposalId][i],
-                proposalValues[proposalId][i],
-                proposalSignatures[proposalId][i],
-                proposalCalldatas[proposalId][i],
-                eta
+                proposalTargets[_proposalId][i],
+                proposalValues[_proposalId][i],
+                proposalSignatures[_proposalId][i],
+                proposalCalldatas[_proposalId][i],
+                _eta
             );
         }
-        proposal.eta = eta;
-        emit ProposalQueued(proposalId, eta);
+        _proposal.eta = _eta;
+        emit ProposalQueued(_proposalId, _eta);
     }
 
     function queueOrRevertInternal(
-        address target,
-        uint256 value,
-        string memory signature,
-        bytes memory data,
-        uint256 eta
+        address _target,
+        uint256 _value,
+        string memory _signature,
+        bytes memory _data,
+        uint256 _eta
     ) internal {
         require(
             !timelock.queuedTransactions(
-                keccak256(abi.encode(target, value, signature, data, eta))
+                keccak256(abi.encode(_target, _value, _signature, _data, _eta))
             ),
             "IPCT::queueOrRevertInternal: identical proposal action already queued at eta"
         );
-        timelock.queueTransaction(target, value, signature, data, eta);
+        timelock.queueTransaction(_target, _value, _signature, _data, _eta);
     }
 
     /**
      * @notice Executes a queued proposal if eta has passed
-     * @param proposalId The id of the proposal to execute
+     * @param _proposalId The id of the proposal to execute
      */
-    function execute(uint256 proposalId) external payable {
+    function execute(uint256 _proposalId) external payable {
         require(
-            state(proposalId) == ProposalState.Queued,
+            state(_proposalId) == ProposalState.Queued,
             "IPCT::execute: proposal can only be executed if it is queued"
         );
-        Proposal storage proposal = proposals[proposalId];
-        proposal.executed = true;
-        for (uint256 i = 0; i < proposalTargets[proposalId].length; i++) {
-            timelock.executeTransaction{value: proposalValues[proposalId][i]}(
-                proposalTargets[proposalId][i],
-                proposalValues[proposalId][i],
-                proposalSignatures[proposalId][i],
-                proposalCalldatas[proposalId][i],
-                proposal.eta
+        Proposal storage _proposal = proposals[_proposalId];
+        _proposal.executed = true;
+        for (uint256 i = 0; i < proposalTargets[_proposalId].length; i++) {
+            timelock.executeTransaction{value: proposalValues[_proposalId][i]}(
+                proposalTargets[_proposalId][i],
+                proposalValues[_proposalId][i],
+                proposalSignatures[_proposalId][i],
+                proposalCalldatas[_proposalId][i],
+                _proposal.eta
             );
         }
-        emit ProposalExecuted(proposalId);
+        emit ProposalExecuted(_proposalId);
     }
 
     /**
      * @notice Cancels a proposal only if sender is the proposer, or proposer delegates dropped below proposal threshold
-     * @param proposalId The id of the proposal to cancel
+     * @param _proposalId The id of the proposal to cancel
      */
-    function cancel(uint256 proposalId) external {
+    function cancel(uint256 _proposalId) external {
         require(
-            state(proposalId) != ProposalState.Executed,
+            state(_proposalId) != ProposalState.Executed,
             "IPCT::cancel: cannot cancel executed proposal"
         );
 
-        Proposal storage proposal = proposals[proposalId];
+        Proposal storage _proposal = proposals[_proposalId];
         require(
-            msg.sender == proposal.proposer ||
-                getPriorVotes(proposal.proposer, sub256(block.number, 1)) < proposalThreshold,
+            msg.sender == _proposal.proposer ||
+                getPriorVotes(_proposal.proposer, sub256(block.number, 1)) < proposalThreshold,
             "IPCT::cancel: proposer above threshold"
         );
 
-        proposal.canceled = true;
-        for (uint256 i = 0; i < proposalTargets[proposalId].length; i++) {
+        _proposal.canceled = true;
+        for (uint256 i = 0; i < proposalTargets[_proposalId].length; i++) {
             timelock.cancelTransaction(
-                proposalTargets[proposalId][i],
-                proposalValues[proposalId][i],
-                proposalSignatures[proposalId][i],
-                proposalCalldatas[proposalId][i],
-                proposal.eta
+                proposalTargets[_proposalId][i],
+                proposalValues[_proposalId][i],
+                proposalSignatures[_proposalId][i],
+                proposalCalldatas[_proposalId][i],
+                _proposal.eta
             );
         }
 
-        emit ProposalCanceled(proposalId);
+        emit ProposalCanceled(_proposalId);
     }
 
     /**
      * @notice Gets actions of a proposal.
-     * @param proposalId Proposal to query.
+     * @param _proposalId Proposal to query.
      * @return targets Target addresses for proposal calls.
      * @return values Eth values for proposal calls.
      * @return signatures Function signatures for proposal calls.
      * @return calldatas Calldatas for proposal calls.
      */
-    function getActions(uint256 proposalId)
+    function getActions(uint256 _proposalId)
         external
         view
         returns (
@@ -317,45 +324,51 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
         )
     {
         return (
-            proposalTargets[proposalId],
-            proposalValues[proposalId],
-            proposalSignatures[proposalId],
-            proposalCalldatas[proposalId]
+            proposalTargets[_proposalId],
+            proposalValues[_proposalId],
+            proposalSignatures[_proposalId],
+            proposalCalldatas[_proposalId]
         );
     }
 
     /**
      * @notice Gets the receipt for a voter on a given proposal
-     * @param proposalId the id of proposal
-     * @param voter The address of the voter
+     * @param _proposalId the id of proposal
+     * @param _voter The address of the voter
      * @return The voting receipt
      */
-    function getReceipt(uint256 proposalId, address voter) external view returns (Receipt memory) {
-        return proposalReceipts[proposalId][voter];
+    function getReceipt(uint256 _proposalId, address _voter)
+        external
+        view
+        returns (Receipt memory)
+    {
+        return proposalReceipts[_proposalId][_voter];
     }
 
     /**
      * @notice Gets the state of a proposal
-     * @param proposalId The id of the proposal
+     * @param _proposalId The id of the proposal
      * @return Proposal state
      */
-    function state(uint256 proposalId) public view returns (ProposalState) {
-        require(proposalCount > proposalId, "IPCT::state: invalid proposal id");
-        Proposal storage proposal = proposals[proposalId];
+    function state(uint256 _proposalId) public view returns (ProposalState) {
+        require(proposalCount > _proposalId, "IPCT::state: invalid proposal id");
+        Proposal storage _proposal = proposals[_proposalId];
 
-        if (proposal.canceled) {
+        if (_proposal.canceled) {
             return ProposalState.Canceled;
-        } else if (block.number <= proposal.startBlock) {
+        } else if (block.number <= _proposal.startBlock) {
             return ProposalState.Pending;
-        } else if (block.number <= proposal.endBlock) {
+        } else if (block.number <= _proposal.endBlock) {
             return ProposalState.Active;
-        } else if (proposal.forVotes <= proposal.againstVotes || proposal.forVotes < quorumVotes) {
+        } else if (
+            _proposal.forVotes <= _proposal.againstVotes || _proposal.forVotes < quorumVotes
+        ) {
             return ProposalState.Defeated;
-        } else if (proposal.eta == 0) {
+        } else if (_proposal.eta == 0) {
             return ProposalState.Succeeded;
-        } else if (proposal.executed) {
+        } else if (_proposal.executed) {
             return ProposalState.Executed;
-        } else if (block.timestamp >= add256(proposal.eta, timelock.GRACE_PERIOD())) {
+        } else if (block.timestamp >= add256(_proposal.eta, timelock.GRACE_PERIOD())) {
             return ProposalState.Expired;
         } else {
             return ProposalState.Queued;
@@ -364,36 +377,36 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
 
     /**
      * @notice Cast a vote for a proposal
-     * @param proposalId The id of the proposal to vote on
-     * @param support The support value for the vote. 0=against, 1=for, 2=abstain
+     * @param _proposalId The id of the proposal to vote on
+     * @param _support The support value for the vote. 0=against, 1=for, 2=abstain
      */
-    function castVote(uint256 proposalId, uint8 support) external {
+    function castVote(uint256 _proposalId, uint8 _support) external {
         emit VoteCast(
             msg.sender,
-            proposalId,
-            support,
-            castVoteInternal(msg.sender, proposalId, support),
+            _proposalId,
+            _support,
+            castVoteInternal(msg.sender, _proposalId, _support),
             ""
         );
     }
 
     /**
      * @notice Cast a vote for a proposal with a reason
-     * @param proposalId The id of the proposal to vote on
-     * @param support The support value for the vote. 0=against, 1=for, 2=abstain
-     * @param reason The reason given for the vote by the voter
+     * @param _proposalId The id of the proposal to vote on
+     * @param _support The support value for the vote. 0=against, 1=for, 2=abstain
+     * @param _reason The reason given for the vote by the voter
      */
     function castVoteWithReason(
-        uint256 proposalId,
-        uint8 support,
-        string calldata reason
+        uint256 _proposalId,
+        uint8 _support,
+        string calldata _reason
     ) external {
         emit VoteCast(
             msg.sender,
-            proposalId,
-            support,
-            castVoteInternal(msg.sender, proposalId, support),
-            reason
+            _proposalId,
+            _support,
+            castVoteInternal(msg.sender, _proposalId, _support),
+            _reason
         );
     }
 
@@ -402,204 +415,188 @@ contract IPCTDelegate is IPCTDelegateStorageV1, IPCTEvents, Initializable {
      * @dev External function that accepts EIP-712 signatures for voting on proposals.
      */
     function castVoteBySig(
-        uint256 proposalId,
-        uint8 support,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
+        uint256 _proposalId,
+        uint8 _support,
+        uint8 _v,
+        bytes32 _r,
+        bytes32 _s
     ) external {
-        bytes32 domainSeparator = keccak256(
+        require(_v == 27 || _v == 28, "IPCT::castVoteBySig: invalid v value");
+        require(
+            _s < 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A1,
+            "IPCT::castVoteBySig: invalid s value"
+        );
+        bytes32 _domainSeparator = keccak256(
             abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(NAME)), getChainIdInternal(), address(this))
         );
-        bytes32 structHash = keccak256(abi.encode(BALLOT_TYPEHASH, proposalId, support));
-        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
-        address signatory = ecrecover(digest, v, r, s);
-        require(signatory != address(0), "IPCT::castVoteBySig: invalid signature");
+        bytes32 _structHash = keccak256(abi.encode(BALLOT_TYPEHASH, _proposalId, _support));
+        bytes32 _digest = keccak256(abi.encodePacked("\x19\x01", _domainSeparator, _structHash));
+        address _signatory = ecrecover(_digest, _v, _r, _s);
+        require(_signatory != address(0), "IPCT::castVoteBySig: invalid signature");
         emit VoteCast(
-            signatory,
-            proposalId,
-            support,
-            castVoteInternal(signatory, proposalId, support),
+            _signatory,
+            _proposalId,
+            _support,
+            castVoteInternal(_signatory, _proposalId, _support),
             ""
         );
     }
 
     /**
      * @notice Internal function that caries out voting logic
-     * @param voter The voter that is casting their vote
-     * @param proposalId The id of the proposal to vote on
-     * @param support The support value for the vote. 0=against, 1=for, 2=abstain
+     * @param _voter The voter that is casting their vote
+     * @param _proposalId The id of the proposal to vote on
+     * @param _support The support value for the vote. 0=against, 1=for, 2=abstain
      * @return The number of votes cast
      */
     function castVoteInternal(
-        address voter,
-        uint256 proposalId,
-        uint8 support
+        address _voter,
+        uint256 _proposalId,
+        uint8 _support
     ) internal returns (uint96) {
         require(
-            state(proposalId) == ProposalState.Active,
+            state(_proposalId) == ProposalState.Active,
             "IPCT::castVoteInternal: voting is closed"
         );
-        require(support <= 2, "IPCT::castVoteInternal: invalid vote type");
-        Proposal storage proposal = proposals[proposalId];
-        Receipt storage receipt = proposalReceipts[proposalId][voter];
-        require(receipt.hasVoted == false, "IPCT::castVoteInternal: voter already voted");
-        uint96 votes = getPriorVotes(voter, proposal.startBlock);
+        require(_support <= 2, "IPCT::castVoteInternal: invalid vote type");
+        Proposal storage _proposal = proposals[_proposalId];
+        Receipt storage _receipt = proposalReceipts[_proposalId][_voter];
+        require(_receipt.hasVoted == false, "IPCT::castVoteInternal: voter already voted");
+        uint96 _votes = getPriorVotes(_voter, _proposal.startBlock);
 
-        if (support == 0) {
-            proposal.againstVotes = add256(proposal.againstVotes, votes);
-        } else if (support == 1) {
-            proposal.forVotes = add256(proposal.forVotes, votes);
-        } else if (support == 2) {
-            proposal.abstainVotes = add256(proposal.abstainVotes, votes);
+        if (_support == 0) {
+            _proposal.againstVotes = add256(_proposal.againstVotes, _votes);
+        } else if (_support == 1) {
+            _proposal.forVotes = add256(_proposal.forVotes, _votes);
+        } else if (_support == 2) {
+            _proposal.abstainVotes = add256(_proposal.abstainVotes, _votes);
         }
 
-        receipt.hasVoted = true;
-        receipt.support = support;
-        receipt.votes = votes;
+        _receipt.hasVoted = true;
+        _receipt.support = _support;
+        _receipt.votes = _votes;
 
-        return votes;
+        return _votes;
     }
 
     /**
-     * @notice Admin function for setting the voting delay
-     * @param newVotingDelay new voting delay, in blocks
+     * @notice Owner function for setting the voting delay
+     * @param _newVotingDelay new voting delay, in blocks
      */
-    function _setVotingDelay(uint256 newVotingDelay) external virtual adminOnly {
+    function _setVotingDelay(uint256 _newVotingDelay) external virtual onlyOwner {
         require(
-            newVotingDelay >= MIN_VOTING_DELAY && newVotingDelay <= MAX_VOTING_DELAY,
+            _newVotingDelay >= MIN_VOTING_DELAY && _newVotingDelay <= MAX_VOTING_DELAY,
             "IPCT::_setVotingDelay: invalid voting delay"
         );
-        uint256 oldVotingDelay = votingDelay;
-        votingDelay = newVotingDelay;
+        uint256 _oldVotingDelay = votingDelay;
+        votingDelay = _newVotingDelay;
 
-        emit VotingDelaySet(oldVotingDelay, newVotingDelay);
+        emit VotingDelaySet(_oldVotingDelay, _newVotingDelay);
     }
 
     /**
-     * @notice Admin function for setting the quorum votes
-     * @param newQuorumVotes new quorum votes
+     * @notice Owner function for setting the quorum votes
+     * @param _newQuorumVotes new quorum votes
      */
-    function _setQuorumVotes(uint256 newQuorumVotes) external adminOnly {
-        require(newQuorumVotes >= proposalThreshold, "IPCT::_setQuorumVotes: invalid quorum votes");
-
-        uint256 oldQuorumVotes = votingDelay;
-        quorumVotes = newQuorumVotes;
-
-        emit QuorumVotesSet(oldQuorumVotes, newQuorumVotes);
-    }
-
-    /**
-     * @notice Admin function for setting the voting period
-     * @param newVotingPeriod new voting period, in blocks
-     */
-    function _setVotingPeriod(uint256 newVotingPeriod) external virtual adminOnly {
+    function _setQuorumVotes(uint256 _newQuorumVotes) external onlyOwner {
         require(
-            newVotingPeriod >= MIN_VOTING_PERIOD && newVotingPeriod <= MAX_VOTING_PERIOD,
+            _newQuorumVotes >= proposalThreshold,
+            "IPCT::_setQuorumVotes: invalid quorum votes"
+        );
+
+        uint256 _oldQuorumVotes = votingDelay;
+        quorumVotes = _newQuorumVotes;
+
+        emit QuorumVotesSet(_oldQuorumVotes, _newQuorumVotes);
+    }
+
+    /**
+     * @notice Owner function for setting the voting period
+     * @param _newVotingPeriod new voting period, in blocks
+     */
+    function _setVotingPeriod(uint256 _newVotingPeriod) external virtual onlyOwner {
+        require(
+            _newVotingPeriod >= MIN_VOTING_PERIOD && _newVotingPeriod <= MAX_VOTING_PERIOD,
             "IPCT::_setVotingPeriod: invalid voting period"
         );
-        uint256 oldVotingPeriod = votingPeriod;
-        votingPeriod = newVotingPeriod;
+        uint256 _oldVotingPeriod = votingPeriod;
+        votingPeriod = _newVotingPeriod;
 
-        emit VotingPeriodSet(oldVotingPeriod, newVotingPeriod);
+        emit VotingPeriodSet(_oldVotingPeriod, _newVotingPeriod);
     }
 
     /**
-     * @notice Admin function for setting the proposal threshold
-     * @dev newProposalThreshold must be greater than the hardcoded min
-     * @param newProposalThreshold new proposal threshold
+     * @notice Owner function for setting the proposal threshold
+     * @dev _newProposalThreshold must be greater than the hardcoded min
+     * @param _newProposalThreshold new proposal threshold
      */
-    function _setProposalThreshold(uint256 newProposalThreshold) external adminOnly {
+    function _setProposalThreshold(uint256 _newProposalThreshold) external onlyOwner {
         require(
-            newProposalThreshold >= MIN_PROPOSAL_THRESHOLD &&
-                newProposalThreshold <= MAX_PROPOSAL_THRESHOLD,
+            _newProposalThreshold >= MIN_PROPOSAL_THRESHOLD &&
+                _newProposalThreshold <= MAX_PROPOSAL_THRESHOLD,
             "IPCT::_setProposalThreshold: invalid proposal threshold"
         );
-        uint256 oldProposalThreshold = proposalThreshold;
-        proposalThreshold = newProposalThreshold;
+        uint256 _oldProposalThreshold = proposalThreshold;
+        proposalThreshold = _newProposalThreshold;
 
-        emit ProposalThresholdSet(oldProposalThreshold, newProposalThreshold);
+        emit ProposalThresholdSet(_oldProposalThreshold, _newProposalThreshold);
     }
 
     /**
-     * @notice Begins transfer of admin rights. The newPendingAdmin must call `_acceptAdmin` to finalize the transfer.
-     * @dev Admin function to begin change of admin. The newPendingAdmin must call `_acceptAdmin` to finalize the transfer.
-     * @param newPendingAdmin New pending admin.
+     * @notice Transfers an amount of an ERC20 from this contract to an address
+     *
+     * @param _token address of the ERC20 token
+     * @param _to address of the receiver
+     * @param _amount amount of the transaction
      */
-    function _setPendingAdmin(address newPendingAdmin) external adminOnly {
-        // Save current value, if any, for inclusion in log
-        address oldPendingAdmin = pendingAdmin;
+    function transfer(
+        IERC20 _token,
+        address _to,
+        uint256 _amount
+    ) external onlyOwner nonReentrant {
+        _token.safeTransfer(_to, _amount);
 
-        // Store pendingAdmin with value newPendingAdmin
-        pendingAdmin = newPendingAdmin;
-
-        // Emit NewPendingAdmin(oldPendingAdmin, newPendingAdmin)
-        emit NewPendingAdmin(oldPendingAdmin, newPendingAdmin);
+        emit TransferERC20(address(_token), _to, _amount);
     }
 
-    /**
-     * @notice Accepts transfer of admin rights. msg.sender must be pendingAdmin
-     * @dev Admin function for pending admin to accept role and update admin
-     */
-    function _acceptAdmin() external {
-        // Check caller is pendingAdmin and pendingAdmin ≠ address(0)
-        require(
-            msg.sender == pendingAdmin && msg.sender != address(0),
-            "IPCT:_acceptAdmin: pending admin only"
-        );
-
-        // Save current values for inclusion in log
-        address oldAdmin = admin;
-        address oldPendingAdmin = pendingAdmin;
-
-        // Store admin with value pendingAdmin
-        admin = pendingAdmin;
-
-        // Clear the pending value
-        pendingAdmin = address(0);
-
-        emit NewAdmin(oldAdmin, admin);
-        emit NewPendingAdmin(oldPendingAdmin, address(0));
+    function add256(uint256 _a, uint256 _b) internal pure returns (uint256) {
+        uint256 _c = _a + _b;
+        require(_c >= _a, "addition overflow");
+        return _c;
     }
 
-    function add256(uint256 a, uint256 b) internal pure returns (uint256) {
-        uint256 c = a + b;
-        require(c >= a, "addition overflow");
-        return c;
-    }
-
-    function sub256(uint256 a, uint256 b) internal pure returns (uint256) {
-        require(b <= a, "subtraction underflow");
-        return a - b;
+    function sub256(uint256 _a, uint256 _b) internal pure returns (uint256) {
+        require(_b <= _a, "subtraction underflow");
+        return _a - _b;
     }
 
     function getChainIdInternal() internal view returns (uint256) {
-        uint256 chainId;
+        uint256 _chainId;
         assembly {
-            chainId := chainid()
+            _chainId := chainid()
         }
-        return chainId;
+        return _chainId;
     }
 
-    function getPriorVotes(address voter, uint256 beforeBlock) internal view returns (uint96) {
+    function getPriorVotes(address _voter, uint256 _beforeBlock) internal view returns (uint96) {
         if (address(releaseToken) == address(0)) {
-            return token.getPriorVotes(voter, beforeBlock);
+            return token.getPriorVotes(_voter, _beforeBlock);
         }
         return
             add96(
-                token.getPriorVotes(voter, beforeBlock),
-                releaseToken.getPriorVotes(voter, beforeBlock),
+                token.getPriorVotes(_voter, _beforeBlock),
+                releaseToken.getPriorVotes(_voter, _beforeBlock),
                 "getPriorVotes overflow"
             );
     }
 
     function add96(
-        uint96 a,
-        uint96 b,
-        string memory errorMessage
+        uint96 _a,
+        uint96 _b,
+        string memory _errorMessage
     ) internal pure returns (uint96) {
-        uint96 c = a + b;
-        require(c >= a, errorMessage);
-        return c;
+        uint96 _c = _a + _b;
+        require(_c >= _a, _errorMessage);
+        return _c;
     }
 }

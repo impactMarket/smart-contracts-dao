@@ -18,8 +18,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// const ownerAddress = deployer.address; //dev
 	const cUSDAddress = getCUSDAddress();
 
-	await new Promise((resolve) => setTimeout(resolve, 6000));
-
 	const communityAdminImplementationResult = await deploy(
 		"CommunityAdminImplementation",
 		{
@@ -42,12 +40,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		// gasLimit: 13000000,
 	});
 
+	await new Promise((resolve) => setTimeout(resolve, 6000));
+
 	const CommunityAdminContract = await ethers.getContractAt(
 		"CommunityAdminImplementation",
 		communityAdminProxyResult.address
 	);
-
-	await new Promise((resolve) => setTimeout(resolve, 6000));
 
 	const communityResult = await deploy("Community", {
 		from: deployer.address,
@@ -56,10 +54,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		// gasLimit: 13000000,
 	});
 
+	await new Promise((resolve) => setTimeout(resolve, 6000));
+
 	await CommunityAdminContract.initialize(
 		communityResult.address,
 		cUSDAddress
 	);
+
+	await new Promise((resolve) => setTimeout(resolve, 6000));
 
 	const Treasury = await deployments.get("TreasuryProxy");
 
@@ -70,12 +72,16 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	await CommunityAdminContract.updateTreasury(Treasury.address);
 
+	await new Promise((resolve) => setTimeout(resolve, 6000));
+
 	await TreasuryContract.updateCommunityAdmin(
 		communityAdminProxyResult.address
 	);
 
 	await CommunityAdminContract.transferOwnership(ownerAddress);
+	await new Promise((resolve) => setTimeout(resolve, 6000));
 	await TreasuryContract.transferOwnership(ownerAddress);
+	await new Promise((resolve) => setTimeout(resolve, 6000));
 };
 
 func.dependencies = [
