@@ -6,7 +6,8 @@ import chaiAsPromised from "chai-as-promised";
 import { deployments, ethers, getNamedAccounts } from "hardhat";
 import {
 	advanceBlockNTimes,
-	advanceTimeAndBlockNTimes, advanceToBlockN,
+	advanceTimeAndBlockNTimes,
+	advanceToBlockN,
 } from "../utils/TimeTravel";
 import { parseEther, formatEther } from "@ethersproject/units";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
@@ -27,7 +28,6 @@ let ImpactProxyAdmin: ethersTypes.Contract;
 let DonationMiner: ethersTypes.Contract;
 let PACT: ethersTypes.Contract;
 let ImpactLabsVesting: ethersTypes.Contract;
-let ImpactLabsVestingImplementation: ethersTypes.Contract;
 let cUSD: ethersTypes.Contract;
 
 const deploy = deployments.createFixture(async () => {
@@ -83,9 +83,7 @@ describe("Impact Labs Vesting", () => {
 	it("Should transfer PACTs on initialization", async function () {
 		await advanceBlockNTimes(STARTING_DELAY);
 
-		expect(await PACT.balanceOf(owner.address)).to.be.equal(
-			INITIAL_REWARD
-		);
+		expect(await PACT.balanceOf(owner.address)).to.be.equal(INITIAL_REWARD);
 		expect(await ImpactLabsVesting.advancePayment()).to.be.equal(
 			INITIAL_REWARD
 		);
@@ -94,9 +92,7 @@ describe("Impact Labs Vesting", () => {
 
 		await ImpactLabsVesting.claim();
 
-		expect(await PACT.balanceOf(owner.address)).to.be.equal(
-			INITIAL_REWARD
-		);
+		expect(await PACT.balanceOf(owner.address)).to.be.equal(INITIAL_REWARD);
 		expect(await ImpactLabsVesting.advancePayment()).to.be.equal(
 			parseEther("96760001")
 		);
@@ -105,9 +101,7 @@ describe("Impact Labs Vesting", () => {
 	it("Should get more PACTs after delay", async function () {
 		await advanceBlockNTimes(STARTING_DELAY);
 
-		expect(await PACT.balanceOf(owner.address)).to.be.equal(
-			INITIAL_REWARD
-		);
+		expect(await PACT.balanceOf(owner.address)).to.be.equal(INITIAL_REWARD);
 		expect(await ImpactLabsVesting.advancePayment()).to.be.equal(
 			INITIAL_REWARD
 		);
@@ -116,9 +110,7 @@ describe("Impact Labs Vesting", () => {
 		await cUSD.connect(donor1).approve(DonationMiner.address, 1);
 		await DonationMiner.connect(donor1).donate(1);
 		await ImpactLabsVesting.claim();
-		expect(await PACT.balanceOf(owner.address)).to.be.equal(
-			INITIAL_REWARD
-		);
+		expect(await PACT.balanceOf(owner.address)).to.be.equal(INITIAL_REWARD);
 		expect(await ImpactLabsVesting.advancePayment()).to.be.equal(
 			parseEther("67759621.560660818850391700")
 		);
@@ -127,9 +119,7 @@ describe("Impact Labs Vesting", () => {
 		await cUSD.connect(donor1).approve(DonationMiner.address, 1);
 		await DonationMiner.connect(donor1).donate(1);
 		await ImpactLabsVesting.claim();
-		expect(await PACT.balanceOf(owner.address)).to.be.equal(
-			INITIAL_REWARD
-		);
+		expect(await PACT.balanceOf(owner.address)).to.be.equal(INITIAL_REWARD);
 		expect(await ImpactLabsVesting.advancePayment()).to.be.equal(
 			parseEther("35871497.488265784597291605")
 		);
@@ -138,9 +128,7 @@ describe("Impact Labs Vesting", () => {
 		await cUSD.connect(donor1).approve(DonationMiner.address, 1);
 		await DonationMiner.connect(donor1).donate(1);
 		await ImpactLabsVesting.claim();
-		expect(await PACT.balanceOf(owner.address)).to.be.equal(
-			INITIAL_REWARD
-		);
+		expect(await PACT.balanceOf(owner.address)).to.be.equal(INITIAL_REWARD);
 		expect(await ImpactLabsVesting.advancePayment()).to.be.equal(
 			parseEther("1196823.780236024210611910")
 		);
@@ -184,7 +172,7 @@ describe("Impact Labs Vesting", () => {
 		expect(balance).to.equal(parseEther(rewardExpected));
 	}
 
-	it("Should donate and claim 9 years, one donor", async function () {
+	xit("Should donate and claim 9 years, one donor", async function () {
 		DonationMiner.updateRewardPeriodParams(1, "998902", "1000000");
 		DonationMiner.updateFirstRewardPeriodParams(100, parseEther("4320000"));
 
