@@ -24,6 +24,7 @@ export default {
     hardhat: {
       hardfork: "istanbul",
       allowUnlimitedContractSize: true,
+      timeout: 100000,
       gasPrice: "auto",
 			gas: 13000000,
     },
@@ -67,7 +68,15 @@ export default {
       blockGasLimit: 13000000,  
     }
   },
-  solidity: "0.8.5",
+  solidity: { 
+    version: "0.8.4",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200
+      }
+    }
+  },
   namedAccounts: {
     deployer: {
       default: 0

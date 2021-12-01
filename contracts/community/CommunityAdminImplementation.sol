@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.5;
+pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
@@ -19,21 +19,21 @@ import "../token/interfaces/ITreasury.sol";
  * remove communities
  */
 contract CommunityAdminImplementation is
-    CommunityAdminStorageV1,
     Initializable,
     OwnableUpgradeable,
-    ReentrancyGuardUpgradeable
+    ReentrancyGuardUpgradeable,
+    CommunityAdminStorageV1
 {
-    uint256 public constant VERSION = 1;
-
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
+
+    uint256 private constant DEFAULT_AMOUNT = 5e16;
 
     /**
      * @notice Triggered when a community has been added
      *
      * @param communityAddress  Address of the community that has been added
-     * @param firstManager      Address of the first manager
+     * @param managers          Addresses of the initial managers
      * @param claimAmount       Value of the claimAmount
      * @param maxClaim          Value of the maxClaim
      * @param decreaseStep      Value of the decreaseStep
@@ -47,7 +47,7 @@ contract CommunityAdminImplementation is
      */
     event CommunityAdded(
         address indexed communityAddress,
-        address indexed firstManager,
+        address[] managers,
         uint256 claimAmount,
         uint256 maxClaim,
         uint256 decreaseStep,
@@ -67,12 +67,12 @@ contract CommunityAdminImplementation is
     /**
      * @notice Triggered when a community has been migrated
      *
-     * @param firstManager             Address of the new community's first manager
+     * @param managers                 Addresses of the new community's initial managers
      * @param communityAddress         New community address
      * @param previousCommunityAddress Old community address
      */
     event CommunityMigrated(
-        address indexed firstManager,
+        address[] managers,
         address indexed communityAddress,
         address indexed previousCommunityAddress
     );
@@ -117,62 +117,42 @@ contract CommunityAdminImplementation is
      * @notice Enforces sender to be a valid community
      */
     modifier onlyCommunities() {
-        require(_communities[msg.sender] == CommunityState.Valid, "CommunityAdmin: NOT_COMMUNITY");
+        require(communities[msg.sender] == CommunityState.Valid, "CommunityAdmin: NOT_COMMUNITY");
         _;
     }
 
     /**
      * @notice Used to initialize a new CommunityAdmin contract
      *
-     * @param communityTemplate_    Address of the Community implementation
+     * @param _communityTemplate    Address of the Community implementation
      *                              used for deploying new communities
-     * @param cUSD_                 Address of the cUSD token
+     * @param _cUSD                 Address of the cUSD token
      */
-    function initialize(ICommunity communityTemplate_, IERC20 cUSD_) external override initializer {
+    function initialize(ICommunity _communityTemplate, IERC20 _cUSD) external initializer {
         __Ownable_init();
+        __ReentrancyGuard_init();
 
-        _communityTemplate = communityTemplate_;
-        _cUSD = cUSD_;
+        communityTemplate = _communityTemplate;
+        cUSD = _cUSD;
 
-        _communityProxyAdmin = new ProxyAdmin();
+        communityProxyAdmin = new ProxyAdmin();
     }
 
     /**
-     * @notice Returns the cUsd contract address
+     * @notice Returns the current implementation version
      */
-    function cUSD() external view override returns (IERC20) {
-        return _cUSD;
+    function getVersion() external pure override returns (uint256) {
+        return 1;
     }
 
     /**
-     * @notice Returns the CommunityAdmin contract address
-     */
-    function treasury() external view override returns (ITreasury) {
-        return _treasury;
-    }
-
-    /**
-     * @notice Returns the state of a community
+     * @notice Returns the address of a community from communityList
      *
-     * @param communityAddress_ address of the community
-     */
-    function communities(address communityAddress_)
-        external
-        view
-        override
-        returns (CommunityState)
-    {
-        return _communities[communityAddress_];
-    }
-
-    /**
-     * @notice Returns the address of a community from _communityList
-     *
-     * @param index index of the community
+     * @param _index index of the community
      * @return address of the community
      */
-    function communityList(uint256 index) external view override returns (address) {
-        return _communityList.at(index);
+    function communityListAt(uint256 _index) external view override returns (address) {
+        return communityList.at(_index);
     }
 
     /**
@@ -181,398 +161,384 @@ contract CommunityAdminImplementation is
      * @return uint256 number of communities
      */
     function communityListLength() external view override returns (uint256) {
-        return _communityList.length();
+        return communityList.length();
     }
 
     /**
      * @notice Updates the address of the treasury
      *
-     * @param newTreasury_ address of the new treasury contract
+     * @param _newTreasury address of the new treasury contract
      */
-    function updateTreasury(ITreasury newTreasury_) external override onlyOwner {
-        address oldTreasuryAddress = address(_treasury);
-        _treasury = newTreasury_;
+    function updateTreasury(ITreasury _newTreasury) external override onlyOwner {
+        address oldTreasuryAddress = address(treasury);
+        treasury = _newTreasury;
 
-        emit TreasuryUpdated(oldTreasuryAddress, address(_treasury));
+        emit TreasuryUpdated(oldTreasuryAddress, address(_newTreasury));
     }
 
     /**
      * @notice Updates the address of the the communityTemplate
      *
-     * @param newCommunityTemplate address of the new communityTemplate contract
+     * @param _newCommunityTemplate address of the new communityTemplate contract
      */
-    function updateCommunityTemplate(ICommunity newCommunityTemplate) external override onlyOwner {
-        address oldCommunityTemplateAddress = address(newCommunityTemplate);
-        _communityTemplate = newCommunityTemplate;
+    function updateCommunityTemplate(ICommunity _newCommunityTemplate) external override onlyOwner {
+        address _oldCommunityTemplateAddress = address(communityTemplate);
+        communityTemplate = _newCommunityTemplate;
 
-        emit CommunityTemplateUpdated(oldCommunityTemplateAddress, address(newCommunityTemplate));
+        emit CommunityTemplateUpdated(_oldCommunityTemplateAddress, address(_newCommunityTemplate));
     }
 
     /**
      * @notice Adds a new community
      *
-     * @param firstManager_ address of the community first manager. Will be able to add others
-     * @param claimAmount_ base amount to be claim by the beneficiary
-     * @param maxClaim_ limit that a beneficiary can claim at in total
-     * @param decreaseStep_ value decreased from maxClaim for every beneficiary added
-     * @param baseInterval_ base interval to start claiming
-     * @param incrementInterval_ increment interval used in each claim
-     * @param minTranche_ minimum amount that the community will receive when requesting funds
-     * @param maxTranche_ maximum amount that the community will receive when requesting funds
-     * @param managerBlockList_    Addresses of managers that have to not be managers
+     * @param _managers addresses of the community managers
+     * @param _claimAmount base amount to be claim by the beneficiary
+     * @param _maxClaim limit that a beneficiary can claim at in total
+     * @param _decreaseStep value decreased from maxClaim for every beneficiary added
+     * @param _baseInterval base interval to start claiming
+     * @param _incrementInterval increment interval used in each claim
+     * @param _minTranche minimum amount that the community will receive when requesting funds
+     * @param _maxTranche maximum amount that the community will receive when requesting funds
      */
     function addCommunity(
-        address firstManager_,
-        uint256 claimAmount_,
-        uint256 maxClaim_,
-        uint256 decreaseStep_,
-        uint256 baseInterval_,
-        uint256 incrementInterval_,
-        uint256 minTranche_,
-        uint256 maxTranche_,
-        address[] memory managerBlockList_
+        address[] memory _managers,
+        uint256 _claimAmount,
+        uint256 _maxClaim,
+        uint256 _decreaseStep,
+        uint256 _baseInterval,
+        uint256 _incrementInterval,
+        uint256 _minTranche,
+        uint256 _maxTranche
     ) external override onlyOwner {
-        address communityAddress = deployCommunity(
-            firstManager_,
-            claimAmount_,
-            maxClaim_,
-            decreaseStep_,
-            baseInterval_,
-            incrementInterval_,
-            minTranche_,
-            maxTranche_,
-            ICommunity(address(0)),
-            managerBlockList_
+        address _communityAddress = deployCommunity(
+            _managers,
+            _claimAmount,
+            _maxClaim,
+            _decreaseStep,
+            _baseInterval,
+            _incrementInterval,
+            _minTranche,
+            _maxTranche,
+            ICommunity(address(0))
         );
-        require(communityAddress != address(0), "CommunityAdmin::addCommunity: NOT_VALID");
-        _communities[communityAddress] = CommunityState.Valid;
-        _communityList.add(communityAddress);
+        require(_communityAddress != address(0), "CommunityAdmin::addCommunity: NOT_VALID");
+        communities[_communityAddress] = CommunityState.Valid;
+        communityList.add(_communityAddress);
 
         emit CommunityAdded(
-            communityAddress,
-            firstManager_,
-            claimAmount_,
-            maxClaim_,
-            decreaseStep_,
-            baseInterval_,
-            incrementInterval_,
-            minTranche_,
-            maxTranche_
+            _communityAddress,
+            _managers,
+            _claimAmount,
+            _maxClaim,
+            _decreaseStep,
+            _baseInterval,
+            _incrementInterval,
+            _minTranche,
+            _maxTranche
         );
 
-        transferToCommunity(ICommunity(communityAddress), minTranche_);
+        transferToCommunity(ICommunity(_communityAddress), _minTranche);
+        treasury.transfer(cUSD, address(_managers[0]), DEFAULT_AMOUNT);
     }
 
     /**
      * @notice Migrates a community by deploying a new contract.
      *
-     * @param firstManager_ address of the community first manager. Will be able to add others
-     * @param previousCommunity_ address of the community to be migrated
-     * @param managerBlockList_ addresses of managers that have to not be managers
+     * @param _managers address of the community managers
+     * @param _previousCommunity address of the community to be migrated
      */
-    function migrateCommunity(
-        address firstManager_,
-        ICommunity previousCommunity_,
-        address[] memory managerBlockList_
-    ) external override onlyOwner nonReentrant {
-        _communities[address(previousCommunity_)] = CommunityState.Removed;
+    function migrateCommunity(address[] memory _managers, ICommunity _previousCommunity)
+        external
+        override
+        onlyOwner
+        nonReentrant
+    {
         require(
-            address(previousCommunity_) != address(0),
-            "CommunityAdmin::migrateCommunity: NOT_VALID"
+            communities[address(_previousCommunity)] != CommunityState.Migrated,
+            "CommunityAdmin::migrateCommunity: this community has been migrated"
         );
 
-        bool isCommunityNew = isCommunityNewType(previousCommunity_);
+        communities[address(_previousCommunity)] = CommunityState.Migrated;
 
-        uint256 maxClaim = isCommunityNew
-            ? previousCommunity_.getInitialMaxClaim()
-            : previousCommunity_.maxClaim();
+        bool _isCommunityNew = isCommunityNewType(_previousCommunity);
 
-        ICommunity community = ICommunity(
-            deployCommunity(
-                firstManager_,
-                previousCommunity_.claimAmount(),
-                maxClaim,
-                isCommunityNew ? previousCommunity_.decreaseStep() : 1e16,
-                isCommunityNew
-                    ? previousCommunity_.baseInterval()
-                    : (previousCommunity_.baseInterval() / 5),
-                isCommunityNew
-                    ? previousCommunity_.incrementInterval()
-                    : (previousCommunity_.incrementInterval() / 5),
-                isCommunityNew ? previousCommunity_.minTranche() : 1e16,
-                isCommunityNew ? previousCommunity_.maxTranche() : 5e18,
-                previousCommunity_,
-                managerBlockList_
-            )
-        );
-        require(address(community) != address(0), "CommunityAdmin::migrateCommunity: NOT_VALID");
-
-        if (isCommunityNew) {
-            uint256 balance = _cUSD.balanceOf(address(previousCommunity_));
-            previousCommunity_.transfer(_cUSD, address(community), balance);
+        address newCommunityAddress;
+        if (_isCommunityNew) {
+            newCommunityAddress = deployCommunity(
+                _managers,
+                _previousCommunity.claimAmount(),
+                _previousCommunity.getInitialMaxClaim(),
+                _previousCommunity.decreaseStep(),
+                _previousCommunity.baseInterval(),
+                _previousCommunity.incrementInterval(),
+                _previousCommunity.minTranche(),
+                _previousCommunity.maxTranche(),
+                _previousCommunity
+            );
+        } else {
+            newCommunityAddress = deployCommunity(
+                _managers,
+                _previousCommunity.claimAmount(),
+                _previousCommunity.maxClaim(),
+                1e16,
+                (_previousCommunity.baseInterval() / 5),
+                (_previousCommunity.incrementInterval() / 5),
+                1e16,
+                5e18,
+                _previousCommunity
+            );
         }
 
-        _communities[address(community)] = CommunityState.Valid;
-        _communityList.add(address(community));
+        require(newCommunityAddress != address(0), "CommunityAdmin::migrateCommunity: NOT_VALID");
 
-        emit CommunityMigrated(firstManager_, address(community), address(previousCommunity_));
-    }
+        if (_isCommunityNew) {
+            uint256 balance = cUSD.balanceOf(address(_previousCommunity));
+            _previousCommunity.transfer(cUSD, newCommunityAddress, balance);
+        }
 
-    /**
-     * @notice Adds addresses to community managerBlockList
-     *
-     * @param community_ address of the community
-     * @param managerBlockList_ addresses to be added in community managerBlockList
-     */
-    function addManagersToCommunityBlockList(
-        ICommunity community_,
-        address[] memory managerBlockList_
-    ) external override onlyOwner {
-        community_.addManagersToBlockList(managerBlockList_);
-    }
+        communities[newCommunityAddress] = CommunityState.Valid;
+        communityList.add(newCommunityAddress);
 
-    /**
-     * @notice Removes addresses from community managerBlockList
-     *
-     * @param community_ address of the community
-     * @param managerAllowList_ addresses to be removed from community managerBlockList
-     */
-    function removeManagersFromCommunityBlockList(
-        ICommunity community_,
-        address[] memory managerAllowList_
-    ) external override onlyOwner {
-        community_.removeManagersFromBlockList(managerAllowList_);
+        emit CommunityMigrated(_managers, newCommunityAddress, address(_previousCommunity));
     }
 
     /**
      * @notice Adds a new manager to a community
      *
-     * @param community_ address of the community
-     * @param account_ address to be added as community manager
+     * @param _community address of the community
+     * @param _account address to be added as community manager
      */
-    function addManagerToCommunity(ICommunity community_, address account_)
+    function addManagerToCommunity(ICommunity _community, address _account)
         external
         override
         onlyOwner
     {
-        community_.addManager(account_);
+        _community.addManager(_account);
     }
 
     /**
      * @notice Removes an existing community. All community funds are transferred to the treasury
      *
-     * @param community_ address of the community
+     * @param _community address of the community
      */
-    function removeCommunity(ICommunity community_) external override onlyOwner nonReentrant {
-        _communities[address(community_)] = CommunityState.Removed;
-        emit CommunityRemoved(address(community_));
-        community_.transfer(_cUSD, address(_treasury), _cUSD.balanceOf(address(community_)));
+    function removeCommunity(ICommunity _community) external override onlyOwner nonReentrant {
+        require(
+            communities[address(_community)] == CommunityState.Valid,
+            "CommunityAdmin::removeCommunity: this isn't a valid community"
+        );
+        communities[address(_community)] = CommunityState.Removed;
+
+        _community.transfer(cUSD, address(treasury), cUSD.balanceOf(address(_community)));
+        emit CommunityRemoved(address(_community));
     }
 
     /**
      * @dev Funds an existing community if it hasn't enough funds
      */
     function fundCommunity() external override onlyCommunities {
+        ICommunity _community = ICommunity(msg.sender);
+        uint256 _balance = cUSD.balanceOf(msg.sender);
         require(
-            _cUSD.balanceOf(msg.sender) <= ICommunity(msg.sender).minTranche(),
+            _balance < _community.minTranche(),
             "CommunityAdmin::fundCommunity: this community has enough funds"
         );
+
         uint256 trancheAmount = calculateCommunityTrancheAmount(ICommunity(msg.sender));
 
-        transferToCommunity(ICommunity(msg.sender), trancheAmount);
+        if (trancheAmount > _balance) {
+            transferToCommunity(_community, trancheAmount - _balance);
+        }
     }
 
     /**
      * @notice Transfers an amount of an ERC20 from this contract to an address
      *
-     * @param token_ address of the ERC20 token
-     * @param to_ address of the receiver
-     * @param amount_ amount of the transaction
+     * @param _token address of the ERC20 token
+     * @param _to address of the receiver
+     * @param _amount amount of the transaction
      */
     function transfer(
-        IERC20 token_,
-        address to_,
-        uint256 amount_
+        IERC20 _token,
+        address _to,
+        uint256 _amount
     ) external override onlyOwner nonReentrant {
-        token_.safeTransfer(to_, amount_);
+        _token.safeTransfer(_to, _amount);
 
-        emit TransferERC20(address(token_), to_, amount_);
+        emit TransferERC20(address(_token), _to, _amount);
     }
 
     /**
      * @notice Transfers an amount of an ERC20 from  community to an address
      *
-     * @param community_ address of the community
-     * @param token_ address of the ERC20 token
-     * @param to_ address of the receiver
-     * @param amount_ amount of the transaction
+     * @param _community address of the community
+     * @param _token address of the ERC20 token
+     * @param _to address of the receiver
+     * @param _amount amount of the transaction
      */
     function transferFromCommunity(
-        ICommunity community_,
-        IERC20 token_,
-        address to_,
-        uint256 amount_
+        ICommunity _community,
+        IERC20 _token,
+        address _to,
+        uint256 _amount
     ) external override onlyOwner nonReentrant {
-        community_.transfer(token_, to_, amount_);
+        _community.transfer(_token, _to, _amount);
     }
 
     /** @notice Updates the beneficiary params of a community
      *
-     * @param community_ address of the community
-     * @param claimAmount_  base amount to be claim by the beneficiary
-     * @param maxClaim_ limit that a beneficiary can claim  in total
-     * @param decreaseStep_ value decreased from maxClaim each time a is beneficiary added
-     * @param baseInterval_ base interval to start claiming
-     * @param incrementInterval_ increment interval used in each claim
+     * @param _community address of the community
+     * @param _claimAmount  base amount to be claim by the beneficiary
+     * @param _maxClaim limit that a beneficiary can claim  in total
+     * @param _decreaseStep value decreased from maxClaim each time a is beneficiary added
+     * @param _baseInterval base interval to start claiming
+     * @param _incrementInterval increment interval used in each claim
      */
     function updateBeneficiaryParams(
-        ICommunity community_,
-        uint256 claimAmount_,
-        uint256 maxClaim_,
-        uint256 decreaseStep_,
-        uint256 baseInterval_,
-        uint256 incrementInterval_
+        ICommunity _community,
+        uint256 _claimAmount,
+        uint256 _maxClaim,
+        uint256 _decreaseStep,
+        uint256 _baseInterval,
+        uint256 _incrementInterval
     ) external override onlyOwner {
-        community_.updateBeneficiaryParams(
-            claimAmount_,
-            maxClaim_,
-            decreaseStep_,
-            baseInterval_,
-            incrementInterval_
+        _community.updateBeneficiaryParams(
+            _claimAmount,
+            _maxClaim,
+            _decreaseStep,
+            _baseInterval,
+            _incrementInterval
         );
     }
 
     /** @notice Updates params of a community
      *
-     * @param community_ address of the community
-     * @param minTranche_ minimum amount that the community will receive when requesting funds
-     * @param maxTranche_ maximum amount that the community will receive when requesting funds
+     * @param _community address of the community
+     * @param _minTranche minimum amount that the community will receive when requesting funds
+     * @param _maxTranche maximum amount that the community will receive when requesting funds
      */
     function updateCommunityParams(
-        ICommunity community_,
-        uint256 minTranche_,
-        uint256 maxTranche_
+        ICommunity _community,
+        uint256 _minTranche,
+        uint256 _maxTranche
     ) external override onlyOwner {
-        community_.updateCommunityParams(minTranche_, maxTranche_);
+        _community.updateCommunityParams(_minTranche, _maxTranche);
     }
 
     /**
      * @notice Updates proxy implementation address of a community
      *
-     * @param communityProxy_ address of the community
-     * @param newCommunityTemplate_ address of new implementation contract
+     * @param _communityProxy address of the community
+     * @param _newCommunityTemplate address of new implementation contract
      */
-    function updateProxyImplementation(address communityProxy_, address newCommunityTemplate_)
+    function updateProxyImplementation(address _communityProxy, address _newCommunityTemplate)
         external
         override
         onlyOwner
     {
-        _communityProxyAdmin.upgrade(
-            TransparentUpgradeableProxy(payable(communityProxy_)),
-            newCommunityTemplate_
+        communityProxyAdmin.upgrade(
+            TransparentUpgradeableProxy(payable(_communityProxy)),
+            _newCommunityTemplate
         );
     }
 
     /**
      * @dev Transfers cUSDs from the treasury to a community
      *
-     * @param community_ address of the community
-     * @param amount_ amount of the transaction
+     * @param _community address of the community
+     * @param _amount amount of the transaction
      */
-    function transferToCommunity(ICommunity community_, uint256 amount_) internal nonReentrant {
-        _treasury.transfer(_cUSD, address(community_), amount_);
-        community_.addTreasuryFunds(amount_);
+    function transferToCommunity(ICommunity _community, uint256 _amount) internal nonReentrant {
+        treasury.transfer(cUSD, address(_community), _amount);
+        _community.addTreasuryFunds(_amount);
 
-        emit CommunityFunded(address(community_), amount_);
+        emit CommunityFunded(address(_community), _amount);
     }
 
     /**
      * @dev Internal implementation of deploying a new community
      *
-     * @param firstManager_ address of the community first manager. Will be able to add others
-     * @param claimAmount_ base amount to be claim by the beneficiary
-     * @param maxClaim_ limit that a beneficiary can claim at in total
-     * @param decreaseStep_ value decreased from maxClaim for every beneficiary added
-     * @param baseInterval_ base interval to start claiming
-     * @param incrementInterval_ increment interval used in each claim
-     * @param minTranche_ minimum amount that the community will receive when requesting funds
-     * @param maxTranche_ maximum amount that the community will receive when requesting funds
-     * @param previousCommunity_ address of the previous community. Used for migrating communities
-     * @param managerBlockList_ addresses that have to not be managers
+     * @param _managers addresses of the community managers
+     * @param _claimAmount base amount to be claim by the beneficiary
+     * @param _maxClaim limit that a beneficiary can claim at in total
+     * @param _decreaseStep value decreased from maxClaim for every beneficiary added
+     * @param _baseInterval base interval to start claiming
+     * @param _incrementInterval increment interval used in each claim
+     * @param _minTranche minimum amount that the community will receive when requesting funds
+     * @param _maxTranche maximum amount that the community will receive when requesting funds
+     * @param _previousCommunity address of the previous community. Used for migrating communities
      */
     function deployCommunity(
-        address firstManager_,
-        uint256 claimAmount_,
-        uint256 maxClaim_,
-        uint256 decreaseStep_,
-        uint256 baseInterval_,
-        uint256 incrementInterval_,
-        uint256 minTranche_,
-        uint256 maxTranche_,
-        ICommunity previousCommunity_,
-        address[] memory managerBlockList_
-    ) internal onlyOwner returns (address) {
-        TransparentUpgradeableProxy community = new TransparentUpgradeableProxy(
-            address(_communityTemplate),
-            address(_communityProxyAdmin),
+        address[] memory _managers,
+        uint256 _claimAmount,
+        uint256 _maxClaim,
+        uint256 _decreaseStep,
+        uint256 _baseInterval,
+        uint256 _incrementInterval,
+        uint256 _minTranche,
+        uint256 _maxTranche,
+        ICommunity _previousCommunity
+    ) internal returns (address) {
+        TransparentUpgradeableProxy _community = new TransparentUpgradeableProxy(
+            address(communityTemplate),
+            address(communityProxyAdmin),
             abi.encodeWithSignature(
-                "initialize(address,uint256,uint256,uint256,uint256,uint256,uint256,uint256,address,address[])",
-                firstManager_,
-                claimAmount_,
-                maxClaim_,
-                decreaseStep_,
-                baseInterval_,
-                incrementInterval_,
-                minTranche_,
-                maxTranche_,
-                address(previousCommunity_),
-                managerBlockList_
+                "initialize(address[],uint256,uint256,uint256,uint256,uint256,uint256,uint256,address)",
+                _managers,
+                _claimAmount,
+                _maxClaim,
+                _decreaseStep,
+                _baseInterval,
+                _incrementInterval,
+                _minTranche,
+                _maxTranche,
+                address(_previousCommunity)
             )
         );
 
-        return address(community);
+        return address(_community);
     }
 
     /** @dev Calculates the tranche amount of a community.
      *        Enforces the tranche amount to be between community minTranche and maxTranche
-     * @param community_ address of the community
+     * @param _community address of the community
      * @return uint256 the value of the tranche amount
      */
-    function calculateCommunityTrancheAmount(ICommunity community_)
+    function calculateCommunityTrancheAmount(ICommunity _community)
         internal
         view
         returns (uint256)
     {
-        uint256 validBeneficiaries = community_.validBeneficiaryCount();
-        uint256 claimAmount = community_.claimAmount();
-        uint256 treasuryFunds = community_.treasuryFunds();
-        uint256 privateFunds = community_.privateFunds();
+        uint256 _validBeneficiaries = _community.validBeneficiaryCount();
+        uint256 _claimAmount = _community.claimAmount();
+        uint256 _treasuryFunds = _community.treasuryFunds();
+        uint256 _privateFunds = _community.privateFunds();
+        uint256 _minTranche = _community.minTranche();
+        uint256 _maxTranche = _community.maxTranche();
 
         // `treasuryFunds` can't be zero.
         // Otherwise, migrated communities will have zero.
-        treasuryFunds = treasuryFunds > 0 ? treasuryFunds : 1e18;
+        _treasuryFunds = _treasuryFunds > 0 ? _treasuryFunds : 1e18;
 
-        uint256 trancheAmount = (1e36 * validBeneficiaries * (treasuryFunds + privateFunds)) /
-            (claimAmount * treasuryFunds);
+        uint256 _trancheAmount = (_validBeneficiaries *
+            _claimAmount *
+            (_treasuryFunds + _privateFunds)) / _treasuryFunds;
 
-        if (trancheAmount < community_.minTranche()) {
-            trancheAmount = community_.minTranche();
+        if (_trancheAmount < _minTranche) {
+            _trancheAmount = _minTranche;
+        } else if (_trancheAmount > _maxTranche) {
+            _trancheAmount = _maxTranche;
         }
 
-        if (trancheAmount > community_.maxTranche()) {
-            trancheAmount = community_.maxTranche();
-        }
-
-        return trancheAmount;
+        return _trancheAmount;
     }
 
     /**
      * @notice Checks if a community is deployed with the new type of smart contract
      *
-     * @param community_ address of the community
+     * @param _community address of the community
      * @return bool true if the community is deployed with the new type of smart contract
      */
-    function isCommunityNewType(ICommunity community_) internal view returns (bool) {
-        return community_.impactMarketAddress() == address(0);
+    function isCommunityNewType(ICommunity _community) internal pure returns (bool) {
+        return _community.impactMarketAddress() == address(0);
     }
 }

@@ -1,13 +1,12 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { parseEther } from "@ethersproject/units";
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// @ts-ignore
-	const { deployments, getNamedAccounts, ethers } = hre;
+	const { deployments, ethers } = hre;
 	const { deploy } = deployments;
 
 	const accounts: SignerWithAddress[] = await ethers.getSigners();
@@ -24,6 +23,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 			// gasLimit: 13000000,
 		}
 	);
+	await new Promise((resolve) => setTimeout(resolve, 6000));
 
 	const treasuryProxyResult = await deploy("TreasuryProxy", {
 		from: deployer.address,
@@ -32,12 +32,16 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		// gasLimit: 13000000,
 	});
 
+	await new Promise((resolve) => setTimeout(resolve, 6000));
+
 	const treasuryContract = await ethers.getContractAt(
 		"TreasuryImplementation",
 		treasuryProxyResult.address
 	);
 
 	await treasuryContract.initialize(ZERO_ADDRESS);
+
+	await new Promise((resolve) => setTimeout(resolve, 6000));
 };
 
 export default func;

@@ -20,6 +20,8 @@ import {
 	advanceBlockNTimes,
 	advanceTimeAndBlockNTimes,
 } from "../utils/TimeTravel";
+import { Bytes, keccak256 } from "ethers/lib/utils";
+import { BytesLike } from "@ethersproject/bytes/src.ts/index";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const {
@@ -35,10 +37,17 @@ const expect = chai.expect;
 const provider = waffle.provider;
 
 enum BeneficiaryState {
-	NONE = "0",
-	Valid = "1",
-	Locked = "2",
-	Removed = "3",
+	NONE = 0,
+	Valid = 1,
+	Locked = 2,
+	Removed = 3,
+}
+
+enum CommunityState {
+	NONE = 0,
+	Valid = 1,
+	Removed = 2,
+	Migrated = 3,
 }
 
 //users
@@ -56,13 +65,15 @@ let beneficiaryC: SignerWithAddress;
 let beneficiaryD: SignerWithAddress;
 
 let Community: ethersTypes.ContractFactory;
-let CommunityAdminImplementationFactory: ethersTypes.ContractFactory;
+let OldCommunity: ethersTypes.ContractFactory;
 
-// contract instances
 let communityInstance: ethersTypes.Contract;
+let newCommunityInstance: ethersTypes.Contract;
+let oldCommunityInstance: ethersTypes.Contract;
 let communityAdminProxy: ethersTypes.Contract;
 let treasuryInstance: ethersTypes.Contract;
 let cUSDInstance: ethersTypes.Contract;
+let impactProxyAdmin: ethersTypes.Contract;
 
 // constants
 const oneMinuteInBlocks = 12;
@@ -75,9 +86,10 @@ const maxClaimTen = parseEther("10");
 const fiveCents = parseEther("0.05");
 const oneCent = parseEther("0.01");
 const zeroAddress = "0x0000000000000000000000000000000000000000";
-const mintAmount = parseEther("500");
+const mintAmount = parseEther("10000");
 const communityMinTranche = parseEther("100");
 const communityMaxTranche = parseEther("5000");
+const managerRole = keccak256(ethers.utils.toUtf8Bytes("MANAGER_ROLE"));
 
 async function init() {
 	const accounts: SignerWithAddress[] = await ethers.getSigners();
@@ -96,9 +108,6 @@ async function init() {
 	beneficiaryD = accounts[9];
 
 	Community = await ethers.getContractFactory("Community");
-	CommunityAdminImplementationFactory = await ethers.getContractFactory(
-		"CommunityAdminImplementation"
-	);
 }
 
 async function deploy() {
@@ -106,6 +115,12 @@ async function deploy() {
 
 	const cUSD = await deployments.get("TokenMock");
 	cUSDInstance = await ethers.getContractAt("TokenMock", cUSD.address);
+
+	const ImpactProxyAdmin = await deployments.get("ImpactProxyAdmin");
+	impactProxyAdmin = await ethers.getContractAt(
+		"ImpactProxyAdmin",
+		ImpactProxyAdmin.address
+	);
 
 	const communityAdmin = await deployments.get("CommunityAdminProxy");
 	communityAdminProxy = await ethers.getContractAt(
@@ -122,15 +137,14 @@ async function deploy() {
 
 async function addDefaultCommunity() {
 	const tx = await communityAdminProxy.addCommunity(
-		communityManagerA.address,
-		claimAmountTwo.toString(),
-		maxClaimTen.toString(),
-		oneCent.toString(),
-		threeMinutesInBlocks.toString(),
-		oneMinuteInBlocks.toString(),
+		[communityManagerA.address],
+		claimAmountTwo,
+		maxClaimTen,
+		oneCent,
+		threeMinutesInBlocks,
+		oneMinuteInBlocks,
 		communityMinTranche,
-		communityMaxTranche,
-		[]
+		communityMaxTranche
 	);
 
 	let receipt = await tx.wait();
@@ -141,7 +155,7 @@ async function addDefaultCommunity() {
 	communityInstance = await Community.attach(communityAddress);
 }
 
-describe("Community - Setup", () => {
+describe("CommunityAdmin", () => {
 	before(async function () {
 		await init();
 	});
@@ -185,6 +199,403 @@ describe("Community - Setup", () => {
 		(await communityInstance.locked()).should.be.equal(false);
 		(await communityInstance.decreaseStep()).should.be.equal(oneCent);
 	});
+
+	it("should add a community if admin", async () => {
+		await cUSDInstance.mint(
+			treasuryInstance.address,
+			mintAmount.toString()
+		);
+
+		const tx = await communityAdminProxy.addCommunity(
+			[communityManagerA.address],
+			claimAmountTwo.toString(),
+			maxClaimTen.toString(),
+			oneCent.toString(),
+			threeMinutesInBlocks.toString(),
+			oneMinuteInBlocks.toString(),
+			communityMinTranche,
+			communityMaxTranche
+		);
+
+		let receipt = await tx.wait();
+
+		const communityAddress = receipt.events?.filter((x: any) => {
+			return x.event == "CommunityAdded";
+		})[0]["args"]["communityAddress"];
+		communityInstance = await Community.attach(communityAddress);
+
+		(await communityInstance.baseInterval())
+			.toString()
+			.should.be.equal(threeMinutesInBlocks.toString());
+		(await communityInstance.incrementInterval())
+			.toString()
+			.should.be.equal(oneMinuteInBlocks.toString());
+		(await communityInstance.maxClaim()).should.be.equal(maxClaimTen);
+	});
+
+	it("should remove a community if admin", async () => {
+		await cUSDInstance.mint(
+			treasuryInstance.address,
+			mintAmount.toString()
+		);
+
+		const tx = await communityAdminProxy.addCommunity(
+			[communityManagerA.address],
+			claimAmountTwo.toString(),
+			maxClaimTen.toString(),
+			oneCent.toString(),
+			threeMinutesInBlocks.toString(),
+			oneMinuteInBlocks.toString(),
+			communityMinTranche,
+			communityMaxTranche
+		);
+
+		let receipt = await tx.wait();
+
+		const communityAddress = receipt.events?.filter((x: any) => {
+			return x.event == "CommunityAdded";
+		})[0]["args"]["communityAddress"];
+		communityInstance = await Community.attach(communityAddress);
+
+		await communityAdminProxy.removeCommunity(communityAddress);
+	});
+
+	it("should not create a community with invalid values", async () => {
+		await expect(
+			communityAdminProxy.addCommunity(
+				[communityManagerA.address],
+				claimAmountTwo.toString(),
+				maxClaimTen.toString(),
+				oneCent.toString(),
+				oneMinuteInBlocks.toString(),
+				threeMinutesInBlocks.toString(),
+				communityMinTranche,
+				communityMaxTranche
+			)
+		).to.be.rejected;
+		await expect(
+			communityAdminProxy.addCommunity(
+				[communityManagerA.address],
+				maxClaimTen.toString(), // it's supposed to be wrong!
+				claimAmountTwo.toString(),
+				oneCent.toString(),
+				threeMinutesInBlocks.toString(),
+				oneMinuteInBlocks.toString(),
+				communityMinTranche,
+				communityMaxTranche
+			)
+		).to.be.rejected;
+	});
+
+	it("Should transfer founds from communityAdmin to address if admin", async function () {
+		expect(
+			await cUSDInstance.balanceOf(communityAdminProxy.address)
+		).to.be.equal(0);
+		await cUSDInstance.mint(communityAdminProxy.address, parseEther("100"));
+		expect(
+			await cUSDInstance.balanceOf(communityAdminProxy.address)
+		).to.be.equal(parseEther("100"));
+		await communityAdminProxy.transfer(
+			cUSDInstance.address,
+			adminAccount1.address,
+			parseEther("100")
+		);
+		expect(
+			await cUSDInstance.balanceOf(communityAdminProxy.address)
+		).to.be.equal(0);
+		expect(await cUSDInstance.balanceOf(adminAccount1.address)).to.be.equal(
+			parseEther("100")
+		);
+	});
+
+	it("Should not transfer founds from communityAdmin to address if not admin", async function () {
+		expect(
+			await cUSDInstance.balanceOf(communityAdminProxy.address)
+		).to.be.equal(0);
+		await cUSDInstance.mint(communityAdminProxy.address, parseEther("100"));
+		expect(
+			await cUSDInstance.balanceOf(communityAdminProxy.address)
+		).to.be.equal(parseEther("100"));
+		await expect(
+			communityAdminProxy
+				.connect(adminAccount2)
+				.transfer(
+					cUSDInstance.address,
+					adminAccount1.address,
+					parseEther("100")
+				)
+		).to.be.rejectedWith("Ownable: caller is not the owner");
+
+		expect(
+			await cUSDInstance.balanceOf(communityAdminProxy.address)
+		).to.be.equal(parseEther("100"));
+		expect(await cUSDInstance.balanceOf(adminAccount2.address)).to.be.equal(
+			parseEther("0")
+		);
+	});
+
+	it("Should not update CommunityAdmin implementation if not owner", async function () {
+		const CommunityAdminMockFactory = await ethers.getContractFactory(
+			"CommunityAdminImplementationMock"
+		);
+
+		const newCommunityAdminImplementation =
+			await CommunityAdminMockFactory.deploy();
+
+		await expect(
+			impactProxyAdmin
+				.connect(adminAccount2)
+				.upgrade(
+					communityAdminProxy.address,
+					newCommunityAdminImplementation.address
+				)
+		).to.be.rejectedWith("Ownable: caller is not the owner");
+	});
+
+	it("Should have same storage after update communityAdmin implementation", async function () {
+		const CommunityAdminMockFactory = await ethers.getContractFactory(
+			"CommunityAdminImplementationMock"
+		);
+
+		const newCommunityAdminImplementation =
+			await CommunityAdminMockFactory.deploy();
+
+		await expect(
+			impactProxyAdmin.upgrade(
+				communityAdminProxy.address,
+				newCommunityAdminImplementation.address
+			)
+		).to.be.fulfilled;
+
+		const oldCommunityImplementation =
+			await communityAdminProxy.communityTemplate();
+		expect(await communityAdminProxy.owner()).to.be.equal(
+			adminAccount1.address
+		);
+		expect(await communityAdminProxy.cUSD()).to.be.equal(
+			cUSDInstance.address
+		);
+		expect(await communityAdminProxy.treasury()).to.be.equal(
+			treasuryInstance.address
+		);
+		expect(await communityAdminProxy.communityTemplate()).to.be.equal(
+			oldCommunityImplementation
+		);
+		expect(
+			await communityAdminProxy.communities(communityInstance.address)
+		).to.be.equal(CommunityState.Valid);
+		expect(await communityAdminProxy.communityListLength()).to.be.equal(1);
+		expect(await communityAdminProxy.communityListAt(0)).to.be.equal(
+			communityInstance.address
+		);
+	});
+});
+
+describe("Community", () => {
+	before(async function () {
+		await init();
+	});
+
+	beforeEach(async () => {
+		await deploy();
+
+		await cUSDInstance.mint(
+			treasuryInstance.address,
+			mintAmount.toString()
+		);
+
+		await addDefaultCommunity();
+	});
+
+	it("should return correct values", async () => {});
+
+	it("Should transfer founds from community to address if admin", async function () {
+		expect(
+			await cUSDInstance.balanceOf(communityInstance.address)
+		).to.be.equal(parseEther("100"));
+		await communityAdminProxy.transferFromCommunity(
+			communityInstance.address,
+			cUSDInstance.address,
+			adminAccount1.address,
+			parseEther("100")
+		);
+		expect(
+			await cUSDInstance.balanceOf(communityInstance.address)
+		).to.be.equal(0);
+		expect(await cUSDInstance.balanceOf(adminAccount1.address)).to.be.equal(
+			parseEther("100")
+		);
+	});
+
+	it("Should not transfer founds from community to address if not admin #1", async function () {
+		expect(
+			await cUSDInstance.balanceOf(communityInstance.address)
+		).to.be.equal(parseEther("100"));
+		await expect(
+			communityInstance
+				.connect(adminAccount2)
+				.transfer(
+					cUSDInstance.address,
+					adminAccount1.address,
+					parseEther("100")
+				)
+		).to.be.rejectedWith("Ownable: caller is not the owner");
+
+		expect(
+			await cUSDInstance.balanceOf(communityInstance.address)
+		).to.be.equal(parseEther("100"));
+		expect(await cUSDInstance.balanceOf(adminAccount2.address)).to.be.equal(
+			parseEther("0")
+		);
+	});
+
+	it("Should not transfer founds from community to address if not admin #2", async function () {
+		expect(
+			await cUSDInstance.balanceOf(communityInstance.address)
+		).to.be.equal(parseEther("100"));
+		await expect(
+			communityAdminProxy
+				.connect(adminAccount2)
+				.transferFromCommunity(
+					communityInstance.address,
+					cUSDInstance.address,
+					adminAccount1.address,
+					parseEther("100")
+				)
+		).to.be.rejectedWith("Ownable: caller is not the owner");
+
+		expect(
+			await cUSDInstance.balanceOf(communityInstance.address)
+		).to.be.equal(parseEther("100"));
+		expect(await cUSDInstance.balanceOf(adminAccount2.address)).to.be.equal(
+			parseEther("0")
+		);
+	});
+
+	it("Should not update Community implementation if not owner #1", async function () {
+		const CommunityMockFactory = await ethers.getContractFactory(
+			"CommunityMock"
+		);
+
+		const newCommunityImplementation = await CommunityMockFactory.deploy();
+
+		await expect(
+			impactProxyAdmin
+				.connect(adminAccount2)
+				.upgrade(
+					communityInstance.address,
+					newCommunityImplementation.address
+				)
+		).to.be.rejectedWith("Ownable: caller is not the owner");
+	});
+
+	it("Should not update Community implementation if not owner #2", async function () {
+		const CommunityMockFactory = await ethers.getContractFactory(
+			"CommunityMock"
+		);
+
+		const newCommunityImplementation = await CommunityMockFactory.deploy();
+
+		await expect(
+			communityAdminProxy
+				.connect(adminAccount2)
+				.updateProxyImplementation(
+					communityInstance.address,
+					newCommunityImplementation.address
+				)
+		).to.be.rejectedWith("Ownable: caller is not the owner");
+	});
+
+	it("Should have same storage after update community implementation", async function () {
+		const CommunityMockFactory = await ethers.getContractFactory(
+			"CommunityMock"
+		);
+
+		communityInstance
+			.connect(communityManagerA)
+			.addBeneficiary(beneficiaryA.address);
+		communityInstance
+			.connect(communityManagerA)
+			.lockBeneficiary(beneficiaryA.address);
+		communityInstance
+			.connect(communityManagerA)
+			.addBeneficiary(beneficiaryB.address);
+
+		const newCommunityImplementation = await CommunityMockFactory.deploy();
+
+		await expect(
+			communityAdminProxy.updateProxyImplementation(
+				communityInstance.address,
+				newCommunityImplementation.address
+			)
+		).to.be.fulfilled;
+
+		communityInstance = await ethers.getContractAt(
+			"CommunityMock",
+			communityInstance.address
+		);
+
+		// expect(await communityInstance.owner()).to.be.equal(zeroAddress);
+		// await communityInstance.initialize();
+
+		communityInstance
+			.connect(communityManagerA)
+			.addBeneficiary(beneficiaryC.address);
+
+		expect(await communityInstance.owner()).to.be.equal(
+			communityAdminProxy.address
+		);
+		expect(await communityInstance.locked()).to.be.equal(false);
+		expect(await communityInstance.claimAmount()).to.be.equal(
+			claimAmountTwo
+		);
+		expect(await communityInstance.baseInterval()).to.be.equal(
+			threeMinutesInBlocks
+		);
+		expect(await communityInstance.incrementInterval()).to.be.equal(
+			oneMinuteInBlocks
+		);
+		expect(await communityInstance.maxClaim()).to.be.equal(
+			maxClaimTen.sub(oneCent.mul(2))
+		);
+		expect(await communityInstance.validBeneficiaryCount()).to.be.equal(2);
+		expect(await communityInstance.treasuryFunds()).to.be.equal(
+			communityMinTranche
+		);
+		expect(await communityInstance.privateFunds()).to.be.equal("0");
+		expect(await communityInstance.decreaseStep()).to.be.equal(oneCent);
+		expect(await communityInstance.minTranche()).to.be.equal(
+			communityMinTranche
+		);
+		expect(await communityInstance.maxTranche()).to.be.equal(
+			communityMaxTranche
+		);
+		expect(await communityInstance.previousCommunity()).to.be.equal(
+			zeroAddress
+		);
+		expect(await communityInstance.communityAdmin()).to.be.equal(
+			communityAdminProxy.address
+		);
+		expect(
+			(await communityInstance.beneficiaries(beneficiaryA.address)).state
+		).to.be.equal(BeneficiaryState.Locked);
+		expect(
+			(await communityInstance.beneficiaries(beneficiaryB.address)).state
+		).to.be.equal(BeneficiaryState.Valid);
+		expect(
+			(await communityInstance.beneficiaries(beneficiaryC.address)).state
+		).to.be.equal(BeneficiaryState.Valid);
+		expect(await communityInstance.beneficiaryListLength()).to.be.equal(3);
+		expect(await communityInstance.beneficiaryListAt(0)).to.be.equal(
+			beneficiaryA.address
+		);
+		expect(await communityInstance.beneficiaryListAt(1)).to.be.equal(
+			beneficiaryB.address
+		);
+		expect(await communityInstance.beneficiaryListAt(2)).to.be.equal(
+			beneficiaryC.address
+		);
+	});
 });
 
 describe("Community - Beneficiary", () => {
@@ -203,16 +614,16 @@ describe("Community - Beneficiary", () => {
 		await addDefaultCommunity();
 	});
 
-	it("should be able to add beneficiary to community", async () => {
-		(await communityInstance.beneficiaries(beneficiaryA.address)).state
-			.toString()
-			.should.be.equal(BeneficiaryState.NONE);
+	it("should add beneficiary to community", async () => {
+		(
+			await communityInstance.beneficiaries(beneficiaryA.address)
+		).state.should.be.equal(BeneficiaryState.NONE);
 		await communityInstance
 			.connect(communityManagerA)
 			.addBeneficiary(beneficiaryA.address);
-		(await communityInstance.beneficiaries(beneficiaryA.address)).state
-			.toString()
-			.should.be.equal(BeneficiaryState.Valid);
+		(
+			await communityInstance.beneficiaries(beneficiaryA.address)
+		).state.should.be.equal(BeneficiaryState.Valid);
 	});
 
 	it("should give beneficiary 5 cents when adding to community", async () => {
@@ -227,28 +638,28 @@ describe("Community - Beneficiary", () => {
 			.should.be.equal(fiveCents.toString());
 	});
 
-	it("should be able to lock beneficiary from community", async () => {
-		(await communityInstance.beneficiaries(beneficiaryA.address)).state
-			.toString()
-			.should.be.equal(BeneficiaryState.NONE);
+	it("should lock beneficiary from community", async () => {
+		(
+			await communityInstance.beneficiaries(beneficiaryA.address)
+		).state.should.be.equal(BeneficiaryState.NONE);
 		await communityInstance
 			.connect(communityManagerA)
 			.addBeneficiary(beneficiaryA.address);
-		(await communityInstance.beneficiaries(beneficiaryA.address)).state
-			.toString()
-			.should.be.equal(BeneficiaryState.Valid);
+		(
+			await communityInstance.beneficiaries(beneficiaryA.address)
+		).state.should.be.equal(BeneficiaryState.Valid);
 		await communityInstance
 			.connect(communityManagerA)
 			.lockBeneficiary(beneficiaryA.address);
-		(await communityInstance.beneficiaries(beneficiaryA.address)).state
-			.toString()
-			.should.be.equal(BeneficiaryState.Locked);
+		(
+			await communityInstance.beneficiaries(beneficiaryA.address)
+		).state.should.be.equal(BeneficiaryState.Locked);
 	});
 
-	it("should not be able to lock an invalid beneficiary from community", async () => {
-		(await communityInstance.beneficiaries(beneficiaryA.address)).state
-			.toString()
-			.should.be.equal(BeneficiaryState.NONE);
+	it("should not lock an invalid beneficiary from community", async () => {
+		(
+			await communityInstance.beneficiaries(beneficiaryA.address)
+		).state.should.be.equal(BeneficiaryState.NONE);
 		await expect(
 			communityInstance
 				.connect(communityManagerA)
@@ -256,40 +667,40 @@ describe("Community - Beneficiary", () => {
 		).to.be.rejectedWith("NOT_YET");
 	});
 
-	it("should be able to unlock locked beneficiary from community", async () => {
-		(await communityInstance.beneficiaries(beneficiaryA.address)).state
-			.toString()
-			.should.be.equal(BeneficiaryState.NONE);
+	it("should unlock locked beneficiary from community", async () => {
+		(
+			await communityInstance.beneficiaries(beneficiaryA.address)
+		).state.should.be.equal(BeneficiaryState.NONE);
 		await communityInstance
 			.connect(communityManagerA)
 			.addBeneficiary(beneficiaryA.address);
-		(await communityInstance.beneficiaries(beneficiaryA.address)).state
-			.toString()
-			.should.be.equal(BeneficiaryState.Valid);
+		(
+			await communityInstance.beneficiaries(beneficiaryA.address)
+		).state.should.be.equal(BeneficiaryState.Valid);
 		await communityInstance
 			.connect(communityManagerA)
 			.lockBeneficiary(beneficiaryA.address);
-		(await communityInstance.beneficiaries(beneficiaryA.address)).state
-			.toString()
-			.should.be.equal(BeneficiaryState.Locked);
+		(
+			await communityInstance.beneficiaries(beneficiaryA.address)
+		).state.should.be.equal(BeneficiaryState.Locked);
 		await communityInstance
 			.connect(communityManagerA)
 			.unlockBeneficiary(beneficiaryA.address);
-		(await communityInstance.beneficiaries(beneficiaryA.address)).state
-			.toString()
-			.should.be.equal(BeneficiaryState.Valid);
+		(
+			await communityInstance.beneficiaries(beneficiaryA.address)
+		).state.should.be.equal(BeneficiaryState.Valid);
 	});
 
-	it("should not be able to unlock a not locked beneficiary from community", async () => {
-		(await communityInstance.beneficiaries(beneficiaryA.address)).state
-			.toString()
-			.should.be.equal(BeneficiaryState.NONE);
+	it("should not unlock a not locked beneficiary from community", async () => {
+		(
+			await communityInstance.beneficiaries(beneficiaryA.address)
+		).state.should.be.equal(BeneficiaryState.NONE);
 		await communityInstance
 			.connect(communityManagerA)
 			.addBeneficiary(beneficiaryA.address);
-		(await communityInstance.beneficiaries(beneficiaryA.address)).state
-			.toString()
-			.should.be.equal(BeneficiaryState.Valid);
+		(
+			await communityInstance.beneficiaries(beneficiaryA.address)
+		).state.should.be.equal(BeneficiaryState.Valid);
 		await expect(
 			communityInstance
 				.connect(communityManagerA)
@@ -297,22 +708,22 @@ describe("Community - Beneficiary", () => {
 		).to.be.rejectedWith("NOT_YET");
 	});
 
-	it("should be able to remove beneficiary from community", async () => {
-		(await communityInstance.beneficiaries(beneficiaryA.address)).state
-			.toString()
-			.should.be.equal(BeneficiaryState.NONE);
+	it("should remove beneficiary from community", async () => {
+		(
+			await communityInstance.beneficiaries(beneficiaryA.address)
+		).state.should.be.equal(BeneficiaryState.NONE);
 		await communityInstance
 			.connect(communityManagerA)
 			.addBeneficiary(beneficiaryA.address);
-		(await communityInstance.beneficiaries(beneficiaryA.address)).state
-			.toString()
-			.should.be.equal(BeneficiaryState.Valid);
+		(
+			await communityInstance.beneficiaries(beneficiaryA.address)
+		).state.should.be.equal(BeneficiaryState.Valid);
 		await communityInstance
 			.connect(communityManagerA)
 			.removeBeneficiary(beneficiaryA.address);
-		(await communityInstance.beneficiaries(beneficiaryA.address)).state
-			.toString()
-			.should.be.equal(BeneficiaryState.Removed);
+		(
+			await communityInstance.beneficiaries(beneficiaryA.address)
+		).state.should.be.equal(BeneficiaryState.Removed);
 	});
 });
 
@@ -448,7 +859,16 @@ describe("Community - Claim", () => {
 			await communityInstance.baseInterval()
 		).toNumber();
 		await advanceTimeAndBlockNTimes(baseInterval + 1);
+		expect(
+			(await communityInstance.beneficiaries(beneficiaryA.address))
+				.claimedAmount
+		).to.be.equal(0);
 		await communityInstance.connect(beneficiaryA).claim();
+		expect(
+			(await communityInstance.beneficiaries(beneficiaryA.address))
+				.claimedAmount
+		).to.be.equal(claimAmountTwo);
+
 		(await cUSDInstance.balanceOf(beneficiaryA.address)).should.be.equal(
 			claimAmountTwo.add(fiveCents)
 		);
@@ -496,15 +916,14 @@ describe("Community - Governance (2)", () => {
 		await addDefaultCommunity();
 	});
 
-	it("should be able to migrate funds from community if CommunityAdmin", async () => {
+	it("should migrate funds from community if CommunityAdmin", async () => {
 		const previousCommunityOldBalance = await cUSDInstance.balanceOf(
 			communityInstance.address
 		);
 
 		const newTx = await communityAdminProxy.migrateCommunity(
-			communityManagerA.address,
-			communityInstance.address,
-			[]
+			[communityManagerA.address],
+			communityInstance.address
 		);
 
 		let receipt = await newTx.wait();
@@ -524,49 +943,7 @@ describe("Community - Governance (2)", () => {
 		previousCommunityNewBalance.should.be.equal(parseEther("100"));
 	});
 
-	it("should be able to call managerJoinFromMigrated", async () => {
-		await communityInstance
-			.connect(communityManagerA)
-			.addManager(communityManagerB.address);
-
-		const newTx = await communityAdminProxy.migrateCommunity(
-			communityManagerA.address,
-			communityInstance.address,
-			[]
-		);
-
-		let receipt = await newTx.wait();
-
-		const newCommunityAddress = receipt.events?.filter((x: any) => {
-			return x.event == "CommunityMigrated";
-		})[0]["args"]["communityAddress"];
-
-		const newCommunityInstance = await Community.attach(
-			newCommunityAddress
-		);
-		await expect(
-			newCommunityInstance
-				.connect(communityManagerC)
-				.managerJoinFromMigrated()
-		).to.be.rejectedWith("Community::managerJoinFromMigrated: NOT_ALLOWED");
-		await expect(
-			newCommunityInstance
-				.connect(communityManagerB)
-				.addManager(communityManagerC.address)
-		).to.be.rejectedWith("Community: NOT_MANAGER");
-		await expect(
-			newCommunityInstance
-				.connect(communityManagerB)
-				.managerJoinFromMigrated()
-		).to.be.fulfilled;
-		await expect(
-			newCommunityInstance
-				.connect(communityManagerB)
-				.addManager(communityManagerC.address)
-		).to.be.fulfilled;
-	});
-
-	it("should be able to call beneficiaryJoinFromMigrated", async () => {
+	it("should call beneficiaryJoinFromMigrated", async () => {
 		await communityInstance
 			.connect(communityManagerA)
 			.addBeneficiary(beneficiaryA.address);
@@ -576,9 +953,8 @@ describe("Community - Governance (2)", () => {
 			.addBeneficiary(beneficiaryB.address);
 
 		const newTx = await communityAdminProxy.migrateCommunity(
-			communityManagerA.address,
-			communityInstance.address,
-			[]
+			[communityManagerA.address],
+			communityInstance.address
 		);
 
 		let receipt = await newTx.wait();
@@ -606,38 +982,45 @@ describe("Community - Governance (2)", () => {
 				.beneficiaryJoinFromMigrated()
 		).to.be.fulfilled;
 
-		(await newCommunityInstance.beneficiaries(beneficiaryA.address)).state
-			.toString()
-			.should.be.equal(BeneficiaryState.Valid);
-		(await newCommunityInstance.beneficiaries(beneficiaryB.address)).state
-			.toString()
-			.should.be.equal(BeneficiaryState.Valid);
-		(await newCommunityInstance.beneficiaries(beneficiaryC.address)).state
-			.toString()
-			.should.be.equal(BeneficiaryState.NONE);
+		(
+			await newCommunityInstance.beneficiaries(beneficiaryA.address)
+		).state.should.be.equal(BeneficiaryState.Valid);
+		(
+			await newCommunityInstance.beneficiaries(beneficiaryB.address)
+		).state.should.be.equal(BeneficiaryState.Valid);
+		(
+			await newCommunityInstance.beneficiaries(beneficiaryC.address)
+		).state.should.be.equal(BeneficiaryState.NONE);
 	});
 
-	it("should not be able to migrate from invalid community", async () => {
+	it("should not migrate a migrated community", async () => {
 		await expect(
 			communityAdminProxy.migrateCommunity(
-				communityManagerA.address,
-				zeroAddress,
-				[]
+				[communityManagerA.address],
+				communityInstance.address
 			)
-		).to.be.rejectedWith("NOT_VALID");
+		).to.be.fulfilled;
+
+		await expect(
+			communityAdminProxy.migrateCommunity(
+				[communityManagerA.address],
+				communityInstance.address
+			)
+		).to.be.rejectedWith(
+			"CommunityAdmin::migrateCommunity: this community has been migrated"
+		);
 	});
 
-	it("should not be able to migrate community if not admin", async () => {
+	it("should not migrate community if not admin", async () => {
 		await expect(
 			communityAdminProxy.connect(adminAccount2).migrateCommunity(
-				communityManagerA.address,
-				cUSDInstance.address, // wrong on purpose,
-				[]
+				[communityManagerA.address],
+				cUSDInstance.address // wrong on purpose,
 			)
 		).to.be.rejectedWith("Ownable: caller is not the owner");
 	});
 
-	it("should be able to edit community if manager", async () => {
+	it("should edit community if manager", async () => {
 		(await communityInstance.incrementInterval()).should.be.equal(
 			oneMinuteInBlocks.toString()
 		);
@@ -693,7 +1076,7 @@ describe("Community - Governance (2)", () => {
 		).to.be.rejected;
 	});
 
-	it("should not be able to add manager to community if not manager", async () => {
+	it("should not add manager to community if not manager", async () => {
 		await expect(
 			communityInstance
 				.connect(communityManagerC)
@@ -701,7 +1084,7 @@ describe("Community - Governance (2)", () => {
 		).to.be.rejectedWith("NOT_MANAGER");
 	});
 
-	it("should not be able to remove manager from community if not manager", async () => {
+	it("should not remove manager from community if not manager", async () => {
 		await communityInstance
 			.connect(communityManagerA)
 			.addManager(communityManagerB.address);
@@ -712,7 +1095,7 @@ describe("Community - Governance (2)", () => {
 		).to.be.rejectedWith("NOT_MANAGER");
 	});
 
-	it("should be able to add manager to community if manager", async () => {
+	it("should add manager to community if manager", async () => {
 		await expect(
 			communityInstance
 				.connect(communityManagerA)
@@ -725,7 +1108,7 @@ describe("Community - Governance (2)", () => {
 		).to.be.fulfilled;
 	});
 
-	it("should be able to remove manager to community if manager", async () => {
+	it("should remove manager to community if manager", async () => {
 		await expect(
 			communityInstance
 				.connect(communityManagerA)
@@ -738,27 +1121,24 @@ describe("Community - Governance (2)", () => {
 		).to.be.fulfilled;
 	});
 
-	it("should be able to renounce from manager of community if manager", async () => {
+	it("should renounce from manager of community if manager", async () => {
 		await communityInstance
 			.connect(communityManagerA)
 			.addManager(communityManagerB.address);
 		await expect(
 			communityInstance
 				.connect(communityManagerB)
-				.renounceRole(
-					await communityInstance.MANAGER_ROLE(),
-					communityManagerB.address
-				)
+				.renounceRole(managerRole, communityManagerB.address)
 		).to.be.fulfilled;
 	});
 
-	it("should be able to lock community if manager", async () => {
+	it("should lock community if manager", async () => {
 		await expect(communityInstance.connect(communityManagerA).lock())
 			.to.emit(communityInstance, "CommunityLocked")
 			.withArgs(communityManagerA.address);
 	});
 
-	it("should be able to lock community if manager", async () => {
+	it("should lock community if manager", async () => {
 		await expect(communityInstance.connect(communityManagerA).lock())
 			.to.emit(communityInstance, "CommunityLocked")
 			.withArgs(communityManagerA.address);
@@ -769,121 +1149,20 @@ describe("Community - Governance (2)", () => {
 	});
 });
 
-describe("CommunityAdmin", () => {
-	before(async function () {
-		await init();
-	});
-	beforeEach(async () => {
-		await deploy();
-	});
-
-	it("should be able to add a community if admin", async () => {
-		await cUSDInstance.mint(
-			treasuryInstance.address,
-			mintAmount.toString()
-		);
-
-		const tx = await communityAdminProxy.addCommunity(
-			communityManagerA.address,
-			claimAmountTwo.toString(),
-			maxClaimTen.toString(),
-			oneCent.toString(),
-			threeMinutesInBlocks.toString(),
-			oneMinuteInBlocks.toString(),
-			communityMinTranche,
-			communityMaxTranche,
-			[]
-		);
-
-		let receipt = await tx.wait();
-
-		const communityAddress = receipt.events?.filter((x: any) => {
-			return x.event == "CommunityAdded";
-		})[0]["args"]["communityAddress"];
-		communityInstance = await Community.attach(communityAddress);
-
-		(await communityInstance.baseInterval())
-			.toString()
-			.should.be.equal(threeMinutesInBlocks.toString());
-		(await communityInstance.incrementInterval())
-			.toString()
-			.should.be.equal(oneMinuteInBlocks.toString());
-		(await communityInstance.maxClaim()).should.be.equal(maxClaimTen);
-	});
-
-	it("should be able to remove a community if admin", async () => {
-		await cUSDInstance.mint(
-			treasuryInstance.address,
-			mintAmount.toString()
-		);
-
-		const tx = await communityAdminProxy.addCommunity(
-			communityManagerA.address,
-			claimAmountTwo.toString(),
-			maxClaimTen.toString(),
-			oneCent.toString(),
-			threeMinutesInBlocks.toString(),
-			oneMinuteInBlocks.toString(),
-			communityMinTranche,
-			communityMaxTranche,
-			[]
-		);
-
-		let receipt = await tx.wait();
-
-		const communityAddress = receipt.events?.filter((x: any) => {
-			return x.event == "CommunityAdded";
-		})[0]["args"]["communityAddress"];
-		communityInstance = await Community.attach(communityAddress);
-
-		await communityAdminProxy.removeCommunity(communityAddress);
-	});
-
-	it("should not be able to create a community with invalid values", async () => {
-		await expect(
-			communityAdminProxy.addCommunity(
-				communityManagerA.address,
-				claimAmountTwo.toString(),
-				maxClaimTen.toString(),
-				oneCent.toString(),
-				oneMinuteInBlocks.toString(),
-				threeMinutesInBlocks.toString(),
-				communityMinTranche,
-				communityMaxTranche,
-				[]
-			)
-		).to.be.rejected;
-		await expect(
-			communityAdminProxy.addCommunity(
-				communityManagerA.address,
-				maxClaimTen.toString(), // it's supposed to be wrong!
-				claimAmountTwo.toString(),
-				oneCent.toString(),
-				threeMinutesInBlocks.toString(),
-				oneMinuteInBlocks.toString(),
-				communityMinTranche,
-				communityMaxTranche,
-				[]
-			)
-		).to.be.rejected;
-	});
-});
-
 describe("Chaos test (complete flow)", async () => {
 	// add community
 	const addCommunity = async (
 		communityManager: SignerWithAddress
 	): Promise<ethersTypes.Contract> => {
 		const tx = await communityAdminProxy.addCommunity(
-			communityManager.address,
+			[communityManager.address],
 			claimAmountTwo.toString(),
 			maxClaimTen.toString(),
 			oneCent.toString(),
 			threeMinutesInBlocks.toString(),
 			oneMinuteInBlocks.toString(),
 			communityMinTranche,
-			communityMaxTranche,
-			[]
+			communityMaxTranche
 		);
 
 		let receipt = await tx.wait();
@@ -907,9 +1186,9 @@ describe("Chaos test (complete flow)", async () => {
 			.addBeneficiary(beneficiaryAddress.address);
 		const block = await provider.getBlock(tx.blockNumber); // block is null; the regular provider apparently doesn't know about this block yet.
 
-		(await instance.beneficiaries(beneficiaryAddress.address)).state
-			.toString()
-			.should.be.equal(BeneficiaryState.Valid);
+		(
+			await instance.beneficiaries(beneficiaryAddress.address)
+		).state.should.be.equal(BeneficiaryState.Valid);
 	};
 	// wait claim time
 	const waitClaimTime = async (
@@ -1147,19 +1426,29 @@ describe("Community - getFunds", () => {
 		await addDefaultCommunity();
 	});
 
-	it("should be able to get funds if manager", async () => {
+	it("should get funds if manager", async () => {
+		await communityInstance
+			.connect(communityManagerA)
+			.addBeneficiary(beneficiaryA.address);
+
+		communityInstance.connect(beneficiaryA).claim();
+
 		await expect(
 			communityInstance.connect(communityManagerA).requestFunds()
 		).to.be.fulfilled;
+
+		expect(
+			await cUSDInstance.balanceOf(communityInstance.address)
+		).to.be.equal(communityMinTranche);
 	});
 
-	it("should not be able to get funds if not manager", async () => {
+	it("should not get funds if not manager", async () => {
 		await expect(
 			communityInstance.connect(beneficiaryA).requestFunds()
 		).to.be.rejectedWith("Community: NOT_MANAGER");
 	});
 
-	it("should not be able to change community tranche limits if not admin", async () => {
+	it("should not change community tranche limits if not admin", async () => {
 		await expect(
 			communityAdminProxy
 				.connect(communityManagerA)
@@ -1171,7 +1460,7 @@ describe("Community - getFunds", () => {
 		).to.be.rejectedWith("Ownable: caller is not the owner");
 	});
 
-	it("should be able to change community tranche limits if admin", async () => {
+	it("should change community tranche limits if admin", async () => {
 		await expect(
 			communityAdminProxy
 				.connect(adminAccount1)
@@ -1190,7 +1479,7 @@ describe("Community - getFunds", () => {
 		);
 	});
 
-	it("should not be able to change communityMaxTranche if not admin", async () => {
+	it("should not change communityMaxTranche if not admin", async () => {
 		await expect(
 			communityAdminProxy
 				.connect(communityManagerA)
@@ -1202,7 +1491,7 @@ describe("Community - getFunds", () => {
 		).to.be.rejectedWith("Ownable: caller is not the owner");
 	});
 
-	it("should be able to change communityMaxTranche if admin", async () => {
+	it("should change communityMaxTranche if admin", async () => {
 		await expect(
 			communityAdminProxy
 				.connect(adminAccount1)
@@ -1218,7 +1507,7 @@ describe("Community - getFunds", () => {
 		);
 	});
 
-	it("should not be able to set communityMinTranche greater than communityMaxTranche", async () => {
+	it("should not set communityMinTranche greater than communityMaxTranche", async () => {
 		await expect(
 			communityAdminProxy
 				.connect(adminAccount1)
@@ -1252,15 +1541,22 @@ describe("Community - getFunds", () => {
 		expect(
 			await cUSDInstance.balanceOf(communityInstance.address)
 		).to.be.equal(communityMinTranche);
+
+		await communityInstance
+			.connect(communityManagerA)
+			.addBeneficiary(beneficiaryA.address);
+
+		communityInstance.connect(beneficiaryA).claim();
+
 		await expect(
 			communityInstance.connect(communityManagerA).requestFunds()
 		).to.be.fulfilled;
 		expect(
 			await cUSDInstance.balanceOf(communityInstance.address)
-		).to.be.equal(communityMinTranche.mul(2));
+		).to.be.equal(communityMinTranche);
 	});
 
-	it("should be able to donate directly in the community", async () => {
+	it("should donate directly in the community", async () => {
 		const user1Donation = 1;
 
 		await cUSDInstance.mint(adminAccount1.address, user1Donation);
@@ -1282,7 +1578,7 @@ describe("Community - getFunds", () => {
 		);
 	});
 
-	it("should not be able to requestFunds if you have more then communityMinTranche", async () => {
+	it("should not requestFunds if you have more then communityMinTranche", async () => {
 		const user1Donation = 1;
 
 		await cUSDInstance.mint(adminAccount1.address, parseEther("100"));
@@ -1307,7 +1603,7 @@ describe("Community - getFunds", () => {
 		).to.be.equal(communityMinTranche.add(user1Donation));
 	});
 
-	it("should be able to transfer funds if admin", async () => {
+	it("should transfer funds if admin", async () => {
 		const userInitialBalance = await cUSDInstance.balanceOf(
 			adminAccount1.address
 		);
@@ -1330,7 +1626,7 @@ describe("Community - getFunds", () => {
 		);
 	});
 
-	it("should be able get more funds if have private donations", async () => {
+	it("should get more funds if have private donations", async () => {
 		const user1Donation = parseEther("20000");
 
 		await communityInstance
@@ -1354,6 +1650,255 @@ describe("Community - getFunds", () => {
 
 		expect(
 			await cUSDInstance.balanceOf(communityInstance.address)
-		).to.be.equal(parseEther("200.45"));
+		).to.be.equal(parseEther("402"));
+	});
+});
+
+describe("Old Community", () => {
+	before(async function () {
+		await init();
+
+		OldCommunity = await ethers.getContractFactory("CommunityOld");
+	});
+
+	beforeEach(async () => {
+		await deploy();
+
+		await cUSDInstance.mint(
+			treasuryInstance.address,
+			mintAmount.toString()
+		);
+
+		await addDefaultCommunity();
+
+		oldCommunityInstance = await OldCommunity.deploy(
+			communityManagerA.address,
+			claimAmountTwo,
+			maxClaimTen,
+			threeMinutesInBlocks,
+			oneMinuteInBlocks,
+			zeroAddress,
+			cUSDInstance.address,
+			adminAccount1.address
+		);
+
+		await cUSDInstance.mint(
+			oldCommunityInstance.address,
+			mintAmount.toString()
+		);
+
+		oldCommunityInstance
+			.connect(communityManagerA)
+			.addBeneficiary(beneficiaryA.address);
+		oldCommunityInstance
+			.connect(communityManagerA)
+			.addBeneficiary(beneficiaryB.address);
+		oldCommunityInstance
+			.connect(communityManagerA)
+			.addBeneficiary(beneficiaryC.address);
+
+		oldCommunityInstance
+			.connect(communityManagerA)
+			.addManager(communityManagerB.address);
+		oldCommunityInstance
+			.connect(communityManagerB)
+			.addManager(communityManagerC.address);
+		oldCommunityInstance
+			.connect(communityManagerC)
+			.removeManager(communityManagerB.address);
+	});
+
+	async function migrateCommunity() {
+		const newTx = await communityAdminProxy.migrateCommunity(
+			[communityManagerA.address],
+			oldCommunityInstance.address
+		);
+
+		let receipt = await newTx.wait();
+
+		const newCommunityAddress = receipt.events?.filter((x: any) => {
+			return x.event == "CommunityMigrated";
+		})[0]["args"]["communityAddress"];
+
+		newCommunityInstance = await Community.attach(newCommunityAddress);
+
+		await cUSDInstance.mint(
+			newCommunityInstance.address,
+			mintAmount.toString()
+		);
+	}
+
+	it("should migrate an old community is owner", async () => {
+		await expect(
+			communityAdminProxy.migrateCommunity(
+				[communityManagerA.address],
+				oldCommunityInstance.address
+			)
+		).to.be.fulfilled;
+	});
+
+	it("should migrate an old community if not owner", async () => {
+		await expect(
+			communityAdminProxy
+				.connect(adminAccount2)
+				.migrateCommunity(
+					[communityManagerA.address],
+					oldCommunityInstance.address
+				)
+		).to.be.rejectedWith("Ownable: caller is not the owner");
+	});
+
+	it("should migrate an old community twice", async () => {
+		await expect(
+			communityAdminProxy.migrateCommunity(
+				[communityManagerA.address],
+				oldCommunityInstance.address
+			)
+		).to.be.fulfilled;
+		await expect(
+			communityAdminProxy.migrateCommunity(
+				[communityManagerA.address],
+				oldCommunityInstance.address
+			)
+		).to.be.rejectedWith(
+			"CommunityAdmin::migrateCommunity: this community has been migrated"
+		);
+	});
+
+	it("should join from migrated if valid beneficiary", async () => {
+		await migrateCommunity();
+		expect(
+			(await newCommunityInstance.beneficiaries(beneficiaryA.address))
+				.state
+		).to.be.equal(BeneficiaryState.NONE);
+		await expect(
+			newCommunityInstance
+				.connect(beneficiaryA)
+				.beneficiaryJoinFromMigrated()
+		).to.be.fulfilled;
+		expect(
+			(await newCommunityInstance.beneficiaries(beneficiaryA.address))
+				.state
+		).to.be.equal(BeneficiaryState.Valid);
+	});
+
+	it("should not join from migrated twice if beneficiary", async () => {
+		await migrateCommunity();
+		expect(
+			(await newCommunityInstance.beneficiaries(beneficiaryA.address))
+				.state
+		).to.be.equal(BeneficiaryState.NONE);
+		await expect(
+			newCommunityInstance
+				.connect(beneficiaryA)
+				.beneficiaryJoinFromMigrated()
+		).to.be.fulfilled;
+		expect(
+			(await newCommunityInstance.beneficiaries(beneficiaryA.address))
+				.state
+		).to.be.equal(BeneficiaryState.Valid);
+
+		await expect(
+			newCommunityInstance
+				.connect(beneficiaryA)
+				.beneficiaryJoinFromMigrated()
+		).to.be.rejectedWith(
+			"Community::beneficiaryJoinFromMigrated: Beneficiary exists"
+		);
+	});
+
+	it("should join from migrated if locked beneficiary", async () => {
+		await migrateCommunity();
+		await oldCommunityInstance
+			.connect(communityManagerA)
+			.lockBeneficiary(beneficiaryA.address);
+
+		expect(
+			(await newCommunityInstance.beneficiaries(beneficiaryA.address))
+				.state
+		).to.be.equal(BeneficiaryState.NONE);
+		await expect(
+			newCommunityInstance
+				.connect(beneficiaryA)
+				.beneficiaryJoinFromMigrated()
+		).to.be.fulfilled;
+		expect(
+			(await newCommunityInstance.beneficiaries(beneficiaryA.address))
+				.state
+		).to.be.equal(BeneficiaryState.Locked);
+	});
+
+	it("should join from migrated if removed beneficiary", async () => {
+		await migrateCommunity();
+		await oldCommunityInstance
+			.connect(communityManagerA)
+			.removeBeneficiary(beneficiaryA.address);
+
+		expect(
+			(await newCommunityInstance.beneficiaries(beneficiaryA.address))
+				.state
+		).to.be.equal(BeneficiaryState.NONE);
+		await expect(
+			newCommunityInstance
+				.connect(beneficiaryA)
+				.beneficiaryJoinFromMigrated()
+		).to.be.fulfilled;
+		expect(
+			(await newCommunityInstance.beneficiaries(beneficiaryA.address))
+				.state
+		).to.be.equal(BeneficiaryState.Removed);
+	});
+
+	it("should join from migrated if not beneficiary", async () => {
+		await migrateCommunity();
+
+		expect(
+			(await newCommunityInstance.beneficiaries(beneficiaryD.address))
+				.state
+		).to.be.equal(BeneficiaryState.NONE);
+		await expect(
+			newCommunityInstance
+				.connect(beneficiaryD)
+				.beneficiaryJoinFromMigrated()
+		).to.be.fulfilled;
+		expect(
+			(await newCommunityInstance.beneficiaries(beneficiaryD.address))
+				.state
+		).to.be.equal(BeneficiaryState.NONE);
+	});
+
+	it("should copy beneficiary details from old community", async () => {
+		await migrateCommunity();
+		await newCommunityInstance
+			.connect(communityManagerA)
+			.addBeneficiary(beneficiaryB.address);
+		await oldCommunityInstance.connect(beneficiaryA).claim();
+
+		await expect(
+			newCommunityInstance
+				.connect(beneficiaryA)
+				.beneficiaryJoinFromMigrated()
+		).to.be.fulfilled;
+
+		const beneficiaryADetails = await newCommunityInstance.beneficiaries(
+			beneficiaryA.address
+		);
+		expect(beneficiaryADetails.claims).to.be.equal(1);
+		expect(beneficiaryADetails.claimedAmount).to.be.equal(claimAmountTwo);
+		expect(beneficiaryADetails.lastClaim).to.be.equal(8);
+
+		await newCommunityInstance
+			.connect(communityManagerA)
+			.addBeneficiary(beneficiaryC.address);
+
+		expect(await newCommunityInstance.beneficiaryListAt(0)).to.be.equal(
+			beneficiaryB.address
+		);
+		expect(await newCommunityInstance.beneficiaryListAt(1)).to.be.equal(
+			beneficiaryA.address
+		);
+		expect(await newCommunityInstance.beneficiaryListAt(2)).to.be.equal(
+			beneficiaryC.address
+		);
 	});
 });

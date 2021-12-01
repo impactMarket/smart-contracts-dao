@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.5;
+pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
@@ -13,22 +13,21 @@ import "./ICommunityAdmin.sol";
  * CommunityStorageVX.
  */
 abstract contract CommunityStorageV1 is ICommunity {
-    bool internal _locked;
-    uint256 internal _claimAmount;
-    uint256 internal _baseInterval;
-    uint256 internal _incrementInterval;
-    uint256 internal _maxClaim;
-    uint256 internal _validBeneficiaryCount;
-    uint256 internal _treasuryFunds;
-    uint256 internal _privateFunds;
-    uint256 internal _decreaseStep;
-    uint256 internal _minTranche;
-    uint256 internal _maxTranche;
+    bool public override locked;
+    uint256 public override claimAmount;
+    uint256 public override baseInterval;
+    uint256 public override incrementInterval;
+    uint256 public override maxClaim;
+    uint256 public override validBeneficiaryCount;
+    uint256 public override treasuryFunds;
+    uint256 public override privateFunds;
+    uint256 public override decreaseStep;
+    uint256 public override minTranche;
+    uint256 public override maxTranche;
 
-    ICommunity internal _previousCommunity;
-    ICommunityAdmin internal _communityAdmin;
+    ICommunity public override previousCommunity;
+    ICommunityAdmin public override communityAdmin;
 
-    mapping(address => Beneficiary) internal _beneficiaries;
-    EnumerableSet.AddressSet internal _beneficiaryList;
-    EnumerableSet.AddressSet internal _managerBlockList;
+    mapping(address => Beneficiary) public override beneficiaries;
+    EnumerableSet.AddressSet internal beneficiaryList;
 }

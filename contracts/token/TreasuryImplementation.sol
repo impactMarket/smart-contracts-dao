@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.5;
+pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
@@ -7,9 +7,9 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/TreasuryStorageV1.sol";
 
 contract TreasuryImplementation is
-    TreasuryStorageV1,
     OwnableUpgradeable,
-    ReentrancyGuardUpgradeable
+    ReentrancyGuardUpgradeable,
+    TreasuryStorageV1
 {
     using SafeERC20 for IERC20;
 
@@ -36,19 +36,27 @@ contract TreasuryImplementation is
     /**
      * @notice Used to initialize a new Treasury contract
      *
-     * @param communityAdmin_    Address of the CommunityAdmin contract
+     * @param _communityAdmin    Address of the CommunityAdmin contract
      */
-    function initialize(ICommunityAdmin communityAdmin_) public override initializer {
+    function initialize(ICommunityAdmin _communityAdmin) public initializer {
         __Ownable_init();
+        __ReentrancyGuard_init();
 
-        _communityAdmin = communityAdmin_;
+        communityAdmin = _communityAdmin;
+    }
+
+    /**
+     * @notice Returns the current implementation version
+     */
+    function getVersion() external pure override returns (uint256) {
+        return 1;
     }
 
     /**
      * @notice Enforces sender to be communityAdmin
      */
     modifier onlyCommunityAdmin() {
-        require(msg.sender == address(_communityAdmin), "Treasury: NOT_COMMUNITY_ADMIN");
+        require(msg.sender == address(communityAdmin), "Treasury: NOT_COMMUNITY_ADMIN");
         _;
     }
 
@@ -57,45 +65,38 @@ contract TreasuryImplementation is
      */
     modifier onlyCommunityAdminOrOwner() {
         require(
-            msg.sender == address(_communityAdmin) || msg.sender == owner(),
+            msg.sender == address(communityAdmin) || msg.sender == owner(),
             "Treasury: NOT_COMMUNITY_ADMIN AND NOT_OWNER"
         );
         _;
     }
 
     /**
-     * @notice Returns the CommunityAdmin contract address
-     */
-    function communityAdmin() external view override returns (ICommunityAdmin) {
-        return _communityAdmin;
-    }
-
-    /**
      * @notice Updates the CommunityAdmin contract address
      *
-     * @param communityAdmin_ address of the new CommunityAdmin contract
+     * @param _newCommunityAdmin address of the new CommunityAdmin contract
      */
-    function updateCommunityAdmin(ICommunityAdmin communityAdmin_) external override onlyOwner {
-        address oldCommunityAdminAddress = address(_communityAdmin);
-        _communityAdmin = communityAdmin_;
+    function updateCommunityAdmin(ICommunityAdmin _newCommunityAdmin) external override onlyOwner {
+        address _oldCommunityAdminAddress = address(communityAdmin);
+        communityAdmin = _newCommunityAdmin;
 
-        emit CommunityAdminUpdated(oldCommunityAdminAddress, address(_communityAdmin));
+        emit CommunityAdminUpdated(_oldCommunityAdminAddress, address(_newCommunityAdmin));
     }
 
     /**
      * @notice Transfers an amount of an ERC20 from this contract to an address
      *
-     * @param token_ address of the ERC20 token
-     * @param to_ address of the receiver
-     * @param amount_ amount of the transaction
+     * @param _token address of the ERC20 token
+     * @param _to address of the receiver
+     * @param _amount amount of the transaction
      */
     function transfer(
-        IERC20 token_,
-        address to_,
-        uint256 amount_
+        IERC20 _token,
+        address _to,
+        uint256 _amount
     ) external override onlyCommunityAdminOrOwner nonReentrant {
-        token_.safeTransfer(to_, amount_);
+        _token.safeTransfer(_to, _amount);
 
-        emit TransferERC20(address(token_), to_, amount_);
+        emit TransferERC20(address(_token), _to, _amount);
     }
 }

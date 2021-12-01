@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.5;
+pragma solidity 0.8.4;
 
 import "./IDonationMiner.sol";
 
@@ -10,16 +10,16 @@ import "./IDonationMiner.sol";
  * DonationMinerStorageVX.
  */
 abstract contract DonationMinerStorageV1 is IDonationMiner {
-    IERC20 internal _cUSD;
-    IERC20 internal _IPCT;
-    ITreasury internal _treasury;
-    uint256 internal _rewardPeriodSize;
-    uint256 internal _donationCount;
-    uint256 internal _rewardPeriodCount;
-    uint256 internal _decayNumerator;
-    uint256 internal _decayDenominator;
+    IERC20 public override cUSD;
+    IERC20 public override PACT;
+    ITreasury public override treasury;
+    uint256 public override rewardPeriodSize;
+    uint256 public override donationCount;
+    uint256 public override rewardPeriodCount;
+    uint256 public override decayNumerator;
+    uint256 public override decayDenominator;
 
-    mapping(uint256 => Donation) internal _donations;
-    mapping(uint256 => RewardPeriod) internal _rewardPeriods;
-    mapping(address => Donor) internal _donors;
+    mapping(uint256 => Donation) public override donations;
+    mapping(uint256 => RewardPeriod) public override rewardPeriods;
+    mapping(address => Donor) public override donors;
 }

@@ -6,13 +6,13 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// @ts-ignore
-	const { deployments, getNamedAccounts, ethers } = hre;
+	const { deployments, ethers } = hre;
 	const { deploy } = deployments;
 
 	const accounts: SignerWithAddress[] = await ethers.getSigners();
 	const deployer = accounts[0];
 
-	const Token = await deployments.get("IPCTToken");
+	const Token = await deployments.get("PACTToken");
 	const Treasury = await deployments.get("TreasuryProxy");
 
 	const ImpactProxyAdmin = await deployments.get("ImpactProxyAdmin");
@@ -20,7 +20,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// const IPCTTimelock = await deployments.get("IPCTTimelock"); //prod
 	// const ownerAddress = IPCTTimelock.address; //prod
 	const ownerAddress = deployer.address; //dev
-	// const cUSDAddress = getCUSDAddress(); //prod
 	const cUSDAddress = getCUSDAddress();
 
 	const donationMinerImplementationResult = await deploy(
@@ -58,9 +57,17 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		Treasury.address,
 		parseEther("216000"),
 		20,
-		30,
+		130,
 		"998902",
 		"1000000"
+	);
+
+	const IPCT = await deployments.get("PACTToken");
+	const IPCTContract = await ethers.getContractAt("PACTToken", IPCT.address);
+
+	await IPCTContract.transfer(
+		donationMinerContract.address,
+		parseEther("4000000000")
 	);
 
 	await donationMinerContract.transferOwnership(ownerAddress);
