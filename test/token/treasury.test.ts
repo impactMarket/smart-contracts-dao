@@ -87,7 +87,9 @@ describe("Treasury", () => {
 	});
 
 	it("Should have correct values", async function () {
-		expect(await Treasury.communityAdmin()).to.be.equal(CommunityAdmin.address);
+		expect(await Treasury.communityAdmin()).to.be.equal(
+			CommunityAdmin.address
+		);
 		expect(await Treasury.owner()).to.be.equal(owner.address);
 	});
 
@@ -97,11 +99,7 @@ describe("Treasury", () => {
 		expect(await cUSD.balanceOf(Treasury.address)).to.be.equal(
 			parseEther("100")
 		);
-		await Treasury.transfer(
-			cUSD.address,
-			owner.address,
-			parseEther("100")
-		);
+		await Treasury.transfer(cUSD.address, owner.address, parseEther("100"));
 		expect(await cUSD.balanceOf(Treasury.address)).to.be.equal(0);
 		expect(await cUSD.balanceOf(owner.address)).to.be.equal(
 			parseEther("100")
@@ -132,7 +130,7 @@ describe("Treasury", () => {
 		);
 	});
 
-	it.only("Should update implementation if owner", async function () {
+	it("Should update implementation if owner", async function () {
 		const NewTreasuryImplementationFactory =
 			await ethers.getContractFactory("TreasuryImplementation");
 		const NewTreasuryImplementation =
