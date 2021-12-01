@@ -28,6 +28,7 @@ contract CommunityAdminImplementation is
     using EnumerableSet for EnumerableSet.AddressSet;
 
     uint256 private constant DEFAULT_AMOUNT = 5e16;
+    uint256 private constant TREASURY_SAFETY_FACTOR = 10;
 
     /**
      * @notice Triggered when a community has been added
@@ -347,10 +348,17 @@ contract CommunityAdminImplementation is
             "CommunityAdmin::fundCommunity: this community has enough funds"
         );
 
-        uint256 trancheAmount = calculateCommunityTrancheAmount(ICommunity(msg.sender));
+        uint256 _trancheAmount = calculateCommunityTrancheAmount(ICommunity(msg.sender));
 
-        if (trancheAmount > _balance) {
-            transferToCommunity(_community, trancheAmount - _balance);
+        if (_trancheAmount > _balance) {
+            uint256 _amount = _trancheAmount - _balance;
+            uint256 _treasurySafetyBalance = cUSD.balanceOf(address(treasury)) /
+                TREASURY_SAFETY_FACTOR;
+            require(
+                _amount <= _treasurySafetyBalance,
+                "CommunityAdmin::fundCommunity: Not enough funds"
+            );
+            transferToCommunity(_community, _amount);
         }
     }
 
