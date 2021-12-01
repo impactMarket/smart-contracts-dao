@@ -12,8 +12,6 @@ import "./interfaces/DonationMinerStorageV1.sol";
 import "../community/interfaces/ICommunity.sol";
 import "../community/interfaces/ICommunityAdmin.sol";
 
-import "hardhat/console.sol";
-
 contract DonationMinerImplementation is
     Initializable,
     OwnableUpgradeable,
@@ -79,6 +77,24 @@ contract DonationMinerImplementation is
     );
 
     /**
+     * @notice Triggered when the first reward period params have been updated
+     *
+     * @param oldStartingBlock        Old oldStartingBlock value
+     * @param oldFirstRewardPerBlock  Old oldFirstRewardPerBlock value
+     * @param newStartingBlock        New newStartingBlock value
+     * @param newFirstRewardPerBlock  New newFirstRewardPerBlock value
+     *
+     * For further information regarding each parameter, see
+     * *DonationMiner* smart contract initialize method.
+     */
+    event FirstRewardPeriodParamsUpdated(
+        uint256 oldStartingBlock,
+        uint256 oldFirstRewardPerBlock,
+        uint256 newStartingBlock,
+        uint256 newFirstRewardPerBlock
+    );
+
+    /**
      * @notice Triggered when the treasury address has been updated
      *
      * @param oldTreasury             Old treasury address
@@ -97,56 +113,52 @@ contract DonationMinerImplementation is
     /**
      * @notice Used to initialize a new DonationMiner contract
      *
-     * @param cUSD_                 Address of the cUSD token
-     * @param PACT_                 Address of the PACT Token
-     * @param treasury_             Address of the Treasury
-     * @param firstRewardPerBlock_  Number of PACTs given for each block
+     * @param _cUSD                 Address of the cUSD token
+     * @param _PACT                 Address of the PACT Token
+     * @param _treasury             Address of the Treasury
+     * @param _firstRewardPerBlock  Number of PACTs given for each block
      *                              from the first reward period
-     * @param rewardPeriodSize_     Number of blocks of the reward period
-     * @param startingBlock_        First block of the first reward period
-     * @param decayNumerator_       Decay numerator used for calculating
+     * @param _rewardPeriodSize     Number of blocks of the reward period
+     * @param _startingBlock        First block of the first reward period
+     * @param _decayNumerator       Decay numerator used for calculating
                                     the new reward per block based on
                                     the previous reward per block
-     * @param decayDenominator_     Decay denominator used for calculating
+     * @param _decayDenominator     Decay denominator used for calculating
                                     the new reward per block based on
                                     the previous reward per block
      */
     function initialize(
-        IERC20 cUSD_,
-        IERC20 PACT_,
-        ITreasury treasury_,
-        uint256 firstRewardPerBlock_,
-        uint256 rewardPeriodSize_,
-        uint256 startingBlock_,
-        uint256 decayNumerator_,
-        uint256 decayDenominator_
+        IERC20 _cUSD,
+        IERC20 _PACT,
+        ITreasury _treasury,
+        uint256 _firstRewardPerBlock,
+        uint256 _rewardPeriodSize,
+        uint256 _startingBlock,
+        uint256 _decayNumerator,
+        uint256 _decayDenominator
     ) public initializer {
-        require(address(cUSD_) != address(0), "DonationMiner::initialize: cUSD address not set");
-        require(address(PACT_) != address(0), "DonationMiner::initialize: PACT address not set");
-        require(address(treasury_) != address(0), "DonationMiner::initialize: treasury_ not set");
+        require(address(_cUSD) != address(0), "DonationMiner::initialize: cUSD address not set");
+        require(address(_PACT) != address(0), "DonationMiner::initialize: PACT address not set");
+        require(address(_treasury) != address(0), "DonationMiner::initialize: treasury_ not set");
         require(
-            firstRewardPerBlock_ != 0,
+            _firstRewardPerBlock != 0,
             "DonationMiner::initialize: firstRewardPerBlock not set!"
         );
-        require(startingBlock_ != 0, "DonationMiner::initialize: startingRewardPeriod not set!");
+        require(_startingBlock != 0, "DonationMiner::initialize: startingRewardPeriod not set!");
 
         __Ownable_init();
         __Pausable_init();
         __ReentrancyGuard_init();
 
-        cUSD = cUSD_;
-        PACT = PACT_;
-        treasury = treasury_;
-        rewardPeriodSize = rewardPeriodSize_;
-        decayNumerator = decayNumerator_;
-        decayDenominator = decayDenominator_;
+        cUSD = _cUSD;
+        PACT = _PACT;
+        treasury = _treasury;
+        rewardPeriodSize = _rewardPeriodSize;
+        decayNumerator = _decayNumerator;
+        decayDenominator = _decayDenominator;
 
         rewardPeriodCount = 1;
-        RewardPeriod storage firstPeriod = rewardPeriods[1];
-        firstPeriod.startBlock = startingBlock_;
-        firstPeriod.endBlock = startingBlock_ + rewardPeriodSize - 1;
-        firstPeriod.rewardPerBlock = firstRewardPerBlock_;
-        firstPeriod.rewardAmount = firstRewardPerBlock_ * rewardPeriodSize;
+        initFirstPeriod(_startingBlock, _firstRewardPerBlock);
     }
 
     /**
@@ -159,166 +171,201 @@ contract DonationMinerImplementation is
     /**
      * @notice Returns the amount of cUSD donated by a user in a reward period
      *
-     * @param period number of the reward period
-     * @param donor address of the donor
+     * @param _period number of the reward period
+     * @param _donor address of the donor
      * @return uint256 amount of cUSD donated by the user in this reward period
      */
-    function rewardPeriodDonorAmount(uint256 period, address donor)
+    function rewardPeriodDonorAmount(uint256 _period, address _donor)
         external
         view
         override
         returns (uint256)
     {
-        return rewardPeriods[period].donorAmounts[donor];
+        return rewardPeriods[_period].donorAmounts[_donor];
     }
 
     /**
      * @notice Returns a reward period number from a donor reward period list
      *
-     * @param donor address of the donor
-     * @param rewardPeriodIndex index of the reward period
+     * @param _donor address of the donor
+     * @param _rewardPeriodIndex index of the reward period
      * @return uint256 number of the reward period
      */
-    function donorRewardPeriod(address donor, uint256 rewardPeriodIndex)
+    function donorRewardPeriod(address _donor, uint256 _rewardPeriodIndex)
         external
         view
         override
         returns (uint256)
     {
-        return donors[donor].rewardPeriods[rewardPeriodIndex];
+        return donors[_donor].rewardPeriods[_rewardPeriodIndex];
     }
 
     /**
      * @notice Updates reward period default params
      *
-     * @param newRewardPeriodSize_ value of new rewardPeriodSize
-     * @param newDecayNumerator_ value of new decayNumerator
-     * @param newDecayDenominator_ value of new decayDenominator
+     * @param _newRewardPeriodSize value of new rewardPeriodSize
+     * @param _newDecayNumerator value of new decayNumerator
+     * @param _newDecayDenominator value of new decayDenominator
      */
     function updateRewardPeriodParams(
-        uint256 newRewardPeriodSize_,
-        uint256 newDecayNumerator_,
-        uint256 newDecayDenominator_
+        uint256 _newRewardPeriodSize,
+        uint256 _newDecayNumerator,
+        uint256 _newDecayDenominator
     ) external override onlyOwner {
-        uint256 oldRewardPeriodSize_ = rewardPeriodSize;
-        uint256 oldDecayNumerator_ = decayNumerator;
-        uint256 oldDecayDenominator_ = decayDenominator;
+        uint256 _oldRewardPeriodSize = rewardPeriodSize;
+        uint256 _oldDecayNumerator = decayNumerator;
+        uint256 _oldDecayDenominator = decayDenominator;
 
-        rewardPeriodSize = newRewardPeriodSize_;
-        decayNumerator = newDecayNumerator_;
-        decayDenominator = newDecayDenominator_;
+        rewardPeriodSize = _newRewardPeriodSize;
+        decayNumerator = _newDecayNumerator;
+        decayDenominator = _newDecayDenominator;
 
         emit RewardPeriodParamsUpdated(
-            oldRewardPeriodSize_,
-            oldDecayNumerator_,
-            oldDecayDenominator_,
-            newRewardPeriodSize_,
-            newDecayNumerator_,
-            newDecayDenominator_
+            _oldRewardPeriodSize,
+            _oldDecayNumerator,
+            _oldDecayDenominator,
+            _newRewardPeriodSize,
+            _newDecayNumerator,
+            _newDecayDenominator
+        );
+    }
+
+    /**
+     * @notice Updates first reward period default params
+     *
+     * @param _startingBlock value of new startingBlock
+     * @param _firstRewardPerBlock value of new firstRewardPerBlock
+     */
+    function updateFirstRewardPeriodParams(uint256 _startingBlock, uint256 _firstRewardPerBlock)
+        external
+        override
+        onlyOwner
+    {
+        uint256 _oldStartingBlock = rewardPeriods[1].startBlock;
+        uint256 _oldFirstRewardPerBlock = rewardPeriods[1].rewardPerBlock;
+
+        require(
+            _oldStartingBlock > block.number,
+            "DonationMiner::updateFirstRewardPeriodParams: DonationMiner has already started"
+        );
+
+        initFirstPeriod(_startingBlock, _firstRewardPerBlock);
+
+        emit FirstRewardPeriodParamsUpdated(
+            _oldStartingBlock,
+            _oldFirstRewardPerBlock,
+            _startingBlock,
+            _firstRewardPerBlock
         );
     }
 
     /**
      * @notice Updates Treasury address
      *
-     * @param newTreasury_ address of new treasury_ contract
+     * @param _newTreasury address of new treasury_ contract
      */
-    function updateTreasury(ITreasury newTreasury_) external override onlyOwner {
-        address oldTreasuryAddress = address(treasury);
-        treasury = newTreasury_;
+    function updateTreasury(ITreasury _newTreasury) external override onlyOwner {
+        address _oldTreasuryAddress = address(treasury);
+        treasury = _newTreasury;
 
-        emit TreasuryUpdated(oldTreasuryAddress, address(newTreasury_));
+        emit TreasuryUpdated(_oldTreasuryAddress, address(_newTreasury));
     }
 
     /**
      * @notice Transfers cUSD tokens to the treasury contract
      *
-     * @param amount_ Amount of cUSD tokens to deposit.
+     * @param _amount Amount of cUSD tokens to deposit.
      */
-    function donate(uint256 amount_) external override whenNotPaused whenStarted nonReentrant {
+    function donate(uint256 _amount) external override whenNotPaused whenStarted nonReentrant {
         // Transfer the cUSD from the donor to the treasury
-        cUSD.safeTransferFrom(msg.sender, address(treasury), amount_);
+        cUSD.safeTransferFrom(msg.sender, address(treasury), _amount);
 
-        addDonation(msg.sender, amount_, address(treasury));
+        addDonation(msg.sender, _amount, address(treasury));
     }
 
     /**
      * @dev Transfers cUSD tokens to the community contract
      *
-     * @param community_ address of the community
-     * @param amount_ amount of cUSD tokens to deposit
+     * @param _community address of the community
+     * @param _amount amount of cUSD tokens to deposit
      */
-    function donateToCommunity(ICommunity community_, uint256 amount_)
+    function donateToCommunity(ICommunity _community, uint256 _amount)
         external
         override
         whenNotPaused
         whenStarted
         nonReentrant
     {
-        ICommunityAdmin communityAdmin = treasury.communityAdmin();
+        ICommunityAdmin _communityAdmin = treasury.communityAdmin();
         require(
-            communityAdmin.communities(address(community_)) == ICommunityAdmin.CommunityState.Valid,
+            _communityAdmin.communities(address(_community)) ==
+                ICommunityAdmin.CommunityState.Valid,
             "DonationMiner::donateToCommunity: This is not a valid community address"
         );
         // Transfer the cUSD from the donor to the community
-        community_.donate(msg.sender, amount_);
-        addDonation(msg.sender, amount_, address(community_));
+        _community.donate(msg.sender, _amount);
+        addDonation(msg.sender, _amount, address(_community));
     }
 
     /**
      * @notice Transfers to the sender the rewards from ended reward periods
      */
     function claimRewards() external override whenNotPaused whenStarted nonReentrant {
-        Donor storage donor = donors[msg.sender];
-        uint256 claimAmount = calculateClaimableRewards(msg.sender);
-        donor.lastClaim = getDonorLastEndedRewardPeriodIndex(donor);
+        Donor storage _donor = donors[msg.sender];
+        uint256 _claimAmount = calculateClaimableRewards(msg.sender);
+        _donor.lastClaim = getDonorLastEndedRewardPeriodIndex(_donor);
 
-        if (claimAmount == 0) {
+        if (_claimAmount == 0) {
             return;
         }
 
-        if (claimAmount > PACT.balanceOf(address(this))) {
-            claimAmount = PACT.balanceOf(address(this));
+        if (_claimAmount > PACT.balanceOf(address(this))) {
+            _claimAmount = PACT.balanceOf(address(this));
         }
 
-        PACT.safeTransfer(msg.sender, claimAmount);
+        PACT.safeTransfer(msg.sender, _claimAmount);
 
-        emit RewardClaimed(msg.sender, claimAmount);
+        emit RewardClaimed(msg.sender, _claimAmount);
     }
 
     /**
      * @notice Calculates the rewards from ended reward periods of a donor
      *
-     * @param donor_ address of the donor
+     * @param _donorAddress address of the donor
      * @return uint256 sum of all donor's rewards that has not been claimed yet
      */
-    function calculateClaimableRewards(address donor_) public view override returns (uint256) {
-        Donor storage donor = donors[donor_];
-        uint256 claimAmount;
-        uint256 rewardPeriodNumber;
-        uint256 lastEndedRewardPeriodIndex = getDonorLastEndedRewardPeriodIndex(donor);
-        uint256 index = donor.lastClaim + 1;
+    function calculateClaimableRewards(address _donorAddress)
+        public
+        view
+        override
+        returns (uint256)
+    {
+        Donor storage _donor = donors[_donorAddress];
+        uint256 _claimAmount;
+        uint256 _rewardPeriodNumber;
+        uint256 _lastEndedRewardPeriodIndex = getDonorLastEndedRewardPeriodIndex(_donor);
+        uint256 _index = _donor.lastClaim + 1;
 
-        while (index <= lastEndedRewardPeriodIndex) {
-            rewardPeriodNumber = donor.rewardPeriods[index];
-            RewardPeriod storage rewardPeriod = rewardPeriods[rewardPeriodNumber];
+        while (_index <= _lastEndedRewardPeriodIndex) {
+            _rewardPeriodNumber = _donor.rewardPeriods[_index];
+            RewardPeriod storage _rewardPeriod = rewardPeriods[_rewardPeriodNumber];
 
-            claimAmount +=
-                (rewardPeriod.rewardAmount * rewardPeriod.donorAmounts[donor_]) /
-                rewardPeriod.donationsAmount;
-            index++;
+            _claimAmount +=
+                (_rewardPeriod.rewardAmount * _rewardPeriod.donorAmounts[_donorAddress]) /
+                _rewardPeriod.donationsAmount;
+            _index++;
         }
 
-        return claimAmount;
+        return _claimAmount;
     }
 
     /**
      * @notice Calculates the estimate reward of a donor for current reward period
      *
-     * @param donor_ address of the donor
+     * @param _donorAddress address of the donor
      * @return uint256 reward that donor will receive in current reward period if there isn't another donation
      */
-    function estimateClaimableReward(address donor_)
+    function estimateClaimableReward(address _donorAddress)
         external
         view
         override
@@ -326,17 +373,17 @@ contract DonationMinerImplementation is
         whenNotPaused
         returns (uint256)
     {
-        RewardPeriod storage lastRewardPeriod = rewardPeriods[rewardPeriodCount];
+        RewardPeriod storage _lastRewardPeriod = rewardPeriods[rewardPeriodCount];
 
-        uint256 claimAmount;
+        uint256 _claimAmount;
 
         if (isCurrentRewardPeriodInitialized()) {
-            claimAmount +=
-                (lastRewardPeriod.rewardAmount * lastRewardPeriod.donorAmounts[donor_]) /
-                lastRewardPeriod.donationsAmount;
+            _claimAmount +=
+                (_lastRewardPeriod.rewardAmount * _lastRewardPeriod.donorAmounts[_donorAddress]) /
+                _lastRewardPeriod.donationsAmount;
         }
 
-        return claimAmount;
+        return _claimAmount;
     }
 
     /**
@@ -353,18 +400,18 @@ contract DonationMinerImplementation is
     /**
      * @notice Transfers an amount of an ERC20 from this contract to an address
      *
-     * @param token_ address of the ERC20 token
-     * @param to_ address of the receiver
-     * @param amount_ amount of the transaction
+     * @param _token address of the ERC20 token
+     * @param _to address of the receiver
+     * @param _amount amount of the transaction
      */
     function transfer(
-        IERC20 token_,
-        address to_,
-        uint256 amount_
+        IERC20 _token,
+        address _to,
+        uint256 _amount
     ) external override onlyOwner nonReentrant {
-        token_.safeTransfer(to_, amount_);
+        _token.safeTransfer(_to, _amount);
 
-        emit TransferERC20(address(token_), to_, amount_);
+        emit TransferERC20(address(_token), _to, _amount);
     }
 
     /**
@@ -372,103 +419,103 @@ contract DonationMinerImplementation is
      *         The first donor in a reward period will pay for that operation.
      */
     function initializeRewardPeriods() internal {
-        RewardPeriod storage lastPeriod = rewardPeriods[rewardPeriodCount];
+        RewardPeriod storage _lastPeriod = rewardPeriods[rewardPeriodCount];
 
-        while (lastPeriod.endBlock < block.number) {
+        while (_lastPeriod.endBlock < block.number) {
             rewardPeriodCount++;
-            RewardPeriod storage newPeriod = rewardPeriods[rewardPeriodCount];
-            newPeriod.startBlock = lastPeriod.endBlock + 1;
-            newPeriod.endBlock = newPeriod.startBlock + rewardPeriodSize - 1;
-            newPeriod.rewardPerBlock = calculateRewardPerBlock();
-            uint256 rewardAmount = rewardPeriodSize * newPeriod.rewardPerBlock;
-            if (lastPeriod.donationsAmount == 0) {
-                rewardAmount += lastPeriod.rewardAmount;
+            RewardPeriod storage _newPeriod = rewardPeriods[rewardPeriodCount];
+            _newPeriod.startBlock = _lastPeriod.endBlock + 1;
+            _newPeriod.endBlock = _newPeriod.startBlock + rewardPeriodSize - 1;
+            _newPeriod.rewardPerBlock = calculateRewardPerBlock();
+            uint256 _rewardAmount = rewardPeriodSize * _newPeriod.rewardPerBlock;
+            if (_lastPeriod.donationsAmount == 0) {
+                _rewardAmount += _lastPeriod.rewardAmount;
             }
-            newPeriod.rewardAmount = rewardAmount;
-            lastPeriod = newPeriod;
+            _newPeriod.rewardAmount = _rewardAmount;
+            _lastPeriod = _newPeriod;
         }
     }
 
     /**
      * @notice Adds a new donation in donations list
      *
-     * @param donor_ address of the donner
-     * @param amount_ amount of the donation
-     * @param target_ address of the receiver (community or treasury)
+     * @param _donorAddress address of the donner
+     * @param _amount amount of the donation
+     * @param _target address of the receiver (community or treasury)
      */
     function addDonation(
-        address donor_,
-        uint256 amount_,
-        address target_
+        address _donorAddress,
+        uint256 _amount,
+        address _target
     ) internal {
         initializeRewardPeriods();
 
         donationCount++;
-        Donation storage donation = donations[donationCount];
-        donation.donor = donor_;
-        donation.target = target_;
-        donation.amount = amount_;
-        donation.blockNumber = block.number;
-        donation.rewardPeriod = rewardPeriodCount;
-        donation.token = cUSD;
-        donation.tokenPrice = 1e18;
+        Donation storage _donation = donations[donationCount];
+        _donation.donor = _donorAddress;
+        _donation.target = _target;
+        _donation.amount = _amount;
+        _donation.blockNumber = block.number;
+        _donation.rewardPeriod = rewardPeriodCount;
+        _donation.token = cUSD;
+        _donation.tokenPrice = 1e18;
 
-        updateRewardPeriodAmounts(rewardPeriodCount, msg.sender, amount_);
+        updateRewardPeriodAmounts(rewardPeriodCount, msg.sender, _amount);
         addCurrentRewardPeriodToDonor(msg.sender);
 
-        emit DonationAdded(donationCount, msg.sender, amount_, target_);
+        emit DonationAdded(donationCount, msg.sender, _amount, _target);
     }
 
     /**
      * @notice Returns the index of the last ended reward period in which a donor has donated
      *
-     * @param donor object of the donor
+     * @param _donor object of the donor
      * @return uint256 the index of the last ended reward period of the donor
      */
-    function getDonorLastEndedRewardPeriodIndex(Donor storage donor)
+    function getDonorLastEndedRewardPeriodIndex(Donor storage _donor)
         internal
         view
         returns (uint256)
     {
-        uint256 lastDonorRewardPeriod = donor.rewardPeriods[donor.rewardPeriodsCount];
-        if (rewardPeriods[lastDonorRewardPeriod].endBlock < block.number) {
-            return donor.rewardPeriodsCount;
+        uint256 _lastDonorRewardPeriod = _donor.rewardPeriods[_donor.rewardPeriodsCount];
+        if (rewardPeriods[_lastDonorRewardPeriod].endBlock < block.number) {
+            return _donor.rewardPeriodsCount;
         } else {
-            return donor.rewardPeriodsCount - 1;
+            return _donor.rewardPeriodsCount - 1;
         }
     }
 
     /**
      * @notice Adds the current reward period number to a donor's list only if it hasn't been added yet
      *
-     * @param donor_ address of the donor
+     * @param _donorAddress address of the donor
      */
-    function addCurrentRewardPeriodToDonor(address donor_) internal {
-        Donor storage donor = donors[donor_];
-        uint256 lastDonorRewardPeriod = donor.rewardPeriods[donor.rewardPeriodsCount];
+    function addCurrentRewardPeriodToDonor(address _donorAddress) internal {
+        Donor storage _donor = donors[_donorAddress];
+        uint256 _lastDonorRewardPeriod = _donor.rewardPeriods[_donor.rewardPeriodsCount];
 
         //ensures that the current reward period number hasn't been added in the donor's list
-        if (lastDonorRewardPeriod != rewardPeriodCount) {
-            donor.rewardPeriodsCount++;
-            donor.rewardPeriods[donor.rewardPeriodsCount] = rewardPeriodCount;
+        if (_lastDonorRewardPeriod != rewardPeriodCount) {
+            _donor.rewardPeriodsCount++;
+            _donor.rewardPeriods[_donor.rewardPeriodsCount] = rewardPeriodCount;
         }
     }
 
     /**
      * @notice Updates the amounts of a reward period
      *
-     * @param rewardPeriodNumber_ number of the reward period
-     * @param donor_ address of the donor
-     * @param amount_ amount to be added
+     * @param _rewardPeriodNumber number of the reward period
+     * @param _donorAddress address of the donor
+     * @param _amount amount to be added
      */
     function updateRewardPeriodAmounts(
-        uint256 rewardPeriodNumber_,
-        address donor_,
-        uint256 amount_
+        uint256 _rewardPeriodNumber,
+        address _donorAddress,
+        uint256 _amount
     ) internal {
-        RewardPeriod storage currentPeriod = rewardPeriods[rewardPeriodNumber_];
-        currentPeriod.donationsAmount += amount_;
-        currentPeriod.donorAmounts[donor_] += amount_;
+        RewardPeriod storage _currentPeriod = rewardPeriods[_rewardPeriodNumber];
+        _currentPeriod.donationsAmount += _amount;
+        _currentPeriod.donorAmounts[_donorAddress] += _amount;
     }
 
     /**
@@ -478,5 +525,19 @@ contract DonationMinerImplementation is
      */
     function isCurrentRewardPeriodInitialized() internal view returns (bool) {
         return rewardPeriods[rewardPeriodCount].endBlock >= block.number;
+    }
+
+    /**
+     * @notice Initializes the first reward period
+     *
+     * @param _startingBlock first block
+     * @param _firstRewardPerBlock initial reward per block
+     */
+    function initFirstPeriod(uint256 _startingBlock, uint256 _firstRewardPerBlock) internal {
+        RewardPeriod storage _firstPeriod = rewardPeriods[1];
+        _firstPeriod.startBlock = _startingBlock;
+        _firstPeriod.endBlock = _startingBlock + rewardPeriodSize - 1;
+        _firstPeriod.rewardPerBlock = _firstRewardPerBlock;
+        _firstPeriod.rewardAmount = _firstRewardPerBlock * rewardPeriodSize;
     }
 }

@@ -14,8 +14,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	const ImpactProxyAdmin = await deployments.get("ImpactProxyAdmin");
 
-	await new Promise((resolve) => setTimeout(resolve, 6000));
-
 	const treasuryImplementationResult = await deploy(
 		"TreasuryImplementation",
 		{
@@ -34,12 +32,16 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		// gasLimit: 13000000,
 	});
 
+	await new Promise((resolve) => setTimeout(resolve, 6000));
+
 	const treasuryContract = await ethers.getContractAt(
 		"TreasuryImplementation",
 		treasuryProxyResult.address
 	);
 
 	await treasuryContract.initialize(ZERO_ADDRESS);
+
+	await new Promise((resolve) => setTimeout(resolve, 6000));
 };
 
 export default func;

@@ -14,5 +14,5 @@ interface IImpactLabsVesting {
     function lastClaimedRewardPeriod() external view returns (uint256);
     function advancePayment() external view returns (uint256);
     function claim() external;
-    function transfer(IERC20 token, address to, uint256 amount) external;
+    function transfer(IERC20 _token, address _to, uint256 _amount) external;
 }

@@ -14,6 +14,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		args: [deployer],
 		log: true,
 	});
+
+	await new Promise((resolve) => setTimeout(resolve, 6000));
 };
 
 export default func;

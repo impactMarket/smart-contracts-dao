@@ -17,45 +17,50 @@ interface ICommunityAdmin {
     function getVersion() external returns(uint256);
     function cUSD() external view returns(IERC20);
     function treasury() external view returns(ITreasury);
-    function communities(address community) external view returns(CommunityState);
+    function communities(address _community) external view returns(CommunityState);
     function communityTemplate() external view returns(ICommunity);
     function communityProxyAdmin() external view returns(ProxyAdmin);
-    function communityListAt(uint256 index) external view returns (address);
+    function communityListAt(uint256 _index) external view returns (address);
     function communityListLength() external view returns (uint256);
 
-    function updateTreasury(ITreasury newTreasury) external;
-    function updateCommunityTemplate(ICommunity communityTemplate_) external;
+    function updateTreasury(ITreasury _newTreasury) external;
+    function updateCommunityTemplate(ICommunity _communityTemplate_) external;
     function updateBeneficiaryParams(
-        ICommunity community,
-        uint256 claimAmount,
-        uint256 maxClaim,
-        uint256 decreaseStep,
-        uint256 baseInterval,
-        uint256 incrementInterval
+        ICommunity _community,
+        uint256 _claimAmount,
+        uint256 _maxClaim,
+        uint256 _decreaseStep,
+        uint256 _baseInterval,
+        uint256 _incrementInterval
     ) external;
     function updateCommunityParams(
-        ICommunity community,
-        uint256 minTranche,
-        uint256 maxTranche
+        ICommunity _community,
+        uint256 _minTranche,
+        uint256 _maxTranche
     ) external;
-    function updateProxyImplementation(address communityProxy, address newLogic) external;
+    function updateProxyImplementation(address _communityProxy, address _newLogic) external;
     function addCommunity(
-        address[] memory managers,
-        uint256 claimAmount,
-        uint256 maxClaim,
-        uint256 decreaseStep,
-        uint256 baseInterval,
-        uint256 incrementInterval,
-        uint256 minTranche,
-        uint256 maxTranche
+        address[] memory _managers,
+        uint256 _claimAmount,
+        uint256 _maxClaim,
+        uint256 _decreaseStep,
+        uint256 _baseInterval,
+        uint256 _incrementInterval,
+        uint256 _minTranche,
+        uint256 _maxTranche
     ) external;
     function migrateCommunity(
-        address[] memory managers,
-        ICommunity previousCommunity
+        address[] memory _managers,
+        ICommunity _previousCommunity
     ) external;
-    function addManagerToCommunity(ICommunity community_, address account_) external;
-    function removeCommunity(ICommunity community) external;
+    function addManagerToCommunity(ICommunity _community_, address _account_) external;
+    function removeCommunity(ICommunity _community) external;
     function fundCommunity() external;
-    function transfer(IERC20 token, address to, uint256 amount) external;
-    function transferFromCommunity(ICommunity community, IERC20 token, address to, uint256 amount) external;
+    function transfer(IERC20 _token, address _to, uint256 _amount) external;
+    function transferFromCommunity(
+        ICommunity _community,
+        IERC20 _token,
+        address _to,
+        uint256 _amount
+    ) external;
 }
