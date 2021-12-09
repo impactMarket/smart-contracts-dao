@@ -58,8 +58,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		delegatorResult.address,
 		parseEther("2000000000")
 	);
-	const airgrabAddress = delegatorResult.address;
-	await IPCTContract.transfer(airgrabAddress, parseEther("1000000000"));
 
 	// only for prod
 	// await governance.transferOwnership(timelockResult.address);

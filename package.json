@@ -64,6 +64,7 @@
   },
   "snyk": true,
   "dependencies": {
-    "@nomiclabs/ethereumjs-vm": "^4.2.2"
+    "@nomiclabs/ethereumjs-vm": "^4.2.2",
+    "ethereumjs-util": "^7.1.3"
   }
 }

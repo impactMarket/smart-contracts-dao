@@ -12,9 +12,9 @@
   * Donors will receive a scaled amount based on their donation amount (7%)
   * Others will receive a fixed amount per valid address (3%)
   * Leave these parameters adjustable so we can tweak the amounts to match 1 Billion
-1. Feed CSV file into Merkel Distributor contract and deploy contract with the calculated merkle root and claim functions
-  * Generate Merkel tree from https://github.com/celo-org/merkle-distributor working example
-  * Deploy Merkel distributor contract with root calculated in previous step, Solidity code also available here: https://github.com/celo-org/merkle-distributor (I am checking in an updated version of this to https://github.com/keyko-io/impact-market-token)
+1. Feed CSV file into Merkle Distributor contract and deploy contract with the calculated merkle root and claim functions
+  * Generate Merkle tree from https://github.com/celo-org/merkle-distributor working example
+  * Deploy Merkle distributor contract with root calculated in previous step, Solidity code also available here: https://github.com/celo-org/merkle-distributor (I am checking in an updated version of this to https://github.com/keyko-io/impact-market-token)
   * Updated version will include the rule that after 1 year the unclaimed tokens can be withdrawn by the Impact Markets treasury to be utilised by the DAO
   * After sending tokens to the contract, recipients can then check their claim amount (Uniswap-style) against the contract and claim
 
