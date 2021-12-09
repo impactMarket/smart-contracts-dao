@@ -1,6 +1,8 @@
 //SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.4;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 // Allows anyone to claim a token if they exist in a merkle root.
 interface IMerkleDistributor {
     // Returns the address of the token distributed by this contract.
@@ -13,6 +15,9 @@ interface IMerkleDistributor {
     function claim(uint256 _index, address _account, uint256 _amount, bytes32[] calldata _merkleProof) external;
     // Withdraw the unclaimed tokens after the claim period ends
     function withdrawUnclaimed() external;
+    // Transfers an amount of an ERC20 from this contract to an address
+    function transfer(IERC20 _token, address _to, uint256 _amount) external;
+
 
     // This event is triggered whenever a call to #claim succeeds.
     event Claimed(uint256 _index, address _account, uint256 _amount);
