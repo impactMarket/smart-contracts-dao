@@ -2,8 +2,7 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { parseEther } from "@ethersproject/units";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import BalanceTree from '../../airdrop_scripts/balance-tree'
-
+import BalanceTree from "../../airdrop_scripts/balance-tree";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// @ts-ignore
@@ -12,6 +11,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	const accounts: SignerWithAddress[] = await ethers.getSigners();
 	const deployer = accounts[0];
+	const account1 = accounts[1];
+	const account2 = accounts[2];
 
 	// const IPCTTimelock = await deployments.get("IPCTTimelock"); //prod
 	// const ownerAddress = IPCTTimelock.address; //prod
@@ -19,23 +20,23 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	const PACT = await deployments.get("PACTToken");
 
-
 	let tree: BalanceTree;
 	tree = new BalanceTree([
-		{ account: deployer.address, amount: parseEther("100") }
-	])
+		{ account: account1.address, amount: parseEther("100") },
+		{ account: account2.address, amount: parseEther("200") },
+	]);
 
-	const MerkleDistributor = await deploy(
+	const MerkleDistributor = await deploy("MerkleDistributor", {
+		from: deployer.address,
+		args: [PACT.address, tree.getHexRoot()],
+		log: true,
+		// gasLimit: 13000000,
+	});
+
+	const MerkleDistributorContract = await ethers.getContractAt(
 		"MerkleDistributor",
-		{
-			from: deployer.address,
-			args: [PACT.address, tree.getHexRoot()],
-			log: true,
-			// gasLimit: 13000000,
-		}
+		MerkleDistributor.address
 	);
-
-	const MerkleDistributorContract = await ethers.getContractAt("MerkleDistributor", MerkleDistributor.address);
 
 	const PACTContract = await ethers.getContractAt("PACTToken", PACT.address);
 
@@ -48,7 +49,5 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 };
 
 export default func;
-func.dependencies = [
-	"TokenTest",
-];
+func.dependencies = ["TokenTest"];
 func.tags = ["MerkleDistributorTest", "Test"];
