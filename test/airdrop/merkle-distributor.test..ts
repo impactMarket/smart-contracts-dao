@@ -4,10 +4,8 @@ import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 // @ts-ignore
 import { deployments, ethers, getNamedAccounts } from "hardhat";
-import { parseEther, formatEther } from "@ethersproject/units";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import * as ethersTypes from "ethers";
-import BalanceTree from "../../airdrop_scripts/balance-tree";
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -18,6 +16,8 @@ let account2: SignerWithAddress;
 
 let MerkleDistributor: ethersTypes.Contract;
 let PACT: ethersTypes.Contract;
+
+const merkleTree = require('../../airdrop_scripts/rewards/merkleTree.json');
 
 const deploy = deployments.createFixture(async () => {
 	await deployments.fixture("Test", { fallbackToGlobal: false });
@@ -46,32 +46,26 @@ describe("Merkle Distributor", () => {
 		await deploy();
 	});
 
-	it.only("Should be able to claim reward", async function () {
-		const initialBalance = await PACT.balanceOf(account1.address);
+	it.only("Should be able to claim reward account #1", async function () {
+		const account = '0x0000000072EF09A65BF7715EEE729AC702546aEC';
 
-		let tree: BalanceTree;
-		tree = new BalanceTree([
-			{ account: account1.address, amount: parseEther("100") },
-			{ account: account2.address, amount: parseEther("200") },
-		]);
+		const initialBalance = await PACT.balanceOf(account);
 
-		const proof0 = tree.getProof(0, account1.address, parseEther("100"));
+		const treeAccount = merkleTree['claims'][account];
 
 		await expect(
 			MerkleDistributor.claim(
-				0,
-				account1.address,
-				parseEther("100"),
-				proof0
+				treeAccount['index'],
+				account,
+				treeAccount['amount'],
+				treeAccount['proof']
 			)
 		)
 			.to.emit(MerkleDistributor, "Claimed")
-			.withArgs(0, account1.address, parseEther("100"));
+			.withArgs(treeAccount['index'], account, treeAccount['amount']);
 
-		const finalBalance = await PACT.balanceOf(account1.address);
+		const finalBalance = await PACT.balanceOf(account);
 
-		expect(finalBalance.sub(initialBalance)).to.be.equal(parseEther("100"));
-
-		expect(await PACT.balanceOf(account2.address)).to.be.equal(parseEther("0"));
+		expect(finalBalance.sub(initialBalance)).to.be.equal(treeAccount['amount']);
 	});
 });
