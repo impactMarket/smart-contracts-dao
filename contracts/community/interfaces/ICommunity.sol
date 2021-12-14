@@ -44,6 +44,7 @@ interface ICommunity {
     function impactMarketAddress() external pure returns (address);
     function minTranche() external view returns(uint256);
     function maxTranche() external view returns(uint256);
+    function lastFundRequest() external view returns(uint256);
 
     function updateCommunityAdmin(ICommunityAdmin _communityAdmin) external;
     function updatePreviousCommunity(ICommunity _newPreviousCommunity) external;
