@@ -18,14 +18,14 @@ contract MerkleDistributor is IMerkleDistributor, Ownable {
     mapping(uint256 => uint256) private claimedBitMap;
 
     modifier withinClaimPeriod() {
-        require(block.number <= claimPeriodEndBlock, "MerkelDistributor: Claim period has ended");
+        require(block.number <= claimPeriodEndBlock, "MerkleDistributor: Claim period has ended");
         _;
     }
 
     modifier claimPeriodEnded() {
         require(
             block.number > claimPeriodEndBlock,
-            "MerkelDistributor: Claim period has not ended"
+            "MerkleDistributor: Claim period has not ended"
         );
         _;
     }
@@ -86,5 +86,20 @@ contract MerkleDistributor is IMerkleDistributor, Ownable {
         uint256 _unclaimedBalance = IERC20(token).balanceOf(address(this));
         IERC20(token).safeTransfer(msg.sender, _unclaimedBalance);
         emit Withdrawn(msg.sender, _unclaimedBalance);
+    }
+
+    /**
+     * @notice Transfers an amount of an ERC20 from this contract to an address
+     *
+     * @param _token address of the ERC20 token
+     * @param _to address of the receiver
+     * @param _amount amount of the transaction
+     */
+    function transfer(
+        IERC20 _token,
+        address _to,
+        uint256 _amount
+    ) external override onlyOwner {
+        _token.safeTransfer(_to, _amount);
     }
 }

@@ -617,6 +617,8 @@ contract Community is
     function requestFunds() external override onlyManagers {
         communityAdmin.fundCommunity();
 
+        lastFundRequest = block.number;
+
         emit FundsRequested(msg.sender);
     }
 
