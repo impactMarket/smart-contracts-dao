@@ -26,5 +26,5 @@ yarn --ignore-engines
 | `/token/IPCT.sol`                            | The Impact Markets cERC-20 token contract                                     |                                       |
 | `/token/DonationMinerImplementation.sol`     | Vesting contract for non-airgrab initial distribution of tokens               |                                       |
 | `/token/TreasuryImplementation.sol`          | Contract that manages the funds                                               |                                       |
-| `/airgrab/MerkleDistributor.sol`             | Merkel Distributor for the Impact Markets token airgrab                       |                                       |
+| `/airgrab/MerkleDistributor.sol`             | Merkle Distributor for the Impact Markets token airgrab                       |                                       |
 | `/test/Token.sol`                            | Sample cERC-20 token used in test only                                        |                                       |

@@ -347,6 +347,10 @@ contract CommunityAdminImplementation is
             _balance < _community.minTranche(),
             "CommunityAdmin::fundCommunity: this community has enough funds"
         );
+        require(
+            block.number > _community.lastFundRequest() + _community.baseInterval(),
+            "CommunityAdmin::fundCommunity: this community is not allowed to request yet"
+        );
 
         uint256 _trancheAmount = calculateCommunityTrancheAmount(ICommunity(msg.sender));
 

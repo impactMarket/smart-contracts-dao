@@ -14,6 +14,6 @@ abstract contract ImpactLabsVestingStorageV1 is IImpactLabsVesting {
     IERC20 public override PACT;
     IDonationMiner public override donationMiner;
 
-    uint256 public override lastClaimedRewardPeriod;
+    uint256 public override nextRewardPeriod;
     uint256 public override advancePayment;
 }

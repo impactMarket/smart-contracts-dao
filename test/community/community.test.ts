@@ -76,6 +76,7 @@ let cUSDInstance: ethersTypes.Contract;
 let impactProxyAdmin: ethersTypes.Contract;
 
 // constants
+const firstBlock = 33;
 const oneMinuteInBlocks = 12;
 const threeMinutesInBlocks = 36;
 const hourInBlocks = 720;
@@ -1454,6 +1455,10 @@ describe("Community - getFunds", () => {
 			communityInstance.connect(communityManagerA).requestFunds()
 		).to.be.fulfilled;
 
+		expect(await communityInstance.lastFundRequest()).to.be.equal(
+			firstBlock + 4
+		);
+
 		expect(
 			await cUSDInstance.balanceOf(communityInstance.address)
 		).to.be.equal(communityMinTranche);
@@ -1463,6 +1468,8 @@ describe("Community - getFunds", () => {
 		await expect(
 			communityInstance.connect(beneficiaryA).requestFunds()
 		).to.be.rejectedWith("Community: NOT_MANAGER");
+
+		expect(await communityInstance.lastFundRequest()).to.be.equal(0);
 	});
 
 	it("should not change community tranche limits if not admin", async () => {
@@ -1568,6 +1575,101 @@ describe("Community - getFunds", () => {
 		await expect(
 			communityInstance.connect(communityManagerA).requestFunds()
 		).to.be.fulfilled;
+
+		expect(await communityInstance.lastFundRequest()).to.be.equal(
+			firstBlock + 4
+		);
+
+		expect(
+			await cUSDInstance.balanceOf(communityInstance.address)
+		).to.be.equal(communityMinTranche);
+	});
+
+	it("should not transfer funds to community too often", async () => {
+		expect(
+			await cUSDInstance.balanceOf(communityInstance.address)
+		).to.be.equal(communityMinTranche);
+
+		await communityInstance
+			.connect(communityManagerA)
+			.addBeneficiary(beneficiaryA.address);
+
+		communityInstance.connect(beneficiaryA).claim();
+
+		await expect(
+			communityInstance.connect(communityManagerA).requestFunds()
+		).to.be.fulfilled;
+
+		expect(await communityInstance.lastFundRequest()).to.be.equal(
+			firstBlock + 4
+		);
+
+		expect(
+			await cUSDInstance.balanceOf(communityInstance.address)
+		).to.be.equal(communityMinTranche);
+
+		await expect(
+			communityAdminProxy.transferFromCommunity(
+				communityInstance.address,
+				cUSDInstance.address,
+				adminAccount1.address,
+				communityMinTranche
+			)
+		).to.be.fulfilled;
+
+		await expect(
+			communityInstance.connect(communityManagerA).requestFunds()
+		).to.be.rejectedWith(
+			"CommunityAdmin::fundCommunity: this community is not allowed to request yet"
+		);
+
+		expect(await communityInstance.lastFundRequest()).to.be.equal(
+			firstBlock + 4
+		);
+	});
+
+	it("should transfer funds to community again after baseInterval", async () => {
+		expect(
+			await cUSDInstance.balanceOf(communityInstance.address)
+		).to.be.equal(communityMinTranche);
+
+		await communityInstance
+			.connect(communityManagerA)
+			.addBeneficiary(beneficiaryA.address);
+
+		communityInstance.connect(beneficiaryA).claim();
+
+		await expect(
+			communityInstance.connect(communityManagerA).requestFunds()
+		).to.be.fulfilled;
+
+		expect(await communityInstance.lastFundRequest()).to.be.equal(
+			firstBlock + 4
+		);
+
+		expect(
+			await cUSDInstance.balanceOf(communityInstance.address)
+		).to.be.equal(communityMinTranche);
+
+		await expect(
+			communityAdminProxy.transferFromCommunity(
+				communityInstance.address,
+				cUSDInstance.address,
+				adminAccount1.address,
+				communityMinTranche
+			)
+		).to.be.fulfilled;
+
+		await advanceBlockNTimes(threeMinutesInBlocks);
+
+		await expect(
+			communityInstance.connect(communityManagerA).requestFunds()
+		).to.be.fulfilled;
+
+		expect(await communityInstance.lastFundRequest()).to.be.equal(
+			firstBlock + 42
+		);
+
 		expect(
 			await cUSDInstance.balanceOf(communityInstance.address)
 		).to.be.equal(communityMinTranche);
@@ -1594,6 +1696,8 @@ describe("Community - getFunds", () => {
 		await expect(
 			communityInstance.connect(communityManagerA).requestFunds()
 		).to.be.rejectedWith("CommunityAdmin::fundCommunity: Not enough funds");
+
+		expect(await communityInstance.lastFundRequest()).to.be.equal(0);
 	});
 
 	it("should donate directly in the community", async () => {
@@ -1641,6 +1745,8 @@ describe("Community - getFunds", () => {
 		expect(
 			await cUSDInstance.balanceOf(communityInstance.address)
 		).to.be.equal(communityMinTranche.add(user1Donation));
+
+		expect(await communityInstance.lastFundRequest()).to.be.equal(0);
 	});
 
 	it("should transfer funds if admin", async () => {
@@ -1687,6 +1793,10 @@ describe("Community - getFunds", () => {
 		await expect(
 			communityInstance.connect(communityManagerA).requestFunds()
 		).to.be.fulfilled;
+
+		expect(await communityInstance.lastFundRequest()).to.be.equal(
+			firstBlock + 7
+		);
 
 		expect(
 			await cUSDInstance.balanceOf(communityInstance.address)
@@ -1925,7 +2035,7 @@ describe("Old Community", () => {
 		);
 		expect(beneficiaryADetails.claims).to.be.equal(1);
 		expect(beneficiaryADetails.claimedAmount).to.be.equal(claimAmountTwo);
-		expect(beneficiaryADetails.lastClaim).to.be.equal(8);
+		expect(beneficiaryADetails.lastClaim).to.be.equal(9);
 
 		await newCommunityInstance
 			.connect(communityManagerA)
