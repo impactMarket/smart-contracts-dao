@@ -7,8 +7,8 @@ import { deployments, ethers, getNamedAccounts } from "hardhat";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import * as ethersTypes from "ethers";
 
-const csv = require('csv-parser')
-const fs = require('fs')
+const csv = require("csv-parser");
+const fs = require("fs");
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -49,7 +49,7 @@ describe("Merkle Distributor", () => {
 		await deploy();
 	});
 
-	it.only("Should be able to claim reward account #1", async function () {
+	it("Should be able to claim reward account #1", async function () {
 		const account = "0x0000000072EF09A65BF7715EEE729AC702546aEC";
 
 		const initialBalance = await PACT.balanceOf(account);

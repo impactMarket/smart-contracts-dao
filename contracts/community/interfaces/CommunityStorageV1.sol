@@ -24,6 +24,7 @@ abstract contract CommunityStorageV1 is ICommunity {
     uint256 public override decreaseStep;
     uint256 public override minTranche;
     uint256 public override maxTranche;
+    uint256 public override lastFundRequest;
 
     ICommunity public override previousCommunity;
     ICommunityAdmin public override communityAdmin;

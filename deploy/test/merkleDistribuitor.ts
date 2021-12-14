@@ -17,11 +17,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	const PACT = await deployments.get("PACTToken");
 
-	const mTree =require('../../airdrop_scripts/tree_scripts/merkleTree.json');
+	const mTree = require("../../airdrop_scripts/tree_scripts/merkleTree.json");
 
 	const MerkleDistributor = await deploy("MerkleDistributor", {
 		from: deployer.address,
-		args: [PACT.address, mTree['merkleRoot']],
+		args: [PACT.address, mTree["merkleRoot"]],
 		log: true,
 		// gasLimit: 13000000,
 	});
@@ -35,7 +35,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	await PACTContract.transfer(
 		MerkleDistributor.address,
-		parseEther("500000000")
+		parseEther("1000000000")
 	);
 
 	await MerkleDistributorContract.transferOwnership(ownerAddress);

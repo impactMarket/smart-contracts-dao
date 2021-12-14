@@ -76,6 +76,7 @@ contract ImpactLabsVestingImplementation is
         PACT = _PACT;
         donationMiner = _donationMiner;
         advancePayment = _advancePayment;
+        nextRewardPeriod = 1;
 
         transferToImpactLabs(_advancePayment);
     }
@@ -93,7 +94,7 @@ contract ImpactLabsVestingImplementation is
      * the entire amount payed in advance will be covered
      */
     function claim() external override whenNotPaused {
-        uint256 _index = lastClaimedRewardPeriod + 1;
+        uint256 _index = nextRewardPeriod;
         uint256 _rewardPeriodCount = donationMiner.rewardPeriodCount();
 
         uint256 _rewardPerBlock;
@@ -105,7 +106,6 @@ contract ImpactLabsVestingImplementation is
             (_rewardPerBlock, , _startBlock, _endBlock, ) = donationMiner.rewardPeriods(_index);
 
             if (_endBlock >= block.number) {
-                _rewardPeriodCount--;
                 break;
             }
 
@@ -133,7 +133,7 @@ contract ImpactLabsVestingImplementation is
             transferToImpactLabs(toTransfer);
         }
 
-        lastClaimedRewardPeriod = _rewardPeriodCount;
+        nextRewardPeriod = _index;
     }
 
     /**

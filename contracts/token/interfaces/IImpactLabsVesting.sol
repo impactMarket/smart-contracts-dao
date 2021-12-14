@@ -11,7 +11,7 @@ interface IImpactLabsVesting {
     function impactLabs() external view returns (address);
     function PACT() external view returns (IERC20);
     function donationMiner() external view returns (IDonationMiner);
-    function lastClaimedRewardPeriod() external view returns (uint256);
+    function nextRewardPeriod() external view returns (uint256);
     function advancePayment() external view returns (uint256);
     function claim() external;
     function transfer(IERC20 _token, address _to, uint256 _amount) external;
