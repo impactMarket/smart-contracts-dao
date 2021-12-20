@@ -1,10 +1,10 @@
 {
   "network": "http://localhost:8545",
-  "savePath": "~/CELO_transfers_dir_1",
+  "savePath": "/home/eduard/projects/impact-market/impact-market-token/airdrop_scripts/celo_events_dir",
+  "saveResultsPath": "/home/eduard/projects/impact-market/impact-market-token/airdrop_scripts/results",
   "imarketStartBlock": "2627648",
-  "targetBlock": "9375854",
-  "oldtargetBlock": "8983266",
-  "walletsToIgnore": ["0x69d174b5934ea2e20b0a31dd848c79ae5300a095"],
+  "targetBlock": "10480000",
+  "walletsToIgnore": [],
   "distributions": {
     "doners": 1,
     "holders": 1,

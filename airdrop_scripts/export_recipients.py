@@ -2,14 +2,17 @@
 # IMCC == Impact Markets Community Contract
 import json
 import os
+import logging
 
-from airdrop_scripts.custom_web3.contract import Contract
-from airdrop_scripts.events_helpers import initConnection, get_event_logs, get_community_event_logs, extract_community_doners, \
+
+from contract import Contract
+from events_helpers import initConnection, get_event_logs, get_community_event_logs, extract_community_doners, \
     extract_token_holders, extract_transfers_and_save_to_file
-from airdrop_scripts.util import from_base_18, get_start_block, get_block_steps, ENV_WEB3_NETWORK
-from airdrop_scripts.web3_instance import get_web3
+from util import from_base_18, get_start_block, get_block_steps, ENV_WEB3_NETWORK
+from web3_instance import get_web3
 
 STEP_SIZE = 100000
+# STEP_SIZE = 20000
 
 impactMarketContract = 'ImpactMarket'
 address_impactMarketContract = '0xe55C3eb4a04F93c3302A5d8058348157561BF5ca'
@@ -61,11 +64,16 @@ def dispatch_get_all_transfers(process_pool, save_path, from_block, to_block, to
     prefix_length = len(_start_name)
     existing_names = [n[prefix_length:] for n in os.listdir(save_path) if n.startswith(_start_name)]
     _starting_names = []
+    saved_files = []
+    args_lists = []
+    network = os.getenv(ENV_WEB3_NETWORK)
+
     if existing_names:
         _names = [os.path.splitext(n)[0] if n.endswith('.json') else n for n in existing_names]
         _starting_ranges = sorted([int(n.split('-')[0]) for n in _names])
         _ending_ranges = sorted([int(n.split('-')[1]) for n in _names])
         valid_ranges_i = [i for i, block in enumerate(_ending_ranges) if block <= to_block]
+
         if valid_ranges_i:
             _starting_ranges = _starting_ranges[:max(valid_ranges_i)]
             _ending_ranges = _ending_ranges[:max(valid_ranges_i)]
@@ -90,21 +98,20 @@ def dispatch_get_all_transfers(process_pool, save_path, from_block, to_block, to
             if last_block > from_block:
                 from_block = last_block + 1
 
-    args_lists = []
-    saved_files = _starting_names
-    network = os.getenv(ENV_WEB3_NETWORK)
-    for _block_range in missing_ranges:
-        _from, _last = _block_range
-        name = os.path.join(save_path, '%s.transfers.%s-%s.json' % (token_name, _from, _last))
-        if os.path.exists(name):
-            print('transfers already completed for range: %s - %s, file %s' % (_from, _last, name))
-            # saved_files.append(name)
-            continue
+        args_lists = []
+        saved_files = _starting_names
+        for _block_range in missing_ranges:
+            _from, _last = _block_range
+            name = os.path.join(save_path, '%s.transfers.%s-%s.json' % (token_name, _from, _last))
+            if os.path.exists(name):
+                print('transfers already completed for range: %s - %s, file %s' % (_from, _last, name))
+                # saved_files.append(name)
+                continue
 
-        print('getting transfers between blocks: %s, %s' % (_from, _last))
-        print('saving transfers to file: %s' % name)
-        # saved_files.append(name)
-        args_lists.append([network, name, token_address, token_name, _from, _last, None, chunk_size])
+            print('getting transfers between blocks: %s, %s' % (_from, _last))
+            print('saving transfers to file: %s' % name)
+            # saved_files.append(name)
+            args_lists.append([network, name, token_address, token_name, _from, _last, None, chunk_size])
 
     if from_block <= to_block:
         _r = get_block_steps(from_block, to_block, STEP_SIZE)
@@ -120,6 +127,7 @@ def dispatch_get_all_transfers(process_pool, save_path, from_block, to_block, to
 
             print('getting transfers between blocks: %s, %s' % (_from, _last))
             print('saving transfers to file: %s' % name)
+
             saved_files.append(name)
             args_lists.append([network, name, token_address, token_name, _from, _last, None, chunk_size])
 
@@ -202,7 +210,7 @@ def get_impact_market_managers(process_pool, save_path, communities, from_block,
     return managers
 
 
-def get_impact_market_beneficiaries(process_pool, save_path, communities, from_block, to_block, chunk_size=100000):
+def get_impact_market_beneficiaries0(process_pool, save_path, communities, from_block, to_block, chunk_size=100000):
     # All beneficiaries via the event BeneficiaryClaim(address indexed _account, uint256 _amount);  event
     main_name = os.path.join(save_path, 'beneficiary_claims.%s-%s.json' % (from_block, to_block))
     if os.path.exists(main_name):
@@ -241,6 +249,46 @@ def get_impact_market_beneficiaries(process_pool, save_path, communities, from_b
         json.dump(beneficiary_claims, f)
 
     return beneficiary_claims
+
+def get_impact_market_beneficiaries(process_pool, save_path, communities, from_block, to_block, chunk_size=100000):
+    # All beneficiaries via the event BeneficiaryAdded(address indexed _account);  event
+    main_name = os.path.join(save_path, 'beneficiary_added.%s-%s.json' % (from_block, to_block))
+    if os.path.exists(main_name):
+        with open(main_name) as f:
+            beneficiary_added = json.load(f)
+            return beneficiary_added
+
+    event_name_BeneficiaryAdded = 'BeneficiaryAdded'
+    args_lists = []
+    saved_files = []
+    network = os.getenv(ENV_WEB3_NETWORK)
+    for i, (comm, block) in enumerate(communities):
+        _from = max(from_block, block)
+        name = os.path.join(save_path, 'comm.%s.%s-%s.json' % (comm, _from, to_block))
+        saved_files.append(name)
+        if os.path.exists(name):
+            print('community (%s) beneficiaries already processed for %s' % (i, comm))
+            continue
+
+        print('saving beneficiaries to file: %s' % name)
+        args_lists.append((
+            network, i, name, comm, 'Community',
+            'COMMUNITY_ABI', event_name_BeneficiaryAdded, ['_account'], _from,
+            to_block, chunk_size, False
+        ))
+
+    process_pool.map(get_event_logs, args_lists)
+
+    beneficiary_added = []
+    for name in saved_files:
+        with open(name) as f:
+            address_added_list = json.load(f)
+            beneficiary_added.extend([(a) for a, _block in address_added_list])
+
+    with open(main_name, 'w') as f:
+        json.dump(beneficiary_added, f)
+
+    return beneficiary_added
 
 
 def get_ubeswap_users(process_pool, save_path, blockNumber: int, chunk_size=500):
