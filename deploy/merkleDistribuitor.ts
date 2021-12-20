@@ -35,7 +35,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	await PACTContract.transfer(
 		MerkleDistributor.address,
-		parseEther("500000000")
+		parseEther("1000000000")
 	);
 
 	await MerkleDistributorContract.transferOwnership(ownerAddress);
