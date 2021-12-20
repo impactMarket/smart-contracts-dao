@@ -3,8 +3,8 @@ import os
 
 from web3 import WebsocketProvider, Web3
 
-from airdrop_scripts.http_provider import CustomHTTPProvider
-from airdrop_scripts.web3_instance import get_web3, set_web3
+from http_provider import CustomHTTPProvider
+from web3_instance import get_web3, set_web3
 
 ENV_WEB3_NETWORK = "WEB3_NETWORK"
 IMPACT_MARKET_START_BLOCK = "IMPACT_MARKET_START_BLOCK"

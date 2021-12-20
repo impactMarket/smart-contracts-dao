@@ -1,9 +1,9 @@
 import os
 import json
 
-import airdrop_scripts.util as util
-from airdrop_scripts.util import to_base_18, from_base_18, initConnection, set_envvars
-from airdrop_scripts.custom_web3.contract import Contract
+import util as util
+from util import to_base_18, from_base_18, initConnection, set_envvars
+from contract import Contract
 
 
 def get_imarket_communities(save_path, _web3, imarket_address, _from, _to):
@@ -124,7 +124,7 @@ def get_event_logs(args):
 
 # def process_files(numbers, path=None):
 #     if path is None:
-#         path = '/home/ssallam/CELO_transfers_dir'
+#         path = '/home/ssallam/celo_events_dir'
 #     _fn = os.path.join(path, 'CELO_transfers%s.txt')
 #     all_transfers = []
 #     total_count = 0
@@ -140,7 +140,7 @@ def get_event_logs(args):
 #             all_transfers.extend(transfers_list)
 #             total_count += len(transfers_list)
 #
-#     outfname = '/home/ssallam/CELO_transfers_dir/transfers.json'
+#     outfname = '/home/ssallam/celo_events_dir/transfers.json'
 #     with open(outfname, 'w') as outf:
 #         json.dump(all_transfers, outf)
 #
@@ -161,7 +161,7 @@ def extract_community_doners(transfers, communities):
     communities_set = {comm for comm, block in communities}
     for _from, _to, value, block in transfers:
         if _to in communities_set:
-            doner_value_list.append((_from, util.from_base_18(value)))
+            doner_value_list.append((_from.lower(), util.from_base_18(value)))
 
     return doner_value_list
 

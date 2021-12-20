@@ -1,4 +1,4 @@
-from airdrop_scripts.custom_web3.web3_request import make_post_request
+from web3_request import make_post_request
 from web3 import HTTPProvider
 
 
