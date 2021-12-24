@@ -20,25 +20,25 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const Token = await deployments.get("PACTToken");
 	const ImpactProxyAdminContract = await deployments.get("ImpactProxyAdmin");
 
-	const delegateResult = await deploy("IPCTDelegate", {
+	const delegateResult = await deploy("PACTDelegate", {
 		from: deployer,
 		log: true,
 	});
 
-	const delegatorResult = await deploy("IPCTDelegator", {
+	const delegatorResult = await deploy("PACTDelegator", {
 		from: deployer,
 		args: [delegateResult.address, ImpactProxyAdminContract.address],
 		log: true,
 	});
 
-	const timelockResult = await deploy("IPCTTimelock", {
+	const timelockResult = await deploy("PACTTimelock", {
 		from: deployer,
 		args: [delegatorResult.address, TWO_DAYS_SECONDS],
 		log: true,
 	});
 
 	const governance = await ethers.getContractAt(
-		"IPCTDelegate",
+		"PACTDelegate",
 		delegatorResult.address
 	);
 
@@ -52,9 +52,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		QUORUM_VOTES
 	);
 
-	const IPCT = await deployments.get("PACTToken");
-	const IPCTContract = await ethers.getContractAt("PACTToken", IPCT.address);
-	await IPCTContract.transfer(
+	const PACT = await deployments.get("PACTToken");
+	const PACTContract = await ethers.getContractAt("PACTToken", PACT.address);
+	await PACTContract.transfer(
 		delegatorResult.address,
 		parseEther("2000000000")
 	);

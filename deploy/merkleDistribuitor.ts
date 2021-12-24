@@ -11,13 +11,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const accounts: SignerWithAddress[] = await ethers.getSigners();
 	const deployer = accounts[0];
 
-	const IPCTTimelock = await deployments.get("IPCTTimelock"); //prod
-	const ownerAddress = IPCTTimelock.address; //prod
+	const pactTimelock = await deployments.get("PACTTimelock"); //prod
+	const ownerAddress = pactTimelock.address; //prod
 	// const ownerAddress = deployer.address; //dev
 
 	const PACT = await deployments.get("PACTToken");
 
-	const mTree =require('../../airdrop_scripts/tree_scripts/merkleTree.json');
+	const mTree =require('../airdrop_scripts/tree_scripts/merkleTree.json');
 
 	const MerkleDistributor = await deploy("MerkleDistributor", {
 		from: deployer.address,

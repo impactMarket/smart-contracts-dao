@@ -17,14 +17,15 @@ yarn --ignore-engines
 
 | Contract                                     | Purpose                                                                       | Source
 |----------------------------------------------|-------------------------------------------------------------------------------| ------------------------------------- |
+| `/airgrab/interfaces/IMerkleDistributor.sol` | Interface for MerkleDistributor.sol                       |                                       |
+| `/airgrab/MerkleDistributor.sol`             | Merkle Distributor for the Impact Markets token airgrab                       |                                       |
 | `/community/interfaces/ICommunity.sol`       | Interface for Community.sol                                                   |                                       |
 | `/community/interfaces/ICommunityAdmin.sol`  | Interface for CommunityAdminImplementation.sol                                |                                       |
 | `/community/Community.sol`                   | A UBI community that is funded by Impact Labs which beneficiaries claim from  |                                       |
 | `/community/CommunityAdminImplementation.sol`| Community controller that orchestrates creation of new Communities            |                                       |
 | `/governance/IPTCGovernor.sol`               | Contract that manages creation, execution, cancellation of proposals          |                                       |
 | `/governance/Timelock.sol`                   | Timelock that marshalls the execution of governance proposals                 |                                       |
-| `/token/IPCT.sol`                            | The Impact Markets cERC-20 token contract                                     |                                       |
+| `/token/PACT.sol`                            | The Impact Markets cERC-20 token contract                                     |                                       |
 | `/token/DonationMinerImplementation.sol`     | Vesting contract for non-airgrab initial distribution of tokens               |                                       |
 | `/token/TreasuryImplementation.sol`          | Contract that manages the funds                                               |                                       |
-| `/airgrab/MerkleDistributor.sol`             | Merkle Distributor for the Impact Markets token airgrab                       |                                       |
 | `/test/Token.sol`                            | Sample cERC-20 token used in test only                                        |                                       |

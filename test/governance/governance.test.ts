@@ -32,7 +32,7 @@ const communityMinTranche = parseEther("100");
 const communityMaxTranche = parseEther("5000");
 
 // Contracts
-let IPCTDelegate: ethersTypes.ContractFactory;
+let PACTDelegate: ethersTypes.ContractFactory;
 
 //users
 let owner: SignerWithAddress;
@@ -42,9 +42,9 @@ let carol: SignerWithAddress;
 
 // contract instances
 let pactToken: ethersTypes.Contract;
-let ipctDelegator: ethersTypes.Contract;
-let ipctDelegate: ethersTypes.Contract;
-let ipctTimelock: ethersTypes.Contract;
+let pactDelegator: ethersTypes.Contract;
+let pactDelegate: ethersTypes.Contract;
+let pactTimelock: ethersTypes.Contract;
 let communityAdmin: ethersTypes.Contract;
 let proxyAdmin: ethersTypes.Contract;
 let donationMiner: ethersTypes.Contract;
@@ -53,9 +53,9 @@ let impactLabsVesting: ethersTypes.Contract;
 let cUSD: ethersTypes.Contract;
 let ImpactProxyAdmin: ethersTypes.Contract;
 
-describe("IPCTGovernator", function () {
+describe("PACTGovernator", function () {
 	before(async function () {
-		IPCTDelegate = await ethers.getContractFactory("IPCTDelegate");
+		PACTDelegate = await ethers.getContractFactory("PACTDelegate");
 
 		const accounts: SignerWithAddress[] = await ethers.getSigners();
 
@@ -74,25 +74,25 @@ describe("IPCTGovernator", function () {
 			pactTokenDeployment.address
 		);
 
-		const ipctTimelockDeployment = await deployments.get("IPCTTimelock");
-		ipctTimelock = await ethers.getContractAt(
-			"IPCTTimelock",
-			ipctTimelockDeployment.address
+		const pactTimelockDeployment = await deployments.get("PACTTimelock");
+		pactTimelock = await ethers.getContractAt(
+			"PACTTimelock",
+			pactTimelockDeployment.address
 		);
 
-		const ipctDelegateDeployment = await deployments.get("IPCTDelegate");
-		ipctDelegate = await ethers.getContractAt(
-			"IPCTDelegate",
-			ipctDelegateDeployment.address
+		const pactDelegateDeployment = await deployments.get("PACTDelegate");
+		pactDelegate = await ethers.getContractAt(
+			"PACTDelegate",
+			pactDelegateDeployment.address
 		);
 
-		const ipctDelegatorDeployment = await deployments.get("IPCTDelegator");
-		ipctDelegator = await ethers.getContractAt(
-			"IPCTDelegator",
-			ipctDelegatorDeployment.address
+		const pactDelegatorDeployment = await deployments.get("PACTDelegator");
+		pactDelegator = await ethers.getContractAt(
+			"PACTDelegator",
+			pactDelegatorDeployment.address
 		);
 
-		ipctDelegator = await IPCTDelegate.attach(ipctDelegator.address);
+		pactDelegator = await PACTDelegate.attach(pactDelegator.address);
 
 		const communityAdminDeployment = await deployments.get(
 			"CommunityAdminProxy"
@@ -151,7 +151,7 @@ describe("IPCTGovernator", function () {
 		// await pactToken.connect(bob).delegate(bob.address);
 		// await pactToken.connect(carol).delegate(carol.address);
 
-		await communityAdmin.transferOwnership(ipctTimelock.address);
+		await communityAdmin.transferOwnership(pactTimelock.address);
 	});
 
 	async function createCommunityProposal() {
@@ -188,7 +188,7 @@ describe("IPCTGovernator", function () {
 		const descriptions = "description";
 
 		await expect(
-			ipctDelegator.propose(
+			pactDelegator.propose(
 				targets,
 				values,
 				signatures,
@@ -203,18 +203,18 @@ describe("IPCTGovernator", function () {
 
 		await advanceBlockNTimes(VOTING_DELAY_BLOCKS);
 
-		await expect(ipctDelegator.castVote(1, 1)).to.be.fulfilled;
+		await expect(pactDelegator.castVote(1, 1)).to.be.fulfilled;
 
-		await expect(ipctDelegator.connect(alice).castVote(1, 1)).to.be
+		await expect(pactDelegator.connect(alice).castVote(1, 1)).to.be
 			.fulfilled;
 
 		await advanceBlockNTimes(VOTING_PERIOD_BLOCKS);
 
-		await expect(ipctDelegator.connect(alice).queue(1)).to.be.fulfilled;
+		await expect(pactDelegator.connect(alice).queue(1)).to.be.fulfilled;
 
 		await advanceNSeconds(TWO_DAYS_SECONDS);
 
-		await expect(ipctDelegator.connect(alice).execute(1)).to.be.fulfilled;
+		await expect(pactDelegator.connect(alice).execute(1)).to.be.fulfilled;
 	});
 
 	it("should update community implementation", async function () {
@@ -222,17 +222,17 @@ describe("IPCTGovernator", function () {
 
 		await advanceBlockNTimes(VOTING_DELAY_BLOCKS);
 
-		await expect(ipctDelegator.castVote(1, 1)).to.be.fulfilled;
-		await expect(ipctDelegator.connect(alice).castVote(1, 1)).to.be
+		await expect(pactDelegator.castVote(1, 1)).to.be.fulfilled;
+		await expect(pactDelegator.connect(alice).castVote(1, 1)).to.be
 			.fulfilled;
 
 		await advanceBlockNTimes(VOTING_PERIOD_BLOCKS);
 
-		await expect(ipctDelegator.connect(alice).queue(1)).to.be.fulfilled;
+		await expect(pactDelegator.connect(alice).queue(1)).to.be.fulfilled;
 
 		await advanceNSeconds(TWO_DAYS_SECONDS);
 
-		await expect(ipctDelegator.connect(alice).execute(1)).to.be.fulfilled;
+		await expect(pactDelegator.connect(alice).execute(1)).to.be.fulfilled;
 
 		//***************************************************************************
 
@@ -253,7 +253,7 @@ describe("IPCTGovernator", function () {
 		];
 
 		await expect(
-			ipctDelegator.propose(
+			pactDelegator.propose(
 				targets2,
 				values2,
 				signatures2,
@@ -264,17 +264,17 @@ describe("IPCTGovernator", function () {
 
 		await advanceBlockNTimes(VOTING_DELAY_BLOCKS);
 
-		await expect(ipctDelegator.castVote(2, 1)).to.be.fulfilled;
-		// await expect(ipctDelegator.connect(alice).castVote(2, 1)).to.be
+		await expect(pactDelegator.castVote(2, 1)).to.be.fulfilled;
+		// await expect(pactDelegator.connect(alice).castVote(2, 1)).to.be
 		// 	.fulfilled;
 
 		await advanceBlockNTimes(VOTING_PERIOD_BLOCKS);
 
-		await expect(ipctDelegator.connect(alice).queue(2)).to.be.fulfilled;
+		await expect(pactDelegator.connect(alice).queue(2)).to.be.fulfilled;
 
 		await advanceNSeconds(TWO_DAYS_SECONDS);
 
-		await expect(ipctDelegator.connect(alice).execute(2)).to.be.fulfilled;
+		await expect(pactDelegator.connect(alice).execute(2)).to.be.fulfilled;
 
 		expect(await communityAdmin.communityTemplate()).to.be.equal(
 			communityTemplateNewAddress
@@ -282,83 +282,83 @@ describe("IPCTGovernator", function () {
 	});
 
 	it("should update params if owner", async function () {
-		await expect(ipctDelegator._setVotingDelay(123)).to.be.fulfilled;
-		await expect(ipctDelegator._setVotingPeriod(730)).to.be.fulfilled;
-		await expect(ipctDelegator._setQuorumVotes(QUORUM_VOTES.mul(2))).to.be
+		await expect(pactDelegator._setVotingDelay(123)).to.be.fulfilled;
+		await expect(pactDelegator._setVotingPeriod(730)).to.be.fulfilled;
+		await expect(pactDelegator._setQuorumVotes(QUORUM_VOTES.mul(2))).to.be
 			.fulfilled;
 		await expect(
-			ipctDelegator._setProposalThreshold(PROPOSAL_THRESHOLD.mul(2))
+			pactDelegator._setProposalThreshold(PROPOSAL_THRESHOLD.mul(2))
 		).to.be.fulfilled;
 	});
 
 	it("should not update params if not owner", async function () {
 		await expect(
-			ipctDelegator.connect(alice)._setVotingDelay(0)
+			pactDelegator.connect(alice)._setVotingDelay(0)
 		).to.be.rejectedWith("Ownable: caller is not the owner");
 		await expect(
-			ipctDelegator.connect(alice)._setVotingPeriod(0)
+			pactDelegator.connect(alice)._setVotingPeriod(0)
 		).to.be.rejectedWith("Ownable: caller is not the owner");
 		await expect(
-			ipctDelegator.connect(alice)._setQuorumVotes(0)
+			pactDelegator.connect(alice)._setQuorumVotes(0)
 		).to.be.rejectedWith("Ownable: caller is not the owner");
 		await expect(
-			ipctDelegator.connect(alice)._setProposalThreshold(0)
+			pactDelegator.connect(alice)._setProposalThreshold(0)
 		).to.be.rejectedWith("Ownable: caller is not the owner");
 	});
 
 	it("should update delegate if owner", async function () {
-		const NewIPCTDelegateFactory = await ethers.getContractFactory(
-			"IPCTDelegate"
+		const NewPACTDelegateFactory = await ethers.getContractFactory(
+			"PACTDelegate"
 		);
-		const newIPCTDelegate = await NewIPCTDelegateFactory.deploy();
+		const newPACTDelegate = await NewPACTDelegateFactory.deploy();
 
 		expect(
-			await ImpactProxyAdmin.getProxyImplementation(ipctDelegator.address)
-		).to.be.equal(ipctDelegate.address);
+			await ImpactProxyAdmin.getProxyImplementation(pactDelegator.address)
+		).to.be.equal(pactDelegate.address);
 		await expect(
 			ImpactProxyAdmin.upgrade(
-				ipctDelegator.address,
-				newIPCTDelegate.address
+				pactDelegator.address,
+				newPACTDelegate.address
 			)
 		).to.be.fulfilled;
 		expect(
-			await ImpactProxyAdmin.getProxyImplementation(ipctDelegator.address)
-		).to.be.equal(newIPCTDelegate.address);
+			await ImpactProxyAdmin.getProxyImplementation(pactDelegator.address)
+		).to.be.equal(newPACTDelegate.address);
 	});
 
 	it("should not update delegate if not owner", async function () {
-		await ImpactProxyAdmin.transferOwnership(ipctTimelock.address);
+		await ImpactProxyAdmin.transferOwnership(pactTimelock.address);
 
-		const NewIPCTDelegateFactory = await ethers.getContractFactory(
-			"IPCTDelegate"
+		const NewPACTDelegateFactory = await ethers.getContractFactory(
+			"PACTDelegate"
 		);
-		const newIPCTDelegate = await NewIPCTDelegateFactory.deploy();
+		const newPACTDelegate = await NewPACTDelegateFactory.deploy();
 
 		expect(
-			await ImpactProxyAdmin.getProxyImplementation(ipctDelegator.address)
-		).to.be.equal(ipctDelegate.address);
+			await ImpactProxyAdmin.getProxyImplementation(pactDelegator.address)
+		).to.be.equal(pactDelegate.address);
 		await expect(
 			ImpactProxyAdmin.upgrade(
-				ipctDelegator.address,
-				newIPCTDelegate.address
+				pactDelegator.address,
+				newPACTDelegate.address
 			)
 		).to.be.rejectedWith("Ownable: caller is not the owner");
 		expect(
-			await ImpactProxyAdmin.getProxyImplementation(ipctDelegator.address)
-		).to.be.equal(ipctDelegate.address);
+			await ImpactProxyAdmin.getProxyImplementation(pactDelegator.address)
+		).to.be.equal(pactDelegate.address);
 	});
 
 	it("should update delegate if timelock is owner", async function () {
-		await ImpactProxyAdmin.transferOwnership(ipctTimelock.address);
+		await ImpactProxyAdmin.transferOwnership(pactTimelock.address);
 
-		const NewIPCTDelegateFactory = await ethers.getContractFactory(
-			"IPCTDelegate"
+		const NewPACTDelegateFactory = await ethers.getContractFactory(
+			"PACTDelegate"
 		);
-		const newIPCTDelegate = await NewIPCTDelegateFactory.deploy();
+		const newPACTDelegate = await NewPACTDelegateFactory.deploy();
 
 		expect(
-			await ImpactProxyAdmin.getProxyImplementation(ipctDelegator.address)
-		).to.be.equal(ipctDelegate.address);
+			await ImpactProxyAdmin.getProxyImplementation(pactDelegator.address)
+		).to.be.equal(pactDelegate.address);
 
 		const targets = [ImpactProxyAdmin.address];
 		const values = [0];
@@ -367,13 +367,13 @@ describe("IPCTGovernator", function () {
 		const calldatas = [
 			ethers.utils.defaultAbiCoder.encode(
 				["address", "address"],
-				[ipctDelegator.address, newIPCTDelegate.address]
+				[pactDelegator.address, newPACTDelegate.address]
 			),
 		];
 		const descriptions = "description";
 
 		await expect(
-			ipctDelegator.propose(
+			pactDelegator.propose(
 				targets,
 				values,
 				signatures,
@@ -384,26 +384,26 @@ describe("IPCTGovernator", function () {
 
 		await advanceBlockNTimes(VOTING_DELAY_BLOCKS);
 
-		await expect(ipctDelegator.castVote(1, 1)).to.be.fulfilled;
+		await expect(pactDelegator.castVote(1, 1)).to.be.fulfilled;
 
-		await expect(ipctDelegator.connect(alice).castVote(1, 1)).to.be
+		await expect(pactDelegator.connect(alice).castVote(1, 1)).to.be
 			.fulfilled;
 
 		await advanceBlockNTimes(VOTING_PERIOD_BLOCKS);
 
-		await expect(ipctDelegator.connect(alice).queue(1)).to.be.fulfilled;
+		await expect(pactDelegator.connect(alice).queue(1)).to.be.fulfilled;
 
 		await advanceNSeconds(TWO_DAYS_SECONDS);
 
-		await expect(ipctDelegator.connect(alice).execute(1)).to.be.fulfilled;
+		await expect(pactDelegator.connect(alice).execute(1)).to.be.fulfilled;
 
 		expect(
-			await ImpactProxyAdmin.getProxyImplementation(ipctDelegator.address)
-		).to.be.equal(newIPCTDelegate.address);
+			await ImpactProxyAdmin.getProxyImplementation(pactDelegator.address)
+		).to.be.equal(newPACTDelegate.address);
 	});
 
 	it("should update donation miner", async function () {
-		donationMiner.transferOwnership(ipctTimelock.address);
+		donationMiner.transferOwnership(pactTimelock.address);
 		const donationMinerImplementationFactory =
 			await ethers.getContractFactory("DonationMinerImplementation");
 		const newDonationMinerImplementation =
@@ -434,7 +434,7 @@ describe("IPCTGovernator", function () {
 			"1000000"
 		);
 
-		await newDonationMinerContract.transferOwnership(ipctTimelock.address);
+		await newDonationMinerContract.transferOwnership(pactTimelock.address);
 
 		const targets = [donationMiner.address];
 		const values = [0];
@@ -454,7 +454,7 @@ describe("IPCTGovernator", function () {
 		];
 
 		await expect(
-			ipctDelegator.propose(
+			pactDelegator.propose(
 				targets,
 				values,
 				signatures,
@@ -465,15 +465,15 @@ describe("IPCTGovernator", function () {
 
 		await advanceBlockNTimes(VOTING_DELAY_BLOCKS);
 
-		await expect(ipctDelegator.castVote(1, 1)).to.be.fulfilled;
+		await expect(pactDelegator.castVote(1, 1)).to.be.fulfilled;
 
 		await advanceBlockNTimes(VOTING_PERIOD_BLOCKS);
 
-		await expect(ipctDelegator.connect(alice).queue(1)).to.be.fulfilled;
+		await expect(pactDelegator.connect(alice).queue(1)).to.be.fulfilled;
 
 		await advanceNSeconds(TWO_DAYS_SECONDS);
 
-		await expect(ipctDelegator.connect(alice).execute(1)).to.be.fulfilled;
+		await expect(pactDelegator.connect(alice).execute(1)).to.be.fulfilled;
 
 		expect(
 			await pactToken.balanceOf(newDonationMinerContract.address)
@@ -484,7 +484,7 @@ describe("IPCTGovernator", function () {
 	});
 
 	it("should transfer token from treasury", async function () {
-		treasury.transferOwnership(ipctTimelock.address);
+		treasury.transferOwnership(pactTimelock.address);
 
 		const treasuryInitialBalance: BigNumber = await cUSD.balanceOf(
 			treasury.address
@@ -506,7 +506,7 @@ describe("IPCTGovernator", function () {
 		];
 
 		await expect(
-			ipctDelegator.propose(
+			pactDelegator.propose(
 				targets,
 				values,
 				signatures,
@@ -517,15 +517,15 @@ describe("IPCTGovernator", function () {
 
 		await advanceBlockNTimes(VOTING_DELAY_BLOCKS);
 
-		await expect(ipctDelegator.castVote(1, 1)).to.be.fulfilled;
+		await expect(pactDelegator.castVote(1, 1)).to.be.fulfilled;
 
 		await advanceBlockNTimes(VOTING_PERIOD_BLOCKS);
 
-		await expect(ipctDelegator.connect(alice).queue(1)).to.be.fulfilled;
+		await expect(pactDelegator.connect(alice).queue(1)).to.be.fulfilled;
 
 		await advanceNSeconds(TWO_DAYS_SECONDS);
 
-		await expect(ipctDelegator.connect(alice).execute(1)).to.be.fulfilled;
+		await expect(pactDelegator.connect(alice).execute(1)).to.be.fulfilled;
 
 		expect(await cUSD.balanceOf(treasury.address)).to.be.equal(
 			treasuryInitialBalance.sub(amount)
@@ -536,17 +536,17 @@ describe("IPCTGovernator", function () {
 	});
 
 	it("should transfer token from delegator", async function () {
-		ipctDelegator.transferOwnership(ipctTimelock.address);
+		pactDelegator.transferOwnership(pactTimelock.address);
 
 		const delegatorInitialBalance: BigNumber = await pactToken.balanceOf(
-			ipctDelegator.address
+			pactDelegator.address
 		);
 		const bobInitialBalance: BigNumber = await pactToken.balanceOf(
 			bob.address
 		);
 		const amount = "123456";
 
-		const targets = [ipctDelegator.address];
+		const targets = [pactDelegator.address];
 		const values = [0];
 		const descriptions = "description";
 
@@ -560,7 +560,7 @@ describe("IPCTGovernator", function () {
 		];
 
 		await expect(
-			ipctDelegator.propose(
+			pactDelegator.propose(
 				targets,
 				values,
 				signatures,
@@ -571,17 +571,17 @@ describe("IPCTGovernator", function () {
 
 		await advanceBlockNTimes(VOTING_DELAY_BLOCKS);
 
-		await expect(ipctDelegator.castVote(1, 1)).to.be.fulfilled;
+		await expect(pactDelegator.castVote(1, 1)).to.be.fulfilled;
 
 		await advanceBlockNTimes(VOTING_PERIOD_BLOCKS);
 
-		await expect(ipctDelegator.connect(alice).queue(1)).to.be.fulfilled;
+		await expect(pactDelegator.connect(alice).queue(1)).to.be.fulfilled;
 
 		await advanceNSeconds(TWO_DAYS_SECONDS);
 
-		await expect(ipctDelegator.connect(alice).execute(1)).to.be.fulfilled;
+		await expect(pactDelegator.connect(alice).execute(1)).to.be.fulfilled;
 
-		expect(await pactToken.balanceOf(ipctDelegator.address)).to.be.equal(
+		expect(await pactToken.balanceOf(pactDelegator.address)).to.be.equal(
 			delegatorInitialBalance.sub(amount)
 		);
 		expect(await pactToken.balanceOf(bob.address)).to.be.equal(

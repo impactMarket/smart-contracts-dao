@@ -13,8 +13,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const deployer = accounts[0];
 
 	const ImpactProxyAdmin = await deployments.get("ImpactProxyAdmin");
-	const IPCTTimelock = await deployments.get("IPCTTimelock"); //prod
-	const ownerAddress = IPCTTimelock.address; //prod
+	const pactTimelock = await deployments.get("PACTTimelock"); //prod
+	const ownerAddress = pactTimelock.address; //prod
 	// const ownerAddress = deployer.address; //dev
 	const cUSDAddress = getCUSDAddress();
 

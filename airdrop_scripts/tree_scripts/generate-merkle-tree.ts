@@ -4,7 +4,7 @@ const csv = require('csv-parser')
 
 const results: {address: string, earnings: string, reasons: string}[] = [];
 
-fs.createReadStream('airdrop_scripts/rewards/reward_distributions_base_18.csv')
+fs.createReadStream('airdrop_scripts/results/reward_distributions_base_18.csv')
     .pipe(csv({ headers: ["address", "earnings"]}))
     .on('data', (data: any) => {
         data.reasons = ''
