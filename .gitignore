@@ -125,3 +125,4 @@ artifacts
 
 airdrop_scripts/celo_events_dir
 airdrop_scripts/__pycache__/
+airdrop_scripts/tree_scripts/merkleTree.json
