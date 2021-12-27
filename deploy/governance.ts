@@ -21,14 +21,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const ImpactProxyAdminContract = await deployments.get("ImpactProxyAdmin");
 
 
-	const delegateResult = await deploy("IPCTDelegate", {
+	const delegateResult = await deploy("PACTDelegate", {
 		from: deployer,
 		log: true,
 	});
 
 	await new Promise((resolve) => setTimeout(resolve, 6000));
 
-	const delegatorResult = await deploy("IPCTDelegator", {
+	const delegatorResult = await deploy("PACTDelegator", {
 		from: deployer,
 		args: [
 			delegateResult.address,
@@ -39,7 +39,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	await new Promise((resolve) => setTimeout(resolve, 6000));
 
-	const timelockResult = await deploy("IPCTTimelock", {
+	const timelockResult = await deploy("PACTTimelock", {
 		from: deployer,
 		args: [delegatorResult.address, TWO_DAYS_SECONDS],
 		log: true,
@@ -48,7 +48,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	await new Promise((resolve) => setTimeout(resolve, 6000));
 
 	const governance = await ethers.getContractAt(
-		"IPCTDelegate",
+		"PACTDelegate",
 		delegatorResult.address
 	);
 
@@ -64,9 +64,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	await new Promise((resolve) => setTimeout(resolve, 6000));
 
-	const IPCT = await deployments.get("PACTToken");
-	const IPCTContract = await ethers.getContractAt("PACTToken", IPCT.address);
-	await IPCTContract.transfer(delegatorResult.address, parseEther("2000000000"));
+	const PACT = await deployments.get("PACTToken");
+	const PACTContract = await ethers.getContractAt("PACTToken", PACT.address);
+	await PACTContract.transfer(delegatorResult.address, parseEther("2000000000"));
 
 	// only for prod
 	await governance.transferOwnership(timelockResult.address);

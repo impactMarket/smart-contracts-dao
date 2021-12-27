@@ -15,16 +15,20 @@ yarn --ignore-engines
 
 # Contracts
 
-| Contract                                     | Purpose                                                                       | Source
-|----------------------------------------------|-------------------------------------------------------------------------------| ------------------------------------- |
-| `/community/interfaces/ICommunity.sol`       | Interface for Community.sol                                                   |                                       |
-| `/community/interfaces/ICommunityAdmin.sol`  | Interface for CommunityAdminImplementation.sol                                |                                       |
-| `/community/Community.sol`                   | A UBI community that is funded by Impact Labs which beneficiaries claim from  |                                       |
-| `/community/CommunityAdminImplementation.sol`| Community controller that orchestrates creation of new Communities            |                                       |
-| `/governance/IPTCGovernor.sol`               | Contract that manages creation, execution, cancellation of proposals          |                                       |
-| `/governance/Timelock.sol`                   | Timelock that marshalls the execution of governance proposals                 |                                       |
-| `/token/IPCT.sol`                            | The Impact Markets cERC-20 token contract                                     |                                       |
-| `/token/DonationMinerImplementation.sol`     | Vesting contract for non-airgrab initial distribution of tokens               |                                       |
-| `/token/TreasuryImplementation.sol`          | Contract that manages the funds                                               |                                       |
-| `/airgrab/MerkleDistributor.sol`             | Merkle Distributor for the Impact Markets token airgrab                       |                                       |
-| `/test/Token.sol`                            | Sample cERC-20 token used in test only                                        |                                       |
+| Contract                                      | Purpose                                                                       | Address
+|---------------------------------------------- |-------------------------------------------------------------------------------| ------------------------------------- |
+| `/airgrab/MerkleDistributor.sol`              | Merkle Distributor for the initial token airgrab                              | 0xd2b20e06C19e7b7E7E385b0F1386Cdde8C6dCd2B |
+| `/community/Community.sol`                    | A UBI community that is funded by Impact Labs which beneficiaries claim from  | 0x147b405e234F6E054876065629E34E4430E80aac |
+| `/community/CommunityAdminProxy.sol`          | Proxy contract that orchestrates creation of new Communities                  | 0xd61c407c3A00dFD8C355973f7a14c55ebaFDf6F9 |
+| `/community/CommunityAdminImplementation.sol` | Implementation for the CommunityAdminProxy                                    | 0x7cA00e933C067C0Cf519D6043FCFFa82e8d4718F |
+| `/governance/ImpactProxyAdmin.sol`            | Contract that is in charge of all the proxies                                 | 0xFC641CE792c242EACcD545B7bee2028f187f61EC |
+| `/governance/PACTDelegator.sol`               | Proxy contract that manages creation, execution, cancellation of proposals    | 0x8f8BB984e652Cb8D0aa7C9D6712Ec2020EB1BAb4 |
+| `/governance/PACTDelegate.sol`                | Implementation for the PACTDelegate                                           | 0xAeEd98C1c5C268C3E23672166Ea0Bde908C90624 |
+| `/governance/PACTTimelock.sol`                | Timelock that marshalls the execution of governance proposals                 | 0xca3171A5FCda4D840Aa375E907b7A1162aDA9379 |
+| `/token/DonationMinerProxy.sol`               | Proxy vesting contract for non-airgrab distribution of tokens                 | 0x1C51657af2ceBA3D5492bA0c5A17E562F7ba6593 |
+| `/token/DonationMinerImplementation.sol`      | Implementation for DonationMinerImplementation                                | 0x140a654F9BF6Fe736F6e69Ae81377606c43214dF |
+| `/token/ImpactLabsProxy.sol`                  | Vesting contract for ImpactLabs distribution of tokens                        | 0x767DA1d208DDA5bc517dcd4ba2A83591D68A5535 |
+| `/token/ImpactLabsImplementation.sol`         | Implementation for ImpactLabsProxy                                            | 0x194f6811Ac5F2FaC8c02eAfBd70567c8597C1B69 |
+| `/token/PACTToken.sol`                        | The Impact Markets cERC-20 token contract                                     | 0x46c9757C5497c5B1f2eb73aE79b6B67D119B0B58 |
+| `/token/TreasuryProxy.sol`                    | Contract that manages the funds                                               | 0xa302dd52a4a85e6778E6A64A0E5EB0e8C76463d6 |
+| `/token/TreasuryImplementation.sol`           | Implementation for TreasuryProxy                                              | 0x5095C3DC6d89151f79433D84e596fD75EEFa10BB |

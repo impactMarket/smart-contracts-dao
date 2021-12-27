@@ -554,7 +554,7 @@ describe("Donation Miner", () => {
 		// Claim the rewards
 		await DonationMiner.connect(donor1).claimRewards();
 
-		// Check their IPCT balance
+		// Check their PACT balance
 		expect(await PACT.balanceOf(donor1.address)).to.equal(
 			user1ExpectedReward
 		);
@@ -577,7 +577,7 @@ describe("Donation Miner", () => {
 		// Claim the rewards
 		await DonationMiner.connect(donor1).claimRewards();
 
-		// Check their IPCT balance
+		// Check their PACT balance
 		expect(await PACT.balanceOf(donor1.address)).to.equal(
 			user1ExpectedReward
 		);
@@ -606,7 +606,7 @@ describe("Donation Miner", () => {
 		await DonationMiner.connect(donor1).claimRewards();
 		await DonationMiner.connect(donor2).claimRewards();
 
-		// Check their IPCT balance
+		// Check their PACT balance
 		expect(await PACT.balanceOf(donor1.address)).to.equal(
 			user1ExpectedReward
 		);
@@ -633,7 +633,7 @@ describe("Donation Miner", () => {
 		// Claim their rewards
 		await DonationMiner.connect(donor1).claimRewards();
 
-		// Check their IPCT balance
+		// Check their PACT balance
 		expect(await PACT.balanceOf(donor1.address)).to.equal(
 			user1ExpectedReward
 		);
@@ -664,7 +664,7 @@ describe("Donation Miner", () => {
 		await DonationMiner.connect(donor1).claimRewards();
 		await DonationMiner.connect(donor2).claimRewards();
 
-		// Check their IPCT balance
+		// Check their PACT balance
 		expect(await PACT.balanceOf(donor1.address)).to.equal(
 			user1ExpectedReward
 		);
@@ -703,7 +703,7 @@ describe("Donation Miner", () => {
 		await DonationMiner.connect(donor1).claimRewards();
 		await DonationMiner.connect(donor2).claimRewards();
 
-		// Check their IPCT balance
+		// Check their PACT balance
 		expect(await PACT.balanceOf(donor1.address)).to.equal(
 			user1ExpectedReward
 		);
@@ -737,7 +737,7 @@ describe("Donation Miner", () => {
 		await DonationMiner.connect(donor1).claimRewards();
 		await DonationMiner.connect(donor2).claimRewards();
 
-		// Check their IPCT balance
+		// Check their PACT balance
 		expect(await PACT.balanceOf(donor1.address)).to.equal(
 			user1ExpectedReward
 		);
@@ -771,7 +771,7 @@ describe("Donation Miner", () => {
 		await DonationMiner.connect(donor1).claimRewards();
 		await DonationMiner.connect(donor2).claimRewards();
 
-		// Check their IPCT balance
+		// Check their PACT balance
 		expect(await PACT.balanceOf(donor1.address)).to.equal(
 			user1ExpectedReward
 		);
@@ -805,7 +805,7 @@ describe("Donation Miner", () => {
 		await DonationMiner.connect(donor1).claimRewards();
 		await DonationMiner.connect(donor2).claimRewards();
 
-		// Check their IPCT balance
+		// Check their PACT balance
 		expect(await PACT.balanceOf(donor1.address)).to.equal(
 			user1ExpectedReward
 		);
@@ -859,7 +859,7 @@ describe("Donation Miner", () => {
 		// Claim their rewards
 		await DonationMiner.connect(donor1).claimRewards();
 
-		// Check their IPCT balance
+		// Check their PACT balance
 		expect(await PACT.balanceOf(donor1.address)).to.equal(
 			user1ExpectedReward
 		);
@@ -892,7 +892,7 @@ describe("Donation Miner", () => {
 		// Claim their rewards
 		await DonationMiner.connect(donor1).claimRewards();
 
-		// Check their IPCT balance
+		// Check their PACT balance
 		expect(await PACT.balanceOf(donor1.address)).to.equal(
 			user1ExpectedReward
 		);
@@ -924,7 +924,7 @@ describe("Donation Miner", () => {
 		// Claim their rewards
 		await DonationMiner.connect(donor1).claimRewards();
 
-		// Check their IPCT balance
+		// Check their PACT balance
 		expect(await PACT.balanceOf(donor1.address)).to.equal(
 			user1ExpectedReward1
 		);
@@ -934,7 +934,7 @@ describe("Donation Miner", () => {
 		// Claim their rewards
 		await DonationMiner.connect(donor1).claimRewards();
 
-		// Check their IPCT balance
+		// Check their PACT balance
 		expect(await PACT.balanceOf(donor1.address)).to.equal(
 			user1ExpectedReward2
 		);
@@ -1074,7 +1074,7 @@ describe("Donation Miner", () => {
 		// Claim their rewards
 		await DonationMiner.connect(donor1).claimRewards();
 
-		// Check their IPCT balance
+		// Check their PACT balance
 		expect(await PACT.balanceOf(donor1.address)).to.equal(
 			user1ExpectedReward1
 		);
@@ -1093,7 +1093,7 @@ describe("Donation Miner", () => {
 		// Claim their rewards
 		await DonationMiner.connect(donor1).claimRewards();
 
-		// Check their IPCT balance
+		// Check their PACT balance
 		expect(await PACT.balanceOf(donor1.address)).to.equal(
 			user1ExpectedReward2
 		);
@@ -1112,7 +1112,7 @@ describe("Donation Miner", () => {
 		// Claim their rewards
 		await DonationMiner.connect(donor1).claimRewards();
 
-		// Check their IPCT balance
+		// Check their PACT balance
 		expect(await PACT.balanceOf(donor1.address)).to.equal(
 			user1ExpectedReward3
 		);
@@ -1131,7 +1131,7 @@ describe("Donation Miner", () => {
 		// Claim their rewards
 		await DonationMiner.connect(donor1).claimRewards();
 
-		// Check their IPCT balance
+		// Check their PACT balance
 		expect(await PACT.balanceOf(donor1.address)).to.equal(
 			user1ExpectedReward4
 		);
@@ -1148,7 +1148,7 @@ describe("Donation Miner", () => {
 		// Claim their rewards
 		await DonationMiner.connect(donor1).claimRewards();
 
-		// Check their IPCT balance
+		// Check their PACT balance
 		const balance = await PACT.balanceOf(donor1.address);
 		expect(balance).to.equal(parseEther(rewardExpected));
 	}
@@ -1426,7 +1426,7 @@ describe("Donation Miner + Community", () => {
 		// Claim the rewards
 		await DonationMiner.connect(donor1).claimRewards();
 
-		// Check their IPCT balance
+		// Check their PACT balance
 		expect(await PACT.balanceOf(donor1.address)).to.equal(
 			user1ExpectedReward
 		);

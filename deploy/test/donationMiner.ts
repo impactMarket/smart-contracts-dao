@@ -17,8 +17,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	const ImpactProxyAdmin = await deployments.get("ImpactProxyAdmin");
 
-	// const IPCTTimelock = await deployments.get("IPCTTimelock"); //prod
-	// const ownerAddress = IPCTTimelock.address; //prod
+	// const PACTTimelock = await deployments.get("PACTTimelock"); //prod
+	// const ownerAddress = PACTTimelock.address; //prod
 	const ownerAddress = deployer.address; //dev
 	const cUSDAddress = getCUSDAddress();
 
@@ -62,10 +62,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		"1000000"
 	);
 
-	const IPCT = await deployments.get("PACTToken");
-	const IPCTContract = await ethers.getContractAt("PACTToken", IPCT.address);
+	const PACT = await deployments.get("PACTToken");
+	const PACTContract = await ethers.getContractAt("PACTToken", PACT.address);
 
-	await IPCTContract.transfer(
+	await PACTContract.transfer(
 		donationMinerContract.address,
 		parseEther("4000000000")
 	);
