@@ -8,11 +8,11 @@ import "./interfaces/PACTDelegateStorageV1.sol";
 import "./interfaces/PACTEvents.sol";
 
 contract PACTDelegate is
-PACTEvents,
-Initializable,
-OwnableUpgradeable,
-ReentrancyGuardUpgradeable,
-PACTDelegateStorageV1
+    PACTEvents,
+    Initializable,
+    OwnableUpgradeable,
+    ReentrancyGuardUpgradeable,
+    PACTDelegateStorageV1
 {
     using SafeERC20 for IERC20;
 
@@ -42,7 +42,7 @@ PACTDelegateStorageV1
 
     /// @notice The EIP-712 typehash for the contract's domain
     bytes32 public constant DOMAIN_TYPEHASH =
-    keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)");
+        keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)");
 
     /// @notice The EIP-712 typehash for the ballot struct used by the contract
     bytes32 public constant BALLOT_TYPEHASH = keccak256("Ballot(uint256 proposalId,uint8 support)");
@@ -80,7 +80,7 @@ PACTDelegateStorageV1
         );
         require(
             _proposalThreshold >= MIN_PROPOSAL_THRESHOLD &&
-            _proposalThreshold <= MAX_PROPOSAL_THRESHOLD,
+                _proposalThreshold <= MAX_PROPOSAL_THRESHOLD,
             "PACT::initialize: invalid proposal threshold"
         );
         require(_quorumVotes >= _proposalThreshold, "PACT::initialize: invalid quorum votes");
@@ -102,16 +102,16 @@ PACTDelegateStorageV1
 
         // Create dummy proposal
         Proposal memory _dummyProposal = Proposal({
-        id: proposalCount,
-        proposer: address(this),
-        eta: 0,
-        startBlock: 0,
-        endBlock: 0,
-        forVotes: 0,
-        againstVotes: 0,
-        abstainVotes: 0,
-        canceled: true,
-        executed: false
+            id: proposalCount,
+            proposer: address(this),
+            eta: 0,
+            startBlock: 0,
+            endBlock: 0,
+            forVotes: 0,
+            againstVotes: 0,
+            abstainVotes: 0,
+            canceled: true,
+            executed: false
         });
         proposalCount++;
 
@@ -153,8 +153,8 @@ PACTDelegateStorageV1
         );
         require(
             _targets.length == _values.length &&
-            _targets.length == _signatures.length &&
-            _targets.length == _calldatas.length,
+                _targets.length == _signatures.length &&
+                _targets.length == _calldatas.length,
             "PACT::propose: proposal function information arity mismatch"
         );
         require(_targets.length != 0, "PACT::propose: must provide actions");
@@ -177,16 +177,16 @@ PACTDelegateStorageV1
         uint256 _endBlock = add256(_startBlock, votingPeriod);
 
         Proposal memory _newProposal = Proposal({
-        id: proposalCount,
-        proposer: msg.sender,
-        eta: 0,
-        startBlock: _startBlock,
-        endBlock: _endBlock,
-        forVotes: 0,
-        againstVotes: 0,
-        abstainVotes: 0,
-        canceled: false,
-        executed: false
+            id: proposalCount,
+            proposer: msg.sender,
+            eta: 0,
+            startBlock: _startBlock,
+            endBlock: _endBlock,
+            forVotes: 0,
+            againstVotes: 0,
+            abstainVotes: 0,
+            canceled: false,
+            executed: false
         });
         proposalCount++;
 
@@ -244,8 +244,8 @@ PACTDelegateStorageV1
     ) internal {
         require(
             !timelock.queuedTransactions(
-            keccak256(abi.encode(_target, _value, _signature, _data, _eta))
-        ),
+                keccak256(abi.encode(_target, _value, _signature, _data, _eta))
+            ),
             "PACT::queueOrRevertInternal: identical proposal action already queued at eta"
         );
         timelock.queueTransaction(_target, _value, _signature, _data, _eta);
@@ -287,7 +287,7 @@ PACTDelegateStorageV1
         Proposal storage _proposal = proposals[_proposalId];
         require(
             msg.sender == _proposal.proposer ||
-            getPriorVotes(_proposal.proposer, sub256(block.number, 1)) < proposalThreshold,
+                getPriorVotes(_proposal.proposer, sub256(block.number, 1)) < proposalThreshold,
             "PACT::cancel: proposer above threshold"
         );
 
@@ -314,20 +314,20 @@ PACTDelegateStorageV1
      * @return calldatas Calldatas for proposal calls.
      */
     function getActions(uint256 _proposalId)
-    external
-    view
-    returns (
-        address[] memory targets,
-        uint256[] memory values,
-        string[] memory signatures,
-        bytes[] memory calldatas
-    )
+        external
+        view
+        returns (
+            address[] memory targets,
+            uint256[] memory values,
+            string[] memory signatures,
+            bytes[] memory calldatas
+        )
     {
         return (
-        proposalTargets[_proposalId],
-        proposalValues[_proposalId],
-        proposalSignatures[_proposalId],
-        proposalCalldatas[_proposalId]
+            proposalTargets[_proposalId],
+            proposalValues[_proposalId],
+            proposalSignatures[_proposalId],
+            proposalCalldatas[_proposalId]
         );
     }
 
@@ -338,9 +338,9 @@ PACTDelegateStorageV1
      * @return The voting receipt
      */
     function getReceipt(uint256 _proposalId, address _voter)
-    external
-    view
-    returns (Receipt memory)
+        external
+        view
+        returns (Receipt memory)
     {
         return proposalReceipts[_proposalId][_voter];
     }
@@ -533,7 +533,7 @@ PACTDelegateStorageV1
     function _setProposalThreshold(uint256 _newProposalThreshold) external onlyOwner {
         require(
             _newProposalThreshold >= MIN_PROPOSAL_THRESHOLD &&
-            _newProposalThreshold <= MAX_PROPOSAL_THRESHOLD,
+                _newProposalThreshold <= MAX_PROPOSAL_THRESHOLD,
             "PACT::_setProposalThreshold: invalid proposal threshold"
         );
         uint256 _oldProposalThreshold = proposalThreshold;
@@ -583,11 +583,11 @@ PACTDelegateStorageV1
             return token.getPriorVotes(_voter, _beforeBlock);
         }
         return
-        add96(
-            token.getPriorVotes(_voter, _beforeBlock),
-            releaseToken.getPriorVotes(_voter, _beforeBlock),
-            "getPriorVotes overflow"
-        );
+            add96(
+                token.getPriorVotes(_voter, _beforeBlock),
+                releaseToken.getPriorVotes(_voter, _beforeBlock),
+                "getPriorVotes overflow"
+            );
     }
 
     function add96(

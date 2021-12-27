@@ -5,6 +5,6 @@ import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.so
 
 contract PACTDelegator is TransparentUpgradeableProxy {
     constructor(address _logic, address _proxyAdmin)
-    TransparentUpgradeableProxy(_logic, _proxyAdmin, "")
+        TransparentUpgradeableProxy(_logic, _proxyAdmin, "")
     {}
 }
