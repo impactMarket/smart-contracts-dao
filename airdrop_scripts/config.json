@@ -6,7 +6,7 @@
   "targetBlock": "10480000",
   "walletsToIgnore": [],
   "distributions": {
-    "doners": 1,
+    "donors": 1,
     "holders": 1,
     "managers": 50,
     "beneficiaries": 1

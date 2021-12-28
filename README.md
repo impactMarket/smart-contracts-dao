@@ -8,7 +8,7 @@ nvm use 12
 yarn --ignore-engines
 ``` 
 ## Build / Test / Deploy
-`yarn build` / `yarn coverage` / `yarn deploy`
+`yarn build` / `yarn coverage` / `yarn deploy` / `yarn test`
 ## Documentation
 * Generate with `yarn docgen`
 * Navigable HTML documentation from `./docs/index.html`

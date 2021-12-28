@@ -49,7 +49,7 @@ describe("Merkle Distributor", () => {
 		await deploy();
 	});
 
-	xit("Should be able to claim reward account #1", async function () {
+	it("Should be able to claim reward account #1", async function () {
 		const account = "0x0000000072EF09A65BF7715EEE729AC702546aEC";
 
 		const initialBalance = await PACT.balanceOf(account);

@@ -54,40 +54,40 @@ def main(config_file_path):
 
     celo_2_usd_rate = 4.0
     # 1. cUSD  #############
-    print('get cUSD doners (token-address %s): %s - %s' % (cusd_address, start_block, target_block))
-    # values in doners and holders are already converted to floats (i.e. not in base_18)
-    cusd_transfers, cusd_doners_list, cusd_holders = process_cUSD_token(
+    print('get cUSD donors (token-address %s): %s - %s' % (cusd_address, start_block, target_block))
+    # values in donors and holders are already converted to floats (i.e. not in base_18)
+    cusd_transfers, cusd_donors_list, cusd_holders = process_cUSD_token(
         mp_pool, save_path, 1, target_block, cusd_address, communities
     )
 
     # 2. CELO ##############
-    print('get CELO doners (token-address %s): %s - %s' % (celo_address, start_block, target_block))
-    celo_transfers, celo_doners_list, celo_holders = process_celo_token(
+    print('get CELO donors (token-address %s): %s - %s' % (celo_address, start_block, target_block))
+    celo_transfers, celo_donors_list, celo_holders = process_celo_token(
         mp_pool, save_path, 1, target_block, celo_address, communities
     )
 
     impactMarketOldAddress = "0x69d174b5934ea2e20b0a31dd848c79ae5300a095"
     impactMarketNewAddress = "0x62c06ebce770f7166f726fab4924940adb520eec"
 
-    celo_doners_list = [(a, amount*celo_2_usd_rate) for a, amount in celo_doners_list]
+    celo_donors_list = [(a, amount*celo_2_usd_rate) for a, amount in celo_donors_list]
     celo_holders_list = [(a, amount*celo_2_usd_rate) for a, amount in celo_holders.items()]
     address_amount_tuples = []
-    address_amount_tuples.extend(cusd_doners_list)
-    address_amount_tuples.extend(celo_doners_list)
-    aggregated_doners = {a: 0 for a, v in address_amount_tuples}
-    aggregated_doners[impactMarketNewAddress] = 0
+    address_amount_tuples.extend(cusd_donors_list)
+    address_amount_tuples.extend(celo_donors_list)
+    aggregated_donors = {a: 0 for a, v in address_amount_tuples}
+    aggregated_donors[impactMarketNewAddress] = 0
 
     for a, v in address_amount_tuples:
         if a == impactMarketOldAddress:
-            aggregated_doners[impactMarketNewAddress] += v
+            aggregated_donors[impactMarketNewAddress] += v
         else:
-            aggregated_doners[a] += v
+            aggregated_donors[a] += v
 
-    sorted_doners = sorted(aggregated_doners.items(), key=lambda x: x[1])
-    doners_file = os.path.join(save_results_path, 'doners.csv')
-    with open(doners_file, 'w') as f:
+    sorted_donors = sorted(aggregated_donors.items(), key=lambda x: x[1])
+    donors_file = os.path.join(save_results_path, 'donors.csv')
+    with open(donors_file, 'w') as f:
         csv_writer = csv.writer(f)
-        csv_writer.writerows(sorted_doners)
+        csv_writer.writerows(sorted_donors)
 #
 #     # # 3. UBE token holders ############## UBE holders (around 3.3K at moment)
 #     # ube_address, ube_block, factory, router, factory_block = get_ubeswap_info()
@@ -160,23 +160,23 @@ def main(config_file_path):
           '%s\n'
           '%s\n'
           '%s\n'
-          '' % (doners_file, holders_file, managers_file, beneficiaries_file)
+          '' % (donors_file, holders_file, managers_file, beneficiaries_file)
           )
 
     million = 1000000
     total_tokens = 1000 * million # 1 billion
-    doners_tokens = 750 * million
+    donors_tokens = 750 * million
     managers_tokens = 50 * million
     beneficiaries_tokens = 100 * million
     holders_tokens = 100 * million
     receivers = []
-    # donation_multiplier = distributions['doners']
-    sorted_doners = [(a, amount) for a, amount in sorted_doners if a not in accounts_to_ignore]
+    # donation_multiplier = distributions['donors']
+    sorted_donors = [(a, amount) for a, amount in sorted_donors if a not in accounts_to_ignore]
 
-    total_donations = sum([amount for _, amount in sorted_doners])
-    donation_multiplier = float(doners_tokens / total_donations)
+    total_donations = sum([amount for _, amount in sorted_donors])
+    donation_multiplier = float(donors_tokens / total_donations)
     print('donation reward multiplier == %s (total donations amount is %s) ' % (donation_multiplier, total_donations))
-    receivers.extend([(address, amount * donation_multiplier) for address, amount in sorted_doners if (amount * donation_multiplier) > 0.0])
+    receivers.extend([(address, amount * donation_multiplier) for address, amount in sorted_donors if (amount * donation_multiplier) > 0.0])
 
     # make receivers unique so a receiver does not receive multiple rewards
     # sorted_holders = [a for a, amount in sorted_holders]

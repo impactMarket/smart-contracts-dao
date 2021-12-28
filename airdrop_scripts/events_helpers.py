@@ -105,7 +105,7 @@ def get_event_logs(args):
 
     return values
 
-# def get_community_transfers(_web3, token_address, token_name, _from, _to, filters=None, chunk_size=500000, sender='doner'):
+# def get_community_transfers(_web3, token_address, token_name, _from, _to, filters=None, chunk_size=500000, sender='donor'):
 #     erc20 = Contract(token_name, os.getenv('ERC20_ABI'), _web3.toChecksumAddress(token_address))
 #     event_name_Transfer = 'Transfer'
 #     logs = erc20.get_event_logs(
@@ -114,7 +114,7 @@ def get_event_logs(args):
 #         _web3,
 #         chunk_size=chunk_size
 #     )
-#     if sender == 'doner':
+#     if sender == 'donor':
 #         return [(l.args['from'], l.args.value) for l in logs]
 #     elif sender == 'community':
 #         return [(l.args.to, l.args.value) for l in logs]
@@ -149,7 +149,7 @@ def get_event_logs(args):
 #     return all_transfers
 
 
-def extract_community_doners(transfers, communities):
+def extract_community_donors(transfers, communities):
     """
     donation amounts are in float type, already converted from base_18
 
@@ -157,13 +157,13 @@ def extract_community_doners(transfers, communities):
     :param communities:
     :return:
     """
-    doner_value_list = []
+    donor_value_list = []
     communities_set = {comm for comm, block in communities}
     for _from, _to, value, block in transfers:
         if _to in communities_set:
-            doner_value_list.append((_from.lower(), util.from_base_18(value)))
+            donor_value_list.append((_from.lower(), util.from_base_18(value)))
 
-    return doner_value_list
+    return donor_value_list
 
 
 def extract_token_holders(transfers, min_amount=1.0):

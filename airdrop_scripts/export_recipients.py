@@ -6,7 +6,7 @@ import logging
 
 
 from contract import Contract
-from events_helpers import initConnection, get_event_logs, get_community_event_logs, extract_community_doners, \
+from events_helpers import initConnection, get_event_logs, get_community_event_logs, extract_community_donors, \
     extract_token_holders, extract_transfers_and_save_to_file
 from util import from_base_18, get_start_block, get_block_steps, ENV_WEB3_NETWORK
 from web3_instance import get_web3
@@ -146,16 +146,16 @@ def dispatch_get_all_transfers(process_pool, save_path, from_block, to_block, to
 
 def process_cUSD_token(process_pool, save_path, start_block, target_block, cusd_address, communities):
     cusd_transfers = dispatch_get_all_transfers(process_pool, save_path, start_block, target_block, cusd_address, 'cUSD')
-    cusd_doners_list = extract_community_doners(cusd_transfers, communities)
+    cusd_donors_list = extract_community_donors(cusd_transfers, communities)
     cusd_holders = extract_token_holders(cusd_transfers, min_amount=10.0)
-    return cusd_transfers, cusd_doners_list, cusd_holders
+    return cusd_transfers, cusd_donors_list, cusd_holders
 
 
 def process_celo_token(process_pool, save_path, start_block, target_block, celo_address, communities):
     celo_transfers = dispatch_get_all_transfers(process_pool, save_path, start_block, target_block, celo_address, 'CELO')
-    celo_doners_list = extract_community_doners(celo_transfers, communities)
+    celo_donors_list = extract_community_donors(celo_transfers, communities)
     celo_holders = extract_token_holders(celo_transfers, min_amount=1.0)
-    return celo_transfers, celo_doners_list, celo_holders
+    return celo_transfers, celo_donors_list, celo_holders
 
 
 def process_ube_token(process_pool, save_path, start_block, target_block, ube_address):
