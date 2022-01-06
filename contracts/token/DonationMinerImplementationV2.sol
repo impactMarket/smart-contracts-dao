@@ -286,7 +286,10 @@ contract DonationMinerImplementationV2 is
         Donor storage _donor = donors[msg.sender];
         uint256 _claimAmount;
 
-        (_claimAmount, _donor.lastClaim) = _calculateRewardAndIndexByPeriodNumber(msg.sender, rewardPeriodCount - claimDelay);
+        (_claimAmount, _donor.lastClaim) = _calculateRewardAndIndexByPeriodNumber(
+            msg.sender,
+            rewardPeriodCount - claimDelay
+        );
 
         if (_claimAmount == 0) {
             return;
@@ -308,12 +311,10 @@ contract DonationMinerImplementationV2 is
      * @param _lastPeriodNumber last reward period number to be computed
      * @return uint256 sum of all donor's rewards that has not been claimed until _lastPeriodNumber
      */
-    function calculateClaimableRewardsByPeriodNumber(address _donorAddress, uint256 _lastPeriodNumber)
-    public
-    view
-    override
-    returns (uint256)
-    {
+    function calculateClaimableRewardsByPeriodNumber(
+        address _donorAddress,
+        uint256 _lastPeriodNumber
+    ) public view override returns (uint256) {
         uint256 _claimAmount;
         (_claimAmount, ) = _calculateRewardAndIndexByPeriodNumber(_donorAddress, _lastPeriodNumber);
 
@@ -509,11 +510,10 @@ contract DonationMinerImplementationV2 is
      * @return uint256 sum of all donor's rewards that has not been claimed until _lastPeriodNumber
      * @return uint256 index of the last rewardPeriod that has been computed
      */
-    function _calculateRewardAndIndexByPeriodNumber(address _donorAddress, uint256 _lastPeriodNumber)
-    internal
-    view
-    returns (uint256, uint256)
-    {
+    function _calculateRewardAndIndexByPeriodNumber(
+        address _donorAddress,
+        uint256 _lastPeriodNumber
+    ) internal view returns (uint256, uint256) {
         Donor storage _donor = donors[_donorAddress];
         uint256 _claimAmount;
         uint256 _rewardPeriodNumber;
@@ -528,8 +528,8 @@ contract DonationMinerImplementationV2 is
             }
 
             _claimAmount +=
-            (_rewardPeriod.rewardAmount * _rewardPeriod.donorAmounts[_donorAddress]) /
-            _rewardPeriod.donationsAmount;
+                (_rewardPeriod.rewardAmount * _rewardPeriod.donorAmounts[_donorAddress]) /
+                _rewardPeriod.donationsAmount;
             _index++;
         }
 

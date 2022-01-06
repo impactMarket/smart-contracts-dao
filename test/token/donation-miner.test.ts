@@ -143,21 +143,15 @@ async function rewardPeriodFixtures() {
 	//second block donations
 	await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
 
-	await cUSD
-		.connect(donor1)
-		.approve(DonationMiner.address, user1Donation1);
+	await cUSD.connect(donor1).approve(DonationMiner.address, user1Donation1);
 
 	await DonationMiner.connect(donor1).donate(user1Donation1);
 
-	await cUSD
-		.connect(donor2)
-		.approve(DonationMiner.address, user2Donation);
+	await cUSD.connect(donor2).approve(DonationMiner.address, user2Donation);
 
 	await DonationMiner.connect(donor2).donate(user2Donation);
 
-	await cUSD
-		.connect(donor1)
-		.approve(DonationMiner.address, user1Donation2);
+	await cUSD.connect(donor1).approve(DonationMiner.address, user1Donation2);
 
 	await DonationMiner.connect(donor1).donate(user1Donation2);
 
@@ -166,15 +160,11 @@ async function rewardPeriodFixtures() {
 
 	await DonationMiner.connect(donor1).claimRewards();
 
-	await cUSD
-		.connect(donor1)
-		.approve(DonationMiner.address, user1Donation3);
+	await cUSD.connect(donor1).approve(DonationMiner.address, user1Donation3);
 
 	await DonationMiner.connect(donor1).donate(user1Donation3);
 
-	await cUSD
-		.connect(donor3)
-		.approve(DonationMiner.address, user3Donation);
+	await cUSD.connect(donor3).approve(DonationMiner.address, user3Donation);
 
 	await DonationMiner.connect(donor3).donate(user3Donation);
 
@@ -187,9 +177,7 @@ async function rewardPeriodFixtures() {
 	//fifth block donations
 	await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE - 1);
 
-	await cUSD
-		.connect(donor4)
-		.approve(DonationMiner.address, user4Donation);
+	await cUSD.connect(donor4).approve(DonationMiner.address, user4Donation);
 
 	await DonationMiner.connect(donor4).donate(user4Donation);
 
@@ -276,9 +264,7 @@ async function verifyRewardPeriodFixtures(
 	expect(rewardPeriod3.rewardPerBlock).to.equal(
 		parseEther("215525.924410464")
 	);
-	expect(rewardPeriod3.rewardAmount).to.equal(
-		parseEther("4310518.48820928")
-	);
+	expect(rewardPeriod3.rewardAmount).to.equal(parseEther("4310518.48820928"));
 	expect(rewardPeriod3.startBlock).to.equal(170);
 	expect(rewardPeriod3.endBlock).to.equal(189);
 	expect(rewardPeriod3.donationsAmount).to.equal(
@@ -384,24 +370,32 @@ async function chunkAdvance(chunk: number, rewardExpected: string) {
 	expect(balance).to.equal(parseEther(rewardExpected));
 }
 
-const getInitializerData = (ImplFactory: any, args: any[], initializer: any) => {
+const getInitializerData = (
+	ImplFactory: any,
+	args: any[],
+	initializer: any
+) => {
 	if (initializer === false) {
-		return "0x"
+		return "0x";
 	}
-	const allowNoInitialization = initializer === undefined && args.length === 0
-	initializer = initializer ?? "initialize"
+	const allowNoInitialization =
+		initializer === undefined && args.length === 0;
+	initializer = initializer ?? "initialize";
 	try {
-		const fragment = ImplFactory.interface.getFunction(initializer)
-		return ImplFactory.interface.encodeFunctionData(fragment, args)
+		const fragment = ImplFactory.interface.getFunction(initializer);
+		return ImplFactory.interface.encodeFunctionData(fragment, args);
 	} catch (e) {
 		if (e instanceof Error) {
-			if (allowNoInitialization && e.message.includes("no matching function")) {
-				return "0x"
+			if (
+				allowNoInitialization &&
+				e.message.includes("no matching function")
+			) {
+				return "0x";
 			}
 		}
-		throw e
+		throw e;
 	}
-}
+};
 
 describe("Donation Miner", () => {
 	before(async function () {});
@@ -1274,7 +1268,7 @@ describe("Donation Miner", () => {
 	});
 
 	it("Should not update implementation if not owner", async function () {
-				expect(
+		expect(
 			await ImpactProxyAdmin.getProxyImplementation(DonationMiner.address)
 		).to.be.equal(DonationMinerImplementation.address);
 		await expect(
@@ -1316,7 +1310,12 @@ describe("Donation Miner", () => {
 		await expect(DonationMiner.updateClaimDelay(10)).to.be.fulfilled;
 		expect(await DonationMiner.claimDelay()).to.be.equal(10);
 
-		expect(await DonationMiner.calculateClaimableRewardsByPeriodNumber(owner.address, 5)).to.be.equal(0);
+		expect(
+			await DonationMiner.calculateClaimableRewardsByPeriodNumber(
+				owner.address,
+				5
+			)
+		).to.be.equal(0);
 	});
 
 	it("Should have same storage after update implementation", async function () {
@@ -1441,8 +1440,6 @@ describe("Donation Miner + Community", () => {
 		expect(donation1.tokenPrice).to.equal(parseEther("1"));
 	});
 });
-
-
 
 describe("Donation Miner V2", () => {
 	before(async function () {});

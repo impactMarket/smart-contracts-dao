@@ -76,7 +76,7 @@ let cUSDInstance: ethersTypes.Contract;
 let impactProxyAdmin: ethersTypes.Contract;
 
 // constants
-const firstBlock = 33;
+const firstBlock = 34;
 const oneMinuteInBlocks = 12;
 const threeMinutesInBlocks = 36;
 const hourInBlocks = 720;

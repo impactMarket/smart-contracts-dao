@@ -603,17 +603,17 @@ describe("PACTGovernator", function () {
 			).address
 		);
 
-		const signatures = ["upgrade(address,address)", "updateClaimDelay(uint256)"];
+		const signatures = [
+			"upgrade(address,address)",
+			"updateClaimDelay(uint256)",
+		];
 
 		const calldatas = [
 			ethers.utils.defaultAbiCoder.encode(
-				["address","address"],
+				["address", "address"],
 				[donationMiner.address, DonationMinerImplementationV2.address]
 			),
-			ethers.utils.defaultAbiCoder.encode(
-				["uint256"],
-				[8]
-			),
+			ethers.utils.defaultAbiCoder.encode(["uint256"], [8]),
 		];
 
 		await expect(
