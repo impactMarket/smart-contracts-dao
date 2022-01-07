@@ -77,24 +77,6 @@ contract DonationMinerImplementationV2 is
     );
 
     /**
-     * @notice Triggered when the first reward period params have been updated
-     *
-     * @param oldStartingBlock        Old oldStartingBlock value
-     * @param oldFirstRewardPerBlock  Old oldFirstRewardPerBlock value
-     * @param newStartingBlock        New newStartingBlock value
-     * @param newFirstRewardPerBlock  New newFirstRewardPerBlock value
-     *
-     * For further information regarding each parameter, see
-     * *DonationMiner* smart contract initialize method.
-     */
-    event FirstRewardPeriodParamsUpdated(
-        uint256 oldStartingBlock,
-        uint256 oldFirstRewardPerBlock,
-        uint256 newStartingBlock,
-        uint256 newFirstRewardPerBlock
-    );
-
-    /**
      * @notice Triggered when the claimDelay address has been updated
      *
      * @param oldClaimDelay            Old claimDelay value
@@ -188,41 +170,12 @@ contract DonationMinerImplementationV2 is
     }
 
     /**
-     * @notice Updates first reward period default params
-     *
-     * @param _startingBlock value of new startingBlock
-     * @param _firstRewardPerBlock value of new firstRewardPerBlock
-     */
-    function updateFirstRewardPeriodParams(uint256 _startingBlock, uint256 _firstRewardPerBlock)
-        external
-        override
-        onlyOwner
-    {
-        uint256 _oldStartingBlock = rewardPeriods[1].startBlock;
-        uint256 _oldFirstRewardPerBlock = rewardPeriods[1].rewardPerBlock;
-
-        require(
-            _oldStartingBlock > block.number,
-            "DonationMiner::updateFirstRewardPeriodParams: DonationMiner has already started"
-        );
-
-        initFirstPeriod(_startingBlock, _firstRewardPerBlock);
-
-        emit FirstRewardPeriodParamsUpdated(
-            _oldStartingBlock,
-            _oldFirstRewardPerBlock,
-            _startingBlock,
-            _firstRewardPerBlock
-        );
-    }
-
-    /**
      * @notice Updates claimDelay value
      *
      * @param _newClaimDelay      Number of reward periods a donor has to wait after
      *                            a donation until he will be able to claim his reward
      */
-    function updateClaimDelay(uint256 _newClaimDelay) external override {
+    function updateClaimDelay(uint256 _newClaimDelay) external override onlyOwner {
         uint256 _oldClaimDelay = claimDelay;
         claimDelay = _newClaimDelay;
 
@@ -286,9 +239,15 @@ contract DonationMinerImplementationV2 is
         Donor storage _donor = donors[msg.sender];
         uint256 _claimAmount;
 
+        uint256 lastPeriodToClaim;
+
+        if (rewardPeriodCount > claimDelay) {
+            lastPeriodToClaim = rewardPeriodCount - claimDelay;
+        }
+
         (_claimAmount, _donor.lastClaim) = _calculateRewardAndIndexByPeriodNumber(
             msg.sender,
-            rewardPeriodCount - claimDelay
+            lastPeriodToClaim
         );
 
         if (_claimAmount == 0) {

@@ -591,6 +591,7 @@ describe("PACTGovernator", function () {
 
 	it("should update DonationMinerImplementation", async function () {
 		await ImpactProxyAdmin.transferOwnership(pactTimelock.address);
+		await donationMiner.transferOwnership(pactTimelock.address);
 
 		const targets = [proxyAdmin.address, donationMiner.address];
 		const values = [0, 0];

@@ -66,10 +66,6 @@ interface IDonationMinerV2 {
         uint256 _newDecayNumerator,
         uint256 _newDecayDenominator
     ) external;
-    function updateFirstRewardPeriodParams(
-        uint256 _startingBlock,
-        uint256 _firstRewardPerBlock
-    ) external;
     function updateClaimDelay(
         uint256 _neClaimDelay
     ) external;
