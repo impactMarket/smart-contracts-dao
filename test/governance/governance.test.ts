@@ -588,4 +588,64 @@ describe("PACTGovernator", function () {
 			bobInitialBalance.add(amount)
 		);
 	});
+
+	it("should update DonationMinerImplementation", async function () {
+		await ImpactProxyAdmin.transferOwnership(pactTimelock.address);
+		await donationMiner.transferOwnership(pactTimelock.address);
+
+		const targets = [proxyAdmin.address, donationMiner.address];
+		const values = [0, 0];
+		const descriptions = "description";
+
+		let DonationMinerImplementationV2 = await ethers.getContractAt(
+			"DonationMinerImplementationV2",
+			(
+				await deployments.get("DonationMinerImplementationV2")
+			).address
+		);
+
+		const signatures = [
+			"upgrade(address,address)",
+			"updateClaimDelay(uint256)",
+		];
+
+		const calldatas = [
+			ethers.utils.defaultAbiCoder.encode(
+				["address", "address"],
+				[donationMiner.address, DonationMinerImplementationV2.address]
+			),
+			ethers.utils.defaultAbiCoder.encode(["uint256"], [8]),
+		];
+
+		await expect(
+			pactDelegator.propose(
+				targets,
+				values,
+				signatures,
+				calldatas,
+				descriptions
+			)
+		).to.be.fulfilled;
+
+		await advanceBlockNTimes(VOTING_DELAY_BLOCKS);
+
+		await expect(pactDelegator.castVote(1, 1)).to.be.fulfilled;
+		// await expect(pactDelegator.connect(alice).castVote(2, 1)).to.be
+		// 	.fulfilled;
+
+		await advanceBlockNTimes(VOTING_PERIOD_BLOCKS);
+
+		await expect(pactDelegator.connect(alice).queue(1)).to.be.fulfilled;
+
+		await advanceNSeconds(TWO_DAYS_SECONDS);
+
+		await expect(pactDelegator.connect(alice).execute(1)).to.be.fulfilled;
+
+		donationMiner = await ethers.getContractAt(
+			"DonationMinerImplementationV2",
+			donationMiner.address
+		);
+
+		expect(await donationMiner.claimDelay()).to.be.equal(8);
+	});
 });
