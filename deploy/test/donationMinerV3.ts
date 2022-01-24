@@ -10,15 +10,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const accounts: SignerWithAddress[] = await ethers.getSigners();
 	const deployer = accounts[0];
 
-	await deploy(
-		"DonationMinerImplementationV3",
-		{
-			from: deployer.address,
-			args: [],
-			log: true,
-			// gasLimit: 13000000,
-		}
-	);
+	await deploy("DonationMinerImplementationV3", {
+		from: deployer.address,
+		args: [],
+		log: true,
+		// gasLimit: 13000000,
+	});
 };
 
 export default func;
