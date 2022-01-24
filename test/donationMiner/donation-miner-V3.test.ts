@@ -1739,9 +1739,120 @@ describe("Donation Miner V3 (claimDelay = 0, againstPeriods != 0)", () => {
 				.add(periodReward9.div(2))
 		);
 	});
+
+	// it("Should return the correct value for calculateClaimableRewardsByPeriodNumber", async function () {
+	it("Should return the correct value for calculateClaimableRewardsByPeriodNumber", async function () {
+		updateImplementation();
+
+		const user1Donation = parseEther("100");
+		const user2Donation = parseEther("100");
+
+		const periodReward1 = parseEther("4320000");
+		const periodReward2 = parseEther("4315256.64");
+		const periodReward3 = parseEther("4310518.48820928");
+		const periodReward4 = parseEther("4305785.53890922621056");
+		const periodReward5 = parseEther("4301057.7863875038801808"); //0.7
+		const periodReward6 = parseEther("4296335.22493805040092036"); // 0.8   1.5
+		const periodReward7 = parseEther("4291617.84886106842158014"); // 1.05  2.55
+		const periodReward8 = parseEther("4286905.65246301896845324"); // 1.4   3.95
+		const periodReward9 = parseEther("4282198.63005661457362586"); // 2.1   6.2
+		const periodReward10 = parseEther("4277496.775960812410824");
+		const periodReward11 = parseEther("4272800.0845008074387969");
+		const periodReward12 = parseEther("4268108.5500080255522291");
+
+		// Approve
+		await cUSD
+			.connect(donor1)
+			.approve(DonationMiner.address, user1Donation.mul(5));
+
+		await cUSD
+			.connect(donor2)
+			.approve(DonationMiner.address, user2Donation);
+
+		await advanceTimeAndBlockNTimes(STARTING_DELAY + 5);
+
+		let previousDonor1Reward = parseEther("0");
+		await donateAndCheckAll(
+			donor1,
+			user1Donation,
+			periodReward1,
+			parseEther("0")
+		);
+		await checkClaimRewards(donor1, periodReward1);
+
+		await donateAndCheckAll(
+			donor1,
+			user1Donation,
+			periodReward2,
+			parseEther("0")
+		);
+		await checkClaimRewards(donor1, periodReward2);
+
+		await donateAndCheckAll(
+			donor1,
+			user1Donation,
+			periodReward3,
+			parseEther("0")
+		);
+		previousDonor1Reward = previousDonor1Reward.add(periodReward3);
+		await donateAndCheckAll(
+			donor1,
+			user1Donation,
+			periodReward4,
+			previousDonor1Reward
+		);
+		previousDonor1Reward = previousDonor1Reward.add(periodReward4);
+		await donateAndCheckSamePeriod(
+			donor1,
+			user1Donation,
+			periodReward5,
+			previousDonor1Reward
+		);
+		await checkClaimRewards(donor1, previousDonor1Reward);
+		await donateAndCheckAll(
+			donor2,
+			user2Donation,
+			periodReward5.div(6),
+			parseEther("0")
+		);
+
+		await advanceTimeAndBlockNTimes(2 * REWARD_PERIOD_SIZE);
+
+		await checkClaimRewards(
+			donor1,
+			periodReward5
+				.div(6)
+				.mul(5)
+				.add(periodReward6.div(5).mul(4))
+				.add(periodReward7.div(4).mul(3))
+				.add(parseEther("0.000000000000000003")) //BigNumber vs solidity math diff
+		);
+
+		await advanceTimeAndBlockNTimes(7 * REWARD_PERIOD_SIZE);
+
+		expect(
+			await DonationMiner.calculateClaimableRewards(donor1.address)
+		).to.be.equal(
+			periodReward8
+				.div(3)
+				.mul(2)
+				.add(periodReward9.div(2))
+				.add(parseEther("0.00000000000000001")) //BigNumber vs solidity math diff
+		);
+
+		expect(
+			await DonationMiner.calculateClaimableRewards(donor2.address)
+		).to.be.equal(
+			periodReward5
+				.div(6)
+				.add(periodReward6.div(5))
+				.add(periodReward7.div(4))
+				.add(periodReward8.div(3))
+				.add(periodReward9.div(2))
+				.add(parseEther("0.000000000000000009")) //BigNumber vs solidity math diff
+		);
+	});
 });
-
-
 
 describe("Donation Miner V2 (againstPeriodsDonations == 2)", () => {
 	before(async function () {});
@@ -2089,7 +2200,7 @@ describe("Donation Miner V2 (againstPeriodsDonations == 2)", () => {
 	});
 });
 
-describe.only("Donation Miner V2 (againstPeriodsDonations == 5)", () => {
+describe("Donation Miner V2 (againstPeriodsDonations == 5)", () => {
 	before(async function () {});
 
 	beforeEach(async () => {

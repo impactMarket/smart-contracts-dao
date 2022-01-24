@@ -298,17 +298,22 @@ contract DonationMinerImplementationV3 is
         address _donorAddress,
         uint256 _lastPeriodNumber
     ) public view override returns (uint256) {
-        uint256 lastPeriodToCompute = isCurrentRewardPeriodInitialized()
-            ? rewardPeriodCount - 1
-            : rewardPeriodCount;
+        uint256 _maxRewardPeriod;
+
+        if (rewardPeriods[rewardPeriodCount].endBlock < block.number) {
+            _maxRewardPeriod =
+                (block.number - rewardPeriods[rewardPeriodCount].endBlock) /
+                rewardPeriodSize;
+            _maxRewardPeriod += rewardPeriodCount;
+        } else {
+            _maxRewardPeriod = rewardPeriodCount - 1;
+        }
 
         require(
-            _lastPeriodNumber <= lastPeriodToCompute,
+            _lastPeriodNumber <= _maxRewardPeriod,
             "DonationMiner::calculateClaimableRewardsByPeriodNumber: This reward period isn't available yet"
         );
 
-        // if previous last period(s) has no donations, they haven't been initialized yet and the result isn't right
-        // todo: find a way to virtually create past period(s)
         return _calculateRewardByPeriodNumber(_donorAddress, _lastPeriodNumber);
     }
 
@@ -324,13 +329,18 @@ contract DonationMinerImplementationV3 is
         override
         returns (uint256)
     {
-        // if previous last period(s) has no donations, they haven't been initialized yet and the result isn't right
-        // todo: find a way to virtually create past period(s)
-        uint256 lastPeriodToCompute = isCurrentRewardPeriodInitialized()
-            ? rewardPeriodCount - 1
-            : rewardPeriodCount;
+        uint256 _maxRewardPeriod;
 
-        return _calculateRewardByPeriodNumber(_donorAddress, lastPeriodToCompute);
+        if (rewardPeriods[rewardPeriodCount].endBlock < block.number) {
+            _maxRewardPeriod =
+                (block.number - rewardPeriods[rewardPeriodCount].endBlock) /
+                rewardPeriodSize;
+            _maxRewardPeriod += rewardPeriodCount;
+        } else {
+            _maxRewardPeriod = rewardPeriodCount - 1;
+        }
+
+        return _calculateRewardByPeriodNumber(_donorAddress, _maxRewardPeriod);
     }
 
     /**
@@ -524,7 +534,7 @@ contract DonationMinerImplementationV3 is
     function _getLastClaimablePeriod() internal returns (uint256) {
         initializeRewardPeriods();
 
-        return rewardPeriodCount - 1 > claimDelay ? rewardPeriodCount - 1 - claimDelay : 0;
+        return rewardPeriodCount > claimDelay + 1 ? rewardPeriodCount - 1 - claimDelay : 0;
     }
 
     /**
@@ -570,10 +580,16 @@ contract DonationMinerImplementationV3 is
     {
         Donor storage _donor = donors[_donorAddress];
         uint256 _claimAmount;
+
+        // this is only used for the transition from V2 to V3
+        // we have to be sure a user is not able to claim for a epoch that he's claimed
+        //      so _index have to be greater then _donor.rewardPeriods[_donor.lastClaim]
         uint256 _index = _donor.lastClaimPeriod > _donor.rewardPeriods[_donor.lastClaim]
             ? _donor.lastClaimPeriod + 1
             : _donor.rewardPeriods[_donor.lastClaim] + 1;
 
+        // this is only for optimizing
+        // to not start from the epoch #1, we can start from the first epoch in witch the user donated
         if (_index == 1) {
             _index = _donor.rewardPeriods[1];
         }
@@ -581,14 +597,27 @@ contract DonationMinerImplementationV3 is
         uint256 _donorAmount;
         uint256 _totalAmount;
         uint256 _startPeriod;
+        uint256 _rewardAmount;
         RewardPeriod storage _previousRewardPeriod = rewardPeriods[0];
         RewardPeriod storage _currentRewardPeriod = rewardPeriods[_index];
         RewardPeriod storage _expiredRewardPeriod = rewardPeriods[0];
 
         while (_index <= _lastPeriodNumber) {
-            if (_currentRewardPeriod.againstPeriods == 0) {
+            // used only by calculateClaimableRewardsByPeriodNumber & calculateClaimableRewards
+            if (_currentRewardPeriod.startBlock == 0) {
+                if (_index > againstPeriods + 1) {
+                    _expiredRewardPeriod = rewardPeriods[_index - 1 - againstPeriods];
+                    _donorAmount -= _expiredRewardPeriod.donorAmounts[_donorAddress];
+                    _totalAmount -= _expiredRewardPeriod.donationsAmount;
+                }
+
+                _donorAmount += _currentRewardPeriod.donorAmounts[_donorAddress];
+                _totalAmount += _currentRewardPeriod.donationsAmount;
+                _rewardAmount = (_rewardAmount * decayNumerator) / decayDenominator;
+            } else if (_currentRewardPeriod.againstPeriods == 0) {
                 _donorAmount = _currentRewardPeriod.donorAmounts[_donorAddress];
                 _totalAmount = _currentRewardPeriod.donationsAmount;
+                _rewardAmount = _currentRewardPeriod.rewardAmount;
             } else if (
                 _previousRewardPeriod.againstPeriods != _currentRewardPeriod.againstPeriods
             ) {
@@ -600,8 +629,9 @@ contract DonationMinerImplementationV3 is
                     _startPeriod,
                     _index
                 );
+                _rewardAmount = _currentRewardPeriod.rewardAmount;
             } else {
-                if (_index - 1 > _currentRewardPeriod.againstPeriods) {
+                if (_index > _currentRewardPeriod.againstPeriods + 1) {
                     _expiredRewardPeriod = rewardPeriods[
                         _index - 1 - _currentRewardPeriod.againstPeriods
                     ];
@@ -611,10 +641,11 @@ contract DonationMinerImplementationV3 is
 
                 _donorAmount += _currentRewardPeriod.donorAmounts[_donorAddress];
                 _totalAmount += _currentRewardPeriod.donationsAmount;
+                _rewardAmount = _currentRewardPeriod.rewardAmount;
             }
 
             if (_totalAmount > 0) {
-                _claimAmount += (_currentRewardPeriod.rewardAmount * _donorAmount) / _totalAmount;
+                _claimAmount += (_rewardAmount * _donorAmount) / _totalAmount;
             }
             _index++;
 
