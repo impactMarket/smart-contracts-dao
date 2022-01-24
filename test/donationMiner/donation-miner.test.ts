@@ -122,8 +122,8 @@ async function showRewardPeriods(DonationMiner: any) {
 		console.log("rewardPeriod #", i, ": ", {
 			rewardPerBlock: formatEther(rewardPeriod.rewardPerBlock),
 			rewardAmount: formatEther(rewardPeriod.rewardAmount),
-			startBlock: formatEther(rewardPeriod.startBlock),
-			endBlock: formatEther(rewardPeriod.endBlock),
+			startBlock: rewardPeriod.startBlock,
+			endBlock: rewardPeriod.endBlock,
 			donationsAmount: formatEther(rewardPeriod.donationsAmount),
 		});
 	}

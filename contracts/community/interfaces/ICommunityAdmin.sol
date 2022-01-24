@@ -4,7 +4,7 @@ pragma solidity 0.8.4;
 import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./ICommunity.sol";
-import "../../token/interfaces/ITreasury.sol";
+import "../../treasury/interfaces/ITreasury.sol";
 
 interface ICommunityAdmin {
     enum CommunityState {
