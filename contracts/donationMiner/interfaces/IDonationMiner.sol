@@ -3,9 +3,9 @@ pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../community/interfaces/ICommunityAdmin.sol";
-import "./ITreasury.sol";
+import "../../treasury/interfaces/ITreasury.sol";
 
-interface IDonationMinerV2 {
+interface IDonationMiner {
     struct RewardPeriod {
         uint256 rewardPerBlock; //reward tokens created per block.
         uint256 rewardAmount; //reward tokens from previous periods + reward tokens from this reward period
@@ -60,21 +60,20 @@ interface IDonationMinerV2 {
         IERC20 token,
         uint256 tokenPrice
     );
-    function claimDelay() external view returns (uint256);
     function updateRewardPeriodParams(
         uint256 _newRewardPeriodSize,
         uint256 _newDecayNumerator,
         uint256 _newDecayDenominator
     ) external;
-    function updateClaimDelay(
-        uint256 _neClaimDelay
+    function updateFirstRewardPeriodParams(
+        uint256 _startingBlock,
+        uint256 _firstRewardPerBlock
     ) external;
     function updateTreasury(ITreasury _newTreasury) external;
     function donate(uint256 _amount) external;
     function donateToCommunity(ICommunity _community, uint256 _amount) external;
     function claimRewards() external;
     function calculateClaimableRewards(address _donor) external returns (uint256);
-    function calculateClaimableRewardsByPeriodNumber(address _donor, uint256 _lastPeriodNumber) external returns (uint256);
     function estimateClaimableReward(address _donor) external view returns (uint256);
     function transfer(IERC20 _token, address _to, uint256 _amount) external;
 }

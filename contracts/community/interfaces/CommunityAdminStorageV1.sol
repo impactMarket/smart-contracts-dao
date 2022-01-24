@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import "./ICommunityAdmin.sol";
-import "../../token/interfaces/ITreasury.sol";
+import "../../treasury/interfaces/ITreasury.sol";
 
 /**
  * @title Storage for CommunityAdmin
