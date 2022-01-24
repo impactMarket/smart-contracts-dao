@@ -270,8 +270,17 @@ contract DonationMinerImplementationV3 is
     /**
      * @notice Transfers to the sender the rewards
      */
-    function claimRewardsPartial(uint256 _lastPeriodNumber) external override whenNotPaused whenStarted nonReentrant {
-        require(_lastPeriodNumber <= _getLastClaimablePeriod(), "DonationMiner::claimRewardsPartial: This reward period isn't claimable yet");
+    function claimRewardsPartial(uint256 _lastPeriodNumber)
+        external
+        override
+        whenNotPaused
+        whenStarted
+        nonReentrant
+    {
+        require(
+            _lastPeriodNumber <= _getLastClaimablePeriod(),
+            "DonationMiner::claimRewardsPartial: This reward period isn't claimable yet"
+        );
 
         uint256 _claimAmount = _claimRewardsByPeriodNumber(msg.sender, _lastPeriodNumber);
 
@@ -289,9 +298,14 @@ contract DonationMinerImplementationV3 is
         address _donorAddress,
         uint256 _lastPeriodNumber
     ) public view override returns (uint256) {
-        uint256 lastPeriodToCompute = isCurrentRewardPeriodInitialized() ? rewardPeriodCount - 1: rewardPeriodCount;
+        uint256 lastPeriodToCompute = isCurrentRewardPeriodInitialized()
+            ? rewardPeriodCount - 1
+            : rewardPeriodCount;
 
-        require(_lastPeriodNumber <= lastPeriodToCompute, "DonationMiner::calculateClaimableRewardsByPeriodNumber: This reward period isn't available yet");
+        require(
+            _lastPeriodNumber <= lastPeriodToCompute,
+            "DonationMiner::calculateClaimableRewardsByPeriodNumber: This reward period isn't available yet"
+        );
 
         // if previous last period(s) has no donations, they haven't been initialized yet and the result isn't right
         // todo: find a way to virtually create past period(s)
@@ -312,7 +326,9 @@ contract DonationMinerImplementationV3 is
     {
         // if previous last period(s) has no donations, they haven't been initialized yet and the result isn't right
         // todo: find a way to virtually create past period(s)
-        uint256 lastPeriodToCompute = isCurrentRewardPeriodInitialized() ? rewardPeriodCount - 1: rewardPeriodCount;
+        uint256 lastPeriodToCompute = isCurrentRewardPeriodInitialized()
+            ? rewardPeriodCount - 1
+            : rewardPeriodCount;
 
         return _calculateRewardByPeriodNumber(_donorAddress, lastPeriodToCompute);
     }
@@ -341,12 +357,14 @@ contract DonationMinerImplementationV3 is
         uint256 _donorAmount;
         uint256 _claimAmount;
 
-        uint256 _startPeriod = (rewardPeriodCount > againstPeriods) ? rewardPeriodCount - againstPeriods : 0;
+        uint256 _startPeriod = (rewardPeriodCount > againstPeriods)
+            ? rewardPeriodCount - againstPeriods
+            : 0;
 
         (_donorAmount, _totalAmount) = _calculateDonorIntervalAmounts(
-                _donorAddress,
-                _startPeriod,
-                rewardPeriodCount
+            _donorAddress,
+            _startPeriod,
+            rewardPeriodCount
         );
 
         _claimAmount += (_lastRewardPeriod.rewardAmount * _donorAmount) / _totalAmount;
@@ -399,8 +417,14 @@ contract DonationMinerImplementationV3 is
             uint256 _rewardAmount = rewardPeriodSize * _newPeriod.rewardPerBlock;
 
             uint256 _totalAmountAgainst;
-            uint256 _startPeriod = (rewardPeriodCount - 1 > _lastPeriod.againstPeriods) ? rewardPeriodCount - 1 - _lastPeriod.againstPeriods : 0;
-            (, _totalAmountAgainst) = _calculateDonorIntervalAmounts(msg.sender, _startPeriod, rewardPeriodCount - 1);
+            uint256 _startPeriod = (rewardPeriodCount - 1 > _lastPeriod.againstPeriods)
+                ? rewardPeriodCount - 1 - _lastPeriod.againstPeriods
+                : 0;
+            (, _totalAmountAgainst) = _calculateDonorIntervalAmounts(
+                msg.sender,
+                _startPeriod,
+                rewardPeriodCount - 1
+            );
             if (_totalAmountAgainst == 0) {
                 _rewardAmount += _lastPeriod.rewardAmount;
             }
@@ -485,7 +509,7 @@ contract DonationMinerImplementationV3 is
         address _donorAddress,
         uint256 _startPeriod,
         uint256 _endPeriod
-    ) internal view returns(uint256, uint256) {
+    ) internal view returns (uint256, uint256) {
         uint256 _donorAmount;
         uint256 _totalAmount;
         uint256 _index;
@@ -497,7 +521,7 @@ contract DonationMinerImplementationV3 is
         return (_donorAmount, _totalAmount);
     }
 
-    function _getLastClaimablePeriod() internal returns(uint256) {
+    function _getLastClaimablePeriod() internal returns (uint256) {
         initializeRewardPeriods();
 
         return rewardPeriodCount - 1 > claimDelay ? rewardPeriodCount - 1 - claimDelay : 0;
@@ -506,13 +530,16 @@ contract DonationMinerImplementationV3 is
     /**
      * @notice Transfers to the sender the rewards
      */
-    function _claimRewardsByPeriodNumber(address _donorAddress, uint256 _lastPeriodNumber) internal returns(uint256) {
+    function _claimRewardsByPeriodNumber(address _donorAddress, uint256 _lastPeriodNumber)
+        internal
+        returns (uint256)
+    {
         Donor storage _donor = donors[_donorAddress];
         uint256 _claimAmount;
 
         _claimAmount = _calculateRewardByPeriodNumber(_donorAddress, _lastPeriodNumber);
 
-        if (_donor.lastClaimPeriod <  _lastPeriodNumber) {
+        if (_donor.lastClaimPeriod < _lastPeriodNumber) {
             _donor.lastClaimPeriod = _lastPeriodNumber;
         }
 
@@ -536,15 +563,16 @@ contract DonationMinerImplementationV3 is
      * @param _lastPeriodNumber last reward period number to be computed
      * @return uint256 sum of all donor's rewards that has not been claimed until _lastPeriodNumber
      */
-    function _calculateRewardByPeriodNumber(
-        address _donorAddress,
-        uint256 _lastPeriodNumber
-    ) internal view returns (uint256) {
+    function _calculateRewardByPeriodNumber(address _donorAddress, uint256 _lastPeriodNumber)
+        internal
+        view
+        returns (uint256)
+    {
         Donor storage _donor = donors[_donorAddress];
         uint256 _claimAmount;
-        uint256 _index = _donor.lastClaimPeriod > _donor.rewardPeriods[_donor.lastClaim] ?
-                _donor.lastClaimPeriod + 1 :
-                _donor.rewardPeriods[_donor.lastClaim] + 1;
+        uint256 _index = _donor.lastClaimPeriod > _donor.rewardPeriods[_donor.lastClaim]
+            ? _donor.lastClaimPeriod + 1
+            : _donor.rewardPeriods[_donor.lastClaim] + 1;
 
         if (_index == 1) {
             _index = _donor.rewardPeriods[1];
@@ -561,12 +589,22 @@ contract DonationMinerImplementationV3 is
             if (_currentRewardPeriod.againstPeriods == 0) {
                 _donorAmount = _currentRewardPeriod.donorAmounts[_donorAddress];
                 _totalAmount = _currentRewardPeriod.donationsAmount;
-            } else if (_previousRewardPeriod.againstPeriods != _currentRewardPeriod.againstPeriods) {
-                _startPeriod = _index > _currentRewardPeriod.againstPeriods ? _index - _currentRewardPeriod.againstPeriods : 0;
-                (_donorAmount, _totalAmount) = _calculateDonorIntervalAmounts(_donorAddress, _startPeriod, _index);
+            } else if (
+                _previousRewardPeriod.againstPeriods != _currentRewardPeriod.againstPeriods
+            ) {
+                _startPeriod = _index > _currentRewardPeriod.againstPeriods
+                    ? _index - _currentRewardPeriod.againstPeriods
+                    : 0;
+                (_donorAmount, _totalAmount) = _calculateDonorIntervalAmounts(
+                    _donorAddress,
+                    _startPeriod,
+                    _index
+                );
             } else {
                 if (_index - 1 > _currentRewardPeriod.againstPeriods) {
-                    _expiredRewardPeriod = rewardPeriods[_index - 1 - _currentRewardPeriod.againstPeriods];
+                    _expiredRewardPeriod = rewardPeriods[
+                        _index - 1 - _currentRewardPeriod.againstPeriods
+                    ];
                     _donorAmount -= _expiredRewardPeriod.donorAmounts[_donorAddress];
                     _totalAmount -= _expiredRewardPeriod.donationsAmount;
                 }
