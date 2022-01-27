@@ -11,7 +11,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const deployer = accounts[0];
 
 	await deploy(
-		"DonationMinerImplementationV2",
+		"DonationMinerImplementationV3",
 		{
 			from: deployer.address,
 			args: [],
