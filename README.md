@@ -8,7 +8,10 @@ nvm use 12
 yarn --ignore-engines
 ``` 
 ## Build / Test / Deploy
-`yarn build` / `yarn coverage` / `yarn deploy` / `yarn test`
+`yarn build`  
+`yarn coverage`  
+`yarn deploy` (extract before: airdrop_scripts/tree_scripts/merkleTree.json.tar.gz)  
+`yarn test`
 ## Documentation
 * Generate with `yarn docgen`
 * Navigable HTML documentation from `./docs/index.html`
