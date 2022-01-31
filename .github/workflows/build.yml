@@ -17,7 +17,7 @@ jobs:
           node-version: '16'
       
       - name: Pre-install
-        run: yarn --ignore-engines --network-concurrency 1
+        run: yarn --network-concurrency 1
       
       - name: Run Checks
         run: |

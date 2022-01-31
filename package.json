@@ -1,7 +1,7 @@
 {
-  "name": "impact-market-token",
+  "name": "impact-market-smart-contracts",
   "version": "1.0.0",
-  "description": "Token and governance for Impact Market",
+  "description": "Solidity smart-contracts for impactMarket protocol",
   "main": "index.js",
   "scripts": {
     "clean": "npx hardhat clean",
@@ -24,15 +24,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/keyko-io/impact-market-token.git"
+    "url": "git+https://github.com/impactMarket/impact-market-smart-contracts.git"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/keyko-io/impact-market-token/issues"
+    "url": "https://github.com/impactmarket/impact-market-smart-contracts/issues"
   },
-  "homepage": "https://github.com/keyko-io/impact-market-token#readme",
+  "homepage": "https://github.com/impactmarket/impact-market-smart-contracts#readme",
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.2",
     "@nomiclabs/hardhat-waffle": "^2.0.1",

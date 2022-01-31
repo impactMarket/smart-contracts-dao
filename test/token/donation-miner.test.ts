@@ -1573,7 +1573,7 @@ describe("Donation Miner V2 (claimDelay = 0)", () => {
 
 	it("Should update treasury if admin", async function () {
 		expect(await DonationMiner.treasury()).to.be.equal(Treasury.address);
-		DonationMiner.updateTreasury(owner.address);
+		await DonationMiner.updateTreasury(owner.address);
 		expect(await DonationMiner.treasury()).to.be.equal(owner.address);
 	});
 
