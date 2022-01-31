@@ -17,7 +17,7 @@ import { BigNumber } from "@ethersproject/bignumber";
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 
-const STARTING_DELAY = 100;
+const STARTING_DELAY = 99;
 const REWARD_PERIOD_SIZE = 20;
 const INITIAL_REWARD = parseEther("100000001");
 

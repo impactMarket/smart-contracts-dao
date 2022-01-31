@@ -7,17 +7,14 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
-import "./interfaces/ITreasury.sol";
-import "./interfaces/DonationMinerStorageV1.sol";
-import "../community/interfaces/ICommunity.sol";
-import "../community/interfaces/ICommunityAdmin.sol";
+import "./interfaces/DonationMinerStorageV2.sol";
 
-contract DonationMinerImplementation is
+contract DonationMinerImplementationV2 is
     Initializable,
     OwnableUpgradeable,
     PausableUpgradeable,
     ReentrancyGuardUpgradeable,
-    DonationMinerStorageV1
+    DonationMinerStorageV2
 {
     using SafeERC20 for IERC20;
 
@@ -77,22 +74,12 @@ contract DonationMinerImplementation is
     );
 
     /**
-     * @notice Triggered when the first reward period params have been updated
+     * @notice Triggered when the claimDelay address has been updated
      *
-     * @param oldStartingBlock        Old oldStartingBlock value
-     * @param oldFirstRewardPerBlock  Old oldFirstRewardPerBlock value
-     * @param newStartingBlock        New newStartingBlock value
-     * @param newFirstRewardPerBlock  New newFirstRewardPerBlock value
-     *
-     * For further information regarding each parameter, see
-     * *DonationMiner* smart contract initialize method.
+     * @param oldClaimDelay            Old claimDelay value
+     * @param newClaimDelay            New claimDelay value
      */
-    event FirstRewardPeriodParamsUpdated(
-        uint256 oldStartingBlock,
-        uint256 oldFirstRewardPerBlock,
-        uint256 newStartingBlock,
-        uint256 newFirstRewardPerBlock
-    );
+    event ClaimDelayUpdated(uint256 oldClaimDelay, uint256 newClaimDelay);
 
     /**
      * @notice Triggered when the treasury address has been updated
@@ -111,61 +98,10 @@ contract DonationMinerImplementation is
     }
 
     /**
-     * @notice Used to initialize a new DonationMiner contract
-     *
-     * @param _cUSD                 Address of the cUSD token
-     * @param _PACT                 Address of the PACT Token
-     * @param _treasury             Address of the Treasury
-     * @param _firstRewardPerBlock  Number of PACTs given for each block
-     *                              from the first reward period
-     * @param _rewardPeriodSize     Number of blocks of the reward period
-     * @param _startingBlock        First block of the first reward period
-     * @param _decayNumerator       Decay numerator used for calculating
-                                    the new reward per block based on
-                                    the previous reward per block
-     * @param _decayDenominator     Decay denominator used for calculating
-                                    the new reward per block based on
-                                    the previous reward per block
-     */
-    function initialize(
-        IERC20 _cUSD,
-        IERC20 _PACT,
-        ITreasury _treasury,
-        uint256 _firstRewardPerBlock,
-        uint256 _rewardPeriodSize,
-        uint256 _startingBlock,
-        uint256 _decayNumerator,
-        uint256 _decayDenominator
-    ) public initializer {
-        require(address(_cUSD) != address(0), "DonationMiner::initialize: cUSD address not set");
-        require(address(_PACT) != address(0), "DonationMiner::initialize: PACT address not set");
-        require(address(_treasury) != address(0), "DonationMiner::initialize: treasury_ not set");
-        require(
-            _firstRewardPerBlock != 0,
-            "DonationMiner::initialize: firstRewardPerBlock not set!"
-        );
-        require(_startingBlock != 0, "DonationMiner::initialize: startingRewardPeriod not set!");
-
-        __Ownable_init();
-        __Pausable_init();
-        __ReentrancyGuard_init();
-
-        cUSD = _cUSD;
-        PACT = _PACT;
-        treasury = _treasury;
-        rewardPeriodSize = _rewardPeriodSize;
-        decayNumerator = _decayNumerator;
-        decayDenominator = _decayDenominator;
-
-        rewardPeriodCount = 1;
-        initFirstPeriod(_startingBlock, _firstRewardPerBlock);
-    }
-
-    /**
      * @notice Returns the current implementation version
      */
     function getVersion() external pure override returns (uint256) {
-        return 1;
+        return 2;
     }
 
     /**
@@ -231,32 +167,16 @@ contract DonationMinerImplementation is
     }
 
     /**
-     * @notice Updates first reward period default params
+     * @notice Updates claimDelay value
      *
-     * @param _startingBlock value of new startingBlock
-     * @param _firstRewardPerBlock value of new firstRewardPerBlock
+     * @param _newClaimDelay      Number of reward periods a donor has to wait after
+     *                            a donation until he will be able to claim his reward
      */
-    function updateFirstRewardPeriodParams(uint256 _startingBlock, uint256 _firstRewardPerBlock)
-        external
-        override
-        onlyOwner
-    {
-        uint256 _oldStartingBlock = rewardPeriods[1].startBlock;
-        uint256 _oldFirstRewardPerBlock = rewardPeriods[1].rewardPerBlock;
+    function updateClaimDelay(uint256 _newClaimDelay) external override onlyOwner {
+        uint256 _oldClaimDelay = claimDelay;
+        claimDelay = _newClaimDelay;
 
-        require(
-            _oldStartingBlock > block.number,
-            "DonationMiner::updateFirstRewardPeriodParams: DonationMiner has already started"
-        );
-
-        initFirstPeriod(_startingBlock, _firstRewardPerBlock);
-
-        emit FirstRewardPeriodParamsUpdated(
-            _oldStartingBlock,
-            _oldFirstRewardPerBlock,
-            _startingBlock,
-            _firstRewardPerBlock
-        );
+        emit ClaimDelayUpdated(_oldClaimDelay, _newClaimDelay);
     }
 
     /**
@@ -308,12 +228,24 @@ contract DonationMinerImplementation is
     }
 
     /**
-     * @notice Transfers to the sender the rewards from ended reward periods
+     * @notice Transfers to the sender the rewards
      */
     function claimRewards() external override whenNotPaused whenStarted nonReentrant {
+        initializeRewardPeriods();
+
         Donor storage _donor = donors[msg.sender];
-        uint256 _claimAmount = calculateClaimableRewards(msg.sender);
-        _donor.lastClaim = getDonorLastEndedRewardPeriodIndex(_donor);
+        uint256 _claimAmount;
+
+        uint256 lastPeriodToClaim;
+
+        if (rewardPeriodCount > claimDelay) {
+            lastPeriodToClaim = rewardPeriodCount - claimDelay;
+        }
+
+        (_claimAmount, _donor.lastClaim) = _calculateRewardAndIndexByPeriodNumber(
+            msg.sender,
+            lastPeriodToClaim
+        );
 
         if (_claimAmount == 0) {
             return;
@@ -332,7 +264,24 @@ contract DonationMinerImplementation is
      * @notice Calculates the rewards from ended reward periods of a donor
      *
      * @param _donorAddress address of the donor
-     * @return uint256 sum of all donor's rewards that has not been claimed yet
+     * @param _lastPeriodNumber last reward period number to be computed
+     * @return uint256 sum of all donor's rewards that has not been claimed until _lastPeriodNumber
+     */
+    function calculateClaimableRewardsByPeriodNumber(
+        address _donorAddress,
+        uint256 _lastPeriodNumber
+    ) public view override returns (uint256) {
+        uint256 _claimAmount;
+        (_claimAmount, ) = _calculateRewardAndIndexByPeriodNumber(_donorAddress, _lastPeriodNumber);
+
+        return _claimAmount;
+    }
+
+    /**
+     * @notice Calculates the rewards from ended reward periods of a donor
+     *
+     * @param _donorAddress address of the donor
+     * @return uint256 sum of all donor's rewards that has not been claimed
      */
     function calculateClaimableRewards(address _donorAddress)
         public
@@ -340,21 +289,8 @@ contract DonationMinerImplementation is
         override
         returns (uint256)
     {
-        Donor storage _donor = donors[_donorAddress];
         uint256 _claimAmount;
-        uint256 _rewardPeriodNumber;
-        uint256 _lastEndedRewardPeriodIndex = getDonorLastEndedRewardPeriodIndex(_donor);
-        uint256 _index = _donor.lastClaim + 1;
-
-        while (_index <= _lastEndedRewardPeriodIndex) {
-            _rewardPeriodNumber = _donor.rewardPeriods[_index];
-            RewardPeriod storage _rewardPeriod = rewardPeriods[_rewardPeriodNumber];
-
-            _claimAmount +=
-                (_rewardPeriod.rewardAmount * _rewardPeriod.donorAmounts[_donorAddress]) /
-                _rewardPeriod.donationsAmount;
-            _index++;
-        }
+        (_claimAmount, ) = _calculateRewardAndIndexByPeriodNumber(_donorAddress, rewardPeriodCount);
 
         return _claimAmount;
     }
@@ -467,25 +403,6 @@ contract DonationMinerImplementation is
     }
 
     /**
-     * @notice Returns the index of the last ended reward period in which a donor has donated
-     *
-     * @param _donor object of the donor
-     * @return uint256 the index of the last ended reward period of the donor
-     */
-    function getDonorLastEndedRewardPeriodIndex(Donor storage _donor)
-        internal
-        view
-        returns (uint256)
-    {
-        uint256 _lastDonorRewardPeriod = _donor.rewardPeriods[_donor.rewardPeriodsCount];
-        if (rewardPeriods[_lastDonorRewardPeriod].endBlock < block.number) {
-            return _donor.rewardPeriodsCount;
-        } else {
-            return _donor.rewardPeriodsCount - 1;
-        }
-    }
-
-    /**
      * @notice Adds the current reward period number to a donor's list only if it hasn't been added yet
      *
      * @param _donorAddress address of the donor
@@ -539,5 +456,39 @@ contract DonationMinerImplementation is
         _firstPeriod.endBlock = _startingBlock + rewardPeriodSize - 1;
         _firstPeriod.rewardPerBlock = _firstRewardPerBlock;
         _firstPeriod.rewardAmount = _firstRewardPerBlock * rewardPeriodSize;
+    }
+
+    /**
+     * @notice Calculates the reward for a donor starting with his last reward period claimed
+     *
+     * @param _donorAddress address of the donor
+     * @param _lastPeriodNumber last reward period number to be computed
+     * @return uint256 sum of all donor's rewards that has not been claimed until _lastPeriodNumber
+     * @return uint256 index of the last rewardPeriod that has been computed
+     */
+    function _calculateRewardAndIndexByPeriodNumber(
+        address _donorAddress,
+        uint256 _lastPeriodNumber
+    ) internal view returns (uint256, uint256) {
+        Donor storage _donor = donors[_donorAddress];
+        uint256 _claimAmount;
+        uint256 _rewardPeriodNumber;
+        uint256 _index = _donor.lastClaim + 1;
+
+        while (_index <= _donor.rewardPeriodsCount) {
+            _rewardPeriodNumber = _donor.rewardPeriods[_index];
+            RewardPeriod storage _rewardPeriod = rewardPeriods[_rewardPeriodNumber];
+
+            if (_rewardPeriodNumber > _lastPeriodNumber || _rewardPeriod.endBlock > block.number) {
+                break;
+            }
+
+            _claimAmount +=
+                (_rewardPeriod.rewardAmount * _rewardPeriod.donorAmounts[_donorAddress]) /
+                _rewardPeriod.donationsAmount;
+            _index++;
+        }
+
+        return (_claimAmount, _index - 1);
     }
 }

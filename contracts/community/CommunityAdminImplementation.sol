@@ -9,8 +9,6 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./interfaces/ICommunity.sol";
 import "./interfaces/CommunityAdminStorageV1.sol";
-import "./Community.sol";
-import "../token/interfaces/ITreasury.sol";
 
 /**
  * @notice Welcome to CommunityAdmin, the main contract. This is an
