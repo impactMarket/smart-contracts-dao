@@ -1,17 +1,19 @@
-![workflow status](https://github.com/keyko-io/impact-market-token/workflows/Build/badge.svg)
+![workflow status](https://github.com/impactMarket/impact-market-smart-contracts/workflows/Build/badge.svg)
 [![MythXBadge](https://badgen.net/https/api.mythx.io/v1/projects/0b74321a-7ca9-4979-a4d1-ab7211fcc1c3/badge/data?cache=300&icon=https://raw.githubusercontent.com/ConsenSys/mythx-github-badge/main/logo_white.svg)](https://docs.mythx.io/dashboard/github-badges)
-# impact-market-token
-Token and governance for Impact Market
+# impact-market-smart-contracts
+Solidity smart-contracts for impactMarket protocol
 ## Install
 ```
-nvm use 12
-yarn --ignore-engines
+$ nvm use
+$ yarn
 ``` 
 ## Build / Test / Deploy
-`yarn build`  
-`yarn coverage`  
-`yarn deploy` (extract before: airdrop_scripts/tree_scripts/merkleTree.json.tar.gz)  
-`yarn test`
+```
+$ yarn build
+$ yarn coverage
+$ yarn deploy
+$ yarn test
+```
 ## Documentation
 * Generate with `yarn docgen`
 * Navigable HTML documentation from `./docs/index.html`
