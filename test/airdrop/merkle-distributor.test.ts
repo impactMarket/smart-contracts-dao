@@ -20,7 +20,7 @@ let account2: SignerWithAddress;
 let MerkleDistributor: ethersTypes.Contract;
 let PACT: ethersTypes.Contract;
 
-const merkleTree = require("../../airdrop_scripts/tree_scripts/merkleTree.json");
+const merkleTree = require("../../airdrop_scripts/tree_scripts/merkleTree_test.json");
 
 const deploy = deployments.createFixture(async () => {
 	await deployments.fixture("Test", { fallbackToGlobal: false });
