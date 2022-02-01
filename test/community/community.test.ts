@@ -987,17 +987,17 @@ describe("Community - Governance (2)", () => {
 		await expect(
 			newCommunityInstance
 				.connect(beneficiaryA)
-				.beneficiaryJoinFromMigrated()
+				.beneficiaryJoinFromMigrated(beneficiaryA.address)
 		).to.be.fulfilled;
 		await expect(
 			newCommunityInstance
 				.connect(beneficiaryB)
-				.beneficiaryJoinFromMigrated()
+				.beneficiaryJoinFromMigrated(beneficiaryB.address)
 		).to.be.fulfilled;
 		await expect(
 			newCommunityInstance
 				.connect(beneficiaryC)
-				.beneficiaryJoinFromMigrated()
+				.beneficiaryJoinFromMigrated(beneficiaryC.address)
 		).to.be.fulfilled;
 
 		(
@@ -1924,7 +1924,24 @@ describe("Old Community", () => {
 		await expect(
 			newCommunityInstance
 				.connect(beneficiaryA)
-				.beneficiaryJoinFromMigrated()
+				.beneficiaryJoinFromMigrated(beneficiaryA.address)
+		).to.be.fulfilled;
+		expect(
+			(await newCommunityInstance.beneficiaries(beneficiaryA.address))
+				.state
+		).to.be.equal(BeneficiaryState.Valid);
+	});
+
+	it("should join from migrated if valid beneficiary, added by anyone", async () => {
+		await migrateCommunity();
+		expect(
+			(await newCommunityInstance.beneficiaries(beneficiaryA.address))
+				.state
+		).to.be.equal(BeneficiaryState.NONE);
+		await expect(
+			newCommunityInstance
+				.connect(beneficiaryD)
+				.beneficiaryJoinFromMigrated(beneficiaryA.address)
 		).to.be.fulfilled;
 		expect(
 			(await newCommunityInstance.beneficiaries(beneficiaryA.address))
@@ -1941,7 +1958,7 @@ describe("Old Community", () => {
 		await expect(
 			newCommunityInstance
 				.connect(beneficiaryA)
-				.beneficiaryJoinFromMigrated()
+				.beneficiaryJoinFromMigrated(beneficiaryA.address)
 		).to.be.fulfilled;
 		expect(
 			(await newCommunityInstance.beneficiaries(beneficiaryA.address))
@@ -1951,7 +1968,7 @@ describe("Old Community", () => {
 		await expect(
 			newCommunityInstance
 				.connect(beneficiaryA)
-				.beneficiaryJoinFromMigrated()
+				.beneficiaryJoinFromMigrated(beneficiaryA.address)
 		).to.be.rejectedWith(
 			"Community::beneficiaryJoinFromMigrated: Beneficiary exists"
 		);
@@ -1970,7 +1987,7 @@ describe("Old Community", () => {
 		await expect(
 			newCommunityInstance
 				.connect(beneficiaryA)
-				.beneficiaryJoinFromMigrated()
+				.beneficiaryJoinFromMigrated(beneficiaryA.address)
 		).to.be.fulfilled;
 		expect(
 			(await newCommunityInstance.beneficiaries(beneficiaryA.address))
@@ -1991,7 +2008,7 @@ describe("Old Community", () => {
 		await expect(
 			newCommunityInstance
 				.connect(beneficiaryA)
-				.beneficiaryJoinFromMigrated()
+				.beneficiaryJoinFromMigrated(beneficiaryA.address)
 		).to.be.fulfilled;
 		expect(
 			(await newCommunityInstance.beneficiaries(beneficiaryA.address))
@@ -2009,7 +2026,25 @@ describe("Old Community", () => {
 		await expect(
 			newCommunityInstance
 				.connect(beneficiaryD)
-				.beneficiaryJoinFromMigrated()
+				.beneficiaryJoinFromMigrated(beneficiaryD.address)
+		).to.be.fulfilled;
+		expect(
+			(await newCommunityInstance.beneficiaries(beneficiaryD.address))
+				.state
+		).to.be.equal(BeneficiaryState.NONE);
+	});
+
+	it("should join from migrated if not beneficiary, added by anyone", async () => {
+		await migrateCommunity();
+
+		expect(
+			(await newCommunityInstance.beneficiaries(beneficiaryD.address))
+				.state
+		).to.be.equal(BeneficiaryState.NONE);
+		await expect(
+			newCommunityInstance
+				.connect(beneficiaryA)
+				.beneficiaryJoinFromMigrated(beneficiaryD.address)
 		).to.be.fulfilled;
 		expect(
 			(await newCommunityInstance.beneficiaries(beneficiaryD.address))
@@ -2027,7 +2062,7 @@ describe("Old Community", () => {
 		await expect(
 			newCommunityInstance
 				.connect(beneficiaryA)
-				.beneficiaryJoinFromMigrated()
+				.beneficiaryJoinFromMigrated(beneficiaryA.address)
 		).to.be.fulfilled;
 
 		const beneficiaryADetails = await newCommunityInstance.beneficiaries(

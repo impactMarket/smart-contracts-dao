@@ -606,9 +606,9 @@ contract CommunityMock is
     /**
      * @notice Allows a beneficiary from the previousCommunity to join in this community
      */
-    function beneficiaryJoinFromMigrated() external override {
+    function beneficiaryJoinFromMigrated(address _beneficiaryAddress) external override {
         // no need to check if it's a beneficiary, as the state is copied
-        Beneficiary storage _beneficiary = beneficiaries[msg.sender];
+        Beneficiary storage _beneficiary = beneficiaries[_beneficiaryAddress];
 
         require(
             _beneficiary.state == BeneficiaryState.NONE,
@@ -622,7 +622,7 @@ contract CommunityMock is
                 uint256 _oldBeneficiaryClaims,
                 uint256 _oldBeneficiaryClaimedAmount,
                 uint256 _oldBeneficiaryLastClaim
-            ) = previousCommunity.beneficiaries(msg.sender);
+            ) = previousCommunity.beneficiaries(_beneficiaryAddress);
 
             _changeBeneficiaryState(_beneficiary, _oldBeneficiaryState);
             _beneficiary.claims = _oldBeneficiaryClaims;
@@ -630,13 +630,13 @@ contract CommunityMock is
             _beneficiary.claimedAmount = _oldBeneficiaryClaimedAmount;
         } else {
             ICommunityOld _oldCommunity = ICommunityOld(address(previousCommunity));
-            uint256 _oldBeneficiaryLastInterval = _oldCommunity.lastInterval(msg.sender);
+            uint256 _oldBeneficiaryLastInterval = _oldCommunity.lastInterval(_beneficiaryAddress);
             _changeBeneficiaryState(
                 _beneficiary,
-                BeneficiaryState(_oldCommunity.beneficiaries(msg.sender))
+                BeneficiaryState(_oldCommunity.beneficiaries(_beneficiaryAddress))
             );
 
-            uint256 _oldBeneficiaryCooldown = _oldCommunity.cooldown(msg.sender);
+            uint256 _oldBeneficiaryCooldown = _oldCommunity.cooldown(_beneficiaryAddress);
 
             if (_oldBeneficiaryCooldown >= _oldBeneficiaryLastInterval + _firstBlockTimestamp()) {
                 // seconds to blocks conversion
@@ -649,7 +649,7 @@ contract CommunityMock is
                 _beneficiary.lastClaim = 0;
             }
 
-            _beneficiary.claimedAmount = _oldCommunity.claimed(msg.sender);
+            _beneficiary.claimedAmount = _oldCommunity.claimed(_beneficiaryAddress);
 
             uint256 _previousBaseInterval = _oldCommunity.baseInterval();
             if (_oldBeneficiaryLastInterval >= _previousBaseInterval) {
@@ -662,9 +662,9 @@ contract CommunityMock is
             }
         }
 
-        beneficiaryList.add(msg.sender);
+        beneficiaryList.add(_beneficiaryAddress);
 
-        emit BeneficiaryJoined(msg.sender);
+        emit BeneficiaryJoined(_beneficiaryAddress);
     }
 
     /**

@@ -74,6 +74,6 @@ interface ICommunity {
     function lock() external;
     function unlock() external;
     function requestFunds() external;
-    function beneficiaryJoinFromMigrated() external;
+    function beneficiaryJoinFromMigrated(address _beneficiaryAddress) external;
     function getInitialMaxClaim() external view returns (uint256);
 }
