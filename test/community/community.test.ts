@@ -2,18 +2,14 @@ import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 import { should } from "chai";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import {
-	ethers,
-	waffle,
-	deployments,
-} from "hardhat";
+import { ethers, waffle, deployments } from "hardhat";
 import type * as ethersTypes from "ethers";
 import { parseEther, formatEther } from "@ethersproject/units";
 import {
 	advanceBlockNTimes,
 	advanceTimeAndBlockNTimes,
 } from "../utils/TimeTravel";
-import { keccak256 }  from "ethers/lib/utils";
+import { keccak256 } from "ethers/lib/utils";
 
 should();
 chai.use(chaiAsPromised);
@@ -94,7 +90,7 @@ async function init() {
 	beneficiaryC = accounts[8];
 	beneficiaryD = accounts[9];
 
-  ambassador = accounts[10];
+	ambassador = accounts[10];
 
 	Community = await ethers.getContractFactory("Community");
 }
@@ -134,7 +130,7 @@ async function addDefaultCommunity() {
 		oneMinuteInBlocks,
 		communityMinTranche,
 		communityMaxTranche,
-		ambassador.address,
+		ambassador.address
 	);
 
 	let receipt = await tx.wait();
@@ -205,7 +201,7 @@ describe("CommunityAdmin", () => {
 			oneMinuteInBlocks.toString(),
 			communityMinTranche,
 			communityMaxTranche,
-			ambassador.address,
+			ambassador.address
 		);
 
 		let receipt = await tx.wait();
@@ -235,7 +231,7 @@ describe("CommunityAdmin", () => {
 				oneMinuteInBlocks.toString(),
 				communityMinTranche,
 				communityMaxTranche,
-				ambassador.address,
+				ambassador.address
 			)
 		).to.be.rejectedWith(
 			"CommunityAdmin::addCommunity: Community should have at least one manager"
@@ -257,7 +253,7 @@ describe("CommunityAdmin", () => {
 			oneMinuteInBlocks.toString(),
 			communityMinTranche,
 			communityMaxTranche,
-			ambassador.address,
+			ambassador.address
 		);
 
 		let receipt = await tx.wait();
@@ -281,7 +277,7 @@ describe("CommunityAdmin", () => {
 				threeMinutesInBlocks.toString(),
 				communityMinTranche,
 				communityMaxTranche,
-				ambassador.address,
+				ambassador.address
 			)
 		).to.be.rejected;
 		await expect(
@@ -294,7 +290,7 @@ describe("CommunityAdmin", () => {
 				oneMinuteInBlocks.toString(),
 				communityMinTranche,
 				communityMaxTranche,
-				ambassador.address,
+				ambassador.address
 			)
 		).to.be.rejected;
 	});
@@ -1175,7 +1171,7 @@ describe("Chaos test (complete flow)", async () => {
 			oneMinuteInBlocks.toString(),
 			communityMinTranche,
 			communityMaxTranche,
-			ambassador.address,
+			ambassador.address
 		);
 
 		let receipt = await tx.wait();

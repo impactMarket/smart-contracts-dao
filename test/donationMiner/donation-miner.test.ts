@@ -1391,7 +1391,7 @@ describe("Donation Miner + Community", () => {
 			oneMinuteInBlocks.toString(),
 			communityMinTranche,
 			communityMaxTranche,
-			ambassador.address,
+			ambassador.address
 		);
 
 		let receipt = await tx.wait();

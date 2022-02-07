@@ -235,7 +235,7 @@ contract CommunityMock is
     }
 
     /**
-  * @notice Enforces sender to have Ambassador role
+     * @notice Enforces sender to have Ambassador role
      */
     modifier onlyAmbassadors() {
         require(hasRole(AMBASSADOR_ROLE, msg.sender), "Community: NOT_AMBASSADOR");

@@ -249,12 +249,11 @@ contract CommunityAdminImplementationMock is
      * @param managers_ address of the community managers
      * @param previousCommunity_ address of the community to be migrated
      */
-    function migrateCommunity(address[] memory managers_, address ambassador, ICommunity previousCommunity_)
-        external
-        override
-        onlyOwner
-        nonReentrant
-    {
+    function migrateCommunity(
+        address[] memory managers_,
+        address ambassador,
+        ICommunity previousCommunity_
+    ) external override onlyOwner nonReentrant {
         require(
             communities[address(previousCommunity_)] != CommunityState.Migrated,
             "CommunityAdmin::migrateCommunity: this community has been migrated"
