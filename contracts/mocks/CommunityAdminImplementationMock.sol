@@ -209,7 +209,8 @@ contract CommunityAdminImplementationMock is
         uint256 baseInterval_,
         uint256 incrementInterval_,
         uint256 minTranche_,
-        uint256 maxTranche_
+        uint256 maxTranche_,
+        address _ambassador
     ) external override onlyOwner {
         address communityAddress = deployCommunity(
             managers_,
@@ -220,6 +221,7 @@ contract CommunityAdminImplementationMock is
             incrementInterval_,
             minTranche_,
             maxTranche_,
+            _ambassador,
             ICommunity(address(0))
         );
         require(communityAddress != address(0), "CommunityAdmin::addCommunity: NOT_VALID");
@@ -247,7 +249,7 @@ contract CommunityAdminImplementationMock is
      * @param managers_ address of the community managers
      * @param previousCommunity_ address of the community to be migrated
      */
-    function migrateCommunity(address[] memory managers_, ICommunity previousCommunity_)
+    function migrateCommunity(address[] memory managers_, address ambassador, ICommunity previousCommunity_)
         external
         override
         onlyOwner
@@ -273,6 +275,7 @@ contract CommunityAdminImplementationMock is
                 previousCommunity_.incrementInterval(),
                 previousCommunity_.minTranche(),
                 previousCommunity_.maxTranche(),
+                ambassador,
                 previousCommunity_
             );
         } else {
@@ -285,6 +288,7 @@ contract CommunityAdminImplementationMock is
                 (previousCommunity_.incrementInterval() / 5),
                 1e16,
                 5e18,
+                ambassador,
                 previousCommunity_
             );
         }
@@ -476,13 +480,14 @@ contract CommunityAdminImplementationMock is
         uint256 incrementInterval_,
         uint256 minTranche_,
         uint256 maxTranche_,
+        address _ambassador,
         ICommunity previousCommunity_
     ) internal returns (address) {
         TransparentUpgradeableProxy community = new TransparentUpgradeableProxy(
             address(communityTemplate),
             address(communityProxyAdmin),
             abi.encodeWithSignature(
-                "initialize(address[],uint256,uint256,uint256,uint256,uint256,uint256,uint256,address)",
+                "initialize(address[],uint256,uint256,uint256,uint256,uint256,uint256,uint256,address,address)",
                 managers_,
                 claimAmount_,
                 maxClaim_,
@@ -491,6 +496,7 @@ contract CommunityAdminImplementationMock is
                 incrementInterval_,
                 minTranche_,
                 maxTranche_,
+                _ambassador,
                 address(previousCommunity_)
             )
         );

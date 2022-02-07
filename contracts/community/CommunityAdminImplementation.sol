@@ -207,7 +207,8 @@ contract CommunityAdminImplementation is
         uint256 _baseInterval,
         uint256 _incrementInterval,
         uint256 _minTranche,
-        uint256 _maxTranche
+        uint256 _maxTranche,
+        address ambassador
     ) external override onlyOwner {
         require(
             _managers.length > 0,
@@ -222,6 +223,7 @@ contract CommunityAdminImplementation is
             _incrementInterval,
             _minTranche,
             _maxTranche,
+            ambassador,
             ICommunity(address(0))
         );
         require(_communityAddress != address(0), "CommunityAdmin::addCommunity: NOT_VALID");
@@ -250,7 +252,7 @@ contract CommunityAdminImplementation is
      * @param _managers address of the community managers
      * @param _previousCommunity address of the community to be migrated
      */
-    function migrateCommunity(address[] memory _managers, ICommunity _previousCommunity)
+    function migrateCommunity(address[] memory _managers, address ambassador, ICommunity _previousCommunity)
         external
         override
         onlyOwner
@@ -276,6 +278,7 @@ contract CommunityAdminImplementation is
                 _previousCommunity.incrementInterval(),
                 _previousCommunity.minTranche(),
                 _previousCommunity.maxTranche(),
+                ambassador,
                 _previousCommunity
             );
         } else {
@@ -288,6 +291,7 @@ contract CommunityAdminImplementation is
                 (_previousCommunity.incrementInterval() / 5),
                 1e16,
                 5e18,
+                ambassador,
                 _previousCommunity
             );
         }
@@ -490,13 +494,14 @@ contract CommunityAdminImplementation is
         uint256 _incrementInterval,
         uint256 _minTranche,
         uint256 _maxTranche,
+        address _ambassador,
         ICommunity _previousCommunity
     ) internal returns (address) {
         TransparentUpgradeableProxy _community = new TransparentUpgradeableProxy(
             address(communityTemplate),
             address(communityProxyAdmin),
             abi.encodeWithSignature(
-                "initialize(address[],uint256,uint256,uint256,uint256,uint256,uint256,uint256,address)",
+                "initialize(address[],uint256,uint256,uint256,uint256,uint256,uint256,uint256,address,address)",
                 _managers,
                 _claimAmount,
                 _maxClaim,
@@ -505,6 +510,7 @@ contract CommunityAdminImplementation is
                 _incrementInterval,
                 _minTranche,
                 _maxTranche,
+                _ambassador,
                 address(_previousCommunity)
             )
         );

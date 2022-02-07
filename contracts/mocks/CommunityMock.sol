@@ -32,6 +32,7 @@ contract CommunityMock is
     using EnumerableSet for EnumerableSet.AddressSet;
 
     bytes32 private constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
+    bytes32 private constant AMBASSADOR_ROLE = keccak256("AMBASSADOR_ROLE");
     uint256 private constant DEFAULT_AMOUNT = 5e16;
 
     /**
@@ -230,6 +231,14 @@ contract CommunityMock is
             beneficiaries[msg.sender].state == BeneficiaryState.Valid,
             "Community: NOT_VALID_BENEFICIARY"
         );
+        _;
+    }
+
+    /**
+  * @notice Enforces sender to have Ambassador role
+     */
+    modifier onlyAmbassadors() {
+        require(hasRole(AMBASSADOR_ROLE, msg.sender), "Community: NOT_AMBASSADOR");
         _;
     }
 

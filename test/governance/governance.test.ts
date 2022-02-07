@@ -39,6 +39,7 @@ let owner: SignerWithAddress;
 let alice: SignerWithAddress;
 let bob: SignerWithAddress;
 let carol: SignerWithAddress;
+let ambassador: SignerWithAddress;
 
 // contract instances
 let pactToken: ethersTypes.Contract;
@@ -63,6 +64,7 @@ describe("PACTGovernator", function () {
 		alice = accounts[1];
 		bob = accounts[2];
 		carol = accounts[3];
+		ambassador = accounts[4];
 	});
 
 	beforeEach(async function () {
@@ -158,7 +160,7 @@ describe("PACTGovernator", function () {
 		const targets = [communityAdmin.address];
 		const values = [0];
 		const signatures = [
-			"addCommunity(address[],uint256,uint256,uint256,uint256,uint256,uint256,uint256)",
+			"addCommunity(address[],uint256,uint256,uint256,uint256,uint256,uint256,uint256,address)",
 		];
 
 		const calldatas = [
@@ -172,6 +174,7 @@ describe("PACTGovernator", function () {
 					"uint256",
 					"uint256",
 					"uint256",
+					"address",
 				],
 				[
 					[alice.address],
@@ -182,6 +185,7 @@ describe("PACTGovernator", function () {
 					111,
 					communityMinTranche,
 					communityMaxTranche,
+					ambassador.address,
 				]
 			),
 		];

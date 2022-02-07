@@ -31,6 +31,7 @@ contract Community is
     using EnumerableSet for EnumerableSet.AddressSet;
 
     bytes32 private constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
+    bytes32 private constant AMBASSADOR_ROLE = keccak256("AMBASSADOR_ROLE");
     uint256 private constant DEFAULT_AMOUNT = 5e16;
 
     /**
@@ -228,6 +229,7 @@ contract Community is
         uint256 _incrementInterval,
         uint256 _minTranche,
         uint256 _maxTranche,
+        address _ambassador,
         ICommunity _previousCommunity
     ) external initializer {
         require(
@@ -261,11 +263,12 @@ contract Community is
 
         transferOwnership(msg.sender);
 
-        // MANAGER_ROLE is the admin for the MANAGER_ROLE
-        // so every manager is able to add or remove other managers
-        _setRoleAdmin(MANAGER_ROLE, MANAGER_ROLE);
+        // AMBASSADOR_ROLE is the admin for the MANAGER_ROLE
+        // so every ambassador is able to add or remove other managers
+        _setRoleAdmin(MANAGER_ROLE, AMBASSADOR_ROLE);
 
-        _setupRole(MANAGER_ROLE, msg.sender);
+        _setupRole(AMBASSADOR_ROLE, _ambassador);
+        _setupRole(AMBASSADOR_ROLE, msg.sender);
         emit ManagerAdded(msg.sender, msg.sender);
 
         for (uint256 i = 0; i < _managers.length; i++) {
@@ -288,6 +291,14 @@ contract Community is
             beneficiaries[msg.sender].state == BeneficiaryState.Valid,
             "Community: NOT_VALID_BENEFICIARY"
         );
+        _;
+    }
+
+    /**
+     * @notice Enforces sender to have Ambassador role
+     */
+    modifier onlyAmbassadors() {
+        require(hasRole(AMBASSADOR_ROLE, msg.sender), "Community: NOT_AMBASSADOR");
         _;
     }
 
@@ -430,11 +441,11 @@ contract Community is
     }
 
     /**
-     * @notice Adds a new manager
+     * @notice Adds a new manager`
      *
      * @param _account address of the manager to be added
      */
-    function addManager(address _account) public override onlyManagers {
+    function addManager(address _account) public override onlyAmbassadors {
         if (!hasRole(MANAGER_ROLE, _account)) {
             super.grantRole(MANAGER_ROLE, _account);
             emit ManagerAdded(msg.sender, _account);
@@ -446,7 +457,7 @@ contract Community is
      *
      * @param _account address of the manager to be removed
      */
-    function removeManager(address _account) external override onlyManagers {
+    function removeManager(address _account) external override onlyAmbassadors {
         require(
             hasRole(MANAGER_ROLE, _account),
             "Community::removeManager: This account doesn't have manager role"

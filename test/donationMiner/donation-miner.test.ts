@@ -33,6 +33,8 @@ let donor7: SignerWithAddress;
 let donor8: SignerWithAddress;
 let donor9: SignerWithAddress;
 
+let ambassador: SignerWithAddress;
+
 let ImpactProxyAdmin: ethersTypes.Contract;
 let DonationMiner: ethersTypes.Contract;
 let DonationMinerImplementation: ethersTypes.Contract;
@@ -55,6 +57,7 @@ const deploy = deployments.createFixture(async () => {
 		donor7,
 		donor8,
 		donor9,
+		ambassador,
 	] = await ethers.getSigners();
 
 	ImpactProxyAdmin = await ethers.getContractAt(
@@ -67,7 +70,7 @@ const deploy = deployments.createFixture(async () => {
 	cUSD = await ethers.getContractAt(
 		"TokenMock",
 		(
-			await await deployments.get("TokenMock")
+			await deployments.get("TokenMock")
 		).address
 	);
 
@@ -1387,7 +1390,8 @@ describe("Donation Miner + Community", () => {
 			threeMinutesInBlocks.toString(),
 			oneMinuteInBlocks.toString(),
 			communityMinTranche,
-			communityMaxTranche
+			communityMaxTranche,
+			ambassador.address,
 		);
 
 		let receipt = await tx.wait();

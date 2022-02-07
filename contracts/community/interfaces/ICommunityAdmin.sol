@@ -47,10 +47,12 @@ interface ICommunityAdmin {
         uint256 _baseInterval,
         uint256 _incrementInterval,
         uint256 _minTranche,
-        uint256 _maxTranche
+        uint256 _maxTranche,
+        address _ambassador
     ) external;
     function migrateCommunity(
         address[] memory _managers,
+        address ambassador,
         ICommunity _previousCommunity
     ) external;
     function addManagerToCommunity(ICommunity _community_, address _account_) external;
