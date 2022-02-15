@@ -1035,7 +1035,7 @@ describe("Community - Governance (2)", () => {
 				[communityManagerA.address],
 				cUSDInstance.address // wrong on purpose,
 			)
-		).to.be.rejectedWith("Ownable: caller is not the owner");
+		).to.be.rejectedWith("CommunityAdmin: Not Owner Or UBICommittee");
 	});
 
 	it("should edit community if manager", async () => {
@@ -1481,7 +1481,7 @@ describe("Community - getFunds", () => {
 					parseEther("50"),
 					parseEther("100")
 				)
-		).to.be.rejectedWith("Ownable: caller is not the owner");
+		).to.be.rejectedWith("CommunityAdmin: Not Owner Or UBICommittee");
 	});
 
 	it("should change community tranche limits if admin", async () => {
@@ -1512,7 +1512,7 @@ describe("Community - getFunds", () => {
 					parseEther("123"),
 					parseEther("124")
 				)
-		).to.be.rejectedWith("Ownable: caller is not the owner");
+		).to.be.rejectedWith("CommunityAdmin: Not Owner Or UBICommittee");
 	});
 
 	it("should change communityMaxTranche if admin", async () => {
@@ -1895,7 +1895,7 @@ describe("Old Community", () => {
 					[communityManagerA.address],
 					oldCommunityInstance.address
 				)
-		).to.be.rejectedWith("Ownable: caller is not the owner");
+		).to.be.rejectedWith("CommunityAdmin: Not Owner Or UBICommittee");
 	});
 
 	it("should migrate an old community twice", async () => {
