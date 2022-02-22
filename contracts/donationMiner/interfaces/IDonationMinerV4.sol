@@ -66,6 +66,7 @@ interface IDonationMinerV4 {
         IERC20 token,
         uint256 tokenPrice
     );
+    function lastEpochsDonations(address _donor) external view returns (uint256, uint256);
     function claimDelay() external view returns (uint256);
     function againstPeriods() external view returns (uint256);
     function updateRewardPeriodParams(

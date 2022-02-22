@@ -259,6 +259,23 @@ contract DonationMinerImplementationV4 is
     }
 
     /**
+     * @dev Calculate all donations on the last X epochs as well as everyone
+     * else in the same period.
+     *
+     * @param _donor address of the donor
+     * @return uint256, uint256 sum of all donor's and everyone else donations
+     */
+    function lastEpochsDonations(address _donor) external override view returns (uint256, uint256) {
+        uint256 _donorValue = 0;
+        uint256 _everyoneValue = 0;
+        for (uint256 i = rewardPeriodCount - againstPeriods; i <= rewardPeriodCount; i++) {
+            _everyoneValue += rewardPeriods[i].donationsAmount;
+            _donorValue += rewardPeriods[i].donorAmounts[_donor];
+        }
+        return (_donorValue, _everyoneValue);
+    }
+
+    /**
      * @notice Transfers to the sender the rewards
      */
     function claimRewards() external override whenNotPaused whenStarted nonReentrant {
