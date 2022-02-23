@@ -265,7 +265,7 @@ contract DonationMinerImplementationV4 is
      * @param _donor address of the donor
      * @return uint256, uint256 sum of all donor's and everyone else donations
      */
-    function lastEpochsDonations(address _donor) external override view returns (uint256, uint256) {
+    function lastEpochsDonations(address _donor) external view override returns (uint256, uint256) {
         uint256 _donorValue = 0;
         uint256 _everyoneValue = 0;
         for (uint256 i = rewardPeriodCount - againstPeriods; i <= rewardPeriodCount; i++) {
