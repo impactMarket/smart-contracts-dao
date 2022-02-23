@@ -4,11 +4,7 @@ import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 // @ts-ignore
 import { deployments, ethers, getNamedAccounts } from "hardhat";
-import {
-	advanceBlockNTimes,
-	advanceTimeAndBlockNTimes,
-	advanceToBlockN,
-} from "../utils/TimeTravel";
+import { advanceBlockNTimes, advanceToBlockN } from "../utils/TimeTravel";
 import { parseEther, formatEther } from "@ethersproject/units";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import * as ethersTypes from "ethers";
@@ -17,7 +13,6 @@ import { BigNumber } from "@ethersproject/bignumber";
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 
-const STARTING_DELAY = 99;
 const REWARD_PERIOD_SIZE = 20;
 const INITIAL_REWARD = parseEther("100000001");
 
@@ -81,7 +76,7 @@ describe("Impact Labs Vesting", () => {
 	});
 
 	it("Should transfer PACTs on initialization", async function () {
-		await advanceBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(131);
 
 		expect(await PACT.balanceOf(owner.address)).to.be.equal(INITIAL_REWARD);
 		expect(await ImpactLabsVesting.advancePayment()).to.be.equal(
@@ -99,7 +94,7 @@ describe("Impact Labs Vesting", () => {
 	});
 
 	it("Should get more PACTs after delay", async function () {
-		await advanceBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(131);
 
 		expect(await PACT.balanceOf(owner.address)).to.be.equal(INITIAL_REWARD);
 		expect(await ImpactLabsVesting.advancePayment()).to.be.equal(

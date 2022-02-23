@@ -7,34 +7,34 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const { deploy } = deployments;
 	const { deployer } = await getNamedAccounts();
 
-	// const ImpactProxyAdminContract = await deployments.get("ImpactProxyAdmin");
+	const ImpactProxyAdminContract = await deployments.get("ImpactProxyAdmin");
 
-	// const implementationResult = await deploy("UBICommitteeImplementation", {
-	// 	from: deployer,
-	// 	log: true,
-	// });
+	const implementationResult = await deploy("UBICommitteeImplementation", {
+		from: deployer,
+		log: true,
+	});
 
-	// const proxyResult = await deploy("UBICommitteeProxy", {
-	// 	from: deployer,
-	// 	args: [implementationResult.address, ImpactProxyAdminContract.address],
-	// 	log: true,
-	// });
+	const proxyResult = await deploy("UBICommitteeProxy", {
+		from: deployer,
+		args: [implementationResult.address, ImpactProxyAdminContract.address],
+		log: true,
+	});
 
-	// const ubiCommittee = await ethers.getContractAt(
-	// 	"UBICommitteeImplementation",
-	// 	proxyResult.address
-	// );
+	const ubiCommittee = await ethers.getContractAt(
+		"UBICommitteeImplementation",
+		proxyResult.address
+	);
 
-	// const communityAdminProxy = await deployments.get("CommunityAdminProxy");
+	const communityAdminProxy = await deployments.get("CommunityAdminProxy");
 
-	// await ubiCommittee.initialize(1, communityAdminProxy.address, [deployer]);
+	await ubiCommittee.initialize(1, communityAdminProxy.address, [deployer]);
 
-	// const CommunityAdmin = await ethers.getContractAt(
-	// 	"CommunityAdminImplementation",
-	// 	communityAdminProxy.address
-	// );
+	const CommunityAdmin = await ethers.getContractAt(
+		"CommunityAdminImplementation",
+		communityAdminProxy.address
+	);
 
-	// await CommunityAdmin.updateUbiCommittee(proxyResult.address);
+	await CommunityAdmin.updateUbiCommittee(proxyResult.address);
 };
 
 func.dependencies = ["ImpactProxyAdminTest", "CommunityTest"];
