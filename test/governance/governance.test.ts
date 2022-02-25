@@ -48,6 +48,7 @@ let pactTimelock: ethersTypes.Contract;
 let communityAdmin: ethersTypes.Contract;
 let proxyAdmin: ethersTypes.Contract;
 let donationMiner: ethersTypes.Contract;
+let ubiCommittee: ethersTypes.Contract;
 let treasury: ethersTypes.Contract;
 let impactLabsVesting: ethersTypes.Contract;
 let cUSD: ethersTypes.Contract;
@@ -109,6 +110,13 @@ describe("PACTGovernator", function () {
 			).address
 		);
 
+		ubiCommittee = await ethers.getContractAt(
+			"UBICommitteeImplementation",
+			(
+				await deployments.get("UBICommitteeProxy")
+			).address
+		);
+
 		proxyAdmin = await ethers.getContractAt(
 			"ImpactProxyAdmin",
 			(
@@ -152,6 +160,7 @@ describe("PACTGovernator", function () {
 		// await pactToken.connect(carol).delegate(carol.address);
 
 		await communityAdmin.transferOwnership(pactTimelock.address);
+		await ubiCommittee.transferOwnership(pactTimelock.address);
 	});
 
 	async function createCommunityProposal() {
@@ -647,5 +656,43 @@ describe("PACTGovernator", function () {
 		);
 
 		expect(await donationMiner.claimDelay()).to.be.equal(8);
+	});
+
+	it("should add member to ubi committee", async function () {
+		const targets = [ubiCommittee.address];
+		const values = [0];
+		const signatures = ["addMember(address)"];
+
+		const calldatas = [
+			ethers.utils.defaultAbiCoder.encode(["address"], [bob.address]),
+		];
+		const descriptions = "description";
+
+		await expect(
+			pactDelegator.propose(
+				targets,
+				values,
+				signatures,
+				calldatas,
+				descriptions
+			)
+		).to.be.fulfilled;
+
+		await advanceBlockNTimes(VOTING_DELAY_BLOCKS);
+
+		await expect(pactDelegator.castVote(1, 1)).to.be.fulfilled;
+
+		await expect(pactDelegator.connect(alice).castVote(1, 1)).to.be
+			.fulfilled;
+
+		await advanceBlockNTimes(VOTING_PERIOD_BLOCKS);
+
+		await expect(pactDelegator.connect(alice).queue(1)).to.be.fulfilled;
+
+		await advanceNSeconds(TWO_DAYS_SECONDS);
+
+		await expect(pactDelegator.connect(alice).execute(1)).to.be.fulfilled;
+
+		expect(await ubiCommittee.members(bob.address)).to.be.equal(true);
 	});
 });
