@@ -234,7 +234,7 @@ contract UBICommitteeImplementation is
 
             // solium-disable-next-line security/no-call-value
             (bool _success, ) = address(communityAdmin).call{value: 0}(_callData);
-            require(_success, "Timelock::executeTransaction: Transaction execution reverted.");
+            require(_success, "PACT::execute: Transaction execution reverted.");
         }
         emit ProposalExecuted(_proposalId);
     }

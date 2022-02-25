@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "../community/interfaces/ICommunity.sol";
-import "../community/interfaces/CommunityAdminStorageV1.sol";
+import "../community/interfaces/CommunityAdminStorageV2.sol";
 import "../governor/ubiCommittee/interfaces/IUBICommittee.sol";
 
 /**
@@ -17,11 +17,11 @@ import "../governor/ubiCommittee/interfaces/IUBICommittee.sol";
  * over the list of communities. Being only able to add and
  * remove communities
  */
-contract CommunityAdminImplementationMock is
+contract CommunityAdminImplementationV2Mock is
     Initializable,
     OwnableUpgradeable,
     ReentrancyGuardUpgradeable,
-    CommunityAdminStorageV1
+    CommunityAdminStorageV2
 {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -81,6 +81,14 @@ contract CommunityAdminImplementationMock is
      * @param newTreasury             New treasury address
      */
     event TreasuryUpdated(address indexed oldTreasury, address indexed newTreasury);
+
+    /**
+     * @notice Triggered when the ubi committee has been updated
+     *
+     * @param oldUbiCommittee   Old UBI Committee address
+     * @param newUbiCommittee   New UBI Committee address
+     */
+    event UBICommitteeUpdated(address indexed oldUbiCommittee, address indexed newUbiCommittee);
 
     /**
      * @notice Triggered when the communityTemplate address has been updated
@@ -440,6 +448,18 @@ contract CommunityAdminImplementationMock is
             TransparentUpgradeableProxy(payable(communityProxy_)),
             newCommunityTemplate_
         );
+    }
+
+    /**
+     * @notice Updates proxy implementation address of ubi committee
+     *
+     * @param _newUbiCommittee address of new implementation contract
+     */
+    function updateUbiCommittee(IUBICommittee _newUbiCommittee) external override onlyOwner {
+        address oldUbiCommittee = address(ubiCommittee);
+        ubiCommittee = _newUbiCommittee;
+
+        emit UBICommitteeUpdated(oldUbiCommittee, address(_newUbiCommittee));
     }
 
     /**

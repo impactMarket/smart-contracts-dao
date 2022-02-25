@@ -74,6 +74,42 @@ describe("UBICommittee", function () {
 			treasuryDeployment.address
 		);
 
+		const ImpactProxyAdmin = await deployments.get("ImpactProxyAdmin");
+		const impactProxyAdmin = await ethers.getContractAt(
+			"ImpactProxyAdmin",
+			ImpactProxyAdmin.address
+		);
+
+		const CommunityAdminImplementation = await deployments.get(
+			"CommunityAdminImplementation"
+		);
+		const CommunityAdminImplementationV2 = await deployments.get(
+			"CommunityAdminImplementationV2"
+		);
+		expect(
+			await impactProxyAdmin.getProxyImplementation(
+				communityAdmin.address
+			)
+		).to.be.equal(CommunityAdminImplementation.address);
+		await expect(
+			impactProxyAdmin.upgrade(
+				communityAdmin.address,
+				CommunityAdminImplementationV2.address
+			)
+		).to.be.fulfilled;
+		expect(
+			await impactProxyAdmin.getProxyImplementation(
+				communityAdmin.address
+			)
+		).to.be.equal(CommunityAdminImplementationV2.address);
+
+		communityAdmin = await ethers.getContractAt(
+			"CommunityAdminImplementationV2",
+			communityAdmin.address
+		);
+
+		await communityAdmin.updateUbiCommittee(ubiCommittee.address);
+
 		await communityAdmin.transferOwnership(pactDelegator.address);
 		await expect(ubiCommittee.addMember(alice.address)).to.be.fulfilled;
 

@@ -134,6 +134,38 @@ async function deploy() {
 		"TreasuryImplementation",
 		treasury.address
 	);
+
+	const CommunityAdminImplementation = await deployments.get(
+		"CommunityAdminImplementation"
+	);
+	const CommunityAdminImplementationV2 = await deployments.get(
+		"CommunityAdminImplementationV2"
+	);
+	expect(
+		await impactProxyAdmin.getProxyImplementation(
+			communityAdminProxy.address
+		)
+	).to.be.equal(CommunityAdminImplementation.address);
+	await expect(
+		impactProxyAdmin.upgrade(
+			communityAdminProxy.address,
+			CommunityAdminImplementationV2.address
+		)
+	).to.be.fulfilled;
+	expect(
+		await impactProxyAdmin.getProxyImplementation(
+			communityAdminProxy.address
+		)
+	).to.be.equal(CommunityAdminImplementationV2.address);
+
+	communityAdminProxy = await ethers.getContractAt(
+		"CommunityAdminImplementationV2",
+		communityAdminProxy.address
+	);
+
+	const UBICommitteeProxy = await deployments.get("UBICommitteeProxy");
+
+	await communityAdminProxy.updateUbiCommittee(UBICommitteeProxy.address);
 }
 
 async function addDefaultCommunity() {

@@ -28,13 +28,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const communityAdminProxy = await deployments.get("CommunityAdminProxy");
 
 	await ubiCommittee.initialize(1, communityAdminProxy.address, [deployer]);
-
-	const CommunityAdmin = await ethers.getContractAt(
-		"CommunityAdminImplementation",
-		communityAdminProxy.address
-	);
-
-	await CommunityAdmin.updateUbiCommittee(proxyResult.address);
 };
 
 func.dependencies = ["ImpactProxyAdminTest", "CommunityTest"];
