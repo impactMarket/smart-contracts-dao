@@ -84,6 +84,7 @@ contract UBICommitteeImplementation is
         address[] calldata _members
     ) public initializer {
         require(_quorumVotes >= 1, "PACT::initialize: invalid proposal threshold");
+        require(_quorumVotes <= _members.length, "PACT::initialize: params mismatch");
 
         __Ownable_init();
         __ReentrancyGuard_init();
@@ -128,7 +129,7 @@ contract UBICommitteeImplementation is
      * @param _member Member address.
      */
     function addMember(address _member) external onlyOwner {
-        require(members[_member] == false, "PACT::removeMember: already a member");
+        require(members[_member] == false, "PACT::addMember: already a member");
 
         members[_member] = true;
 
