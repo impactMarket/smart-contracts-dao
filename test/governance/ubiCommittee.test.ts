@@ -7,6 +7,7 @@ import { ethers, deployments } from "hardhat";
 import type * as ethersTypes from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { parseEther } from "@ethersproject/units";
+import { advanceBlockNTimes } from "../utils/TimeTravel";
 
 chai.use(chaiAsPromised);
 
@@ -263,5 +264,97 @@ describe("UBICommittee", function () {
 		await expect(ubiCommittee.removeMember(bob.address)).to.be.rejectedWith(
 			"PACT::removeMember: not a member"
 		);
+	});
+
+	it("should be able to add many members", async function () {
+		await expect(ubiCommittee.addMember(bob.address)).to.be.fulfilled;
+		await expect(ubiCommittee.addMember(carol.address)).to.be.fulfilled;
+	});
+
+	it("should be able to change quorum", async function () {
+		await expect(ubiCommittee.addMember(bob.address)).to.be.fulfilled;
+		await expect(ubiCommittee.setQuorumVotes(2)).to.be.fulfilled;
+	});
+
+	it("should be able to execute after reaching quorum", async function () {
+		await expect(ubiCommittee.addMember(bob.address)).to.be.fulfilled;
+		await expect(ubiCommittee.setQuorumVotes(2)).to.be.fulfilled;
+
+		await createCommunityProposal();
+
+		await expect(ubiCommittee.connect(alice).castVote(1, 1)).to.be
+			.fulfilled;
+		await expect(ubiCommittee.connect(bob).castVote(1, 1)).to.be.fulfilled;
+		await expect(ubiCommittee.connect(alice).execute(1)).to.be.fulfilled;
+	});
+
+	it("should not be able to execute without reaching quorum", async function () {
+		await expect(ubiCommittee.addMember(bob.address)).to.be.fulfilled;
+		await expect(ubiCommittee.setQuorumVotes(2)).to.be.fulfilled;
+
+		await createCommunityProposal();
+
+		await expect(ubiCommittee.connect(alice).execute(1)).to.be.rejectedWith(
+			"PACT::execute: proposal can only be executed if it is succeeded"
+		);
+	});
+
+	it("should not be able to execute a canceled proposal", async function () {
+		await createCommunityProposal();
+
+		await expect(ubiCommittee.connect(alice).cancel(1)).to.be.fulfilled;
+		await expect(
+			ubiCommittee.connect(alice).castVote(1, 1)
+		).to.be.rejectedWith("PACT::castVoteInternal: voting is closed");
+	});
+
+	it("should not be able to vote once proposal meet quorum already", async function () {
+		await expect(ubiCommittee.addMember(bob.address)).to.be.fulfilled;
+
+		await createCommunityProposal();
+
+		await expect(ubiCommittee.connect(alice).castVote(1, 1)).to.be
+			.fulfilled;
+		await expect(
+			ubiCommittee.connect(bob).castVote(1, 1)
+		).to.be.rejectedWith("PACT::castVoteInternal: voting is closed");
+	});
+
+	it("should not be able to vote twice", async function () {
+		await expect(ubiCommittee.addMember(bob.address)).to.be.fulfilled;
+		await expect(ubiCommittee.setQuorumVotes(2)).to.be.fulfilled;
+
+		await createCommunityProposal();
+
+		await expect(ubiCommittee.connect(alice).castVote(1, 1)).to.be
+			.fulfilled;
+		await expect(
+			ubiCommittee.connect(alice).castVote(1, 1)
+		).to.be.rejectedWith("PACT::castVoteInternal: voter already voted");
+	});
+
+	it("if quorum is set to a number higher or equal than current votes, should be able to execute", async function () {
+		await expect(ubiCommittee.addMember(bob.address)).to.be.fulfilled;
+		await expect(ubiCommittee.addMember(carol.address)).to.be.fulfilled;
+		await expect(ubiCommittee.setQuorumVotes(3)).to.be.fulfilled;
+
+		await createCommunityProposal();
+
+		await expect(ubiCommittee.connect(alice).castVote(1, 1)).to.be
+			.fulfilled;
+		await expect(ubiCommittee.connect(bob).castVote(1, 1)).to.be.fulfilled;
+		await expect(ubiCommittee.setQuorumVotes(2)).to.be.fulfilled;
+		await expect(ubiCommittee.connect(bob).execute(1)).to.be.fulfilled;
+	});
+
+	xit("should not be able to vote once vote period ends", async function () {
+		await createCommunityProposal();
+
+		const VOTING_PERIOD_BLOCKS = 518400;
+		await advanceBlockNTimes(VOTING_PERIOD_BLOCKS);
+
+		await expect(
+			ubiCommittee.connect(alice).castVote(1, 1)
+		).to.be.rejectedWith("PACT::castVoteInternal: voting is closed");
 	});
 });
