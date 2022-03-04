@@ -6,7 +6,6 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import "./ICommunityAdmin.sol";
 import "../../treasury/interfaces/ITreasury.sol";
-import "../../governor/ubiCommittee/interfaces/IUBICommittee.sol";
 
 /**
  * @title Storage for CommunityAdmin
@@ -22,6 +21,4 @@ abstract contract CommunityAdminStorageV1 is ICommunityAdmin {
 
     mapping(address => CommunityState) public override communities;
     EnumerableSet.AddressSet internal communityList;
-
-    IUBICommittee public override ubiCommittee;
 }

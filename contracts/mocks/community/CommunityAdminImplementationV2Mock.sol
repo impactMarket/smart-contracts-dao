@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "../../community/interfaces/ICommunity.sol";
-import "../../community/interfaces/CommunityAdminStorageV1.sol";
+import "../../community/interfaces/CommunityAdminStorageV2.sol";
 import "../../governor/ubiCommittee/interfaces/IUBICommittee.sol";
 
 /**
@@ -21,7 +21,7 @@ contract CommunityAdminImplementationV2Mock is
     Initializable,
     OwnableUpgradeable,
     ReentrancyGuardUpgradeable,
-    CommunityAdminStorageV1
+    CommunityAdminStorageV2
 {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;

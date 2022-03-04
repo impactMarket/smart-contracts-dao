@@ -10,6 +10,7 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./interfaces/ICommunity.sol";
 import "./interfaces/CommunityAdminStorageV1.sol";
 import "../governor/ubiCommittee/interfaces/IUBICommittee.sol";
+import "./interfaces/CommunityAdminStorageV2.sol";
 
 /**
  * @notice Welcome to CommunityAdmin, the main contract. This is an
@@ -21,7 +22,7 @@ contract CommunityAdminImplementation is
     Initializable,
     OwnableUpgradeable,
     ReentrancyGuardUpgradeable,
-    CommunityAdminStorageV1
+    CommunityAdminStorageV2
 {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
