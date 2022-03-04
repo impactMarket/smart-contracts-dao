@@ -81,31 +81,31 @@ describe("UBICommittee", function () {
 			ImpactProxyAdmin.address
 		);
 
+		const CommunityAdminImplementationOld = await deployments.get(
+			"CommunityAdminImplementationOld"
+		);
 		const CommunityAdminImplementation = await deployments.get(
 			"CommunityAdminImplementation"
-		);
-		const CommunityAdminImplementationV2 = await deployments.get(
-			"CommunityAdminImplementationV2"
 		);
 		expect(
 			await impactProxyAdmin.getProxyImplementation(
 				communityAdmin.address
 			)
-		).to.be.equal(CommunityAdminImplementation.address);
+		).to.be.equal(CommunityAdminImplementationOld.address);
 		await expect(
 			impactProxyAdmin.upgrade(
 				communityAdmin.address,
-				CommunityAdminImplementationV2.address
+				CommunityAdminImplementation.address
 			)
 		).to.be.fulfilled;
 		expect(
 			await impactProxyAdmin.getProxyImplementation(
 				communityAdmin.address
 			)
-		).to.be.equal(CommunityAdminImplementationV2.address);
+		).to.be.equal(CommunityAdminImplementation.address);
 
 		communityAdmin = await ethers.getContractAt(
-			"CommunityAdminImplementationV2",
+			"CommunityAdminImplementation",
 			communityAdmin.address
 		);
 

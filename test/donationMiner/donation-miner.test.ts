@@ -137,7 +137,7 @@ async function rewardPeriodFixtures() {
 	const user4Donation = parseEther("600");
 
 	//first block donations
-	await advanceToBlockN(130);
+	await advanceToBlockN(131);
 	//none
 
 	//second block donations
@@ -2256,7 +2256,7 @@ describe("Donation Miner V2 (claimDelay != 0)", () => {
 	});
 
 	async function updateImplementation() {
-		ImpactProxyAdmin.upgrade(
+		await ImpactProxyAdmin.upgrade(
 			DonationMiner.address,
 			DonationMinerImplementationV2.address
 		);

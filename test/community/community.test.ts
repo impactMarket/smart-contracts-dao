@@ -19,6 +19,7 @@ import { parseEther, formatEther } from "@ethersproject/units";
 import {
 	advanceBlockNTimes,
 	advanceTimeAndBlockNTimes,
+	getBlockNumber,
 } from "../utils/TimeTravel";
 import { Bytes, keccak256 } from "ethers/lib/utils";
 import { BytesLike } from "@ethersproject/bytes/src.ts/index";
@@ -125,7 +126,7 @@ async function deploy() {
 
 	const communityAdmin = await deployments.get("CommunityAdminProxy");
 	communityAdminProxy = await ethers.getContractAt(
-		"CommunityAdminImplementation",
+		"CommunityAdminImplementationOld",
 		communityAdmin.address
 	);
 
@@ -135,31 +136,31 @@ async function deploy() {
 		treasury.address
 	);
 
+	const CommunityAdminImplementationOld = await deployments.get(
+		"CommunityAdminImplementationOld"
+	);
 	const CommunityAdminImplementation = await deployments.get(
 		"CommunityAdminImplementation"
-	);
-	const CommunityAdminImplementationV2 = await deployments.get(
-		"CommunityAdminImplementationV2"
 	);
 	expect(
 		await impactProxyAdmin.getProxyImplementation(
 			communityAdminProxy.address
 		)
-	).to.be.equal(CommunityAdminImplementation.address);
+	).to.be.equal(CommunityAdminImplementationOld.address);
 	await expect(
 		impactProxyAdmin.upgrade(
 			communityAdminProxy.address,
-			CommunityAdminImplementationV2.address
+			CommunityAdminImplementation.address
 		)
 	).to.be.fulfilled;
 	expect(
 		await impactProxyAdmin.getProxyImplementation(
 			communityAdminProxy.address
 		)
-	).to.be.equal(CommunityAdminImplementationV2.address);
+	).to.be.equal(CommunityAdminImplementation.address);
 
 	communityAdminProxy = await ethers.getContractAt(
-		"CommunityAdminImplementationV2",
+		"CommunityAdminImplementation",
 		communityAdminProxy.address
 	);
 
@@ -1475,7 +1476,7 @@ describe("Community - getFunds", () => {
 
 		await addDefaultCommunity();
 
-		firstBlock = await ethers.provider.getBlockNumber();
+		firstBlock = await getBlockNumber();
 	});
 
 	it("should get funds if manager", async () => {
@@ -1483,7 +1484,7 @@ describe("Community - getFunds", () => {
 			.connect(communityManagerA)
 			.addBeneficiary(beneficiaryA.address);
 
-		communityInstance.connect(beneficiaryA).claim();
+		await communityInstance.connect(beneficiaryA).claim();
 
 		await expect(
 			communityInstance.connect(communityManagerA).requestFunds()

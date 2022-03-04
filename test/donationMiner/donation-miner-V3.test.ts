@@ -66,7 +66,7 @@ const deploy = deployments.createFixture(async () => {
 	cUSD = await ethers.getContractAt(
 		"TokenMock",
 		(
-			await await deployments.get("TokenMock")
+			await deployments.get("TokenMock")
 		).address
 	);
 
@@ -371,7 +371,7 @@ async function chunkAdvance(chunk: number, rewardExpected: string) {
 
 	// Check their PACT balance
 	const balance = await PACT.balanceOf(donor1.address);
-	expect(balance).to.equal(parseEther(rewardExpected));
+	await expect(balance).to.equal(parseEther(rewardExpected));
 }
 
 describe("Donation Miner V3 (claimDelay = 0, againstPeriods = 0)", () => {
@@ -1180,7 +1180,7 @@ describe("Donation Miner V3 (claimDelay != 0, againstPeriods = 0)", () => {
 	});
 
 	async function updateImplementation() {
-		ImpactProxyAdmin.upgrade(
+		await ImpactProxyAdmin.upgrade(
 			DonationMiner.address,
 			DonationMinerImplementationV3.address
 		);
@@ -1543,7 +1543,7 @@ describe("Donation Miner V3 (claimDelay = 0, againstPeriods != 0)", () => {
 	});
 
 	async function updateImplementation() {
-		ImpactProxyAdmin.upgrade(
+		await ImpactProxyAdmin.upgrade(
 			DonationMiner.address,
 			DonationMinerImplementationV3.address
 		);
@@ -1857,7 +1857,7 @@ describe("Donation Miner V3 (againstPeriodsDonations == 2)", () => {
 	});
 
 	async function updateImplementation() {
-		ImpactProxyAdmin.upgrade(
+		await ImpactProxyAdmin.upgrade(
 			DonationMiner.address,
 			DonationMinerImplementationV3.address
 		);
@@ -2199,7 +2199,7 @@ describe("Donation Miner V3 (againstPeriodsDonations == 5)", () => {
 	});
 
 	async function updateImplementation() {
-		ImpactProxyAdmin.upgrade(
+		await ImpactProxyAdmin.upgrade(
 			DonationMiner.address,
 			DonationMinerImplementationV3.address
 		);
@@ -2371,14 +2371,14 @@ describe("Donation Miner V3 (change againstPeriodsDonations)", () => {
 	beforeEach(async () => {
 		await deploy();
 
-		ImpactProxyAdmin.upgrade(
-			DonationMiner.address,
-			DonationMinerImplementationV3.address
-		);
+		// ImpactProxyAdmin.upgrade(
+		// 	DonationMiner.address,
+		// 	DonationMinerImplementationV3.address
+		// );
 	});
 
 	async function updateImplementation() {
-		ImpactProxyAdmin.upgrade(
+		await ImpactProxyAdmin.upgrade(
 			DonationMiner.address,
 			DonationMinerImplementationV3.address
 		);
@@ -2513,7 +2513,7 @@ describe("Donation Miner V3 (change againstPeriodsDonations)", () => {
 		const user1Donation = parseEther("100");
 		const user1ExpectedReward1 = parseEther("30140571.527305128913241300");
 
-		await DonationMiner.updateAgainstPeriods(8);
+		await expect(DonationMiner.updateAgainstPeriods(8)).to.be.fulfilled;
 
 		await advanceToBlockN(130);
 		await cUSD
@@ -2528,7 +2528,7 @@ describe("Donation Miner V3 (change againstPeriodsDonations)", () => {
 		await DonationMiner.connect(donor1).donate(user1Donation);
 
 		await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE * 2);
-		await DonationMiner.updateAgainstPeriods(5);
+		await expect(DonationMiner.updateAgainstPeriods(5)).to.be.fulfilled;
 
 		await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE * 4);
 		await DonationMiner.connect(donor1).claimRewards();
@@ -2819,7 +2819,7 @@ describe("Donation Miner V3 (migrations)", () => {
 	});
 
 	async function updateImplementation() {
-		ImpactProxyAdmin.upgrade(
+		await ImpactProxyAdmin.upgrade(
 			DonationMiner.address,
 			DonationMinerImplementationV3.address
 		);

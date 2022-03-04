@@ -7,10 +7,10 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "../community/interfaces/ICommunity.sol";
-import "../community/interfaces/ICommunityOld.sol";
-import "../community/interfaces/ICommunityAdmin.sol";
-import "../community/interfaces/CommunityStorageV1.sol";
+import "../../community/interfaces/ICommunity.sol";
+import "../../community/interfaces/ICommunityOld.sol";
+import "../../community/interfaces/ICommunityAdmin.sol";
+import "../../community/interfaces/CommunityStorageV1.sol";
 import "./CommunityStorageV2Mock.sol";
 
 /**

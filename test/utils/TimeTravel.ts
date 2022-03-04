@@ -43,7 +43,7 @@ export async function advanceBlockNTimes(n: number) {
 }
 
 export async function advanceToBlockN(n: number) {
-	const currentBlock = await ethers.provider.getBlockNumber();
+	const currentBlock = await getBlockNumber();
 
 	if (currentBlock > n) {
 		throw new Error("N value too low");
@@ -63,4 +63,8 @@ export async function advanceNSeconds(n: number) {
 			return reject(err);
 		}
 	});
+}
+
+export async function getBlockNumber() {
+	return Number(await network.provider.send("eth_blockNumber", []));
 }

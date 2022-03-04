@@ -3,9 +3,9 @@ pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "../community/interfaces/ICommunity.sol";
-import "../community/interfaces/ICommunityAdmin.sol";
-import "../community/interfaces/CommunityStorageV1.sol";
+import "../../community/interfaces/ICommunity.sol";
+import "../../community/interfaces/ICommunityAdmin.sol";
+import "../../community/interfaces/CommunityStorageV1.sol";
 
 /**
  * @title Storage for Community

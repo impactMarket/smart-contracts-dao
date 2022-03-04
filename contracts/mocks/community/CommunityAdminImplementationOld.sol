@@ -7,9 +7,8 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "./interfaces/ICommunity.sol";
-import "./interfaces/CommunityAdminStorageV2.sol";
-import "../governor/ubiCommittee/interfaces/IUBICommittee.sol";
+import "../../community/interfaces/ICommunity.sol";
+import "./interfaces/CommunityAdminStorageV1Old.sol";
 
 /**
  * @notice Welcome to CommunityAdmin, the main contract. This is an
@@ -17,11 +16,11 @@ import "../governor/ubiCommittee/interfaces/IUBICommittee.sol";
  * over the list of communities. Being only able to add and
  * remove communities
  */
-contract CommunityAdminImplementationV2 is
+contract CommunityAdminImplementationOld is
     Initializable,
     OwnableUpgradeable,
     ReentrancyGuardUpgradeable,
-    CommunityAdminStorageV2
+    CommunityAdminStorageV1Old
 {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -86,14 +85,6 @@ contract CommunityAdminImplementationV2 is
     event TreasuryUpdated(address indexed oldTreasury, address indexed newTreasury);
 
     /**
-     * @notice Triggered when the ubi committee has been updated
-     *
-     * @param oldUbiCommittee   Old UBI Committee address
-     * @param newUbiCommittee   New UBI Committee address
-     */
-    event UBICommitteeUpdated(address indexed oldUbiCommittee, address indexed newUbiCommittee);
-
-    /**
      * @notice Triggered when the communityTemplate address has been updated
      *
      * @param oldCommunityTemplate    Old communityTemplate address
@@ -126,17 +117,6 @@ contract CommunityAdminImplementationV2 is
      */
     modifier onlyCommunities() {
         require(communities[msg.sender] == CommunityState.Valid, "CommunityAdmin: NOT_COMMUNITY");
-        _;
-    }
-
-    /**
-     * @notice Enforces sender to be a valid community
-     */
-    modifier onlyOwnerOrUBICommittee() {
-        require(
-            msg.sender == owner() || msg.sender == address(ubiCommittee),
-            "CommunityAdmin: Not Owner Or UBICommittee"
-        );
         _;
     }
 
@@ -228,7 +208,7 @@ contract CommunityAdminImplementationV2 is
         uint256 _incrementInterval,
         uint256 _minTranche,
         uint256 _maxTranche
-    ) external override onlyOwnerOrUBICommittee {
+    ) external override onlyOwner {
         require(
             _managers.length > 0,
             "CommunityAdmin::addCommunity: Community should have at least one manager"
@@ -273,7 +253,7 @@ contract CommunityAdminImplementationV2 is
     function migrateCommunity(address[] memory _managers, ICommunity _previousCommunity)
         external
         override
-        onlyOwnerOrUBICommittee
+        onlyOwner
         nonReentrant
     {
         require(
@@ -334,7 +314,7 @@ contract CommunityAdminImplementationV2 is
     function addManagerToCommunity(ICommunity _community, address _account)
         external
         override
-        onlyOwnerOrUBICommittee
+        onlyOwner
     {
         _community.addManager(_account);
     }
@@ -344,12 +324,7 @@ contract CommunityAdminImplementationV2 is
      *
      * @param _community address of the community
      */
-    function removeCommunity(ICommunity _community)
-        external
-        override
-        onlyOwnerOrUBICommittee
-        nonReentrant
-    {
+    function removeCommunity(ICommunity _community) external override onlyOwner nonReentrant {
         require(
             communities[address(_community)] == CommunityState.Valid,
             "CommunityAdmin::removeCommunity: this isn't a valid community"
@@ -439,7 +414,7 @@ contract CommunityAdminImplementationV2 is
         uint256 _decreaseStep,
         uint256 _baseInterval,
         uint256 _incrementInterval
-    ) external override onlyOwnerOrUBICommittee {
+    ) external override onlyOwner {
         _community.updateBeneficiaryParams(
             _claimAmount,
             _maxClaim,
@@ -459,7 +434,7 @@ contract CommunityAdminImplementationV2 is
         ICommunity _community,
         uint256 _minTranche,
         uint256 _maxTranche
-    ) external override onlyOwnerOrUBICommittee {
+    ) external override onlyOwner {
         _community.updateCommunityParams(_minTranche, _maxTranche);
     }
 
@@ -478,18 +453,6 @@ contract CommunityAdminImplementationV2 is
             TransparentUpgradeableProxy(payable(_communityProxy)),
             _newCommunityTemplate
         );
-    }
-
-    /**
-     * @notice Updates proxy implementation address of ubi committee
-     *
-     * @param _newUbiCommittee address of new implementation contract
-     */
-    function updateUbiCommittee(IUBICommittee _newUbiCommittee) external override onlyOwner {
-        address oldUbiCommittee = address(ubiCommittee);
-        ubiCommittee = _newUbiCommittee;
-
-        emit UBICommitteeUpdated(oldUbiCommittee, address(_newUbiCommittee));
     }
 
     /**

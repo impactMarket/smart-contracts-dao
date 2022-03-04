@@ -1,7 +1,5 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
-import { parseEther } from "@ethersproject/units";
-import { getCUSDAddress } from "./cUSD";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
@@ -12,15 +10,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const accounts: SignerWithAddress[] = await ethers.getSigners();
 	const deployer = accounts[0];
 
-	const CommunityAdminImplementationV2Result = await deploy(
-		"CommunityAdminImplementationV2",
-		{
-			from: deployer.address,
-			args: [],
-			log: true,
-			// gasLimit: 13000000,
-		}
-	);
+	await deploy("CommunityAdminImplementation", {
+		from: deployer.address,
+		args: [],
+		log: true,
+		// gasLimit: 13000000,
+	});
 };
 
 export default func;

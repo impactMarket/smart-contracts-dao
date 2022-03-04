@@ -4,9 +4,8 @@ pragma solidity 0.8.4;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
-import "./ICommunityAdminV2.sol";
-import "../../treasury/interfaces/ITreasury.sol";
-import "../../governor/ubiCommittee/interfaces/IUBICommittee.sol";
+import "./ICommunityAdminOld.sol";
+import "../../../treasury/interfaces/ITreasury.sol";
 
 /**
  * @title Storage for CommunityAdmin
@@ -14,7 +13,7 @@ import "../../governor/ubiCommittee/interfaces/IUBICommittee.sol";
  * contract which implements CommunityAdminStorageV1 and following the naming convention
  * CommunityAdminStorageVX.
  */
-abstract contract CommunityAdminStorageV2 is ICommunityAdminV2 {
+abstract contract CommunityAdminStorageV1Old is ICommunityAdminOld {
     IERC20 public override cUSD;
     ITreasury public override treasury;
     ICommunity public override communityTemplate;
@@ -22,6 +21,4 @@ abstract contract CommunityAdminStorageV2 is ICommunityAdminV2 {
 
     mapping(address => CommunityState) public override communities;
     EnumerableSet.AddressSet internal communityList;
-
-    IUBICommittee public override ubiCommittee;
 }
