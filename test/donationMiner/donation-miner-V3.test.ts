@@ -8,7 +8,6 @@ import {
 	advanceBlockNTimes,
 	advanceTimeAndBlockNTimes,
 	advanceToBlockN,
-	getBlockNumber,
 } from "../utils/TimeTravel";
 import { parseEther, formatEther } from "@ethersproject/units";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
@@ -18,7 +17,6 @@ import { BigNumber } from "@ethersproject/bignumber";
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 
-let STARTING_DELAY = 100;
 const REWARD_PERIOD_SIZE = 20;
 const CLAIM_DELAY = 8;
 const AGAINST_PERIODS = 4;
@@ -68,7 +66,7 @@ const deploy = deployments.createFixture(async () => {
 	cUSD = await ethers.getContractAt(
 		"TokenMock",
 		(
-			await await deployments.get("TokenMock")
+			await deployments.get("TokenMock")
 		).address
 	);
 
@@ -139,7 +137,7 @@ async function rewardPeriodFixtures() {
 	const user4Donation = parseEther("600");
 
 	//first block donations
-	await advanceTimeAndBlockNTimes(STARTING_DELAY);
+	await advanceToBlockN(130);
 	//none
 
 	//second block donations
@@ -373,7 +371,7 @@ async function chunkAdvance(chunk: number, rewardExpected: string) {
 
 	// Check their PACT balance
 	const balance = await PACT.balanceOf(donor1.address);
-	expect(balance).to.equal(parseEther(rewardExpected));
+	await expect(balance).to.equal(parseEther(rewardExpected));
 }
 
 describe("Donation Miner V3 (claimDelay = 0, againstPeriods = 0)", () => {
@@ -399,8 +397,6 @@ describe("Donation Miner V3 (claimDelay = 0, againstPeriods = 0)", () => {
 			"DonationMinerImplementationV3",
 			DonationMiner.address
 		);
-
-		STARTING_DELAY = 90;
 	});
 
 	it("Should have correct values", async function () {
@@ -445,7 +441,7 @@ describe("Donation Miner V3 (claimDelay = 0, againstPeriods = 0)", () => {
 		const user1ExpectedReward2 = parseEther("864000");
 
 		//first block donations
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(130);
 
 		await cUSD
 			.connect(donor1)
@@ -528,7 +524,7 @@ describe("Donation Miner V3 (claimDelay = 0, againstPeriods = 0)", () => {
 		const user1Donation = parseEther("100");
 
 		//first block donations
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(130);
 
 		await cUSD
 			.connect(donor1)
@@ -544,7 +540,7 @@ describe("Donation Miner V3 (claimDelay = 0, againstPeriods = 0)", () => {
 	it("Should approve and donate 100 cUSD from user1", async function () {
 		const user1Donation = parseEther("200");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(130);
 
 		// Approve
 		await cUSD
@@ -561,7 +557,7 @@ describe("Donation Miner V3 (claimDelay = 0, againstPeriods = 0)", () => {
 		const user1Donation = parseEther("100");
 		const user1ExpectedReward = parseEther("4320000");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(130);
 
 		// Approve
 		await cUSD
@@ -585,7 +581,7 @@ describe("Donation Miner V3 (claimDelay = 0, againstPeriods = 0)", () => {
 		const user1Donation = parseEther("100");
 		const user1ExpectedReward = parseEther("0");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(130);
 
 		// Approve
 		await cUSD
@@ -610,7 +606,7 @@ describe("Donation Miner V3 (claimDelay = 0, againstPeriods = 0)", () => {
 		const user1ExpectedReward = parseEther("0");
 		const user2ExpectedReward = parseEther("0");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(130);
 
 		// Approve
 		await cUSD
@@ -640,7 +636,7 @@ describe("Donation Miner V3 (claimDelay = 0, againstPeriods = 0)", () => {
 		const user1Donation = parseEther("100");
 		const user1ExpectedReward = parseEther("8635256.64");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY + REWARD_PERIOD_SIZE);
+		await advanceToBlockN(130 + REWARD_PERIOD_SIZE);
 
 		// Approve
 		await cUSD
@@ -666,7 +662,7 @@ describe("Donation Miner V3 (claimDelay = 0, againstPeriods = 0)", () => {
 		const user1ExpectedReward = parseEther("2160000");
 		const user2ExpectedReward = parseEther("2160000");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(130);
 
 		// Approve
 		await cUSD
@@ -701,7 +697,7 @@ describe("Donation Miner V3 (claimDelay = 0, againstPeriods = 0)", () => {
 		const user1ExpectedReward = parseEther("2160000");
 		const user2ExpectedReward = parseEther("2160000");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(130);
 
 		await cUSD
 			.connect(donor1)
@@ -739,7 +735,7 @@ describe("Donation Miner V3 (claimDelay = 0, againstPeriods = 0)", () => {
 		const user1ExpectedReward = parseEther("1440000");
 		const user2ExpectedReward = parseEther("2880000");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(130);
 
 		// Approve
 		await cUSD
@@ -773,7 +769,7 @@ describe("Donation Miner V3 (claimDelay = 0, againstPeriods = 0)", () => {
 		const user1ExpectedReward = parseEther("3240000");
 		const user2ExpectedReward = parseEther("1080000");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(130);
 
 		// Approve
 		await cUSD
@@ -807,7 +803,7 @@ describe("Donation Miner V3 (claimDelay = 0, againstPeriods = 0)", () => {
 		const user1ExpectedReward = parseEther("4.319995680004319995");
 		const user2ExpectedReward = parseEther("4319995.680004319995680004");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(130);
 
 		// Approve
 		await cUSD
@@ -838,7 +834,7 @@ describe("Donation Miner V3 (claimDelay = 0, againstPeriods = 0)", () => {
 	it("Should not be able to donate to a wrong community", async function () {
 		const user1Donation = parseEther("1");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(130);
 
 		// Approve
 		await cUSD
@@ -859,7 +855,7 @@ describe("Donation Miner V3 (claimDelay = 0, againstPeriods = 0)", () => {
 		const user1Donation = parseEther("100");
 		const user1ExpectedReward = parseEther("4320000");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(130);
 
 		// Approve
 		await cUSD
@@ -890,7 +886,7 @@ describe("Donation Miner V3 (claimDelay = 0, againstPeriods = 0)", () => {
 		const user1Donation = parseEther("100");
 		const user1ExpectedReward = parseEther("8635256.64");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(130);
 
 		// Approve
 		await cUSD
@@ -924,7 +920,7 @@ describe("Donation Miner V3 (claimDelay = 0, againstPeriods = 0)", () => {
 		const user1ExpectedReward1 = parseEther("4320000");
 		const user1ExpectedReward2 = parseEther("8635256.64");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(130);
 
 		// Approve
 		await cUSD
@@ -967,7 +963,7 @@ describe("Donation Miner V3 (claimDelay = 0, againstPeriods = 0)", () => {
 		const user1ExpectedReward2 = parseEther("8635256.64");
 
 		//first reward period
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(130);
 
 		await cUSD
 			.connect(donor1)
@@ -999,7 +995,7 @@ describe("Donation Miner V3 (claimDelay = 0, againstPeriods = 0)", () => {
 		const user1Donation = parseEther("100");
 
 		//first reward period
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(130);
 
 		await cUSD
 			.connect(donor1)
@@ -1020,7 +1016,7 @@ describe("Donation Miner V3 (claimDelay = 0, againstPeriods = 0)", () => {
 		const user2ExpectedReward = parseEther("2157628.32");
 
 		//first reward period
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(130);
 
 		await cUSD
 			.connect(donor1)
@@ -1079,7 +1075,7 @@ describe("Donation Miner V3 (claimDelay = 0, againstPeriods = 0)", () => {
 			"1299711602.324538381026520940"
 		);
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(130);
 
 		// first 100 reward periods
 		await advanceTimeAndBlockNTimes(99 * REWARD_PERIOD_SIZE);
@@ -1181,12 +1177,10 @@ describe("Donation Miner V3 (claimDelay != 0, againstPeriods = 0)", () => {
 
 	beforeEach(async () => {
 		await deploy();
-
-		STARTING_DELAY = 93;
 	});
 
 	async function updateImplementation() {
-		ImpactProxyAdmin.upgrade(
+		await ImpactProxyAdmin.upgrade(
 			DonationMiner.address,
 			DonationMinerImplementationV3.address
 		);
@@ -1197,8 +1191,6 @@ describe("Donation Miner V3 (claimDelay != 0, againstPeriods = 0)", () => {
 		);
 
 		DonationMiner.updateClaimDelay(CLAIM_DELAY);
-
-		STARTING_DELAY = 90;
 	}
 
 	it("Should not claim reward before claim delay, multiple donors #1", async function () {
@@ -1210,7 +1202,7 @@ describe("Donation Miner V3 (claimDelay != 0, againstPeriods = 0)", () => {
 		const user1ExpectedReward = parseEther("2160000");
 		const user2ExpectedReward = parseEther("2160000");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(130);
 
 		await cUSD
 			.connect(donor1)
@@ -1247,7 +1239,7 @@ describe("Donation Miner V3 (claimDelay != 0, againstPeriods = 0)", () => {
 		const user1ExpectedReward = parseEther("2160000");
 		const user2ExpectedReward = parseEther("2160000");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(130);
 
 		await cUSD
 			.connect(donor1)
@@ -1335,7 +1327,7 @@ describe("Donation Miner V3 (claimDelay != 0, againstPeriods = 0)", () => {
 			.connect(donor1)
 			.approve(DonationMiner.address, user1Donation.mul(12));
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY + 10);
+		await advanceToBlockN(140);
 
 		let previousReward = parseEther("0");
 		await donateAndCheck(user1Donation, user1Reward1, previousReward);
@@ -1451,7 +1443,7 @@ describe("Donation Miner V3 (claimDelay != 0, againstPeriods = 0)", () => {
 			.connect(donor1)
 			.approve(DonationMiner.address, user1Donation.mul(12));
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY + 10);
+		await advanceToBlockN(131);
 
 		let previousReward = parseEther("0");
 		await donateAndCheck(user1Donation, user1Reward1, previousReward);
@@ -1548,12 +1540,10 @@ describe("Donation Miner V3 (claimDelay = 0, againstPeriods != 0)", () => {
 
 	beforeEach(async () => {
 		await deploy();
-
-		STARTING_DELAY = 93;
 	});
 
 	async function updateImplementation() {
-		ImpactProxyAdmin.upgrade(
+		await ImpactProxyAdmin.upgrade(
 			DonationMiner.address,
 			DonationMinerImplementationV3.address
 		);
@@ -1659,7 +1649,7 @@ describe("Donation Miner V3 (claimDelay = 0, againstPeriods != 0)", () => {
 			.connect(donor2)
 			.approve(DonationMiner.address, user2Donation);
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY + 5);
+		await advanceToBlockN(135);
 
 		let previousDonor1Reward = parseEther("0");
 		await donateAndCheckAll(
@@ -1769,7 +1759,7 @@ describe("Donation Miner V3 (claimDelay = 0, againstPeriods != 0)", () => {
 			.connect(donor2)
 			.approve(DonationMiner.address, user2Donation);
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY + 5);
+		await advanceToBlockN(135);
 
 		let previousDonor1Reward = parseEther("0");
 		await donateAndCheckAll(
@@ -1864,12 +1854,10 @@ describe("Donation Miner V3 (againstPeriodsDonations == 2)", () => {
 			DonationMiner.address,
 			DonationMinerImplementationV3.address
 		);
-
-		STARTING_DELAY = 93;
 	});
 
 	async function updateImplementation() {
-		ImpactProxyAdmin.upgrade(
+		await ImpactProxyAdmin.upgrade(
 			DonationMiner.address,
 			DonationMinerImplementationV3.address
 		);
@@ -1880,8 +1868,6 @@ describe("Donation Miner V3 (againstPeriodsDonations == 2)", () => {
 		);
 
 		await DonationMiner.updateAgainstPeriods(2);
-
-		STARTING_DELAY = 90;
 	}
 
 	it("Should claim reward after claim delay, multiple donors #1", async function () {
@@ -1896,7 +1882,7 @@ describe("Donation Miner V3 (againstPeriodsDonations == 2)", () => {
 		const user1ExpectedReward3 = parseEther("6472887.56410464");
 		const user2ExpectedReward3 = parseEther("6472887.56410464");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(130);
 
 		await cUSD
 			.connect(donor1)
@@ -1968,7 +1954,7 @@ describe("Donation Miner V3 (againstPeriodsDonations == 2)", () => {
 		const user1ExpectedReward3 = parseEther("6472887.56410464");
 		const user2ExpectedReward3 = parseEther("6472887.56410464");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(130);
 
 		await cUSD
 			.connect(donor1)
@@ -2001,7 +1987,7 @@ describe("Donation Miner V3 (againstPeriodsDonations == 2)", () => {
 		const user1ExpectedReward3 = parseEther("8618673.103013866210560000");
 		const user2ExpectedReward3 = parseEther("8632887.564104640000000000");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(130);
 
 		await cUSD
 			.connect(donor2)
@@ -2044,7 +2030,7 @@ describe("Donation Miner V3 (againstPeriodsDonations == 2)", () => {
 		const user1ExpectedReward4 = parseEther("10058673.10301386621056");
 		const user2ExpectedReward4 = parseEther("7192887.56410464");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(130);
 
 		await cUSD
 			.connect(donor1)
@@ -2122,7 +2108,7 @@ describe("Donation Miner V3 (againstPeriodsDonations == 2)", () => {
 		const user1ExpectedReward4 = parseEther("10058673.10301386621056");
 		const user2ExpectedReward4 = parseEther("7192887.56410464");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(130);
 
 		await cUSD
 			.connect(donor1)
@@ -2165,7 +2151,7 @@ describe("Donation Miner V3 (againstPeriodsDonations == 2)", () => {
 		const user1ExpectedReward4 = parseEther("10058673.10301386621056");
 		const user2ExpectedReward4 = parseEther("7192887.56410464");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(130);
 
 		await cUSD
 			.connect(donor1)
@@ -2210,12 +2196,10 @@ describe("Donation Miner V3 (againstPeriodsDonations == 5)", () => {
 			DonationMiner.address,
 			DonationMinerImplementationV3.address
 		);
-
-		STARTING_DELAY = 93;
 	});
 
 	async function updateImplementation() {
-		ImpactProxyAdmin.upgrade(
+		await ImpactProxyAdmin.upgrade(
 			DonationMiner.address,
 			DonationMinerImplementationV3.address
 		);
@@ -2226,8 +2210,6 @@ describe("Donation Miner V3 (againstPeriodsDonations == 5)", () => {
 		);
 
 		await DonationMiner.updateAgainstPeriods(5);
-
-		STARTING_DELAY = 90;
 	}
 
 	it("Should donate and claim in multiple periods, one donors #1", async function () {
@@ -2237,7 +2219,7 @@ describe("Donation Miner V3 (againstPeriodsDonations == 5)", () => {
 		const user1ExpectedReward1 = parseEther("21552618.453506010090740800");
 		const user1ExpectedReward2 = parseEther("30140571.527305128913241300");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(130);
 
 		await cUSD
 			.connect(donor1)
@@ -2282,7 +2264,7 @@ describe("Donation Miner V3 (againstPeriodsDonations == 5)", () => {
 		const user1ExpectedReward2 = parseEther("15070285.763652564456620650");
 		const user2ExpectedReward2 = parseEther("15070285.763652564456620650");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(130);
 
 		await cUSD
 			.connect(donor1)
@@ -2341,7 +2323,7 @@ describe("Donation Miner V3 (againstPeriodsDonations == 5)", () => {
 		const user1ExpectedReward2 = parseEther("15084476.839222030245830580");
 		const user2ExpectedReward2 = parseEther("15056094.688083098667410720");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(130);
 
 		await cUSD
 			.connect(donor1)
@@ -2389,16 +2371,14 @@ describe("Donation Miner V3 (change againstPeriodsDonations)", () => {
 	beforeEach(async () => {
 		await deploy();
 
-		ImpactProxyAdmin.upgrade(
-			DonationMiner.address,
-			DonationMinerImplementationV3.address
-		);
-
-		STARTING_DELAY = 93;
+		// ImpactProxyAdmin.upgrade(
+		// 	DonationMiner.address,
+		// 	DonationMinerImplementationV3.address
+		// );
 	});
 
 	async function updateImplementation() {
-		ImpactProxyAdmin.upgrade(
+		await ImpactProxyAdmin.upgrade(
 			DonationMiner.address,
 			DonationMinerImplementationV3.address
 		);
@@ -2409,8 +2389,6 @@ describe("Donation Miner V3 (change againstPeriodsDonations)", () => {
 		);
 
 		await DonationMiner.updateAgainstPeriods(5);
-
-		STARTING_DELAY = 90;
 	}
 
 	it("Should donate and claim in multiple periods while changing from 5 to 8, one donors #1", async function () {
@@ -2421,7 +2399,7 @@ describe("Donation Miner V3 (change againstPeriodsDonations)", () => {
 		const user1ExpectedReward2 = parseEther("30140571.527305128913241300");
 		const user1ExpectedReward3 = parseEther("42987172.585785574866144400");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(130);
 		await cUSD
 			.connect(donor1)
 			.approve(DonationMiner.address, user1Donation);
@@ -2461,7 +2439,7 @@ describe("Donation Miner V3 (change againstPeriodsDonations)", () => {
 		const user1ExpectedReward2 = parseEther("30140571.527305128913241300");
 		const user1ExpectedReward3 = parseEther("38709675.809824762455320400");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(130);
 		await cUSD
 			.connect(donor1)
 			.approve(DonationMiner.address, user1Donation);
@@ -2501,7 +2479,7 @@ describe("Donation Miner V3 (change againstPeriodsDonations)", () => {
 		const user1ExpectedReward1 = parseEther("30140571.527305128913241300");
 		const user1ExpectedReward2 = parseEther("42987172.585785574866144400");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(130);
 		await cUSD
 			.connect(donor1)
 			.approve(DonationMiner.address, user1Donation);
@@ -2535,9 +2513,9 @@ describe("Donation Miner V3 (change againstPeriodsDonations)", () => {
 		const user1Donation = parseEther("100");
 		const user1ExpectedReward1 = parseEther("30140571.527305128913241300");
 
-		await DonationMiner.updateAgainstPeriods(8);
+		await expect(DonationMiner.updateAgainstPeriods(8)).to.be.fulfilled;
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(130);
 		await cUSD
 			.connect(donor1)
 			.approve(DonationMiner.address, user1Donation);
@@ -2550,7 +2528,7 @@ describe("Donation Miner V3 (change againstPeriodsDonations)", () => {
 		await DonationMiner.connect(donor1).donate(user1Donation);
 
 		await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE * 2);
-		await DonationMiner.updateAgainstPeriods(5);
+		await expect(DonationMiner.updateAgainstPeriods(5)).to.be.fulfilled;
 
 		await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE * 4);
 		await DonationMiner.connect(donor1).claimRewards();
@@ -2573,7 +2551,7 @@ describe("Donation Miner V3 (change againstPeriodsDonations)", () => {
 		const user1ExpectedReward2 = parseEther("30140571.527305128913241300");
 
 		await DonationMiner.updateAgainstPeriods(8);
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(130);
 		await cUSD
 			.connect(donor1)
 			.approve(DonationMiner.address, user1Donation);
@@ -2617,7 +2595,7 @@ describe("Donation Miner V3 (change againstPeriodsDonations)", () => {
 		const user1ExpectedReward3 = parseEther("21493586.292892787433072200");
 		const user2ExpectedReward3 = parseEther("21493586.292892787433072200");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(130);
 
 		await cUSD
 			.connect(donor1)
@@ -2692,7 +2670,7 @@ describe("Donation Miner V3 (change againstPeriodsDonations)", () => {
 		const user1ExpectedReward3 = parseEther("21514837.904912381227660200");
 		const user2ExpectedReward3 = parseEther("21472334.680873193638484200");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(130);
 
 		await cUSD
 			.connect(donor1)
@@ -2760,7 +2738,7 @@ describe("Donation Miner V3 (change againstPeriodsDonations)", () => {
 		const user1ExpectedReward4 = parseEther("30128786.715169404783387082");
 		const user2ExpectedReward4 = parseEther("38424916.301522012431218355");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(130);
 
 		await cUSD
 			.connect(donor1)
@@ -2838,12 +2816,10 @@ describe("Donation Miner V3 (migrations)", () => {
 		// 	DonationMiner.address,
 		// 	DonationMinerImplementationV3.address
 		// );
-
-		STARTING_DELAY = 93;
 	});
 
 	async function updateImplementation() {
-		ImpactProxyAdmin.upgrade(
+		await ImpactProxyAdmin.upgrade(
 			DonationMiner.address,
 			DonationMinerImplementationV3.address
 		);
@@ -2854,8 +2830,6 @@ describe("Donation Miner V3 (migrations)", () => {
 		);
 
 		await DonationMiner.updateAgainstPeriods(5);
-
-		STARTING_DELAY = 90;
 	}
 
 	it("Should donate and claim in multiple periods and migrate, one donors #1", async function () {
@@ -2866,7 +2840,7 @@ describe("Donation Miner V3 (migrations)", () => {
 		const user1ExpectedReward4 = parseEther("21552618.453506010090740800");
 		const user1ExpectedReward5 = parseEther("30140571.527305128913241300");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(131);
 		await cUSD
 			.connect(donor1)
 			.approve(DonationMiner.address, user1Donation);
@@ -2925,7 +2899,7 @@ describe("Donation Miner V3 (migrations)", () => {
 		const user1ExpectedReward6 = parseEther("42987172.585785574866144400");
 		const user1ExpectedReward7 = parseEther("47259972.670286382304941300");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(131);
 		await cUSD
 			.connect(donor1)
 			.approve(DonationMiner.address, user1Donation);
@@ -3002,7 +2976,7 @@ describe("Donation Miner V3 (migrations)", () => {
 		const user1ExpectedReward6 = parseEther("42987172.585785574866144400");
 		const user1ExpectedReward7 = parseEther("47259972.670286382304941300");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(131);
 		await cUSD
 			.connect(donor1)
 			.approve(DonationMiner.address, user1Donation);
@@ -3082,7 +3056,7 @@ describe("Donation Miner V3 (migrations)", () => {
 		const user2ExpectedReward5 = parseEther("22205521.074125055670439189");
 		const user2ExpectedReward7 = parseEther("22205521.074125055670439189");
 
-		await advanceTimeAndBlockNTimes(STARTING_DELAY);
+		await advanceToBlockN(131);
 		await cUSD
 			.connect(donor1)
 			.approve(DonationMiner.address, user1Donation);

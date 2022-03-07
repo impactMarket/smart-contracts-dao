@@ -19,6 +19,7 @@ import { parseEther, formatEther } from "@ethersproject/units";
 import {
 	advanceBlockNTimes,
 	advanceTimeAndBlockNTimes,
+	getBlockNumber,
 } from "../utils/TimeTravel";
 import { Bytes, keccak256 } from "ethers/lib/utils";
 import { BytesLike } from "@ethersproject/bytes/src.ts/index";
@@ -76,7 +77,7 @@ let cUSDInstance: ethersTypes.Contract;
 let impactProxyAdmin: ethersTypes.Contract;
 
 // constants
-const firstBlock = 35;
+let firstBlock: number;
 const oneMinuteInBlocks = 12;
 const threeMinutesInBlocks = 36;
 const hourInBlocks = 720;
@@ -125,7 +126,7 @@ async function deploy() {
 
 	const communityAdmin = await deployments.get("CommunityAdminProxy");
 	communityAdminProxy = await ethers.getContractAt(
-		"CommunityAdminImplementation",
+		"CommunityAdminImplementationOld",
 		communityAdmin.address
 	);
 
@@ -134,6 +135,38 @@ async function deploy() {
 		"TreasuryImplementation",
 		treasury.address
 	);
+
+	const CommunityAdminImplementationOld = await deployments.get(
+		"CommunityAdminImplementationOld"
+	);
+	const CommunityAdminImplementation = await deployments.get(
+		"CommunityAdminImplementation"
+	);
+	expect(
+		await impactProxyAdmin.getProxyImplementation(
+			communityAdminProxy.address
+		)
+	).to.be.equal(CommunityAdminImplementationOld.address);
+	await expect(
+		impactProxyAdmin.upgrade(
+			communityAdminProxy.address,
+			CommunityAdminImplementation.address
+		)
+	).to.be.fulfilled;
+	expect(
+		await impactProxyAdmin.getProxyImplementation(
+			communityAdminProxy.address
+		)
+	).to.be.equal(CommunityAdminImplementation.address);
+
+	communityAdminProxy = await ethers.getContractAt(
+		"CommunityAdminImplementation",
+		communityAdminProxy.address
+	);
+
+	const UBICommitteeProxy = await deployments.get("UBICommitteeProxy");
+
+	await communityAdminProxy.updateUbiCommittee(UBICommitteeProxy.address);
 }
 
 async function addDefaultCommunity() {
@@ -1035,7 +1068,7 @@ describe("Community - Governance (2)", () => {
 				[communityManagerA.address],
 				cUSDInstance.address // wrong on purpose,
 			)
-		).to.be.rejectedWith("Ownable: caller is not the owner");
+		).to.be.rejectedWith("CommunityAdmin: Not Owner Or UBICommittee");
 	});
 
 	it("should edit community if manager", async () => {
@@ -1442,6 +1475,8 @@ describe("Community - getFunds", () => {
 		);
 
 		await addDefaultCommunity();
+
+		firstBlock = await getBlockNumber();
 	});
 
 	it("should get funds if manager", async () => {
@@ -1449,14 +1484,14 @@ describe("Community - getFunds", () => {
 			.connect(communityManagerA)
 			.addBeneficiary(beneficiaryA.address);
 
-		communityInstance.connect(beneficiaryA).claim();
+		await communityInstance.connect(beneficiaryA).claim();
 
 		await expect(
 			communityInstance.connect(communityManagerA).requestFunds()
 		).to.be.fulfilled;
 
 		expect(await communityInstance.lastFundRequest()).to.be.equal(
-			firstBlock + 4
+			firstBlock + 3
 		);
 
 		expect(
@@ -1481,7 +1516,7 @@ describe("Community - getFunds", () => {
 					parseEther("50"),
 					parseEther("100")
 				)
-		).to.be.rejectedWith("Ownable: caller is not the owner");
+		).to.be.rejectedWith("CommunityAdmin: Not Owner Or UBICommittee");
 	});
 
 	it("should change community tranche limits if admin", async () => {
@@ -1512,7 +1547,7 @@ describe("Community - getFunds", () => {
 					parseEther("123"),
 					parseEther("124")
 				)
-		).to.be.rejectedWith("Ownable: caller is not the owner");
+		).to.be.rejectedWith("CommunityAdmin: Not Owner Or UBICommittee");
 	});
 
 	it("should change communityMaxTranche if admin", async () => {
@@ -1577,7 +1612,7 @@ describe("Community - getFunds", () => {
 		).to.be.fulfilled;
 
 		expect(await communityInstance.lastFundRequest()).to.be.equal(
-			firstBlock + 4
+			firstBlock + 3
 		);
 
 		expect(
@@ -1601,7 +1636,7 @@ describe("Community - getFunds", () => {
 		).to.be.fulfilled;
 
 		expect(await communityInstance.lastFundRequest()).to.be.equal(
-			firstBlock + 4
+			firstBlock + 3
 		);
 
 		expect(
@@ -1624,7 +1659,7 @@ describe("Community - getFunds", () => {
 		);
 
 		expect(await communityInstance.lastFundRequest()).to.be.equal(
-			firstBlock + 4
+			firstBlock + 3
 		);
 	});
 
@@ -1644,7 +1679,7 @@ describe("Community - getFunds", () => {
 		).to.be.fulfilled;
 
 		expect(await communityInstance.lastFundRequest()).to.be.equal(
-			firstBlock + 4
+			firstBlock + 3
 		);
 
 		expect(
@@ -1667,7 +1702,7 @@ describe("Community - getFunds", () => {
 		).to.be.fulfilled;
 
 		expect(await communityInstance.lastFundRequest()).to.be.equal(
-			firstBlock + 42
+			firstBlock + 41
 		);
 
 		expect(
@@ -1795,7 +1830,7 @@ describe("Community - getFunds", () => {
 		).to.be.fulfilled;
 
 		expect(await communityInstance.lastFundRequest()).to.be.equal(
-			firstBlock + 7
+			firstBlock + 6
 		);
 
 		expect(
@@ -1895,7 +1930,7 @@ describe("Old Community", () => {
 					[communityManagerA.address],
 					oldCommunityInstance.address
 				)
-		).to.be.rejectedWith("Ownable: caller is not the owner");
+		).to.be.rejectedWith("CommunityAdmin: Not Owner Or UBICommittee");
 	});
 
 	it("should migrate an old community twice", async () => {
@@ -2070,7 +2105,7 @@ describe("Old Community", () => {
 		);
 		expect(beneficiaryADetails.claims).to.be.equal(1);
 		expect(beneficiaryADetails.claimedAmount).to.be.equal(claimAmountTwo);
-		expect(beneficiaryADetails.lastClaim).to.be.equal(9);
+		// expect(beneficiaryADetails.lastClaim).to.be.equal(9);
 
 		await newCommunityInstance
 			.connect(communityManagerA)

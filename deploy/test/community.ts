@@ -20,7 +20,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const cUSDAddress = getCUSDAddress();
 
 	const communityAdminImplementationResult = await deploy(
-		"CommunityAdminImplementation",
+		"CommunityAdminImplementationOld",
 		{
 			from: deployer.address,
 			args: [],
@@ -40,7 +40,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	});
 
 	const CommunityAdminContract = await ethers.getContractAt(
-		"CommunityAdminImplementation",
+		"CommunityAdminImplementationOld",
 		communityAdminProxyResult.address
 	);
 

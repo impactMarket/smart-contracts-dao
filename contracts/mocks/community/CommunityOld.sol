@@ -3,7 +3,7 @@ pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "../community/interfaces/ICommunityOld.sol";
+import "../../community/interfaces/ICommunityOld.sol";
 
 /**
  * @notice Welcome to the Community contract. For each community

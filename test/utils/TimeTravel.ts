@@ -1,5 +1,5 @@
-import { network } from "hardhat";
-import { formatEther } from "ethers/lib/utils";
+// @ts-ignore
+import { network, ethers } from "hardhat";
 
 function advanceTime() {
 	return new Promise((resolve, reject) => {
@@ -43,18 +43,14 @@ export async function advanceBlockNTimes(n: number) {
 }
 
 export async function advanceToBlockN(n: number) {
-	const currentBlock = await network.provider.send("eth_blockNumber", []);
+	const currentBlock = await getBlockNumber();
 
 	if (currentBlock > n) {
 		throw new Error("N value too low");
 	}
-	for (let i = currentBlock; i < n - 2; i++) {
+	for (let i = currentBlock; i < n; i++) {
 		await advanceBlock();
 	}
-}
-
-export async function getBlockNumber() {
-	return network.provider.send("eth_blockNumber", []);
 }
 
 export async function advanceNSeconds(n: number) {
@@ -67,4 +63,8 @@ export async function advanceNSeconds(n: number) {
 			return reject(err);
 		}
 	});
+}
+
+export async function getBlockNumber() {
+	return Number(await network.provider.send("eth_blockNumber", []));
 }
