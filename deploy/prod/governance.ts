@@ -20,7 +20,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const Token = await deployments.get("PACTToken");
 	const ImpactProxyAdminContract = await deployments.get("ImpactProxyAdmin");
 
-
 	const delegateResult = await deploy("PACTDelegate", {
 		from: deployer,
 		log: true,
@@ -30,10 +29,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	const delegatorResult = await deploy("PACTDelegator", {
 		from: deployer,
-		args: [
-			delegateResult.address,
-			ImpactProxyAdminContract.address,
-		],
+		args: [delegateResult.address, ImpactProxyAdminContract.address],
 		log: true,
 	});
 
@@ -59,14 +55,17 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		VOTING_PERIOD_BLOCKS,
 		VOTING_DELAY_BLOCKS,
 		PROPOSAL_THRESHOLD,
-		QUORUM_VOTES,
+		QUORUM_VOTES
 	);
 
 	await new Promise((resolve) => setTimeout(resolve, 6000));
 
 	const PACT = await deployments.get("PACTToken");
 	const PACTContract = await ethers.getContractAt("PACTToken", PACT.address);
-	await PACTContract.transfer(delegatorResult.address, parseEther("2000000000"));
+	await PACTContract.transfer(
+		delegatorResult.address,
+		parseEther("2000000000")
+	);
 
 	// only for prod
 	await governance.transferOwnership(timelockResult.address);

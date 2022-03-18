@@ -87,17 +87,7 @@ describe("UBICommittee", function () {
 		const CommunityAdminImplementation = await deployments.get(
 			"CommunityAdminImplementation"
 		);
-		expect(
-			await impactProxyAdmin.getProxyImplementation(
-				communityAdmin.address
-			)
-		).to.be.equal(CommunityAdminImplementationOld.address);
-		await expect(
-			impactProxyAdmin.upgrade(
-				communityAdmin.address,
-				CommunityAdminImplementation.address
-			)
-		).to.be.fulfilled;
+
 		expect(
 			await impactProxyAdmin.getProxyImplementation(
 				communityAdmin.address

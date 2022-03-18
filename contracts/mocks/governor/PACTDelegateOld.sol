@@ -4,10 +4,10 @@ pragma solidity 0.8.4;
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "./interfaces/PACTDelegateStorageV1.sol";
-import "./interfaces/PACTEvents.sol";
+import "../../governor/interfaces/PACTDelegateStorageV1.sol";
+import "../../governor/interfaces/PACTEvents.sol";
 
-contract PACTDelegate is
+contract PACTDelegateOld is
     PACTEvents,
     Initializable,
     OwnableUpgradeable,
@@ -48,7 +48,7 @@ contract PACTDelegate is
     bytes32 public constant BALLOT_TYPEHASH = keccak256("Ballot(uint256 proposalId,uint8 support)");
 
     /**
-     * @notice Used to initialize the contract during delegator constructor
+     * @notice Used to initialize the contract during delegator contructor
      * @param _timelock The address of the Timelock
      * @param _token The address of the voting token
      * @param _releaseToken The address of the "Release" voting token. If none, specify the zero address.
@@ -540,21 +540,6 @@ contract PACTDelegate is
         proposalThreshold = _newProposalThreshold;
 
         emit ProposalThresholdSet(_oldProposalThreshold, _newProposalThreshold);
-    }
-
-    /**
-     * @notice Owner function for setting the release token
-     * @param _newReleaseToken new release token address
-     */
-    function _setReleaseToken(IHasVotes _newReleaseToken) external onlyOwner {
-        require(
-            _newReleaseToken != token,
-            "PACT::_setReleaseToken: releaseToken and token must be different"
-        );
-        IHasVotes _oldReleaseToken = releaseToken;
-        releaseToken = _newReleaseToken;
-
-        emit ReleaseTokenSet(address(_oldReleaseToken), address(_newReleaseToken));
     }
 
     /**

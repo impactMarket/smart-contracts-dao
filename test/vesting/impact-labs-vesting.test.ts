@@ -66,6 +66,7 @@ const deploy = deployments.createFixture(async () => {
 	);
 
 	await cUSD.mint(donor1.address, parseEther("1000000"));
+	await PACT.transfer(DonationMiner.address, parseEther("2000000000"));
 });
 
 describe("Impact Labs Vesting", () => {

@@ -28,7 +28,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	const communityAdminProxy = await deployments.get("CommunityAdminProxy");
 
-	await ubiCommittee.initialize(1, communityAdminProxy.address, [committeeMember]);
+	await ubiCommittee.initialize(1, communityAdminProxy.address, [
+		committeeMember,
+	]);
 };
 
 func.dependencies = ["ImpactProxyAdminProd", "CommunityProd"];

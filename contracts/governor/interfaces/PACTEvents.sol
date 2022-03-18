@@ -44,6 +44,9 @@ contract PACTEvents {
     /// @notice Emitted when proposal threshold is set
     event ProposalThresholdSet(uint256 oldProposalThreshold, uint256 newProposalThreshold);
 
+    /// @notice Emitted when release token is set
+    event ReleaseTokenSet(address oldReleaseToken, address newReleaseToken);
+
     /// @notice An event emitted when the quorum votes is set
     event QuorumVotesSet(uint256 oldQuorumVotes, uint256 newQuorumVotes);
 
