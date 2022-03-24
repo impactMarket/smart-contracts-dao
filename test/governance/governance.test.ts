@@ -51,8 +51,8 @@ let proxyAdmin: ethersTypes.Contract;
 let treasuryProxy: ethersTypes.Contract;
 let ubiCommittee: ethersTypes.Contract;
 
-const ADDRESS_TEST = '0x0000000000000000000000000000000123456789';
-const ADDRESS_ZERO = '0x0000000000000000000000000000000000000000';
+const ADDRESS_TEST = "0x0000000000000000000000000000000123456789";
+const ADDRESS_ZERO = "0x0000000000000000000000000000000000000000";
 
 enum ProposalState {
 	Pending,
@@ -89,22 +89,30 @@ async function deployGovernance() {
 	// governance setup
 	votingToken = await ethers.getContractAt(
 		"PACTToken",
-		(await deployments.get("PACTToken")).address
+		(
+			await deployments.get("PACTToken")
+		).address
 	);
 
 	timelock = await ethers.getContractAt(
 		"PACTTimelock",
-		(await deployments.get("PACTTimelock")).address
+		(
+			await deployments.get("PACTTimelock")
+		).address
 	);
 
 	governanceDelegate = await ethers.getContractAt(
 		"PACTDelegate",
-		(await deployments.get("PACTDelegate")).address
+		(
+			await deployments.get("PACTDelegate")
+		).address
 	);
 
 	governanceDelegator = await ethers.getContractAt(
 		"PACTDelegator",
-		(await deployments.get("PACTDelegator")).address
+		(
+			await deployments.get("PACTDelegator")
+		).address
 	);
 
 	governanceDelegator = await delegate.attach(governanceDelegator.address);
@@ -170,7 +178,6 @@ describe("Governance - with one token", function () {
 
 	beforeEach(async function () {
 		await deployGovernance();
-
 	});
 
 	it("should have correct params", async function () {
@@ -434,7 +441,9 @@ describe("Governance - with one token", function () {
 		await advanceBlockNTimes(governanceParams.VOTING_PERIOD);
 
 		await governanceDelegator.queue(1);
-		await advanceNSeconds(governanceParams.EXECUTION_DELAY + governanceParams.GRACE_PERIOD);
+		await advanceNSeconds(
+			governanceParams.EXECUTION_DELAY + governanceParams.GRACE_PERIOD
+		);
 		await expect(governanceDelegator.execute(1)).to.be.rejectedWith(
 			"PACT::execute: proposal can only be executed if it is queued"
 		);
@@ -525,7 +534,7 @@ describe("Governance - with one token", function () {
 			governanceDelegator.address,
 			governanceDelegator.address,
 			governanceDelegator.address,
-			governanceDelegator.address
+			governanceDelegator.address,
 		];
 		const values = [0, 0, 0, 0, 0];
 		const signatures = [
@@ -547,7 +556,7 @@ describe("Governance - with one token", function () {
 				["uint256"],
 				[parseEther("200000000")]
 			),
-			ethers.utils.defaultAbiCoder.encode(["address"], [ADDRESS_TEST])
+			ethers.utils.defaultAbiCoder.encode(["address"], [ADDRESS_TEST]),
 		];
 		const descriptions = "description";
 
@@ -573,7 +582,9 @@ describe("Governance - with one token", function () {
 		expect(await governanceDelegator.proposalThreshold()).to.be.equal(
 			parseEther("200000000")
 		);
-		expect(await governanceDelegator.releaseToken()).to.be.equal(ADDRESS_TEST);
+		expect(await governanceDelegator.releaseToken()).to.be.equal(
+			ADDRESS_TEST
+		);
 	});
 
 	it("should update timelock params by proposal", async function () {
@@ -627,8 +638,7 @@ describe("Governance - with one token", function () {
 		const governanceDelegateFactory = await ethers.getContractFactory(
 			"PACTDelegate"
 		);
-		const newGovernanceDelegate =
-			await governanceDelegateFactory.deploy();
+		const newGovernanceDelegate = await governanceDelegateFactory.deploy();
 
 		expect(
 			await proxyAdmin.getProxyImplementation(governanceDelegator.address)
@@ -641,10 +651,7 @@ describe("Governance - with one token", function () {
 		const calldatas = [
 			ethers.utils.defaultAbiCoder.encode(
 				["address", "address"],
-				[
-					governanceDelegator.address,
-					newGovernanceDelegate.address,
-				]
+				[governanceDelegator.address, newGovernanceDelegate.address]
 			),
 		];
 		const descriptions = "description";
@@ -677,8 +684,7 @@ describe("Governance - with one token", function () {
 		const governanceDelegateFactory = await ethers.getContractFactory(
 			"PACTDelegate"
 		);
-		const newGovernanceDelegate =
-			await governanceDelegateFactory.deploy();
+		const newGovernanceDelegate = await governanceDelegateFactory.deploy();
 
 		expect(
 			await proxyAdmin.getProxyImplementation(governanceDelegator.address)
@@ -731,21 +737,22 @@ describe("Governance - with one token", function () {
 	});
 });
 
-
 describe("Governance - with two tokens", function () {
-	before(async function() {
+	before(async function () {
 		delegate = await ethers.getContractFactory("PACTDelegate");
 
 		[owner, user1, user2, user3, user4, user5, user6, user7, user8, user9] =
 			await ethers.getSigners();
 	});
 
-	beforeEach(async function() {
+	beforeEach(async function () {
 		await deployGovernance();
 
 		stakingToken = await ethers.getContractAt(
 			"SPACTToken",
-			(await deployments.get("SPACTToken")).address
+			(
+				await deployments.get("SPACTToken")
+			).address
 		);
 
 		await stakingToken.mint(user1.address, parseEther("100000001")); // 100 mil (1 %)
@@ -758,8 +765,7 @@ describe("Governance - with two tokens", function () {
 		const governanceDelegateFactory = await ethers.getContractFactory(
 			"PACTDelegate"
 		);
-		const newGovernanceDelegate =
-			await governanceDelegateFactory.deploy();
+		const newGovernanceDelegate = await governanceDelegateFactory.deploy();
 
 		expect(
 			await proxyAdmin.getProxyImplementation(governanceDelegator.address)
@@ -778,10 +784,15 @@ describe("Governance - with two tokens", function () {
 			[0, 0],
 			["upgrade(address,address)", "_setReleaseToken(address)"],
 			[["address", "address"], ["address"]],
-			[[governanceDelegator.address, newGovernanceDelegate.address], [ADDRESS_TEST]]
+			[
+				[governanceDelegator.address, newGovernanceDelegate.address],
+				[ADDRESS_TEST],
+			]
 		);
 
-		expect(await governanceDelegator.releaseToken()).to.be.equal(ADDRESS_TEST);
+		expect(await governanceDelegator.releaseToken()).to.be.equal(
+			ADDRESS_TEST
+		);
 	});
 
 	it("should create proposal if user have enough tokens and stakingTokens", async function () {
@@ -796,10 +807,12 @@ describe("Governance - with two tokens", function () {
 			[treasuryProxy.address],
 			[0],
 			["transfer(address,address,uint256)"],
-			[["address", "address","uint256"]],
+			[["address", "address", "uint256"]],
 			[[USDT.address, user2.address, parseEther("1234")]]
 		);
 
-		expect(await USDT.balanceOf(user2.address)).to.be.equal(parseEther("1234"));
+		expect(await USDT.balanceOf(user2.address)).to.be.equal(
+			parseEther("1234")
+		);
 	});
 });

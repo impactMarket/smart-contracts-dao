@@ -3,16 +3,13 @@ pragma solidity 0.8.4;
 
 import "@ubeswap/governance/contracts/voting/VotingToken.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./interfaces/IMintableVotingToken.sol";
+import "./interfaces/IMintableToken.sol";
 
-contract SPACTToken is IMintableVotingToken, VotingToken, Ownable {
+contract SPACTToken is IMintableToken, VotingToken, Ownable {
     /**
      * @notice Construct a Staking PACT Token
-     * @param _ownerAddress The owner address
      */
-    constructor(address _ownerAddress) VotingToken("StakingPactToken", "SPACT", 18) {
-        transferOwnership(_ownerAddress);
-    }
+    constructor() VotingToken("StakingPactToken", "SPACT", 18) {}
 
     /**
      * @notice Mint new voting power

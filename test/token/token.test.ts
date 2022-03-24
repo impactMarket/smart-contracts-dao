@@ -45,7 +45,9 @@ describe("Token", function () {
 
 		votingToken = await ethers.getContractAt(
 			"PACTToken",
-			(await deployments.get("PACTToken")).address
+			(
+				await deployments.get("PACTToken")
+			).address
 		);
 
 		await votingToken.transfer(user1.address, parseEther("1000000"));
@@ -55,33 +57,50 @@ describe("Token", function () {
 		expect(await votingToken.name()).to.be.equal("PactToken");
 		expect(await votingToken.symbol()).to.be.equal("PACT");
 		expect(await votingToken.decimals()).to.be.equal(18);
-		expect(await votingToken.totalSupply()).to.be.equal(parseEther("10000000000"));
+		expect(await votingToken.totalSupply()).to.be.equal(
+			parseEther("10000000000")
+		);
 	});
 
-	it.only("should be able to transfer funds", async function () {
+	it("should be able to transfer funds", async function () {
 		await expect(votingToken.transfer(user2.address, 1)).to.be.fulfilled;
 		expect(await votingToken.balanceOf(user2.address)).to.be.equal(1);
 	});
 
 	it("should be able to delegate voting power", async function () {
 		const blockNumber: number = await getBlockNumber();
-		await expect(votingToken.connect(user1).delegate(user2.address)).to.be.fulfilled;
-		expect(await votingToken.getCurrentVotes(user2.address)).to.be.equal(parseEther("1000000"));
-		expect(await votingToken.getPriorVotes(user2.address, blockNumber)).to.be.equal(0);
+		await expect(votingToken.connect(user1).delegate(user2.address)).to.be
+			.fulfilled;
+		expect(await votingToken.getCurrentVotes(user2.address)).to.be.equal(
+			parseEther("1000000")
+		);
+		expect(
+			await votingToken.getPriorVotes(user2.address, blockNumber)
+		).to.be.equal(0);
 		await advanceBlockNTimes(10);
-		expect(await votingToken.getPriorVotes(user2.address, blockNumber + 10)).to.be.equal(parseEther("1000000"));
+		expect(
+			await votingToken.getPriorVotes(user2.address, blockNumber + 10)
+		).to.be.equal(parseEther("1000000"));
 	});
 
 	it("should not have same voting power after transferring", async function () {
 		await votingToken.connect(user1).delegate(user2.address);
-		expect(await votingToken.getCurrentVotes(user2.address)).to.be.equal(parseEther("1000000"));
+		expect(await votingToken.getCurrentVotes(user2.address)).to.be.equal(
+			parseEther("1000000")
+		);
 
-		await votingToken.connect(user1).transfer(user3.address, parseEther("400000"));
+		await votingToken
+			.connect(user1)
+			.transfer(user3.address, parseEther("400000"));
 
-		expect(await votingToken.getCurrentVotes(user2.address)).to.be.equal(parseEther("600000"));
+		expect(await votingToken.getCurrentVotes(user2.address)).to.be.equal(
+			parseEther("600000")
+		);
 
 		await votingToken.connect(user1).delegate(user4.address);
 		expect(await votingToken.getCurrentVotes(user2.address)).to.be.equal(0);
-		expect(await votingToken.getCurrentVotes(user4.address)).to.be.equal(parseEther("600000"));
+		expect(await votingToken.getCurrentVotes(user4.address)).to.be.equal(
+			parseEther("600000")
+		);
 	});
 });

@@ -19,4 +19,4 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 };
 
 export default func;
-func.tags = ["CommunityAdminV2Test", "Test"];
+func.tags = ["CommunityAdminOldTest", "Test"];

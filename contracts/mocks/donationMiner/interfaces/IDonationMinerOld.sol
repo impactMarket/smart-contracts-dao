@@ -2,10 +2,10 @@
 pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "../../community/interfaces/ICommunityAdmin.sol";
-import "../../treasury/interfaces/ITreasury.sol";
+import "../../../community/interfaces/ICommunityAdmin.sol";
+import "../../../treasury/interfaces/ITreasury.sol";
 
-interface IDonationMinerV3 {
+interface IDonationMinerOld {
     struct RewardPeriod {
         uint256 rewardPerBlock; //reward tokens created per block.
         uint256 rewardAmount; //reward tokens from previous periods + reward tokens from this reward period

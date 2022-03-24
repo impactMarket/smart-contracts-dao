@@ -12,10 +12,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	await deploy("SPACTToken", {
 		from: deployer,
-		args: [owner],
+		args: [],
 		log: true,
 	});
 };
 
 export default func;
-func.tags = ["StakingTokenProd", "Prod"];
+func.tags = ["StakingTokenProd"];

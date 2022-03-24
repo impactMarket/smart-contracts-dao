@@ -7,12 +7,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const { deploy } = deployments;
 	const { deployer } = await getNamedAccounts();
 
-	const owner = deployer; //test
-	// const owner = (await deployments.get("PACTTimelock")).address; //prod
-
 	await deploy("SPACTToken", {
 		from: deployer,
-		args: [owner],
+		args: [],
 		log: true,
 	});
 };
