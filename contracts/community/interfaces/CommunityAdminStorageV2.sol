@@ -3,6 +3,7 @@ pragma solidity 0.8.4;
 
 import "./CommunityAdminStorageV1.sol";
 import "../../governor/ubiCommittee/interfaces/IUBICommittee.sol";
+import "../../ambassadors/interfaces/IAmbassadors.sol";
 
 /**
  * @title Storage for CommunityAdmin
@@ -12,4 +13,5 @@ import "../../governor/ubiCommittee/interfaces/IUBICommittee.sol";
  */
 abstract contract CommunityAdminStorageV2 is CommunityAdminStorageV1 {
     IUBICommittee public override ubiCommittee;
+    IAmbassadors public override ambassadors;
 }

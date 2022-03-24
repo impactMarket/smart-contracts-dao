@@ -95,6 +95,14 @@ contract CommunityAdminImplementation is
     event UBICommitteeUpdated(address indexed oldUbiCommittee, address indexed newUbiCommittee);
 
     /**
+     * @notice Triggered when the ambassadors has been updated
+     *
+     * @param oldAmbassadors   Old Ambassador address
+     * @param newAmbassadors   New Ambassador address
+     */
+    event AmbassadorsUpdated(address indexed oldAmbassadors, address indexed newAmbassadors);
+
+    /**
      * @notice Triggered when the communityTemplate address has been updated
      *
      * @param oldCommunityTemplate    Old communityTemplate address
@@ -185,6 +193,15 @@ contract CommunityAdminImplementation is
     }
 
     /**
+     * @notice Returns if an address is the ambassador of the community
+     *
+     * @return bool true if the address is an ambassador of the community
+     */
+    function isAmbassadorOfCommunity(address _community, address _ambassador) external view override returns (bool) {
+        return ambassadors.isAmbassadorOf(_ambassador, _community);
+    }
+
+    /**
      * @notice Updates the address of the treasury
      *
      * @param _newTreasury address of the new treasury contract
@@ -222,6 +239,7 @@ contract CommunityAdminImplementation is
      */
     function addCommunity(
         address[] memory _managers,
+        address _ambassador,
         uint256 _claimAmount,
         uint256 _maxClaim,
         uint256 _decreaseStep,
@@ -248,6 +266,7 @@ contract CommunityAdminImplementation is
         require(_communityAddress != address(0), "CommunityAdmin::addCommunity: NOT_VALID");
         communities[_communityAddress] = CommunityState.Valid;
         communityList.add(_communityAddress);
+        ambassadors.setCommunityToAmbassador(_ambassador, address(_communityAddress));
 
         emit CommunityAdded(
             _communityAddress,
@@ -357,6 +376,7 @@ contract CommunityAdminImplementation is
         );
         communities[address(_community)] = CommunityState.Removed;
 
+        ambassadors.removeCommunity(address(_community));
         _community.transfer(cUSD, address(treasury), cUSD.balanceOf(address(_community)));
         emit CommunityRemoved(address(_community));
     }
@@ -491,6 +511,18 @@ contract CommunityAdminImplementation is
         ubiCommittee = _newUbiCommittee;
 
         emit UBICommitteeUpdated(oldUbiCommittee, address(_newUbiCommittee));
+    }
+
+    /**
+     * @notice Updates proxy implementation address of ambassadors
+     *
+     * @param _newAmbassadors address of new implementation contract
+     */
+    function updateAmbassadors(IAmbassadors _newAmbassadors) external override onlyOwner {
+        address oldAmbassadors = address(ambassadors);
+        ambassadors = _newAmbassadors;
+
+        emit AmbassadorsUpdated(oldAmbassadors, address(_newAmbassadors));
     }
 
     /**
