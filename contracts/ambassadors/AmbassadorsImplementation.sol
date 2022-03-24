@@ -22,41 +22,21 @@ contract AmbassadorsImplementation is
 {
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    event EntityAdded(
-        address indexed entity
-    );
+    event EntityAdded(address indexed entity);
 
-    event EntityRemoved(
-        address indexed entity
-    );
+    event EntityRemoved(address indexed entity);
 
-    event AmbassadorAdded(
-        address indexed ambassador,
-        address indexed entity
-    );
+    event AmbassadorAdded(address indexed ambassador, address indexed entity);
 
-    event AmbassadorRemoved(
-        address indexed ambassador
-    );
+    event AmbassadorRemoved(address indexed ambassador);
 
-    event AmbassadorReplaced(
-        address indexed oldAmbassador,
-        address indexed newAmbassador
-    );
+    event AmbassadorReplaced(address indexed oldAmbassador, address indexed newAmbassador);
 
-    event AmbassadorTransfered(
-        address indexed ambassador,
-        address indexed entity
-    );
+    event AmbassadorTransfered(address indexed ambassador, address indexed entity);
 
-    event AmbassadorToCommunityUpdated(
-        address indexed ambassador,
-        address indexed community
-    );
+    event AmbassadorToCommunityUpdated(address indexed ambassador, address indexed community);
 
-    event CommunityRemoved(
-        address indexed community
-    );
+    event CommunityRemoved(address indexed community);
 
     modifier onlyAmbassador() {
         require(ambassadorByAddress[msg.sender] != 0, "Ambassador:: ONLY_AMBASSADOR");
@@ -69,7 +49,10 @@ contract AmbassadorsImplementation is
     }
 
     modifier onlyEntityOrOwner() {
-        require(entityByAddress[msg.sender] != 0 || owner() == msg.sender, "Ambassador:: ONLY_ENTITY_OR_OWNER");
+        require(
+            entityByAddress[msg.sender] != 0 || owner() == msg.sender,
+            "Ambassador:: ONLY_ENTITY_OR_OWNER"
+        );
         _;
     }
 
@@ -100,21 +83,31 @@ contract AmbassadorsImplementation is
     /**
      * @notice Is ambassador.
      */
-    function isAmbassador(address _ambassador) public override view returns (bool) {
+    function isAmbassador(address _ambassador) public view override returns (bool) {
         return ambassadorByAddress[_ambassador] != 0;
     }
 
     /**
      * @notice Is ambassador of a given community.
      */
-    function isAmbassadorOf(address _ambassador, address _community) public override view returns (bool) {
+    function isAmbassadorOf(address _ambassador, address _community)
+        public
+        view
+        override
+        returns (bool)
+    {
         return ambassadorByAddress[_ambassador] == communityToAmbassador[_community];
     }
 
     /**
      * @notice Is ambassador of a given community.
      */
-    function isAmbassadorAt(address _ambassador, address _entityAddress) public override view returns (bool) {
+    function isAmbassadorAt(address _ambassador, address _entityAddress)
+        public
+        view
+        override
+        returns (bool)
+    {
         return ambassadorByAddress[_ambassador] == entityByAddress[_entityAddress];
     }
 
@@ -125,7 +118,7 @@ contract AmbassadorsImplementation is
         require(entityByAddress[_entity] == 0, "Ambassador:: ALREADY_ENTITY");
 
         entityByAddress[_entity] = entityIndex;
-        entityIndex ++;
+        entityIndex++;
 
         emit EntityAdded(_entity);
     }
@@ -155,8 +148,8 @@ contract AmbassadorsImplementation is
         ambassadorByAddress[_ambassador] = ambassadorIndex;
         ambassadorByIndex[ambassadorIndex] = _ambassador;
         ambassadorToEntity[ambassadorIndex] = entityIndex;
-        entityAmbassadors[entityIndex] ++;
-        ambassadorIndex ++;
+        entityAmbassadors[entityIndex]++;
+        ambassadorIndex++;
 
         emit AmbassadorAdded(_ambassador, msg.sender);
     }
@@ -169,9 +162,12 @@ contract AmbassadorsImplementation is
         uint256 entityIndex = entityByAddress[msg.sender];
 
         require(isAmbassadorAt(_ambassador, msg.sender), "Ambassador:: NOT_AMBASSADOR");
-        require(ambassadorCommunities[ambassadorIndex].length() == 0, "Ambassador:: HAS_COMMUNITIES");
+        require(
+            ambassadorCommunities[ambassadorIndex].length() == 0,
+            "Ambassador:: HAS_COMMUNITIES"
+        );
 
-        entityAmbassadors[entityIndex] --;
+        entityAmbassadors[entityIndex]--;
         ambassadorByAddress[_ambassador] = 0;
 
         emit AmbassadorRemoved(_ambassador);
@@ -180,8 +176,15 @@ contract AmbassadorsImplementation is
     /**
      * @notice Replaces an ambassador.
      */
-    function replaceAmbassador(address _oldAmbassador, address _newAmbassador) external override onlyEntityOrOwner {
-        require(isAmbassadorAt(_oldAmbassador, msg.sender) || msg.sender == owner(), "Ambassador:: NOT_AMBASSADOR");
+    function replaceAmbassador(address _oldAmbassador, address _newAmbassador)
+        external
+        override
+        onlyEntityOrOwner
+    {
+        require(
+            isAmbassadorAt(_oldAmbassador, msg.sender) || msg.sender == owner(),
+            "Ambassador:: NOT_AMBASSADOR"
+        );
         require(!isAmbassador(_newAmbassador), "Ambassador:: ALREADY_AMBASSADOR");
 
         ambassadorByAddress[_newAmbassador] = ambassadorByAddress[_oldAmbassador];
@@ -193,17 +196,27 @@ contract AmbassadorsImplementation is
     /**
      * @notice Transfers an ambassador.
      */
-    function transferAmbassador(address _ambassador, address _toEntity, bool _keepCommunities) external override onlyEntityOrOwner {
-        require(isAmbassadorAt(_ambassador, msg.sender) || msg.sender == owner(), "Ambassador:: NOT_AMBASSADOR");
-        require(ambassadorCommunities[ambassadorIndex].length() == 0 || _keepCommunities, "Ambassador:: HAS_COMMUNITIES");
+    function transferAmbassador(
+        address _ambassador,
+        address _toEntity,
+        bool _keepCommunities
+    ) external override onlyEntityOrOwner {
+        require(
+            isAmbassadorAt(_ambassador, msg.sender) || msg.sender == owner(),
+            "Ambassador:: NOT_AMBASSADOR"
+        );
+        require(
+            ambassadorCommunities[ambassadorIndex].length() == 0 || _keepCommunities,
+            "Ambassador:: HAS_COMMUNITIES"
+        );
 
         uint256 ambassadorIndex = ambassadorByAddress[_ambassador];
         uint256 entityIndex = ambassadorToEntity[ambassadorIndex];
         uint256 entityToIndex = entityByAddress[_toEntity];
 
         ambassadorToEntity[ambassadorIndex] = entityToIndex;
-        entityAmbassadors[entityIndex] --;
-        entityAmbassadors[entityToIndex] ++;
+        entityAmbassadors[entityIndex]--;
+        entityAmbassadors[entityToIndex]++;
 
         emit AmbassadorTransfered(_ambassador, _toEntity);
     }
@@ -211,13 +224,23 @@ contract AmbassadorsImplementation is
     /**
      * @notice Transfers community from ambassador to another ambassador.
      */
-    function transferCommunityToAmbassador(address _to, address _community) external override onlyEntityOrOwner {
+    function transferCommunityToAmbassador(address _to, address _community)
+        external
+        override
+        onlyEntityOrOwner
+    {
         address _from = ambassadorByIndex[communityToAmbassador[_community]];
 
         require(isAmbassadorOf(_from, _community), "Ambassador:: NOT_AMBASSADOR");
         require(!isAmbassadorOf(_to, _community), "Ambassador:: ALREADY_AMBASSADOR");
-        require(isAmbassadorAt(_from, msg.sender) || msg.sender == owner(), "Ambassador:: NOT_AMBASSADOR");
-        require(isAmbassadorAt(_to, msg.sender) || msg.sender == owner(), "Ambassador:: NOT_AMBASSADOR");
+        require(
+            isAmbassadorAt(_from, msg.sender) || msg.sender == owner(),
+            "Ambassador:: NOT_AMBASSADOR"
+        );
+        require(
+            isAmbassadorAt(_to, msg.sender) || msg.sender == owner(),
+            "Ambassador:: NOT_AMBASSADOR"
+        );
 
         communityToAmbassador[_community] = ambassadorByAddress[_to];
         ambassadorCommunities[ambassadorByAddress[_from]].remove(_community);
@@ -229,7 +252,11 @@ contract AmbassadorsImplementation is
     /**
      * @notice Sets community to ambassador.
      */
-    function setCommunityToAmbassador(address _ambassador, address _community) external override onlyCommunityAdmin {
+    function setCommunityToAmbassador(address _ambassador, address _community)
+        external
+        override
+        onlyCommunityAdmin
+    {
         require(isAmbassador(_ambassador), "Ambassador:: NOT_AMBASSADOR");
         require(!isAmbassadorOf(_ambassador, _community), "Ambassador:: ALREADY_AMBASSADOR");
 

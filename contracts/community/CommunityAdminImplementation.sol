@@ -197,7 +197,12 @@ contract CommunityAdminImplementation is
      *
      * @return bool true if the address is an ambassador of the community
      */
-    function isAmbassadorOfCommunity(address _community, address _ambassador) external view override returns (bool) {
+    function isAmbassadorOfCommunity(address _community, address _ambassador)
+        external
+        view
+        override
+        returns (bool)
+    {
         return ambassadors.isAmbassadorOf(_ambassador, _community);
     }
 

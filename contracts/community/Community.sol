@@ -303,7 +303,10 @@ contract Community is
      * @notice Enforces sender to be the community ambassador
      */
     modifier onlyAmbassador() {
-        require(communityAdmin.isAmbassadorOfCommunity(address(this), msg.sender), "Community: NOT_AMBASSADOR");
+        require(
+            communityAdmin.isAmbassadorOfCommunity(address(this), msg.sender),
+            "Community: NOT_AMBASSADOR"
+        );
         _;
     }
 

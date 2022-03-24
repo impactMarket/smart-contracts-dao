@@ -175,7 +175,9 @@ async function deploy() {
 	);
 
 	await ambassadors.addEntity(ambassadorsEntityA.address);
-	await ambassadors.connect(ambassadorsEntityA).addAmbassador(ambassadorA.address);
+	await ambassadors
+		.connect(ambassadorsEntityA)
+		.addAmbassador(ambassadorA.address);
 }
 
 async function addDefaultCommunity() {
