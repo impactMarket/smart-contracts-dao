@@ -28,15 +28,40 @@ contract AmbassadorsImplementation is
 
     event AmbassadorAdded(address indexed ambassador, address indexed entity);
 
-    event AmbassadorRemoved(address indexed ambassador);
+    event AmbassadorRemoved(address indexed ambassador, address indexed entity);
 
-    event AmbassadorReplaced(address indexed oldAmbassador, address indexed newAmbassador);
+    event AmbassadorReplaced(
+        address indexed oldAmbassador,
+        address indexed newAmbassador,
+        address indexed entity
+    );
 
-    event AmbassadorTransfered(address indexed ambassador, address indexed entity);
+    event AmbassadorTransfered(
+        address indexed ambassador,
+        address indexed oldEntity,
+        address indexed newEntity
+    );
 
-    event AmbassadorToCommunityUpdated(address indexed ambassador, address indexed community);
+    event AmbassadorToCommunityUpdated(
+        address indexed fromAmbassador,
+        address indexed toAmbassador,
+        address indexed community
+    );
 
-    event CommunityRemoved(address indexed community);
+    event CommunityRemoved(address indexed ambassador, address indexed community);
+
+    event EntityAccountReplaced(
+        uint256 entityIndex,
+        address indexed oldAccount,
+        address indexed newAccount
+    );
+
+    event AmbassadorAccountReplaced(
+        uint256 ambassadorIndex,
+        address indexed entityAccount,
+        address indexed oldAccount,
+        address indexed newAccount
+    );
 
     modifier onlyAmbassador() {
         require(ambassadorByAddress[msg.sender] != 0, "Ambassador:: ONLY_AMBASSADOR");
@@ -118,6 +143,7 @@ contract AmbassadorsImplementation is
         require(entityByAddress[_entity] == 0, "Ambassador:: ALREADY_ENTITY");
 
         entityByAddress[_entity] = entityIndex;
+        entityByIndex[entityIndex] = _entity;
         entityIndex++;
 
         emit EntityAdded(_entity);
@@ -132,9 +158,26 @@ contract AmbassadorsImplementation is
         require(entityIndex != 0, "Ambassador:: NOT_ENTITY");
         require(entityAmbassadors[entityIndex] == 0, "Ambassador:: HAS_AMBASSADORS");
 
+        entityByIndex[entityIndex] = address(0);
         entityByAddress[_entity] = 0;
 
         emit EntityRemoved(_entity);
+    }
+
+    /**
+     * @notice Replace entity account.
+     */
+    function replaceEntityAccount(address _entity, address _newAccount) external override {
+        uint256 entityIndex = entityByAddress[_entity];
+
+        require(msg.sender == _entity || msg.sender == owner(), "Ambassador:: NOT_ALLOWED");
+        require(entityIndex != 0, "Ambassador:: NOT_ENTITY");
+
+        entityByIndex[entityIndex] = _newAccount;
+        entityByAddress[_newAccount] = entityByAddress[_entity];
+        entityByAddress[_entity] = 0;
+
+        emit EntityAccountReplaced(entityIndex, _entity, _newAccount);
     }
 
     /**
@@ -170,7 +213,29 @@ contract AmbassadorsImplementation is
         entityAmbassadors[entityIndex]--;
         ambassadorByAddress[_ambassador] = 0;
 
-        emit AmbassadorRemoved(_ambassador);
+        emit AmbassadorRemoved(_ambassador, msg.sender);
+    }
+
+    /**
+     * @notice Replace ambassador account.
+     */
+    function replaceAmbassadorAccount(address _ambassador, address _newAccount) external override {
+        uint256 ambassadorIndex = ambassadorByAddress[_ambassador];
+
+        require(msg.sender == _ambassador || msg.sender == owner(), "Ambassador:: NOT_ALLOWED");
+        require(ambassadorIndex != 0, "Ambassador:: NOT_AMBASSADOR");
+
+        ambassadorByIndex[ambassadorIndex] = _newAccount;
+        ambassadorByAddress[_newAccount] = ambassadorByAddress[_ambassador];
+        ambassadorByAddress[_ambassador] = 0;
+
+        uint256 entityIndex = ambassadorToEntity[ambassadorIndex];
+        emit AmbassadorAccountReplaced(
+            ambassadorIndex,
+            entityByIndex[entityIndex],
+            _ambassador,
+            _newAccount
+        );
     }
 
     /**
@@ -190,7 +255,10 @@ contract AmbassadorsImplementation is
         ambassadorByAddress[_newAmbassador] = ambassadorByAddress[_oldAmbassador];
         ambassadorByAddress[_oldAmbassador] = 0;
 
-        emit AmbassadorReplaced(_oldAmbassador, _newAmbassador);
+        uint256 ambassadorIndex = ambassadorByAddress[_oldAmbassador];
+        uint256 entityIndex = ambassadorToEntity[ambassadorIndex];
+
+        emit AmbassadorReplaced(_oldAmbassador, _newAmbassador, entityByIndex[entityIndex]);
     }
 
     /**
@@ -218,7 +286,7 @@ contract AmbassadorsImplementation is
         entityAmbassadors[entityIndex]--;
         entityAmbassadors[entityToIndex]++;
 
-        emit AmbassadorTransfered(_ambassador, _toEntity);
+        emit AmbassadorTransfered(_ambassador, entityByIndex[entityIndex], _toEntity);
     }
 
     /**
@@ -246,7 +314,7 @@ contract AmbassadorsImplementation is
         ambassadorCommunities[ambassadorByAddress[_from]].remove(_community);
         ambassadorCommunities[ambassadorByAddress[_to]].add(_community);
 
-        emit AmbassadorToCommunityUpdated(_from, _community);
+        emit AmbassadorToCommunityUpdated(_from, _to, _community);
     }
 
     /**
@@ -265,7 +333,7 @@ contract AmbassadorsImplementation is
         communityToAmbassador[_community] = ambassadorIndex;
         ambassadorCommunities[ambassadorIndex].add(_community);
 
-        emit AmbassadorToCommunityUpdated(_ambassador, _community);
+        emit AmbassadorToCommunityUpdated(address(0), _ambassador, _community);
     }
 
     /**
@@ -281,6 +349,6 @@ contract AmbassadorsImplementation is
         communityToAmbassador[_community] = ambassadorIndex;
         ambassadorCommunities[ambassadorIndex].add(_community);
 
-        emit CommunityRemoved(_community);
+        emit CommunityRemoved(_ambassador, _community);
     }
 }

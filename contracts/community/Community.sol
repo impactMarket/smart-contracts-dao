@@ -495,6 +495,8 @@ contract Community is
         onlyManagers
         nonReentrant
     {
+        require(!locked, "LOCKED");
+
         Beneficiary storage _beneficiary = beneficiaries[_beneficiaryAddress];
         require(
             _beneficiary.state == BeneficiaryState.NONE,
@@ -518,6 +520,8 @@ contract Community is
      * @param _beneficiaryAddress address of the beneficiary to be locked
      */
     function lockBeneficiary(address _beneficiaryAddress) external override onlyManagers {
+        require(!locked, "LOCKED");
+
         Beneficiary storage _beneficiary = beneficiaries[_beneficiaryAddress];
 
         require(
@@ -534,6 +538,8 @@ contract Community is
      * @param _beneficiaryAddress address of the beneficiary to be unlocked
      */
     function unlockBeneficiary(address _beneficiaryAddress) external override onlyManagers {
+        require(!locked, "LOCKED");
+
         Beneficiary storage _beneficiary = beneficiaries[_beneficiaryAddress];
 
         require(
@@ -607,17 +613,17 @@ contract Community is
     }
 
     /**
-     * @notice Locks the community claims
+     * @notice Locks the community
      */
-    function lock() external override onlyManagers {
+    function lock() external override onlyAmbassador {
         locked = true;
         emit CommunityLocked(msg.sender);
     }
 
     /**
-     * @notice Unlocks the community claims
+     * @notice Unlocks the community
      */
-    function unlock() external override onlyManagers {
+    function unlock() external override onlyAmbassador {
         locked = false;
         emit CommunityUnlocked(msg.sender);
     }
@@ -626,6 +632,8 @@ contract Community is
      * @notice Requests treasury funds from the communityAdmin
      */
     function requestFunds() external override onlyManagers {
+        require(!locked, "LOCKED");
+
         communityAdmin.fundCommunity();
 
         lastFundRequest = block.number;

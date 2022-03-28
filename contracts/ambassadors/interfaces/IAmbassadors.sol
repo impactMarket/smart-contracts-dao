@@ -9,8 +9,10 @@ interface IAmbassadors {
 
     function addEntity(address _entity) external;
     function removeEntity(address _entity) external;
+    function replaceEntityAccount(address _entity, address _newAccount) external;
     function addAmbassador(address _ambassador) external;
     function removeAmbassador(address _ambassador) external;
+    function replaceAmbassadorAccount(address _ambassador, address _newAccount) external;
     function replaceAmbassador(address _oldAmbassador, address _newAmbassador) external;
     function transferAmbassador(address _ambassador, address _toEntity, bool _keepCommunities) external;
     function transferCommunityToAmbassador(address _to, address _community) external;

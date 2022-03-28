@@ -28,6 +28,8 @@ abstract contract AmbassadorsStorageV1 is IAmbassadors {
     mapping(uint256 => uint256) public ambassadorToEntity;
     // entity adding ambassadors
     mapping(address => uint256) public entityByAddress;
+    // entity adding ambassadors
+    mapping(uint256 => address) public entityByIndex;
     // number of ambassadors an entity is resposible for
     mapping(uint256 => uint256) public entityAmbassadors;
 }

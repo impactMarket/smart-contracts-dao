@@ -888,9 +888,9 @@ describe("Community - Claim", () => {
 	});
 
 	it("should not claim if community is locked", async () => {
-		await expect(communityInstance.connect(communityManagerA).lock())
+		await expect(communityInstance.connect(ambassadorA).lock())
 			.to.emit(communityInstance, "CommunityLocked")
-			.withArgs(communityManagerA.address);
+			.withArgs(ambassadorA.address);
 		await expect(
 			communityInstance.connect(beneficiaryA).claim()
 		).to.be.rejectedWith("LOCKED");
@@ -1219,20 +1219,10 @@ describe("Community - Governance (2)", () => {
 		).to.be.fulfilled;
 	});
 
-	it("should lock community if manager", async () => {
-		await expect(communityInstance.connect(communityManagerA).lock())
-			.to.emit(communityInstance, "CommunityLocked")
-			.withArgs(communityManagerA.address);
-	});
-
-	it("should lock community if manager", async () => {
-		await expect(communityInstance.connect(communityManagerA).lock())
-			.to.emit(communityInstance, "CommunityLocked")
-			.withArgs(communityManagerA.address);
-
-		await expect(communityInstance.connect(communityManagerA).unlock())
-			.to.emit(communityInstance, "CommunityUnlocked")
-			.withArgs(communityManagerA.address);
+	it("should not lock community if manager", async () => {
+		await expect(
+			communityInstance.connect(communityManagerA).lock()
+		).to.be.rejectedWith("Community: NOT_AMBASSADOR");
 	});
 });
 
