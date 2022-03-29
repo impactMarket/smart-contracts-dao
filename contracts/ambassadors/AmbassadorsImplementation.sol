@@ -9,7 +9,6 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./interfaces/AmbassadorsStorageV1.sol";
 import "../community/interfaces/ICommunityAdmin.sol";
-import "hardhat/console.sol";
 
 /**
  * @notice Welcome to Ambassadors contract.
@@ -22,40 +21,79 @@ contract AmbassadorsImplementation is
 {
     using EnumerableSet for EnumerableSet.AddressSet;
 
+    /**
+     * @notice Triggered when an entity is added.
+     *
+     * @param entity Address of the entity added
+     *
+     */
     event EntityAdded(address indexed entity);
 
+    /**
+     * @notice Triggered when an entity is removed.
+     *
+     * @param entity Address of the entity removed
+     *
+     */
     event EntityRemoved(address indexed entity);
 
-    event AmbassadorAdded(address indexed ambassador, address indexed entity);
-
-    event AmbassadorRemoved(address indexed ambassador, address indexed entity);
-
-    event AmbassadorReplaced(
-        address indexed oldAmbassador,
-        address indexed newAmbassador,
-        address indexed entity
-    );
-
-    event AmbassadorTransfered(
-        address indexed ambassador,
-        address indexed oldEntity,
-        address indexed newEntity
-    );
-
-    event AmbassadorToCommunityUpdated(
-        address indexed fromAmbassador,
-        address indexed toAmbassador,
-        address indexed community
-    );
-
-    event CommunityRemoved(address indexed ambassador, address indexed community);
-
+    /**
+     * @notice Triggered when an entity replaced account address.
+     *
+     * @param entityIndex Entity index replacing account address
+     * @param oldAccount Old account address
+     * @param newAccount New account address
+     *
+     */
     event EntityAccountReplaced(
         uint256 entityIndex,
         address indexed oldAccount,
         address indexed newAccount
     );
 
+    /**
+     * @notice Triggered when an ambassador is added to an entity.
+     *
+     * @param ambassador Address of the ambassador added
+     * @param entity Address of the entity where the ambassador is added
+     *
+     */
+    event AmbassadorAdded(address indexed ambassador, address indexed entity);
+
+    /**
+     * @notice Triggered when an ambassador is removed.
+     *
+     * @param ambassador Address of the ambassador removed
+     * @param entity Address of the entity where the ambassador is removed
+     *
+     */
+    event AmbassadorRemoved(address indexed ambassador, address indexed entity);
+
+    /**
+     * @notice Triggered when an ambassador is replaced by the entity.
+     *
+     * @param ambassadorIndex Index of the ambassador being replaced
+     * @param entityAccount Address of the entity where ambassador is being replaced
+     * @param oldAmbassador Ambassador's old account address
+     * @param newAmbassador Ambassador's new account address
+     *
+     */
+    event AmbassadorReplaced(
+        uint256 ambassadorIndex,
+        address indexed entityAccount,
+        address indexed oldAmbassador,
+        address indexed newAmbassador
+    );
+
+    /**
+     * @notice Triggered when an ambassador replaces it's own account.
+     *
+     * @param ambassadorIndex Index of the ambassador being replaced
+     * @param entityAccount Address of the entity where ambassador is being replaced
+     * @param oldAccount Ambassador's old account address
+     * @param newAccount Ambassador's new account address
+     *
+     */
     event AmbassadorAccountReplaced(
         uint256 ambassadorIndex,
         address indexed entityAccount,
@@ -63,16 +101,62 @@ contract AmbassadorsImplementation is
         address indexed newAccount
     );
 
+    /**
+     * @notice Triggered when an ambassador is transfered to a new entity.
+     *
+     * @param ambassador Ambassador address being replaced
+     * @param oldEntity Entity's old account address
+     * @param newEntity Entity's new account address
+     *
+     */
+    event AmbassadorTransfered(
+        address indexed ambassador,
+        address indexed oldEntity,
+        address indexed newEntity
+    );
+
+    /**
+     * @notice Triggered when a community is transfered from one ambassador to another.
+     *
+     * @param fromAmbassador Ambassador address from which the community is being transfered from
+     * @param toAmbassador Ambassador address to which the community is being transfered to
+     * @param community Community address being transfered
+     *
+     */
+    event AmbassadorToCommunityUpdated(
+        address indexed fromAmbassador,
+        address indexed toAmbassador,
+        address indexed community
+    );
+
+    /**
+     * @notice Triggered when a community is removed.
+     *
+     * @param ambassador Ambassador of the community being removed
+     * @param community Community address being removed
+     *
+     */
+    event CommunityRemoved(address indexed ambassador, address indexed community);
+
+    /**
+     * @notice Enforces sender to be an ambassador
+     */
     modifier onlyAmbassador() {
         require(ambassadorByAddress[msg.sender] != 0, "Ambassador:: ONLY_AMBASSADOR");
         _;
     }
 
+    /**
+     * @notice Enforces sender to be an entity
+     */
     modifier onlyEntity() {
         require(entityByAddress[msg.sender] != 0, "Ambassador:: ONLY_ENTITY");
         _;
     }
 
+    /**
+     * @notice Enforces sender to be an entity or owner
+     */
     modifier onlyEntityOrOwner() {
         require(
             entityByAddress[msg.sender] != 0 || owner() == msg.sender,
@@ -81,6 +165,9 @@ contract AmbassadorsImplementation is
         _;
     }
 
+    /**
+     * @notice Enforces sender to be te community admin contract
+     */
     modifier onlyCommunityAdmin() {
         require(address(communityAdmin) == msg.sender, "Ambassador:: ONLY_COMMUNITY_ADMIN");
         _;
@@ -88,6 +175,9 @@ contract AmbassadorsImplementation is
 
     /**
      * @notice Used to initialize a new Ambassadors contract
+     *
+     * @param _communityAdmin Address of the community admin contract
+     *
      */
     function initialize(ICommunityAdmin _communityAdmin) external initializer {
         __Ownable_init();
@@ -106,14 +196,21 @@ contract AmbassadorsImplementation is
     }
 
     /**
-     * @notice Is ambassador.
+     * @notice Returns boolean whether an address is ambassador or not.
+     *
+     * @param _ambassador Address of the ambassador
+     * @return Boolean whether an address is ambassador or not
      */
     function isAmbassador(address _ambassador) public view override returns (bool) {
         return ambassadorByAddress[_ambassador] != 0;
     }
 
     /**
-     * @notice Is ambassador of a given community.
+     * @notice Returns boolean whether an address is ambassador of a given community.
+     *
+     * @param _ambassador Address of the ambassador
+     * @param _community Address of the community
+     * @return Boolean whether an address is ambassador of a given community or not
      */
     function isAmbassadorOf(address _ambassador, address _community)
         public
@@ -125,7 +222,11 @@ contract AmbassadorsImplementation is
     }
 
     /**
-     * @notice Is ambassador of a given community.
+     * @notice Returns boolean whether an address is ambassador at a given entity.
+     *
+     * @param _ambassador Address of the ambassador
+     * @param _entityAddress Address of the entity
+     * @return Boolean whether an address is ambassador at a given entity or not
      */
     function isAmbassadorAt(address _ambassador, address _entityAddress)
         public
@@ -133,11 +234,14 @@ contract AmbassadorsImplementation is
         override
         returns (bool)
     {
-        return ambassadorByAddress[_ambassador] == entityByAddress[_entityAddress];
+        return
+            ambassadorToEntity[ambassadorByAddress[_ambassador]] == entityByAddress[_entityAddress];
     }
 
     /**
      * @notice Registers an entity.
+     *
+     * @param _entity Address of the entity
      */
     function addEntity(address _entity) public override onlyOwner {
         require(entityByAddress[_entity] == 0, "Ambassador:: ALREADY_ENTITY");
@@ -151,6 +255,8 @@ contract AmbassadorsImplementation is
 
     /**
      * @notice Removes an entity.
+     *
+     * @param _entity Address of the entity
      */
     function removeEntity(address _entity) public override onlyOwner {
         uint256 entityIndex = entityByAddress[_entity];
@@ -166,22 +272,27 @@ contract AmbassadorsImplementation is
 
     /**
      * @notice Replace entity account.
+     *
+     * @param _entity Address of the entity
+     * @param _newEntity New entity address
      */
-    function replaceEntityAccount(address _entity, address _newAccount) external override {
+    function replaceEntityAccount(address _entity, address _newEntity) external override {
         uint256 entityIndex = entityByAddress[_entity];
 
         require(msg.sender == _entity || msg.sender == owner(), "Ambassador:: NOT_ALLOWED");
         require(entityIndex != 0, "Ambassador:: NOT_ENTITY");
 
-        entityByIndex[entityIndex] = _newAccount;
-        entityByAddress[_newAccount] = entityByAddress[_entity];
+        entityByIndex[entityIndex] = _newEntity;
+        entityByAddress[_newEntity] = entityByAddress[_entity];
         entityByAddress[_entity] = 0;
 
-        emit EntityAccountReplaced(entityIndex, _entity, _newAccount);
+        emit EntityAccountReplaced(entityIndex, _entity, _newEntity);
     }
 
     /**
      * @notice Registers an ambassador.
+     *
+     * @param _ambassador Address of the ambassador
      */
     function addAmbassador(address _ambassador) external override onlyEntity {
         require(!isAmbassador(_ambassador), "Ambassador:: ALREADY_AMBASSADOR");
@@ -199,14 +310,16 @@ contract AmbassadorsImplementation is
 
     /**
      * @notice Removes an ambassador.
+     *
+     * @param _ambassador Address of the ambassador
      */
     function removeAmbassador(address _ambassador) external override onlyEntity {
-        uint256 ambassadorIndex = ambassadorByAddress[_ambassador];
+        uint256 thisAmbassadorIndex = ambassadorByAddress[_ambassador];
         uint256 entityIndex = entityByAddress[msg.sender];
 
         require(isAmbassadorAt(_ambassador, msg.sender), "Ambassador:: NOT_AMBASSADOR");
         require(
-            ambassadorCommunities[ambassadorIndex].length() == 0,
+            ambassadorCommunities[thisAmbassadorIndex].length() == 0,
             "Ambassador:: HAS_COMMUNITIES"
         );
 
@@ -217,72 +330,91 @@ contract AmbassadorsImplementation is
     }
 
     /**
-     * @notice Replace ambassador account.
+     * @notice Replace ambassador account. Called by ambassador.
+     *
+     * @param _ambassador Address of the ambassador
+     * @param _newAmbassador New ambassador address
      */
-    function replaceAmbassadorAccount(address _ambassador, address _newAccount) external override {
-        uint256 ambassadorIndex = ambassadorByAddress[_ambassador];
-
+    function replaceAmbassadorAccount(address _ambassador, address _newAmbassador)
+        external
+        override
+    {
         require(msg.sender == _ambassador || msg.sender == owner(), "Ambassador:: NOT_ALLOWED");
-        require(ambassadorIndex != 0, "Ambassador:: NOT_AMBASSADOR");
+        require(isAmbassador(_ambassador), "Ambassador:: NOT_AMBASSADOR");
+        require(!isAmbassador(_newAmbassador), "Ambassador:: ALREADY_AMBASSADOR");
 
-        ambassadorByIndex[ambassadorIndex] = _newAccount;
-        ambassadorByAddress[_newAccount] = ambassadorByAddress[_ambassador];
-        ambassadorByAddress[_ambassador] = 0;
+        uint256 thisAmbassadorIndex;
+        address entityAddress;
+        address oldAmbassador;
+        address newAmbassador;
+        (
+            thisAmbassadorIndex,
+            entityAddress,
+            oldAmbassador,
+            newAmbassador
+        ) = _replaceAmbassadorAccountInternal(_ambassador, _newAmbassador);
 
-        uint256 entityIndex = ambassadorToEntity[ambassadorIndex];
         emit AmbassadorAccountReplaced(
-            ambassadorIndex,
-            entityByIndex[entityIndex],
-            _ambassador,
-            _newAccount
+            thisAmbassadorIndex,
+            entityAddress,
+            oldAmbassador,
+            newAmbassador
         );
     }
 
     /**
-     * @notice Replaces an ambassador.
+     * @notice Replaces an ambassador. Called by entity.
+     *
+     * @param _oldAmbassador Address of the ambassador
+     * @param _newAmbassador New ambassador address
      */
-    function replaceAmbassador(address _oldAmbassador, address _newAmbassador)
-        external
-        override
-        onlyEntityOrOwner
-    {
+    function replaceAmbassador(address _oldAmbassador, address _newAmbassador) external override {
         require(
             isAmbassadorAt(_oldAmbassador, msg.sender) || msg.sender == owner(),
             "Ambassador:: NOT_AMBASSADOR"
         );
         require(!isAmbassador(_newAmbassador), "Ambassador:: ALREADY_AMBASSADOR");
 
-        ambassadorByAddress[_newAmbassador] = ambassadorByAddress[_oldAmbassador];
-        ambassadorByAddress[_oldAmbassador] = 0;
+        uint256 thisAmbassadorIndex;
+        address entityAddress;
+        address oldAmbassador;
+        address newAmbassador;
+        (
+            thisAmbassadorIndex,
+            entityAddress,
+            oldAmbassador,
+            newAmbassador
+        ) = _replaceAmbassadorAccountInternal(_oldAmbassador, _newAmbassador);
 
-        uint256 ambassadorIndex = ambassadorByAddress[_oldAmbassador];
-        uint256 entityIndex = ambassadorToEntity[ambassadorIndex];
-
-        emit AmbassadorReplaced(_oldAmbassador, _newAmbassador, entityByIndex[entityIndex]);
+        emit AmbassadorReplaced(thisAmbassadorIndex, entityAddress, oldAmbassador, newAmbassador);
     }
 
     /**
-     * @notice Transfers an ambassador.
+     * @notice Transfers an ambassador to another entity.
+     *
+     * @param _ambassador Address of the ambassador
+     * @param _toEntity Address of the entity
+     * @param _keepCommunities Boolean whether to keep the ambassador's communities or not
      */
     function transferAmbassador(
         address _ambassador,
         address _toEntity,
         bool _keepCommunities
     ) external override onlyEntityOrOwner {
+        uint256 thisAmbassadorIndex = ambassadorByAddress[_ambassador];
         require(
             isAmbassadorAt(_ambassador, msg.sender) || msg.sender == owner(),
             "Ambassador:: NOT_AMBASSADOR"
         );
         require(
-            ambassadorCommunities[ambassadorIndex].length() == 0 || _keepCommunities,
+            ambassadorCommunities[thisAmbassadorIndex].length() == 0 || _keepCommunities == true,
             "Ambassador:: HAS_COMMUNITIES"
         );
 
-        uint256 ambassadorIndex = ambassadorByAddress[_ambassador];
-        uint256 entityIndex = ambassadorToEntity[ambassadorIndex];
+        uint256 entityIndex = ambassadorToEntity[thisAmbassadorIndex];
         uint256 entityToIndex = entityByAddress[_toEntity];
 
-        ambassadorToEntity[ambassadorIndex] = entityToIndex;
+        ambassadorToEntity[thisAmbassadorIndex] = entityToIndex;
         entityAmbassadors[entityIndex]--;
         entityAmbassadors[entityToIndex]++;
 
@@ -291,6 +423,9 @@ contract AmbassadorsImplementation is
 
     /**
      * @notice Transfers community from ambassador to another ambassador.
+     *
+     * @param _to Address of the ambassador to transfer the community to
+     * @param _community Community address
      */
     function transferCommunityToAmbassador(address _to, address _community)
         external
@@ -319,6 +454,9 @@ contract AmbassadorsImplementation is
 
     /**
      * @notice Sets community to ambassador.
+     *
+     * @param _ambassador Address of the ambassador
+     * @param _community Community address
      */
     function setCommunityToAmbassador(address _ambassador, address _community)
         external
@@ -328,27 +466,54 @@ contract AmbassadorsImplementation is
         require(isAmbassador(_ambassador), "Ambassador:: NOT_AMBASSADOR");
         require(!isAmbassadorOf(_ambassador, _community), "Ambassador:: ALREADY_AMBASSADOR");
 
-        uint256 ambassadorIndex = ambassadorByAddress[_ambassador];
+        uint256 thisAmbassadorIndex = ambassadorByAddress[_ambassador];
 
-        communityToAmbassador[_community] = ambassadorIndex;
-        ambassadorCommunities[ambassadorIndex].add(_community);
+        communityToAmbassador[_community] = thisAmbassadorIndex;
+        ambassadorCommunities[thisAmbassadorIndex].add(_community);
 
         emit AmbassadorToCommunityUpdated(address(0), _ambassador, _community);
     }
 
     /**
      * @notice Removes community.
+     *
+     * @param _community Community address
      */
     function removeCommunity(address _community) external override onlyCommunityAdmin {
         address _ambassador = ambassadorByIndex[communityToAmbassador[_community]];
 
         require(isAmbassadorOf(_ambassador, _community), "Ambassador:: NOT_AMBASSADOR");
 
-        uint256 ambassadorIndex = ambassadorByAddress[_ambassador];
+        uint256 thisAmbassadorIndex = ambassadorByAddress[_ambassador];
 
-        communityToAmbassador[_community] = ambassadorIndex;
-        ambassadorCommunities[ambassadorIndex].add(_community);
+        communityToAmbassador[_community] = 0;
+        ambassadorCommunities[thisAmbassadorIndex].remove(_community);
 
         emit CommunityRemoved(_ambassador, _community);
+    }
+
+    /**
+     * @notice Internal function, common to account replacement.
+     *
+     * @param _old Address of the ambassador
+     * @param _new New ambassador address
+     */
+    function _replaceAmbassadorAccountInternal(address _old, address _new)
+        private
+        returns (
+            uint256,
+            address,
+            address,
+            address
+        )
+    {
+        uint256 thisAmbassadorIndex = ambassadorByAddress[_old];
+        uint256 entityIndex = ambassadorToEntity[thisAmbassadorIndex];
+
+        ambassadorByIndex[thisAmbassadorIndex] = _new;
+        ambassadorByAddress[_new] = ambassadorByAddress[_old];
+        ambassadorByAddress[_old] = 0;
+
+        return (thisAmbassadorIndex, entityByIndex[entityIndex], _old, _new);
     }
 }

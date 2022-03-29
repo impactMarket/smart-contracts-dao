@@ -234,6 +234,7 @@ contract CommunityAdminImplementation is
      * @notice Adds a new community
      *
      * @param _managers addresses of the community managers
+     * @param _ambassador address of the ambassador
      * @param _claimAmount base amount to be claim by the beneficiary
      * @param _maxClaim limit that a beneficiary can claim at in total
      * @param _decreaseStep value decreased from maxClaim for every beneficiary added
