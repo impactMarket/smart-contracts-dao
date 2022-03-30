@@ -68,7 +68,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	);
 
 	await stakingContract.transferOwnership(ownerAddress);
-	await SPACT.transferOwnership(stakingContract.address);
+	// await SPACT.transferOwnership(stakingContract.address);
 	await donationMiner.updateStaking(stakingContract.address);
 };
 

@@ -756,6 +756,7 @@ describe("Governance - with two tokens", function () {
 		);
 
 		await stakingToken.mint(user1.address, parseEther("100000001")); // 100 mil (1 %)
+
 		await stakingToken.mint(user6.address, parseEther("50000001")); // 50 mil (0.5 %)
 		await stakingToken.connect(user1).delegate(user1.address);
 		await stakingToken.connect(user6).delegate(user6.address);
@@ -770,11 +771,6 @@ describe("Governance - with two tokens", function () {
 		expect(
 			await proxyAdmin.getProxyImplementation(governanceDelegator.address)
 		).to.be.equal(governanceDelegate.address);
-
-		// const callData = governanceDelegateFactory.interface.encodeFunctionData(
-		// 	"_setReleaseToken",
-		// 	[ADDRESS_TEST]
-		// );
 
 		await createAndExecuteProposal(
 			governanceDelegator,

@@ -19,7 +19,7 @@ import { parseUnits } from "@ethersproject/units/src.ts";
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 
-describe.only("Donation", () => {
+describe("Donation", () => {
 	const START_BLOCK = 130;
 	const REWARD_PERIOD_SIZE = 20;
 	const CLAIM_DELAY = 5;
@@ -2914,6 +2914,8 @@ describe.only("Donation", () => {
 			await PACT.transfer(user5.address, user5InitialPACTBalance);
 
 			await advanceToBlockN(START_BLOCK);
+
+			await SPACT.transferOwnership(Staking.address);
 		});
 
 		it("Should stake and claim, one donor #1", async function () {

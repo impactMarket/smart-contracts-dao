@@ -80,6 +80,8 @@ describe("Staking", () => {
 		await PACT.transfer(user3.address, toEther("3000000"));
 		await PACT.transfer(user4.address, toEther("4000000"));
 		await PACT.transfer(user5.address, toEther("5000000"));
+
+		await SPACT.transferOwnership(Staking.address);
 	});
 
 	async function checkDonationMinerRewardPeriod(
