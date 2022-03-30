@@ -1,9 +1,10 @@
 // @ts-ignore
 import { ethers } from "hardhat";
 import { advanceBlockNTimes, advanceNSeconds } from "./TimeTravel";
-import { parseEther } from "@ethersproject/units";
+import { parseEther, formatEther } from "@ethersproject/units";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import * as ethersTypes from "ethers";
+import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 
 export const governanceParams = {
 	EXECUTION_DELAY: 2 * 24 * 60 * 60, //2 days in seconds
@@ -14,6 +15,14 @@ export const governanceParams = {
 	QUORUM_VOTES: parseEther("100000000"),
 	GRACE_PERIOD: 3600 * 24 * 14, //fixed in timelock
 };
+
+export function toEther(value: number | string): BigNumber {
+	return parseEther(value.toString());
+}
+
+export function fromEther(value: number | string | BigNumber): string {
+	return formatEther(value.toString());
+}
 
 export async function createAndExecuteProposal(
 	governanceDelegator: ethersTypes.Contract,

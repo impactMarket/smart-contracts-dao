@@ -4,8 +4,6 @@ import { parseEther } from "@ethersproject/units";
 import { getCUSDAddress } from "./cUSD";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
-const STAKING_DONATION_RATIO = 1000;
-
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// @ts-ignore
 	const { deployments, ethers } = hre;
@@ -73,9 +71,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	);
 
 	await donationMinerContract.transferOwnership(ownerAddress);
-	await donationMinerContract.updateStakingDonationRatio(
-		STAKING_DONATION_RATIO
-	);
 };
 
 export default func;

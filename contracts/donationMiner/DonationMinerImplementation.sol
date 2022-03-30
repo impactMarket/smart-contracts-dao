@@ -237,6 +237,22 @@ contract DonationMinerImplementation is
     }
 
     /**
+     * @notice Returns the amount of PACT staked by a user at the and of the reward period
+     *
+     * @param _period reward period number
+     * @param _donor address of the donor
+     * @return uint256 amount of PACT staked by a user at the and of the reward period
+     */
+    function rewardPeriodDonorStakeAmounts(uint256 _period, address _donor)
+        external
+        view
+        override
+        returns (uint256)
+    {
+        return rewardPeriods[_period].donorStakeAmounts[_donor];
+    }
+
+    /**
      * @notice Returns a reward period number from a donor reward period list
      *
      * @param _donor address of the donor
@@ -264,6 +280,8 @@ contract DonationMinerImplementation is
         uint256 _newDecayNumerator,
         uint256 _newDecayDenominator
     ) external override onlyOwner {
+        initializeRewardPeriods();
+
         uint256 _oldRewardPeriodSize = rewardPeriodSize;
         uint256 _oldDecayNumerator = decayNumerator;
         uint256 _oldDecayDenominator = decayDenominator;
@@ -317,6 +335,8 @@ contract DonationMinerImplementation is
      * @param _newAgainstPeriods      Number of reward periods for the backward computation
      */
     function updateAgainstPeriods(uint256 _newAgainstPeriods) external override onlyOwner {
+        initializeRewardPeriods();
+
         uint256 _oldAgainstPeriods = againstPeriods;
         againstPeriods = _newAgainstPeriods;
 
@@ -424,7 +444,7 @@ contract DonationMinerImplementation is
 
         uint256 _stakeAmount = _computeRewardsByPeriodNumber(msg.sender, rewardPeriodCount - 1);
 
-        PACT.approve(address(this), _stakeAmount);
+        PACT.approve(address(staking), _stakeAmount);
         staking.stake(msg.sender, _stakeAmount);
 
         emit RewardStaked(msg.sender, _stakeAmount);
@@ -447,9 +467,9 @@ contract DonationMinerImplementation is
             "DonationMiner::stakeRewardsPartial: This reward period isn't claimable yet"
         );
 
-        uint256 _stakeAmount = _computeRewardsByPeriodNumber(msg.sender, rewardPeriodCount);
+        uint256 _stakeAmount = _computeRewardsByPeriodNumber(msg.sender, _lastPeriodNumber);
 
-        PACT.approve(address(this), _stakeAmount);
+        PACT.approve(address(staking), _stakeAmount);
         staking.stake(msg.sender, _stakeAmount);
 
         emit RewardStaked(msg.sender, _stakeAmount);
@@ -588,6 +608,7 @@ contract DonationMinerImplementation is
         initializeRewardPeriods();
 
         RewardPeriod storage _rewardPeriod = rewardPeriods[rewardPeriodCount];
+        _rewardPeriod.hasSetStakeAmount[_holderAddress] = true;
         _rewardPeriod.donorStakeAmounts[_holderAddress] = _holderAmount;
         _rewardPeriod.stakesAmount = _totalAmount;
 
@@ -615,18 +636,14 @@ contract DonationMinerImplementation is
             _newPeriod.endBlock = _newPeriod.startBlock + rewardPeriodSize - 1;
             _newPeriod.rewardPerBlock = calculateRewardPerBlock();
             _newPeriod.stakesAmount = _lastPeriod.stakesAmount;
+            _newPeriod.stakingDonationRatio = stakingDonationRatio;
             uint256 _rewardAmount = rewardPeriodSize * _newPeriod.rewardPerBlock;
 
-            uint256 _totalAmountAgainst;
             uint256 _startPeriod = (rewardPeriodCount - 1 > _lastPeriod.againstPeriods)
                 ? rewardPeriodCount - 1 - _lastPeriod.againstPeriods
-                : 0;
-            (, _totalAmountAgainst) = _calculateDonorIntervalAmounts(
-                msg.sender,
-                _startPeriod,
-                rewardPeriodCount - 1
-            );
-            if (_totalAmountAgainst == 0) {
+                : 1;
+
+            if (!hasDonationOrStake(_startPeriod, rewardPeriodCount - 1)) {
                 _rewardAmount += _lastPeriod.rewardAmount;
             }
             _newPeriod.rewardAmount = _rewardAmount;
@@ -755,7 +772,7 @@ contract DonationMinerImplementation is
             _donor.lastClaimPeriod = _lastPeriodNumber;
         }
 
-        rewardPeriods[rewardPeriodCount].donorStakeAmounts[_donorAddress] = _lastDonorStakeAmount;
+        rewardPeriods[_lastPeriodNumber].donorStakeAmounts[_donorAddress] = _lastDonorStakeAmount;
 
         if (_claimAmount == 0) {
             return _claimAmount;
@@ -783,92 +800,122 @@ contract DonationMinerImplementation is
     {
         Donor storage _donor = donors[_donorAddress];
 
+        // _index is the last reward period number for which the donor claimed his reward
         uint256 _index = _donor.lastClaimPeriod + 1;
 
         // this is only used for the transition from V2 to V3
         // we have to be sure a user is not able to claim for a epoch that he's claimed
-        //      so, if the _donor.lastClaimPeriod hasn't been set yet, we will start from _donor.rewardPeriods[_donor.lastClaim]
+        //      so, if the _donor.lastClaimPeriod hasn't been set yet,
+        //      we will start from _donor.rewardPeriods[_donor.lastClaim]
         if (_index == 1) {
             _index = _donor.rewardPeriods[_donor.lastClaim] + 1;
         }
 
         uint256 _donorAmount;
         uint256 _totalAmount;
-        uint256 _startPeriod;
         uint256 _rewardAmount;
+        uint256 _stakesAmount;
+        uint256 _stakingDonationRatio;
 
-        //first time _previousRewardPeriod should be rewardPeriods[0] in order to have:
+        //first time _previousRewardPeriod must be rewardPeriods[0] in order to have:
         //_currentRewardPeriod.againstPeriods = _currentRewardPeriod.againstPeriods - _previousRewardPeriod.againstPeriods
         RewardPeriod storage _previousRewardPeriod = rewardPeriods[0];
         RewardPeriod storage _currentRewardPeriod = rewardPeriods[_index];
         RewardPeriod storage _expiredRewardPeriod = rewardPeriods[0];
 
-        //if _index == 0 => _lastDonorStakeAmount is 0
-        if (_index > 0) {
-            _lastDonorStakeAmount = rewardPeriods[_index - 1].donorStakeAmounts[_donorAddress];
-        }
+        //we save the stake amount of a donor at the end of each claim,
+        //so rewardPeriods[_index - 1].donorStakeAmounts[_donorAddress] is the amount staked by the donor at his last claim
+        _lastDonorStakeAmount = rewardPeriods[_index - 1].donorStakeAmounts[_donorAddress];
 
         while (_index <= _lastPeriodNumber) {
-            // used only by calculateClaimableRewardsByPeriodNumber & calculateClaimableRewards
-            if (_currentRewardPeriod.startBlock == 0) {
+            if (_currentRewardPeriod.startBlock > 0) {
+                // this case is used to calculate the reward for periods that have been initialized yet
+
+                if (_currentRewardPeriod.againstPeriods == 0) {
+                    _donorAmount = _currentRewardPeriod.donorAmounts[_donorAddress];
+                    _totalAmount = _currentRewardPeriod.donationsAmount;
+                } else if (
+                    _previousRewardPeriod.againstPeriods == _currentRewardPeriod.againstPeriods
+                ) {
+                    if (_index > _currentRewardPeriod.againstPeriods + 1) {
+                        _expiredRewardPeriod = rewardPeriods[
+                            _index - 1 - _currentRewardPeriod.againstPeriods
+                        ];
+                        _donorAmount -= _expiredRewardPeriod.donorAmounts[_donorAddress];
+                        _totalAmount -= _expiredRewardPeriod.donationsAmount;
+                    }
+
+                    _donorAmount += _currentRewardPeriod.donorAmounts[_donorAddress];
+                    _totalAmount += _currentRewardPeriod.donationsAmount;
+                } else {
+                    if (_index > _currentRewardPeriod.againstPeriods) {
+                        (_donorAmount, _totalAmount) = _calculateDonorIntervalAmounts(
+                            _donorAddress,
+                            _index - _currentRewardPeriod.againstPeriods,
+                            _index
+                        );
+                    } else {
+                        (_donorAmount, _totalAmount) = _calculateDonorIntervalAmounts(
+                            _donorAddress,
+                            0,
+                            _index
+                        );
+                    }
+                }
+
+                _rewardAmount = _currentRewardPeriod.rewardAmount;
+                _stakesAmount = _currentRewardPeriod.stakesAmount;
+                _stakingDonationRatio = _currentRewardPeriod.stakingDonationRatio > 0
+                    ? _currentRewardPeriod.stakingDonationRatio
+                    : 1;
+            } else {
+                // this case is used to calculate the reward for periods that have not been initialized yet
+                // E.g. calculateClaimableRewardsByPeriodNumber & calculateClaimableRewards
+                // this step can be reached only after calculating the reward for periods that have been initialized
+
                 if (_index > againstPeriods + 1) {
                     _expiredRewardPeriod = rewardPeriods[_index - 1 - againstPeriods];
+
+                    //we already know that _donorAmount >= _expiredRewardPeriod.donorAmounts[_donorAddress]
+                    //because _donorAmount is a sum of some donorAmounts, including _expiredRewardPeriod.donorAmounts[_donorAddress]
                     _donorAmount -= _expiredRewardPeriod.donorAmounts[_donorAddress];
+                    //we already know that _totalAmount >= _expiredRewardPeriod.donationsAmount
+                    //because _totalAmount is a sum of some donationsAmounts, including _expiredRewardPeriod.donationsAmount
                     _totalAmount -= _expiredRewardPeriod.donationsAmount;
                 }
 
                 _donorAmount += _currentRewardPeriod.donorAmounts[_donorAddress];
                 _totalAmount += _currentRewardPeriod.donationsAmount;
                 _rewardAmount = (_rewardAmount * decayNumerator) / decayDenominator;
-            } else if (_currentRewardPeriod.againstPeriods == 0) {
-                _donorAmount = _currentRewardPeriod.donorAmounts[_donorAddress];
-                _totalAmount = _currentRewardPeriod.donationsAmount;
-                _rewardAmount = _currentRewardPeriod.rewardAmount;
-            } else if (
-                _previousRewardPeriod.againstPeriods != _currentRewardPeriod.againstPeriods
-            ) {
-                _startPeriod = _index > _currentRewardPeriod.againstPeriods
-                    ? _index - _currentRewardPeriod.againstPeriods
-                    : 0;
-                (_donorAmount, _totalAmount) = _calculateDonorIntervalAmounts(
-                    _donorAddress,
-                    _startPeriod,
-                    _index
-                );
-                _rewardAmount = _currentRewardPeriod.rewardAmount;
-            } else {
-                if (_index > _currentRewardPeriod.againstPeriods + 1) {
-                    _expiredRewardPeriod = rewardPeriods[
-                        _index - 1 - _currentRewardPeriod.againstPeriods
-                    ];
-                    _donorAmount -= _expiredRewardPeriod.donorAmounts[_donorAddress];
-                    _totalAmount -= _expiredRewardPeriod.donationsAmount;
-                }
-
-                _donorAmount += _currentRewardPeriod.donorAmounts[_donorAddress];
-                _totalAmount += _currentRewardPeriod.donationsAmount;
-                _rewardAmount = _currentRewardPeriod.rewardAmount;
             }
 
-            if (_donorChangedHisStakeAmount(_donorAddress, _index)) {
+            if (_currentRewardPeriod.hasSetStakeAmount[_donorAddress]) {
                 _lastDonorStakeAmount = _currentRewardPeriod.donorStakeAmounts[_donorAddress];
             }
 
             if (_donorAmount + _lastDonorStakeAmount > 0) {
-                if (stakingDonationRatio > 0) {
-                    _claimAmount +=
-                        (_rewardAmount *
-                            (_donorAmount * stakingDonationRatio + _lastDonorStakeAmount)) /
-                        (_totalAmount * stakingDonationRatio + _currentRewardPeriod.stakesAmount);
-                } else {
-                    _claimAmount += (_rewardAmount * _donorAmount) / _totalAmount;
-                }
+                _claimAmount +=
+                    (_rewardAmount *
+                        (_donorAmount * _stakingDonationRatio + _lastDonorStakeAmount)) /
+                    (_totalAmount * _stakingDonationRatio + _stakesAmount);
             }
+            //            console.log('+++++++++++++++++++++++++++++++++++++++++++++++++');
+            //            console.log('_index: ', _index);
+            //            console.log('_rewardAmount: ', _rewardAmount);
+            //            console.log('_donorAmount: ', _donorAmount);
+            //            console.log('_stakingDonationRatio: ', _stakingDonationRatio);
+            //            console.log('_lastDonorStakeAmount: ', _lastDonorStakeAmount);
+            //            console.log('_totalAmount: ', _totalAmount);
+            //            console.log('_stakesAmount: ', _stakesAmount);
+            //            console.log('_claimAmount: ', _claimAmount);
+
             _index++;
 
             _previousRewardPeriod = _currentRewardPeriod;
             _currentRewardPeriod = rewardPeriods[_index];
         }
+
+        //        console.log('**************************************************************************************');
 
         return (_claimAmount, _lastDonorStakeAmount);
     }
@@ -888,19 +935,25 @@ contract DonationMinerImplementation is
     }
 
     /**
-     * @notice Checks if the donor modified his stake amount (by staking or unstacking)
+     * @notice Checks if there is any donation or stake between _startPeriod and _endPeriod
      *
-     * @param _donorAddress address of the donor
-     * @param _periodNumber reward period number
+     * @return bool true if there is any donation or stake
      */
-    function _donorChangedHisStakeAmount(address _donorAddress, uint256 _periodNumber)
+    function hasDonationOrStake(uint256 _startPeriod, uint256 _endPeriod)
         internal
         view
         returns (bool)
     {
-        return
-            _periodNumber > 0 &&
-            rewardPeriods[_periodNumber].donorStakeAmounts[_donorAddress] !=
-            rewardPeriods[_periodNumber - 1].donorStakeAmounts[_donorAddress];
+        while (_startPeriod <= _endPeriod) {
+            if (
+                rewardPeriods[_startPeriod].donationsAmount +
+                    rewardPeriods[_startPeriod].stakesAmount >
+                0
+            ) {
+                return true;
+            }
+            _startPeriod++;
+        }
+        return false;
     }
 }

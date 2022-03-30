@@ -5,10 +5,10 @@ import chaiAsPromised from "chai-as-promised";
 // @ts-ignore
 import { deployments, ethers, getNamedAccounts } from "hardhat";
 import { advanceBlockNTimes, advanceToBlockN } from "../utils/TimeTravel";
-import { parseEther, formatEther } from "@ethersproject/units";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import * as ethersTypes from "ethers";
 import { BigNumber } from "@ethersproject/bignumber";
+import { toEther } from "../utils/helpers";
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -75,11 +75,11 @@ describe("Staking", () => {
 			).address
 		);
 
-		await PACT.transfer(user1.address, parseEther("1000000"));
-		await PACT.transfer(user2.address, parseEther("2000000"));
-		await PACT.transfer(user3.address, parseEther("3000000"));
-		await PACT.transfer(user4.address, parseEther("4000000"));
-		await PACT.transfer(user5.address, parseEther("5000000"));
+		await PACT.transfer(user1.address, toEther("1000000"));
+		await PACT.transfer(user2.address, toEther("2000000"));
+		await PACT.transfer(user3.address, toEther("3000000"));
+		await PACT.transfer(user4.address, toEther("4000000"));
+		await PACT.transfer(user5.address, toEther("5000000"));
 	});
 
 	async function checkDonationMinerRewardPeriod(
@@ -121,7 +121,7 @@ describe("Staking", () => {
 		it("should stake", async function () {
 			let spactBalance: any;
 
-			const stakeAmount = parseEther("100");
+			const stakeAmount = toEther("100");
 			const initialPACTBalance = await PACT.balanceOf(user1.address);
 
 			await PACT.connect(user1).approve(Staking.address, stakeAmount);
@@ -150,13 +150,13 @@ describe("Staking", () => {
 			);
 
 			expect(await PACT.totalSupply()).to.be.equal(
-				parseEther("10000000000")
+				toEther("10000000000")
 			);
 			expect(await SPACT.totalSupply()).to.be.equal(stakeAmount);
 		});
 
 		it("should stake for someone else", async function () {
-			const stakeAmount = parseEther("100");
+			const stakeAmount = toEther("100");
 			const user1InitialPACTBalance = await PACT.balanceOf(user1.address);
 			const user2InitialPACTBalance = await PACT.balanceOf(user2.address);
 
@@ -191,17 +191,17 @@ describe("Staking", () => {
 			);
 
 			expect(await PACT.totalSupply()).to.be.equal(
-				parseEther("10000000000")
+				toEther("10000000000")
 			);
 			expect(await SPACT.totalSupply()).to.be.equal(stakeAmount);
 		});
 
 		it("should stake multiples holders", async function () {
 			let spactBalance: any;
-			const user1StakeAmount1 = parseEther("101");
-			const user1StakeAmount2 = parseEther("102");
-			const user2StakeAmount1 = parseEther("201");
-			const totalAmount = parseEther("404");
+			const user1StakeAmount1 = toEther("101");
+			const user1StakeAmount2 = toEther("102");
+			const user2StakeAmount1 = toEther("201");
+			const totalAmount = toEther("404");
 			const user1InitialPACTBalance = await PACT.balanceOf(user1.address);
 			const user2InitialPACTBalance = await PACT.balanceOf(user2.address);
 
@@ -255,13 +255,13 @@ describe("Staking", () => {
 			);
 
 			expect(await PACT.totalSupply()).to.be.equal(
-				parseEther("10000000000")
+				toEther("10000000000")
 			);
 			expect(await SPACT.totalSupply()).to.be.equal(totalAmount);
 		});
 
 		it("should emit event when staking", async function () {
-			const stakeAmount = parseEther("100");
+			const stakeAmount = toEther("100");
 
 			await PACT.connect(user1).approve(Staking.address, stakeAmount);
 			await expect(
@@ -285,21 +285,21 @@ describe("Staking", () => {
 
 		it("should unstake", async function () {
 			let spactBalance: any;
-			const stakeAmount = parseEther("100");
+			const stakeAmount = toEther("100");
 			const user1InitialPACTBalance = await PACT.balanceOf(user1.address);
 
 			await PACT.connect(user1).approve(Staking.address, stakeAmount);
 			await Staking.connect(user1).stake(user1.address, stakeAmount);
-			await expect(Staking.connect(user1).unstake(parseEther("60"))).to.be
+			await expect(Staking.connect(user1).unstake(toEther("60"))).to.be
 				.fulfilled;
 
 			expect(await Staking.stakeholderAmount(user1.address)).to.be.equal(
-				parseEther("40")
+				toEther("40")
 			);
 			expect(await Staking.currentTotalAmount()).to.be.equal(
-				parseEther("40")
+				toEther("40")
 			);
-			await checkDonationMinerRewardPeriod(parseEther("40"));
+			await checkDonationMinerRewardPeriod(toEther("40"));
 
 			spactBalance = stakeAmount;
 			expect(await SPACT.balanceOf(user1.address)).to.be.equal(
@@ -311,24 +311,24 @@ describe("Staking", () => {
 		});
 
 		it("should not unstake if not enough funds #2", async function () {
-			const stakeAmount = parseEther("100");
+			const stakeAmount = toEther("100");
 
 			await PACT.connect(user1).approve(Staking.address, stakeAmount);
 			await Staking.connect(user1).stake(user1.address, stakeAmount);
 			await expect(
-				Staking.connect(user1).unstake(parseEther("200"))
+				Staking.connect(user1).unstake(toEther("200"))
 			).to.be.rejectedWith("Stake::unstake: Not enough funds");
 		});
 
 		it("should not unstake if not enough funds #3", async function () {
-			const stakeAmount = parseEther("100");
+			const stakeAmount = toEther("100");
 
 			await PACT.connect(user1).approve(Staking.address, stakeAmount);
 			await Staking.connect(user1).stake(user1.address, stakeAmount);
-			await expect(Staking.connect(user1).unstake(parseEther("90"))).to.be
+			await expect(Staking.connect(user1).unstake(toEther("90"))).to.be
 				.fulfilled;
 			await expect(
-				Staking.connect(user1).unstake(parseEther("50"))
+				Staking.connect(user1).unstake(toEther("50"))
 			).to.be.rejectedWith("Stake::unstake: Not enough funds");
 		});
 
@@ -339,11 +339,11 @@ describe("Staking", () => {
 		});
 
 		it("should not claim if not enough funds #2", async function () {
-			const stakeAmount = parseEther("100");
+			const stakeAmount = toEther("100");
 
 			await PACT.connect(user1).approve(Staking.address, stakeAmount);
 			await Staking.connect(user1).stake(user1.address, stakeAmount);
-			await expect(Staking.connect(user1).unstake(parseEther("50"))).to.be
+			await expect(Staking.connect(user1).unstake(toEther("50"))).to.be
 				.fulfilled;
 
 			await expect(Staking.connect(user1).claim()).to.be.rejectedWith(
@@ -353,12 +353,12 @@ describe("Staking", () => {
 
 		it("should claim", async function () {
 			let spactBalance: any;
-			const stakeAmount = parseEther("100");
+			const stakeAmount = toEther("100");
 			const user1InitialPACTBalance = await PACT.balanceOf(user1.address);
 
 			await PACT.connect(user1).approve(Staking.address, stakeAmount);
 			await Staking.connect(user1).stake(user1.address, stakeAmount);
-			await expect(Staking.connect(user1).unstake(parseEther("60"))).to.be
+			await expect(Staking.connect(user1).unstake(toEther("60"))).to.be
 				.fulfilled;
 
 			await advanceBlockNTimes(COOLDOWN);
@@ -366,14 +366,14 @@ describe("Staking", () => {
 			await expect(Staking.connect(user1).claim()).to.be.fulfilled;
 
 			expect(await Staking.stakeholderAmount(user1.address)).to.be.equal(
-				parseEther("40")
+				toEther("40")
 			);
 			expect(await Staking.currentTotalAmount()).to.be.equal(
-				parseEther("40")
+				toEther("40")
 			);
-			await checkDonationMinerRewardPeriod(parseEther("40"));
+			await checkDonationMinerRewardPeriod(toEther("40"));
 
-			spactBalance = parseEther("40");
+			spactBalance = toEther("40");
 			expect(await SPACT.balanceOf(user1.address)).to.be.equal(
 				spactBalance
 			);
@@ -384,31 +384,22 @@ describe("Staking", () => {
 
 		it("should stake, unstake and claim multiple holders", async function () {
 			let spactBalance: any;
-			const user1StakeAmount1 = parseEther("101");
-			const user1StakeAmount2 = parseEther("102");
-			const user1StakeAmount3 = parseEther("103");
-			const user2StakeAmount1 = parseEther("201");
-			const user2StakeAmount2 = parseEther("202");
-			const user3StakeAmount1 = parseEther("301");
-			const user3StakeAmount2 = parseEther("302");
-			const totalAmount = parseEther("1312");
+			const user1StakeAmount1 = toEther("101");
+			const user1StakeAmount2 = toEther("102");
+			const user1StakeAmount3 = toEther("103");
+			const user2StakeAmount1 = toEther("201");
+			const user2StakeAmount2 = toEther("202");
+			const user3StakeAmount1 = toEther("301");
+			const user3StakeAmount2 = toEther("302");
+			const totalAmount = toEther("1312");
 
 			const user1InitialPACTBalance = await PACT.balanceOf(user1.address);
 			const user2InitialPACTBalance = await PACT.balanceOf(user2.address);
 			const user3InitialPACTBalance = await PACT.balanceOf(user3.address);
 
-			await PACT.connect(user1).approve(
-				Staking.address,
-				parseEther("306")
-			);
-			await PACT.connect(user2).approve(
-				Staking.address,
-				parseEther("403")
-			);
-			await PACT.connect(user3).approve(
-				Staking.address,
-				parseEther("603")
-			);
+			await PACT.connect(user1).approve(Staking.address, toEther("306"));
+			await PACT.connect(user2).approve(Staking.address, toEther("403"));
+			await PACT.connect(user3).approve(Staking.address, toEther("603"));
 
 			await expect(
 				Staking.connect(user1).stake(user1.address, user1StakeAmount1)
@@ -420,25 +411,25 @@ describe("Staking", () => {
 				Staking.connect(user3).stake(user3.address, user3StakeAmount1)
 			).to.be.fulfilled; //2
 
-			await expect(Staking.connect(user2).unstake(parseEther("50"))).to.be
+			await expect(Staking.connect(user2).unstake(toEther("50"))).to.be
 				.fulfilled;
 
 			await expect(
 				Staking.connect(user3).stake(user3.address, user3StakeAmount2)
 			).to.be.fulfilled; //3
 
-			await expect(Staking.connect(user3).unstake(parseEther("60"))).to.be
+			await expect(Staking.connect(user3).unstake(toEther("60"))).to.be
 				.fulfilled;
 
 			await advanceBlockNTimes(COOLDOWN);
 
-			await expect(Staking.connect(user3).unstake(parseEther("70"))).to.be
+			await expect(Staking.connect(user3).unstake(toEther("70"))).to.be
 				.fulfilled;
 
 			await expect(
 				Staking.connect(user1).stake(user1.address, user1StakeAmount2)
 			).to.be.fulfilled; //4
-			await expect(Staking.connect(user1).unstake(parseEther("80"))).to.be
+			await expect(Staking.connect(user1).unstake(toEther("80"))).to.be
 				.fulfilled;
 
 			await expect(Staking.connect(user3).claim()).to.be.fulfilled;
@@ -452,10 +443,10 @@ describe("Staking", () => {
 
 			//general asserts
 			expect(await Staking.currentTotalAmount()).to.be.equal(
-				totalAmount.sub(parseEther((50 + 60 + 70 + 80).toString()))
+				totalAmount.sub(toEther(50 + 60 + 70 + 80))
 			);
 			await checkDonationMinerRewardPeriod(
-				totalAmount.sub(parseEther((50 + 60 + 70 + 80).toString()))
+				totalAmount.sub(toEther(50 + 60 + 70 + 80))
 			);
 			expect(await Staking.stakeholdersListLength()).to.be.equal(3);
 
@@ -470,10 +461,10 @@ describe("Staking", () => {
 			);
 
 			expect(await PACT.totalSupply()).to.be.equal(
-				parseEther("10000000000")
+				toEther("10000000000")
 			);
 			expect(await SPACT.totalSupply()).to.be.equal(
-				totalAmount.sub(parseEther("60"))
+				totalAmount.sub(toEther("60"))
 			);
 
 			//user asserts
@@ -481,7 +472,7 @@ describe("Staking", () => {
 				user1StakeAmount1
 					.add(user1StakeAmount2)
 					.add(user1StakeAmount3)
-					.sub(parseEther("80"))
+					.sub(toEther("80"))
 			);
 			spactBalance = user1StakeAmount1
 				.add(user1StakeAmount2)
@@ -494,7 +485,7 @@ describe("Staking", () => {
 			);
 
 			expect(await Staking.stakeholderAmount(user2.address)).to.be.equal(
-				user2StakeAmount1.add(user2StakeAmount2).sub(parseEther("50"))
+				user2StakeAmount1.add(user2StakeAmount2).sub(toEther("50"))
 			);
 			spactBalance = user2StakeAmount1.add(user2StakeAmount2);
 			expect(await SPACT.balanceOf(user2.address)).to.be.equal(
@@ -507,13 +498,11 @@ describe("Staking", () => {
 			);
 
 			expect(await Staking.stakeholderAmount(user3.address)).to.be.equal(
-				user3StakeAmount1
-					.add(user3StakeAmount2)
-					.sub(parseEther((60 + 70).toString()))
+				user3StakeAmount1.add(user3StakeAmount2).sub(toEther(60 + 70))
 			);
 			spactBalance = user3StakeAmount1
 				.add(user3StakeAmount2)
-				.sub(parseEther("60"));
+				.sub(toEther("60"));
 			expect(await SPACT.balanceOf(user3.address)).to.be.equal(
 				spactBalance
 			);
@@ -521,28 +510,28 @@ describe("Staking", () => {
 				user3InitialPACTBalance.sub(spactBalance)
 			);
 
-			await expect(Staking.connect(user2).unstake(parseEther("10"))).to.be
+			await expect(Staking.connect(user2).unstake(toEther("10"))).to.be
 				.fulfilled;
-			await expect(Staking.connect(user2).unstake(parseEther("20"))).to.be
+			await expect(Staking.connect(user2).unstake(toEther("20"))).to.be
 				.fulfilled;
-			await expect(Staking.connect(user2).unstake(parseEther("30"))).to.be
+			await expect(Staking.connect(user2).unstake(toEther("30"))).to.be
 				.fulfilled;
-			await expect(Staking.connect(user2).unstake(parseEther("40"))).to.be
+			await expect(Staking.connect(user2).unstake(toEther("40"))).to.be
 				.fulfilled;
 
 			await expect(Staking.connect(user2).claim()).to.be.fulfilled;
 
 			expect(await SPACT.totalSupply()).to.be.equal(
-				totalAmount.sub(parseEther((50 + 60).toString()))
+				totalAmount.sub(toEther(50 + 60))
 			);
 			expect(await Staking.stakeholderAmount(user2.address)).to.be.equal(
 				user2StakeAmount1
 					.add(user2StakeAmount2)
-					.sub(parseEther((10 + 20 + 30 + 40 + 50).toString()))
+					.sub(toEther(10 + 20 + 30 + 40 + 50))
 			);
 			spactBalance = user2StakeAmount1
 				.add(user2StakeAmount2)
-				.sub(parseEther("50"));
+				.sub(toEther("50"));
 			expect(await SPACT.balanceOf(user2.address)).to.be.equal(
 				spactBalance
 			);
@@ -553,18 +542,16 @@ describe("Staking", () => {
 			await advanceBlockNTimes(COOLDOWN);
 			await expect(Staking.connect(user2).claim()).to.be.fulfilled;
 			expect(await SPACT.totalSupply()).to.be.equal(
-				totalAmount.sub(
-					parseEther((10 + 20 + 30 + 40 + 50 + 60).toString())
-				)
+				totalAmount.sub(toEther(10 + 20 + 30 + 40 + 50 + 60))
 			);
 			expect(await Staking.stakeholderAmount(user2.address)).to.be.equal(
 				user2StakeAmount1
 					.add(user2StakeAmount2)
-					.sub(parseEther((10 + 20 + 30 + 40 + 50).toString()))
+					.sub(toEther(10 + 20 + 30 + 40 + 50))
 			);
 			spactBalance = user2StakeAmount1
 				.add(user2StakeAmount2)
-				.sub(parseEther((10 + 20 + 30 + 40 + 50).toString()));
+				.sub(toEther(10 + 20 + 30 + 40 + 50));
 			expect(await SPACT.balanceOf(user2.address)).to.be.equal(
 				spactBalance
 			);
@@ -576,7 +563,7 @@ describe("Staking", () => {
 				Staking.connect(user2).unstake(
 					user2StakeAmount1
 						.add(user2StakeAmount2)
-						.sub(parseEther((10 + 20 + 30 + 40 + 50).toString()))
+						.sub(toEther(10 + 20 + 30 + 40 + 50))
 				)
 			).to.be.fulfilled;
 			await advanceBlockNTimes(COOLDOWN);

@@ -8,17 +8,31 @@ import "../../staking/interfaces/IStaking.sol";
 
 interface IDonationMiner {
     struct RewardPeriod {
-        uint256 rewardPerBlock; //reward tokens created per block
-        uint256 rewardAmount; //reward tokens from previous periods + reward tokens from this reward period
-        uint256 startBlock; //block number at which reward period starts
-        uint256 endBlock; //block number at which reward period ends
-        uint256 donationsAmount; //total of donations for this rewardPeriod
-        mapping(address => uint256) donorAmounts; //amounts donated by every donor in this rewardPeriod
+        //reward tokens created per block
+        uint256 rewardPerBlock;
+        //reward tokens from previous periods + reward tokens from this reward period
+        uint256 rewardAmount;
+        //block number at which reward period starts
+        uint256 startBlock;
+        //block number at which reward period ends
+        uint256 endBlock;
+        //total of donations for this rewardPeriod
+        uint256 donationsAmount;
+        //amounts donated by every donor in this rewardPeriod
+        mapping(address => uint256) donorAmounts;
         uint256 againstPeriods;
-        uint256 stakesAmount; //total stake amount at the end of this rewardPeriod
-        mapping(address => uint256) donorStakeAmounts; //current stake amount of a user;
-                                                        //if a user doesn't stake in a reward period, it will be 0
-                                                        //if this value is 0 => donorStakeAmounts = previousRewardPeriod.donorStakeAmounts
+        //total stake amount at the end of this rewardPeriod
+        uint256 stakesAmount;
+        //ratio between 1 cUSD donated and 1 PACT staked
+        uint256 stakingDonationRatio;
+        //true if user has staked/unstaked in this reward period
+        mapping(address => bool) hasSetStakeAmount;
+        //stake amount of a user at the end of this reward period;
+        //if a user doesn't stake/unstake in a reward period,
+        //              this value will remain 0 (and hasSetStakeAmount will be false)
+        //if hasNewStakeAmount is false it means the donorStakeAmount
+        //              is the same as the last reward period where hasSetStakeAmount is true
+        mapping(address => uint256) donorStakeAmounts;
     }
 
     struct Donor {
@@ -56,9 +70,12 @@ interface IDonationMiner {
         uint256 endBlock,
         uint256 donationsAmount,
         uint256 againstPeriods,
-        uint256 stakesAmount
-    );
+        uint256 stakesAmount,
+        uint256 stakingDonationRatio
+
+);
     function rewardPeriodDonorAmount(uint256 _period, address _donor) external view returns (uint256);
+    function rewardPeriodDonorStakeAmounts(uint256 _period, address _donor) external view returns (uint256);
     function donors(address _donor) external view returns (
         uint256 rewardPeriodsCount,
         uint256 lastClaim,

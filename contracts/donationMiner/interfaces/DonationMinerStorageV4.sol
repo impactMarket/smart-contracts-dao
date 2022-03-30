@@ -11,5 +11,6 @@ import "./DonationMinerStorageV3.sol";
  */
 abstract contract DonationMinerStorageV4 is DonationMinerStorageV3 {
     IStaking public override staking;
+    //ratio between 1 cUSD donated and 1 PACT staked
     uint256 public override stakingDonationRatio;
 }
