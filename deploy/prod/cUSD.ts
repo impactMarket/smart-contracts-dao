@@ -4,6 +4,7 @@ import { DeployFunction } from "hardhat-deploy/types";
 let cUSDAddress: string;
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
+	// @ts-ignore
 	const { deployments, getNamedAccounts, getChainId } = hre;
 	const { deploy } = deployments;
 	const { deployer } = await getNamedAccounts();

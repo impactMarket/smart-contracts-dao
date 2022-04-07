@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.4;
 
-import "./DonationMinerStorageV1.sol";
+import "./DonationMinerStorageV1Old.sol";
 
 /**
  * @title Storage for DonationMiner
@@ -9,6 +9,6 @@ import "./DonationMinerStorageV1.sol";
  * contract which implements DonationMinerStorageV2 and following the naming convention
  * DonationMinerStorageVX.
  */
-abstract contract DonationMinerStorageV2 is DonationMinerStorageV1 {
+abstract contract DonationMinerStorageV2Old is DonationMinerStorageV1Old {
     uint256 public override claimDelay;
 }

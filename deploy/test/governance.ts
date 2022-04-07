@@ -18,6 +18,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const { deployer } = await getNamedAccounts();
 
 	const Token = await deployments.get("PACTToken");
+	const StakingToken = await deployments.get("SPACTToken");
 	const ImpactProxyAdminContract = await deployments.get("ImpactProxyAdmin");
 
 	const delegateResult = await deploy("PACTDelegate", {
@@ -45,7 +46,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	await governance.initialize(
 		timelockResult.address,
 		Token.address,
-		ZERO_ADDRESS,
+		StakingToken.address,
 		VOTING_PERIOD_BLOCKS,
 		VOTING_DELAY_BLOCKS,
 		PROPOSAL_THRESHOLD,
@@ -54,13 +55,15 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	const PACT = await deployments.get("PACTToken");
 	const PACTContract = await ethers.getContractAt("PACTToken", PACT.address);
-	await PACTContract.transfer(
-		delegatorResult.address,
-		parseEther("2000000000")
-	);
+
+	await governance.transferOwnership(timelockResult.address);
 
 	// only for prod
-	// await governance.transferOwnership(timelockResult.address);
+	// await PACTContract.transfer(
+	// 	delegatorResult.address,
+	// 	parseEther("2000000000")
+	// );
+	//
 	// const ImpactProxyAdmin = await ethers.getContractAt(
 	// 	"ImpactProxyAdmin",
 	// 	ImpactProxyAdminContract.address
@@ -68,6 +71,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// await ImpactProxyAdmin.transferOwnership(timelockAddress);
 };
 
-func.dependencies = ["TokenTest", "ImpactProxyAdminTest"];
+func.dependencies = ["TokenTest", "StakingTokenTest", "ImpactProxyAdminTest"];
 func.tags = ["GovernanceTest", "Test"];
 export default func;

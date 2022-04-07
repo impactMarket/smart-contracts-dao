@@ -3,659 +3,701 @@ import chai from "chai";
 // @ts-ignore
 import chaiAsPromised from "chai-as-promised";
 // @ts-ignore
-import { ethers, network, artifacts, deployments, waffle } from "hardhat";
+import {
+	ethers,
+	network,
+	artifacts,
+	deployments,
+	waffle,
+	hardhatArguments,
+} from "hardhat";
 import type * as ethersTypes from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { BigNumberish } from "ethers";
-import { advanceBlockNTimes, advanceNSeconds } from "../utils/TimeTravel";
-import { parseEther, formatEther } from "@ethersproject/units";
-import { zeroOutAddresses } from "hardhat/internal/hardhat-network/stack-traces/library-utils";
-import { BigNumber } from "@ethersproject/bignumber";
-
-const {
-	expectRevert,
-	expectEvent,
-	time,
-	constants,
-} = require("@openzeppelin/test-helpers");
+import {
+	advanceBlockNTimes,
+	advanceNSeconds,
+	getBlockNumber,
+} from "../utils/TimeTravel";
+import { formatEther, parseEther } from "@ethersproject/units";
+import { createAndExecuteProposal, governanceParams } from "../utils/helpers";
 
 chai.use(chaiAsPromised);
 
 const expect = chai.expect;
 
-const TWO_DAYS_SECONDS = 2 * 24 * 60 * 60; // 2 days
-const VOTING_PERIOD_BLOCKS = 720;
-const VOTING_DELAY_BLOCKS = 1;
-const PROPOSAL_THRESHOLD: BigNumberish = parseEther("100000000"); // 100 millions units (1%)
-const QUORUM_VOTES: BigNumberish = parseEther("100000000"); // 400 millions units (4%)
-const communityMinTranche = parseEther("100");
-const communityMaxTranche = parseEther("5000");
-
 // Contracts
-let PACTDelegate: ethersTypes.ContractFactory;
+let delegate: ethersTypes.ContractFactory;
 
 //users
 let owner: SignerWithAddress;
-let alice: SignerWithAddress;
-let bob: SignerWithAddress;
-let carol: SignerWithAddress;
+let user1: SignerWithAddress;
+let user2: SignerWithAddress;
+let user3: SignerWithAddress;
+let user4: SignerWithAddress;
+let user5: SignerWithAddress;
+let user6: SignerWithAddress;
+let user7: SignerWithAddress;
+let user8: SignerWithAddress;
+let user9: SignerWithAddress;
 
 // contract instances
-let pactToken: ethersTypes.Contract;
-let pactDelegator: ethersTypes.Contract;
-let pactDelegate: ethersTypes.Contract;
-let pactTimelock: ethersTypes.Contract;
-let communityAdmin: ethersTypes.Contract;
+let votingToken: ethersTypes.Contract;
+let stakingToken: ethersTypes.Contract;
+let USDT: ethersTypes.Contract;
+let governanceDelegator: ethersTypes.Contract;
+let governanceDelegate: ethersTypes.Contract;
+let timelock: ethersTypes.Contract;
 let proxyAdmin: ethersTypes.Contract;
-let donationMiner: ethersTypes.Contract;
+let treasuryProxy: ethersTypes.Contract;
 let ubiCommittee: ethersTypes.Contract;
-let treasury: ethersTypes.Contract;
-let impactLabsVesting: ethersTypes.Contract;
-let cUSD: ethersTypes.Contract;
-let ImpactProxyAdmin: ethersTypes.Contract;
 
-describe("PACTGovernator", function () {
+const ADDRESS_TEST = "0x0000000000000000000000000000000123456789";
+const ADDRESS_ZERO = "0x0000000000000000000000000000000000000000";
+
+enum ProposalState {
+	Pending,
+	Active,
+	Canceled,
+	Defeated,
+	Succeeded,
+	Queued,
+	Expired,
+	Executed,
+}
+
+async function createTreasuryTransferProposal(user: SignerWithAddress) {
+	const targets = [treasuryProxy.address];
+	const values = [0];
+	const signatures = ["transfer(address,address,uint256)"];
+
+	const calldatas = [
+		ethers.utils.defaultAbiCoder.encode(
+			["address", "address", "uint256"],
+			[USDT.address, user1.address, parseEther("1000")]
+		),
+	];
+	const descriptions = "description";
+
+	await governanceDelegator
+		.connect(user)
+		.propose(targets, values, signatures, calldatas, descriptions);
+}
+
+async function deployGovernance() {
+	await deployments.fixture("Test", { fallbackToGlobal: false });
+
+	// governance setup
+	votingToken = await ethers.getContractAt(
+		"PACTToken",
+		(
+			await deployments.get("PACTToken")
+		).address
+	);
+
+	timelock = await ethers.getContractAt(
+		"PACTTimelock",
+		(
+			await deployments.get("PACTTimelock")
+		).address
+	);
+
+	governanceDelegate = await ethers.getContractAt(
+		"PACTDelegate",
+		(
+			await deployments.get("PACTDelegate")
+		).address
+	);
+
+	governanceDelegator = await ethers.getContractAt(
+		"PACTDelegator",
+		(
+			await deployments.get("PACTDelegator")
+		).address
+	);
+
+	governanceDelegator = await delegate.attach(governanceDelegator.address);
+
+	await votingToken.transfer(user1.address, parseEther("100000001")); // 100 mil (1 %)
+	await votingToken.transfer(user2.address, parseEther("200000000")); // 200 mil (2 %)
+	await votingToken.transfer(user3.address, parseEther("300000000")); // 300 mil (3 %)
+	await votingToken.transfer(user4.address, parseEther("400000000")); // 400 mil (4 %)
+	await votingToken.transfer(user5.address, parseEther("500000000")); // 500 mil (5 %)
+	await votingToken.transfer(user6.address, parseEther("50000001")); // 50 mil (0.5 %)
+	await votingToken.transfer(user7.address, parseEther("50000001")); // 50 mil (0.5 %)
+	await votingToken.connect(user1).delegate(user1.address);
+	await votingToken.connect(user2).delegate(user2.address);
+	await votingToken.connect(user3).delegate(user3.address);
+	await votingToken.connect(user4).delegate(user4.address);
+	await votingToken.connect(user5).delegate(user5.address);
+	await votingToken.connect(user6).delegate(user6.address);
+	await votingToken.connect(user7).delegate(user7.address);
+
+	proxyAdmin = await ethers.getContractAt(
+		"ImpactProxyAdmin",
+		(
+			await deployments.get("ImpactProxyAdmin")
+		).address
+	);
+
+	ubiCommittee = await ethers.getContractAt(
+		"UBICommitteeImplementation",
+		(
+			await deployments.get("UBICommitteeProxy")
+		).address
+	);
+
+	// treasury setup
+	treasuryProxy = await ethers.getContractAt(
+		"TreasuryImplementation",
+		(
+			await deployments.get("TreasuryProxy")
+		).address
+	);
+
+	USDT = await ethers.getContractAt(
+		"TokenMock",
+		(
+			await deployments.get("TokenMock")
+		).address
+	);
+
+	await proxyAdmin.transferOwnership(timelock.address);
+	await treasuryProxy.transferOwnership(timelock.address);
+	await ubiCommittee.transferOwnership(timelock.address);
+
+	await USDT.mint(treasuryProxy.address, parseEther("1000000"));
+}
+
+describe("Governance - with one token", function () {
 	before(async function () {
-		PACTDelegate = await ethers.getContractFactory("PACTDelegate");
+		delegate = await ethers.getContractFactory("PACTDelegate");
 
-		const accounts: SignerWithAddress[] = await ethers.getSigners();
-
-		owner = accounts[0];
-		alice = accounts[1];
-		bob = accounts[2];
-		carol = accounts[3];
+		[owner, user1, user2, user3, user4, user5, user6, user7, user8, user9] =
+			await ethers.getSigners();
 	});
 
 	beforeEach(async function () {
-		await deployments.fixture("Test", { fallbackToGlobal: false });
-
-		const pactTokenDeployment = await deployments.get("PACTToken");
-		pactToken = await ethers.getContractAt(
-			"PACTToken",
-			pactTokenDeployment.address
-		);
-
-		const pactTimelockDeployment = await deployments.get("PACTTimelock");
-		pactTimelock = await ethers.getContractAt(
-			"PACTTimelock",
-			pactTimelockDeployment.address
-		);
-
-		const pactDelegateDeployment = await deployments.get("PACTDelegate");
-		pactDelegate = await ethers.getContractAt(
-			"PACTDelegate",
-			pactDelegateDeployment.address
-		);
-
-		const pactDelegatorDeployment = await deployments.get("PACTDelegator");
-		pactDelegator = await ethers.getContractAt(
-			"PACTDelegator",
-			pactDelegatorDeployment.address
-		);
-
-		pactDelegator = await PACTDelegate.attach(pactDelegator.address);
-
-		const communityAdminDeployment = await deployments.get(
-			"CommunityAdminProxy"
-		);
-		communityAdmin = await ethers.getContractAt(
-			"CommunityAdminImplementation",
-			communityAdminDeployment.address
-		);
-
-		donationMiner = await ethers.getContractAt(
-			"DonationMinerImplementation",
-			(
-				await deployments.get("DonationMinerProxy")
-			).address
-		);
-
-		ubiCommittee = await ethers.getContractAt(
-			"UBICommitteeImplementation",
-			(
-				await deployments.get("UBICommitteeProxy")
-			).address
-		);
-
-		proxyAdmin = await ethers.getContractAt(
-			"ImpactProxyAdmin",
-			(
-				await deployments.get("ImpactProxyAdmin")
-			).address
-		);
-
-		const treasuryDeployment = await deployments.get("TreasuryProxy");
-		treasury = await ethers.getContractAt(
-			"TreasuryImplementation",
-			treasuryDeployment.address
-		);
-
-		const impactLabsVestingDeployment = await deployments.get(
-			"ImpactLabsVestingProxy"
-		);
-		impactLabsVesting = await ethers.getContractAt(
-			"ImpactLabsVestingImplementation",
-			impactLabsVestingDeployment.address
-		);
-
-		ImpactProxyAdmin = await ethers.getContractAt(
-			"ImpactProxyAdmin",
-			(
-				await deployments.get("ImpactProxyAdmin")
-			).address
-		);
-
-		const cUSDDeployment = await deployments.get("TokenMock");
-		cUSD = await ethers.getContractAt("TokenMock", cUSDDeployment.address);
-
-		await cUSD.mint(treasury.address, parseEther("1000"));
-
-		await pactToken.transfer(alice.address, parseEther("40000000"));
-		// await pactToken.transfer(bob.address, parseEther("100000000"));
-		// await pactToken.transfer(carol.address, parseEther("100000000"));
-
-		await pactToken.delegate(owner.address);
-		await pactToken.connect(alice).delegate(owner.address);
-		// await pactToken.connect(bob).delegate(bob.address);
-		// await pactToken.connect(carol).delegate(carol.address);
-
-		await communityAdmin.transferOwnership(pactTimelock.address);
-		await ubiCommittee.transferOwnership(pactTimelock.address);
+		await deployGovernance();
 	});
 
-	async function createCommunityProposal() {
-		const targets = [communityAdmin.address];
-		const values = [0];
+	it("should have correct params", async function () {
+		expect(await governanceDelegator.votingDelay()).to.be.equal(
+			governanceParams.VOTING_DELAY
+		);
+		expect(await governanceDelegator.votingPeriod()).to.be.equal(
+			governanceParams.VOTING_PERIOD
+		);
+		expect(await governanceDelegator.proposalThreshold()).to.be.equal(
+			governanceParams.PROPOSAL_THRESHOLD
+		);
+
+		expect(await governanceDelegator.proposalCount()).to.be.equal(1);
+		expect(await governanceDelegator.quorumVotes()).to.be.equal(
+			governanceParams.QUORUM_VOTES
+		);
+		expect(await governanceDelegator.timelock()).to.be.equal(
+			timelock.address
+		);
+		expect(await governanceDelegator.token()).to.be.equal(
+			votingToken.address
+		);
+	});
+
+	it("should create proposal if user has enough votingTokens", async function () {
+		await expect(createTreasuryTransferProposal(user1)).to.be.fulfilled;
+
+		const startBlock = (await getBlockNumber()) + 1;
+
+		const proposal = await governanceDelegator.proposals(1);
+		expect(proposal.id).to.be.equal(1);
+		expect(proposal.proposer).to.be.equal(user1.address);
+		expect(proposal.eta).to.be.equal("0");
+		expect(proposal.startBlock).to.be.equal(startBlock);
+		expect(proposal.endBlock).to.be.equal(
+			startBlock + governanceParams.VOTING_PERIOD
+		);
+		expect(proposal.forVotes).to.be.equal("0");
+		expect(proposal.againstVotes).to.be.equal("0");
+		expect(proposal.abstainVotes).to.be.equal("0");
+		expect(proposal.canceled).to.be.equal(false);
+		expect(proposal.executed).to.be.equal(false);
+
+		expect(await governanceDelegator.state(1)).to.be.equal(
+			ProposalState.Pending
+		);
+	});
+
+	it("should not create proposal if user doesn't have enough votingTokens", async function () {
+		await expect(createTreasuryTransferProposal(user6)).to.be.rejectedWith(
+			"PACT::propose: proposer votes below proposal threshold"
+		);
+	});
+
+	it("should create proposal if user has been delegated", async function () {
+		await votingToken.connect(user6).delegate(user8.address);
+		await votingToken.connect(user7).delegate(user8.address);
+
+		await expect(createTreasuryTransferProposal(user8)).to.be.fulfilled;
+	});
+
+	it("should not vote too early", async function () {
+		await createTreasuryTransferProposal(user1);
+
+		await expect(
+			governanceDelegator.connect(user6).castVote(1, 1)
+		).to.be.rejectedWith("PACT::castVoteInternal: voting is closed");
+	});
+
+	it("should vote on proposal after voting delay", async function () {
+		await createTreasuryTransferProposal(user1);
+
+		await advanceBlockNTimes(governanceParams.VOTING_DELAY);
+
+		await expect(governanceDelegator.connect(user1).castVote(1, 0)).to.be
+			.fulfilled; //  0=against
+		await expect(governanceDelegator.connect(user2).castVote(1, 1)).to.be
+			.fulfilled; //  1=for
+		await expect(governanceDelegator.connect(user3).castVote(1, 2)).to.be
+			.fulfilled; //  2=abstain
+
+		const proposal = await governanceDelegator.proposals(1);
+		expect(proposal.againstVotes).to.be.equal(parseEther("100000001"));
+		expect(proposal.forVotes).to.be.equal(parseEther("200000000"));
+		expect(proposal.abstainVotes).to.be.equal(parseEther("300000000"));
+
+		expect(await governanceDelegator.state(1)).to.be.equal(
+			ProposalState.Active
+		);
+	});
+
+	it("should vote on proposal after voting delay #2", async function () {
+		await createTreasuryTransferProposal(user1);
+
+		await advanceBlockNTimes(governanceParams.VOTING_DELAY);
+
+		await expect(governanceDelegator.connect(user1).castVote(1, 0)).to.be
+			.fulfilled; //  0=against
+		await expect(governanceDelegator.connect(user4).castVote(1, 0)).to.be
+			.fulfilled; //  0=against
+		await expect(governanceDelegator.connect(user2).castVote(1, 1)).to.be
+			.fulfilled; //  1=for
+		await expect(governanceDelegator.connect(user5).castVote(1, 1)).to.be
+			.fulfilled; //  1=for
+		await expect(governanceDelegator.connect(user3).castVote(1, 2)).to.be
+			.fulfilled; //  2=abstain
+		await expect(governanceDelegator.connect(user6).castVote(1, 2)).to.be
+			.fulfilled; //  2=abstain
+
+		const proposal = await governanceDelegator.proposals(1);
+		expect(proposal.againstVotes).to.be.equal(parseEther("500000001"));
+		expect(proposal.forVotes).to.be.equal(parseEther("700000000"));
+		expect(proposal.abstainVotes).to.be.equal(parseEther("350000001"));
+
+		expect(await governanceDelegator.state(1)).to.be.equal(
+			ProposalState.Active
+		);
+	});
+
+	it("should not vote on invalid proposal", async function () {
+		await createTreasuryTransferProposal(user1);
+
+		await advanceBlockNTimes(governanceParams.VOTING_DELAY);
+
+		await expect(
+			governanceDelegator.connect(user1).castVote(2, 1)
+		).to.be.rejectedWith("PACT::state: invalid proposal id");
+	});
+
+	it("should not vote on proposal twice", async function () {
+		await createTreasuryTransferProposal(user1);
+
+		await advanceBlockNTimes(governanceParams.VOTING_DELAY);
+
+		await governanceDelegator.connect(user1).castVote(1, 1);
+		await expect(
+			governanceDelegator.connect(user1).castVote(1, 1)
+		).to.be.rejectedWith("PACT::castVoteInternal: voter already voted");
+
+		const proposal = await governanceDelegator.proposals(1);
+		expect(proposal.forVotes).to.be.equal(parseEther("100000001"));
+	});
+
+	it("should not queue proposal too early", async function () {
+		await createTreasuryTransferProposal(user1);
+		await advanceBlockNTimes(governanceParams.VOTING_DELAY);
+		await governanceDelegator.connect(user5).castVote(1, 1);
+
+		expect(await governanceDelegator.state(1)).to.be.equal(
+			ProposalState.Active
+		);
+		await expect(governanceDelegator.queue(1)).to.be.rejectedWith(
+			"PACT::queue: proposal can only be queued if it is succeeded"
+		);
+	});
+
+	it("should not queue an invalid proposal", async function () {
+		await createTreasuryTransferProposal(user1);
+		await advanceBlockNTimes(governanceParams.VOTING_DELAY);
+		await governanceDelegator.connect(user5).castVote(1, 1);
+
+		await expect(governanceDelegator.queue(2)).to.be.rejectedWith(
+			"PACT::state: invalid proposal id"
+		);
+	});
+
+	it("should not queue an un-succeeded proposal", async function () {
+		await createTreasuryTransferProposal(user1);
+		await advanceBlockNTimes(governanceParams.VOTING_DELAY);
+		await governanceDelegator.connect(user4).castVote(1, 2);
+
+		await advanceBlockNTimes(governanceParams.VOTING_PERIOD);
+
+		expect(await governanceDelegator.state(1)).to.be.equal(
+			ProposalState.Defeated
+		);
+		await expect(governanceDelegator.queue(1)).to.be.rejectedWith(
+			"PACT::queue: proposal can only be queued if it is succeeded"
+		);
+	});
+
+	it("should queue a succeeded proposal", async function () {
+		await createTreasuryTransferProposal(user1);
+		await advanceBlockNTimes(governanceParams.VOTING_DELAY);
+		await governanceDelegator.connect(user4).castVote(1, 1);
+
+		await advanceBlockNTimes(governanceParams.VOTING_PERIOD);
+
+		expect(await governanceDelegator.state(1)).to.be.equal(
+			ProposalState.Succeeded
+		);
+		await expect(governanceDelegator.queue(1)).to.be.fulfilled;
+		expect(await governanceDelegator.state(1)).to.be.equal(
+			ProposalState.Queued
+		);
+	});
+
+	it("should not execute an un-queued proposal", async function () {
+		await createTreasuryTransferProposal(user1);
+		await advanceBlockNTimes(governanceParams.VOTING_DELAY);
+		await governanceDelegator.connect(user4).castVote(1, 1);
+
+		await advanceBlockNTimes(governanceParams.VOTING_PERIOD);
+
+		await expect(governanceDelegator.execute(1)).to.be.rejectedWith(
+			"PACT::execute: proposal can only be executed if it is queued"
+		);
+	});
+
+	it("should not execute a proposal too early", async function () {
+		await createTreasuryTransferProposal(user1);
+		await advanceBlockNTimes(governanceParams.VOTING_DELAY);
+		await governanceDelegator.connect(user4).castVote(1, 1);
+
+		await advanceBlockNTimes(governanceParams.VOTING_PERIOD);
+
+		await governanceDelegator.queue(1);
+		await expect(governanceDelegator.execute(1)).to.be.rejectedWith(
+			"Timelock::executeTransaction: Transaction hasn't surpassed time lock."
+		);
+	});
+
+	it("should execute a proposal after execution delay", async function () {
+		await createTreasuryTransferProposal(user1);
+		await advanceBlockNTimes(governanceParams.VOTING_DELAY);
+		await governanceDelegator.connect(user4).castVote(1, 1);
+
+		await advanceBlockNTimes(governanceParams.VOTING_PERIOD);
+
+		await governanceDelegator.queue(1);
+		await advanceNSeconds(governanceParams.EXECUTION_DELAY);
+
+		await expect(governanceDelegator.execute(1)).to.be.fulfilled;
+		expect(await governanceDelegator.state(1)).to.be.equal(
+			ProposalState.Executed
+		);
+	});
+
+	it("should not execute a proposal twice", async function () {
+		await createTreasuryTransferProposal(user1);
+		await advanceBlockNTimes(governanceParams.VOTING_DELAY);
+		await governanceDelegator.connect(user4).castVote(1, 1);
+
+		await advanceBlockNTimes(governanceParams.VOTING_PERIOD);
+
+		await governanceDelegator.queue(1);
+		await advanceNSeconds(governanceParams.EXECUTION_DELAY);
+
+		await governanceDelegator.execute(1);
+		await expect(governanceDelegator.execute(1)).to.be.rejectedWith(
+			"PACT::execute: proposal can only be executed if it is queued"
+		);
+	});
+
+	it("should not execute a proposal too late", async function () {
+		await createTreasuryTransferProposal(user1);
+		await advanceBlockNTimes(governanceParams.VOTING_DELAY);
+		await governanceDelegator.connect(user4).castVote(1, 1);
+
+		await advanceBlockNTimes(governanceParams.VOTING_PERIOD);
+
+		await governanceDelegator.queue(1);
+		await advanceNSeconds(
+			governanceParams.EXECUTION_DELAY + governanceParams.GRACE_PERIOD
+		);
+		await expect(governanceDelegator.execute(1)).to.be.rejectedWith(
+			"PACT::execute: proposal can only be executed if it is queued"
+		);
+		expect(await governanceDelegator.state(1)).to.be.equal(
+			ProposalState.Expired
+		);
+	});
+
+	it("should cancel a proposal if it is not executed", async function () {
+		await createTreasuryTransferProposal(user1);
+		await advanceBlockNTimes(governanceParams.VOTING_DELAY);
+		await governanceDelegator.connect(user4).castVote(1, 1);
+
+		await advanceBlockNTimes(governanceParams.VOTING_PERIOD);
+
+		await governanceDelegator.queue(1);
+		await advanceNSeconds(governanceParams.EXECUTION_DELAY);
+		await expect(governanceDelegator.connect(user1).cancel(1)).to.be
+			.fulfilled;
+		expect(await governanceDelegator.state(1)).to.be.equal(
+			ProposalState.Canceled
+		);
+	});
+
+	it("should cancel a proposal if it is not executed and owner doesn't have enough voting tokens", async function () {
+		await createTreasuryTransferProposal(user1);
+		await advanceBlockNTimes(governanceParams.VOTING_DELAY);
+		await governanceDelegator.connect(user4).castVote(1, 1);
+
+		await advanceBlockNTimes(governanceParams.VOTING_PERIOD);
+
+		await governanceDelegator.queue(1);
+		await advanceNSeconds(governanceParams.EXECUTION_DELAY);
+
+		await votingToken
+			.connect(user1)
+			.transfer(user7.address, parseEther("100"));
+		// user1 will have less than 1% Voting Tokens and this value is lower than proposalThreshold
+		// so any user can cancel an ongoing user1 proposal
+
+		await expect(governanceDelegator.connect(user9).cancel(1)).to.be
+			.fulfilled;
+		expect(await governanceDelegator.state(1)).to.be.equal(
+			ProposalState.Canceled
+		);
+	});
+
+	it("should not cancel a proposal if not owner", async function () {
+		await createTreasuryTransferProposal(user1);
+		await advanceBlockNTimes(governanceParams.VOTING_DELAY);
+		await governanceDelegator.connect(user4).castVote(1, 1);
+
+		await advanceBlockNTimes(governanceParams.VOTING_PERIOD);
+
+		await governanceDelegator.queue(1);
+		await advanceNSeconds(governanceParams.EXECUTION_DELAY);
+		await expect(
+			governanceDelegator.connect(user2).cancel(1)
+		).to.be.rejectedWith("PACT::cancel: proposer above threshold");
+		expect(await governanceDelegator.state(1)).to.be.equal(
+			ProposalState.Queued
+		);
+	});
+
+	it("should not cancel an executed proposal", async function () {
+		await createTreasuryTransferProposal(user1);
+		await advanceBlockNTimes(governanceParams.VOTING_DELAY);
+		await governanceDelegator.connect(user4).castVote(1, 1);
+
+		await advanceBlockNTimes(governanceParams.VOTING_PERIOD);
+
+		await governanceDelegator.queue(1);
+		await advanceNSeconds(governanceParams.EXECUTION_DELAY);
+
+		await governanceDelegator.execute(1);
+
+		await expect(
+			governanceDelegator.connect(user2).cancel(1)
+		).to.be.rejectedWith("PACT::cancel: cannot cancel executed proposal");
+		expect(await governanceDelegator.state(1)).to.be.equal(
+			ProposalState.Executed
+		);
+	});
+
+	it("should update governance params by proposal", async function () {
+		const targets = [
+			governanceDelegator.address,
+			governanceDelegator.address,
+			governanceDelegator.address,
+			governanceDelegator.address,
+			governanceDelegator.address,
+		];
+		const values = [0, 0, 0, 0, 0];
 		const signatures = [
-			"addCommunity(address[],uint256,uint256,uint256,uint256,uint256,uint256,uint256)",
+			"_setVotingDelay(uint256)",
+			"_setVotingPeriod(uint256)",
+			"_setQuorumVotes(uint256)",
+			"_setProposalThreshold(uint256)",
+			"_setReleaseToken(address)",
 		];
 
 		const calldatas = [
+			ethers.utils.defaultAbiCoder.encode(["uint256"], [123]),
+			ethers.utils.defaultAbiCoder.encode(["uint256"], [1000]),
 			ethers.utils.defaultAbiCoder.encode(
-				[
-					"address[]",
-					"uint256",
-					"uint256",
-					"uint256",
-					"uint256",
-					"uint256",
-					"uint256",
-					"uint256",
-				],
-				[
-					[alice.address],
-					parseEther("100"),
-					parseEther("1000"),
-					parseEther("0.01"),
-					1111,
-					111,
-					communityMinTranche,
-					communityMaxTranche,
-				]
+				["uint256"],
+				[parseEther("400000000")]
 			),
+			ethers.utils.defaultAbiCoder.encode(
+				["uint256"],
+				[parseEther("200000000")]
+			),
+			ethers.utils.defaultAbiCoder.encode(["address"], [ADDRESS_TEST]),
 		];
 		const descriptions = "description";
 
-		await expect(
-			pactDelegator.propose(
-				targets,
-				values,
-				signatures,
-				calldatas,
-				descriptions
-			)
-		).to.be.fulfilled;
-	}
+		await governanceDelegator
+			.connect(user1)
+			.propose(targets, values, signatures, calldatas, descriptions);
 
-	it("should create community", async function () {
-		await createCommunityProposal();
+		await advanceBlockNTimes(governanceParams.VOTING_DELAY);
+		await governanceDelegator.connect(user4).castVote(1, 1);
 
-		await advanceBlockNTimes(VOTING_DELAY_BLOCKS);
+		await advanceBlockNTimes(governanceParams.VOTING_PERIOD);
 
-		await expect(pactDelegator.castVote(1, 1)).to.be.fulfilled;
+		await governanceDelegator.queue(1);
+		advanceNSeconds(governanceParams.EXECUTION_DELAY);
 
-		await expect(pactDelegator.connect(alice).castVote(1, 1)).to.be
-			.fulfilled;
+		await expect(governanceDelegator.execute(1)).to.be.fulfilled;
 
-		await advanceBlockNTimes(VOTING_PERIOD_BLOCKS);
-
-		await expect(pactDelegator.connect(alice).queue(1)).to.be.fulfilled;
-
-		await advanceNSeconds(TWO_DAYS_SECONDS);
-
-		await expect(pactDelegator.connect(alice).execute(1)).to.be.fulfilled;
+		expect(await governanceDelegator.votingDelay()).to.be.equal(123);
+		expect(await governanceDelegator.votingPeriod()).to.be.equal(1000);
+		expect(await governanceDelegator.quorumVotes()).to.be.equal(
+			parseEther("400000000")
+		);
+		expect(await governanceDelegator.proposalThreshold()).to.be.equal(
+			parseEther("200000000")
+		);
+		expect(await governanceDelegator.releaseToken()).to.be.equal(
+			ADDRESS_TEST
+		);
 	});
 
-	it("should update community implementation", async function () {
-		await createCommunityProposal();
+	it("should update timelock params by proposal", async function () {
+		const targets = [timelock.address, timelock.address];
+		const values = [0, 0];
+		const signatures = ["setDelay(uint256)", "setPendingAdmin(address)"];
 
-		await advanceBlockNTimes(VOTING_DELAY_BLOCKS);
-
-		await expect(pactDelegator.castVote(1, 1)).to.be.fulfilled;
-		await expect(pactDelegator.connect(alice).castVote(1, 1)).to.be
-			.fulfilled;
-
-		await advanceBlockNTimes(VOTING_PERIOD_BLOCKS);
-
-		await expect(pactDelegator.connect(alice).queue(1)).to.be.fulfilled;
-
-		await advanceNSeconds(TWO_DAYS_SECONDS);
-
-		await expect(pactDelegator.connect(alice).execute(1)).to.be.fulfilled;
-
-		//***************************************************************************
-
-		const targets2 = [communityAdmin.address];
-		const values2 = [0];
-		const descriptions2 = "description";
-
-		let communityTemplateNewAddress: string =
-			"0xf41B47c54dEFF12f8fE830A411a09D865eBb120E";
-
-		const signatures2 = ["updateCommunityTemplate(address)"];
-
-		const calldatas2 = [
-			ethers.utils.defaultAbiCoder.encode(
-				["address"],
-				[communityTemplateNewAddress]
-			),
+		const calldatas = [
+			ethers.utils.defaultAbiCoder.encode(["uint256"], [3601]),
+			ethers.utils.defaultAbiCoder.encode(["address"], [owner.address]),
 		];
+		const descriptions = "description";
 
-		await expect(
-			pactDelegator.propose(
-				targets2,
-				values2,
-				signatures2,
-				calldatas2,
-				descriptions2
-			)
-		).to.be.fulfilled;
+		await governanceDelegator
+			.connect(user1)
+			.propose(targets, values, signatures, calldatas, descriptions);
 
-		await advanceBlockNTimes(VOTING_DELAY_BLOCKS);
+		await advanceBlockNTimes(governanceParams.VOTING_DELAY);
+		await governanceDelegator.connect(user4).castVote(1, 1);
 
-		await expect(pactDelegator.castVote(2, 1)).to.be.fulfilled;
-		// await expect(pactDelegator.connect(alice).castVote(2, 1)).to.be
-		// 	.fulfilled;
+		await advanceBlockNTimes(governanceParams.VOTING_PERIOD);
 
-		await advanceBlockNTimes(VOTING_PERIOD_BLOCKS);
+		await governanceDelegator.queue(1);
+		advanceNSeconds(governanceParams.EXECUTION_DELAY);
 
-		await expect(pactDelegator.connect(alice).queue(2)).to.be.fulfilled;
+		await expect(governanceDelegator.execute(1)).to.be.fulfilled;
 
-		await advanceNSeconds(TWO_DAYS_SECONDS);
-
-		await expect(pactDelegator.connect(alice).execute(2)).to.be.fulfilled;
-
-		expect(await communityAdmin.communityTemplate()).to.be.equal(
-			communityTemplateNewAddress
-		);
+		expect(await timelock.delay()).to.be.equal(3601);
+		expect(await timelock.pendingAdmin()).to.be.equal(owner.address);
 	});
 
-	it("should update params if owner", async function () {
-		await expect(pactDelegator._setVotingDelay(123)).to.be.fulfilled;
-		await expect(pactDelegator._setVotingPeriod(730)).to.be.fulfilled;
-		await expect(pactDelegator._setQuorumVotes(QUORUM_VOTES.mul(2))).to.be
-			.fulfilled;
+	it("should not update params if not timelock", async function () {
 		await expect(
-			pactDelegator._setProposalThreshold(PROPOSAL_THRESHOLD.mul(2))
-		).to.be.fulfilled;
-	});
-
-	it("should not update params if not owner", async function () {
-		await expect(
-			pactDelegator.connect(alice)._setVotingDelay(0)
+			governanceDelegator.connect(user1)._setQuorumVotes(0)
 		).to.be.rejectedWith("Ownable: caller is not the owner");
 		await expect(
-			pactDelegator.connect(alice)._setVotingPeriod(0)
+			governanceDelegator.connect(user1)._setProposalThreshold(0)
 		).to.be.rejectedWith("Ownable: caller is not the owner");
 		await expect(
-			pactDelegator.connect(alice)._setQuorumVotes(0)
+			governanceDelegator.connect(user1)._setVotingDelay(0)
 		).to.be.rejectedWith("Ownable: caller is not the owner");
 		await expect(
-			pactDelegator.connect(alice)._setProposalThreshold(0)
+			governanceDelegator.connect(user1)._setVotingPeriod(0)
+		).to.be.rejectedWith("Ownable: caller is not the owner");
+		await expect(
+			governanceDelegator.connect(user1)._setReleaseToken(ADDRESS_TEST)
 		).to.be.rejectedWith("Ownable: caller is not the owner");
 	});
 
-	it("should update delegate if owner", async function () {
-		const NewPACTDelegateFactory = await ethers.getContractFactory(
+	it("should update implementation by proposal", async function () {
+		const governanceDelegateFactory = await ethers.getContractFactory(
 			"PACTDelegate"
 		);
-		const newPACTDelegate = await NewPACTDelegateFactory.deploy();
+		const newGovernanceDelegate = await governanceDelegateFactory.deploy();
 
 		expect(
-			await ImpactProxyAdmin.getProxyImplementation(pactDelegator.address)
-		).to.be.equal(pactDelegate.address);
-		await expect(
-			ImpactProxyAdmin.upgrade(
-				pactDelegator.address,
-				newPACTDelegate.address
-			)
-		).to.be.fulfilled;
-		expect(
-			await ImpactProxyAdmin.getProxyImplementation(pactDelegator.address)
-		).to.be.equal(newPACTDelegate.address);
-	});
+			await proxyAdmin.getProxyImplementation(governanceDelegator.address)
+		).to.be.equal(governanceDelegate.address);
 
-	it("should not update delegate if not owner", async function () {
-		await ImpactProxyAdmin.transferOwnership(pactTimelock.address);
-
-		const NewPACTDelegateFactory = await ethers.getContractFactory(
-			"PACTDelegate"
-		);
-		const newPACTDelegate = await NewPACTDelegateFactory.deploy();
-
-		expect(
-			await ImpactProxyAdmin.getProxyImplementation(pactDelegator.address)
-		).to.be.equal(pactDelegate.address);
-		await expect(
-			ImpactProxyAdmin.upgrade(
-				pactDelegator.address,
-				newPACTDelegate.address
-			)
-		).to.be.rejectedWith("Ownable: caller is not the owner");
-		expect(
-			await ImpactProxyAdmin.getProxyImplementation(pactDelegator.address)
-		).to.be.equal(pactDelegate.address);
-	});
-
-	it("should update delegate if timelock is owner", async function () {
-		await ImpactProxyAdmin.transferOwnership(pactTimelock.address);
-
-		const NewPACTDelegateFactory = await ethers.getContractFactory(
-			"PACTDelegate"
-		);
-		const newPACTDelegate = await NewPACTDelegateFactory.deploy();
-
-		expect(
-			await ImpactProxyAdmin.getProxyImplementation(pactDelegator.address)
-		).to.be.equal(pactDelegate.address);
-
-		const targets = [ImpactProxyAdmin.address];
+		const targets = [proxyAdmin.address];
 		const values = [0];
 		const signatures = ["upgrade(address,address)"];
 
 		const calldatas = [
 			ethers.utils.defaultAbiCoder.encode(
 				["address", "address"],
-				[pactDelegator.address, newPACTDelegate.address]
+				[governanceDelegator.address, newGovernanceDelegate.address]
 			),
 		];
 		const descriptions = "description";
 
 		await expect(
-			pactDelegator.propose(
-				targets,
-				values,
-				signatures,
-				calldatas,
-				descriptions
-			)
+			governanceDelegator
+				.connect(user4)
+				.propose(targets, values, signatures, calldatas, descriptions)
 		).to.be.fulfilled;
 
-		await advanceBlockNTimes(VOTING_DELAY_BLOCKS);
+		await advanceBlockNTimes(governanceParams.VOTING_DELAY);
 
-		await expect(pactDelegator.castVote(1, 1)).to.be.fulfilled;
-
-		await expect(pactDelegator.connect(alice).castVote(1, 1)).to.be
+		await expect(governanceDelegator.connect(user4).castVote(1, 1)).to.be
 			.fulfilled;
 
-		await advanceBlockNTimes(VOTING_PERIOD_BLOCKS);
+		await advanceBlockNTimes(governanceParams.VOTING_PERIOD);
 
-		await expect(pactDelegator.connect(alice).queue(1)).to.be.fulfilled;
+		await expect(governanceDelegator.queue(1)).to.be.fulfilled;
 
-		await advanceNSeconds(TWO_DAYS_SECONDS);
+		await advanceNSeconds(governanceParams.EXECUTION_DELAY);
 
-		await expect(pactDelegator.connect(alice).execute(1)).to.be.fulfilled;
-
-		expect(
-			await ImpactProxyAdmin.getProxyImplementation(pactDelegator.address)
-		).to.be.equal(newPACTDelegate.address);
-	});
-
-	it("should update donation miner", async function () {
-		donationMiner.transferOwnership(pactTimelock.address);
-		const donationMinerImplementationFactory =
-			await ethers.getContractFactory("DonationMinerImplementation");
-		const newDonationMinerImplementation =
-			await donationMinerImplementationFactory.deploy();
-
-		const donationMinerProxyFactory = await ethers.getContractFactory(
-			"DonationMinerProxy"
-		);
-
-		const newDonationMinerProxy = await donationMinerProxyFactory.deploy(
-			newDonationMinerImplementation.address,
-			proxyAdmin.address
-		);
-
-		const newDonationMinerContract = await ethers.getContractAt(
-			"DonationMinerImplementation",
-			newDonationMinerProxy.address
-		);
-
-		await newDonationMinerContract.initialize(
-			cUSD.address,
-			pactToken.address,
-			treasury.address,
-			parseEther("1234"),
-			30,
-			100,
-			"998902",
-			"1000000"
-		);
-
-		await newDonationMinerContract.transferOwnership(pactTimelock.address);
-
-		const targets = [donationMiner.address];
-		const values = [0];
-		const descriptions = "description";
-
-		const signatures = ["transfer(address,address,uint256)"];
-
-		const calldatas = [
-			ethers.utils.defaultAbiCoder.encode(
-				["address", "address", "uint256"],
-				[
-					pactToken.address,
-					newDonationMinerProxy.address,
-					parseEther("4000000000"),
-				]
-			),
-		];
-
-		await expect(
-			pactDelegator.propose(
-				targets,
-				values,
-				signatures,
-				calldatas,
-				descriptions
-			)
-		).to.be.fulfilled;
-
-		await advanceBlockNTimes(VOTING_DELAY_BLOCKS);
-
-		await expect(pactDelegator.castVote(1, 1)).to.be.fulfilled;
-
-		await advanceBlockNTimes(VOTING_PERIOD_BLOCKS);
-
-		await expect(pactDelegator.connect(alice).queue(1)).to.be.fulfilled;
-
-		await advanceNSeconds(TWO_DAYS_SECONDS);
-
-		await expect(pactDelegator.connect(alice).execute(1)).to.be.fulfilled;
+		await expect(governanceDelegator.execute(1)).to.be.fulfilled;
 
 		expect(
-			await pactToken.balanceOf(newDonationMinerContract.address)
-		).to.be.equal(parseEther("4000000000"));
-		expect(await pactToken.balanceOf(donationMiner.address)).to.be.equal(
-			parseEther("0")
-		);
+			await proxyAdmin.getProxyImplementation(governanceDelegator.address)
+		).to.be.equal(newGovernanceDelegate.address);
 	});
 
-	it("should transfer token from treasury", async function () {
-		treasury.transferOwnership(pactTimelock.address);
-
-		const treasuryInitialBalance: BigNumber = await cUSD.balanceOf(
-			treasury.address
+	it("should not update implementation if not timelock", async function () {
+		const governanceDelegateFactory = await ethers.getContractFactory(
+			"PACTDelegate"
 		);
-		const bobInitialBalance: BigNumber = await cUSD.balanceOf(bob.address);
-		const amount = "123456";
+		const newGovernanceDelegate = await governanceDelegateFactory.deploy();
 
-		const targets = [treasury.address];
-		const values = [0];
-		const descriptions = "description";
-
-		const signatures = ["transfer(address,address,uint256)"];
-
-		const calldatas = [
-			ethers.utils.defaultAbiCoder.encode(
-				["address", "address", "uint256"],
-				[cUSD.address, bob.address, amount]
-			),
-		];
-
+		expect(
+			await proxyAdmin.getProxyImplementation(governanceDelegator.address)
+		).to.be.equal(governanceDelegate.address);
 		await expect(
-			pactDelegator.propose(
-				targets,
-				values,
-				signatures,
-				calldatas,
-				descriptions
+			proxyAdmin.upgrade(
+				governanceDelegator.address,
+				newGovernanceDelegate.address
 			)
-		).to.be.fulfilled;
-
-		await advanceBlockNTimes(VOTING_DELAY_BLOCKS);
-
-		await expect(pactDelegator.castVote(1, 1)).to.be.fulfilled;
-
-		await advanceBlockNTimes(VOTING_PERIOD_BLOCKS);
-
-		await expect(pactDelegator.connect(alice).queue(1)).to.be.fulfilled;
-
-		await advanceNSeconds(TWO_DAYS_SECONDS);
-
-		await expect(pactDelegator.connect(alice).execute(1)).to.be.fulfilled;
-
-		expect(await cUSD.balanceOf(treasury.address)).to.be.equal(
-			treasuryInitialBalance.sub(amount)
-		);
-		expect(await cUSD.balanceOf(bob.address)).to.be.equal(
-			bobInitialBalance.add(amount)
-		);
-	});
-
-	it("should transfer token from delegator", async function () {
-		pactDelegator.transferOwnership(pactTimelock.address);
-
-		const delegatorInitialBalance: BigNumber = await pactToken.balanceOf(
-			pactDelegator.address
-		);
-		const bobInitialBalance: BigNumber = await pactToken.balanceOf(
-			bob.address
-		);
-		const amount = "123456";
-
-		const targets = [pactDelegator.address];
-		const values = [0];
-		const descriptions = "description";
-
-		const signatures = ["transfer(address,address,uint256)"];
-
-		const calldatas = [
-			ethers.utils.defaultAbiCoder.encode(
-				["address", "address", "uint256"],
-				[pactToken.address, bob.address, amount]
-			),
-		];
-
-		await expect(
-			pactDelegator.propose(
-				targets,
-				values,
-				signatures,
-				calldatas,
-				descriptions
-			)
-		).to.be.fulfilled;
-
-		await advanceBlockNTimes(VOTING_DELAY_BLOCKS);
-
-		await expect(pactDelegator.castVote(1, 1)).to.be.fulfilled;
-
-		await advanceBlockNTimes(VOTING_PERIOD_BLOCKS);
-
-		await expect(pactDelegator.connect(alice).queue(1)).to.be.fulfilled;
-
-		await advanceNSeconds(TWO_DAYS_SECONDS);
-
-		await expect(pactDelegator.connect(alice).execute(1)).to.be.fulfilled;
-
-		expect(await pactToken.balanceOf(pactDelegator.address)).to.be.equal(
-			delegatorInitialBalance.sub(amount)
-		);
-		expect(await pactToken.balanceOf(bob.address)).to.be.equal(
-			bobInitialBalance.add(amount)
-		);
-	});
-
-	it("should update DonationMinerImplementation", async function () {
-		await ImpactProxyAdmin.transferOwnership(pactTimelock.address);
-		await donationMiner.transferOwnership(pactTimelock.address);
-
-		const targets = [proxyAdmin.address, donationMiner.address];
-		const values = [0, 0];
-		const descriptions = "description";
-
-		let DonationMinerImplementationV2 = await ethers.getContractAt(
-			"DonationMinerImplementationV2",
-			(
-				await deployments.get("DonationMinerImplementationV2")
-			).address
-		);
-
-		const signatures = [
-			"upgrade(address,address)",
-			"updateClaimDelay(uint256)",
-		];
-
-		const calldatas = [
-			ethers.utils.defaultAbiCoder.encode(
-				["address", "address"],
-				[donationMiner.address, DonationMinerImplementationV2.address]
-			),
-			ethers.utils.defaultAbiCoder.encode(["uint256"], [8]),
-		];
-
-		await expect(
-			pactDelegator.propose(
-				targets,
-				values,
-				signatures,
-				calldatas,
-				descriptions
-			)
-		).to.be.fulfilled;
-
-		await advanceBlockNTimes(VOTING_DELAY_BLOCKS);
-
-		await expect(pactDelegator.castVote(1, 1)).to.be.fulfilled;
-		// await expect(pactDelegator.connect(alice).castVote(2, 1)).to.be
-		// 	.fulfilled;
-
-		await advanceBlockNTimes(VOTING_PERIOD_BLOCKS);
-
-		await expect(pactDelegator.connect(alice).queue(1)).to.be.fulfilled;
-
-		await advanceNSeconds(TWO_DAYS_SECONDS);
-
-		await expect(pactDelegator.connect(alice).execute(1)).to.be.fulfilled;
-
-		donationMiner = await ethers.getContractAt(
-			"DonationMinerImplementationV2",
-			donationMiner.address
-		);
-
-		expect(await donationMiner.claimDelay()).to.be.equal(8);
+		).to.be.rejectedWith("Ownable: caller is not the owner");
+		expect(
+			await proxyAdmin.getProxyImplementation(governanceDelegator.address)
+		).to.be.equal(governanceDelegate.address);
 	});
 
 	it("should add member to ubi committee", async function () {
@@ -664,35 +706,109 @@ describe("PACTGovernator", function () {
 		const signatures = ["addMember(address)"];
 
 		const calldatas = [
-			ethers.utils.defaultAbiCoder.encode(["address"], [bob.address]),
+			ethers.utils.defaultAbiCoder.encode(["address"], [user8.address]),
 		];
 		const descriptions = "description";
 
 		await expect(
-			pactDelegator.propose(
-				targets,
-				values,
-				signatures,
-				calldatas,
-				descriptions
-			)
+			governanceDelegator
+				.connect(user1)
+				.propose(targets, values, signatures, calldatas, descriptions)
 		).to.be.fulfilled;
 
-		await advanceBlockNTimes(VOTING_DELAY_BLOCKS);
+		await advanceBlockNTimes(governanceParams.VOTING_DELAY);
 
-		await expect(pactDelegator.castVote(1, 1)).to.be.fulfilled;
+		await expect(governanceDelegator.castVote(1, 1)).to.be.fulfilled;
 
-		await expect(pactDelegator.connect(alice).castVote(1, 1)).to.be
+		await expect(governanceDelegator.connect(user1).castVote(1, 1)).to.be
 			.fulfilled;
 
-		await advanceBlockNTimes(VOTING_PERIOD_BLOCKS);
+		await advanceBlockNTimes(governanceParams.VOTING_PERIOD);
 
-		await expect(pactDelegator.connect(alice).queue(1)).to.be.fulfilled;
+		await expect(governanceDelegator.connect(user2).queue(1)).to.be
+			.fulfilled;
 
-		await advanceNSeconds(TWO_DAYS_SECONDS);
+		await advanceNSeconds(governanceParams.EXECUTION_DELAY);
 
-		await expect(pactDelegator.connect(alice).execute(1)).to.be.fulfilled;
+		await expect(governanceDelegator.connect(user1).execute(1)).to.be
+			.fulfilled;
 
-		expect(await ubiCommittee.members(bob.address)).to.be.equal(true);
+		expect(await ubiCommittee.members(user8.address)).to.be.equal(true);
+	});
+});
+
+describe("Governance - with two tokens", function () {
+	before(async function () {
+		delegate = await ethers.getContractFactory("PACTDelegate");
+
+		[owner, user1, user2, user3, user4, user5, user6, user7, user8, user9] =
+			await ethers.getSigners();
+	});
+
+	beforeEach(async function () {
+		await deployGovernance();
+
+		stakingToken = await ethers.getContractAt(
+			"SPACTToken",
+			(
+				await deployments.get("SPACTToken")
+			).address
+		);
+
+		await stakingToken.mint(user1.address, parseEther("100000001")); // 100 mil (1 %)
+
+		await stakingToken.mint(user6.address, parseEther("50000001")); // 50 mil (0.5 %)
+		await stakingToken.connect(user1).delegate(user1.address);
+		await stakingToken.connect(user6).delegate(user6.address);
+	});
+
+	it("should upgrade and set release token", async function () {
+		const governanceDelegateFactory = await ethers.getContractFactory(
+			"PACTDelegate"
+		);
+		const newGovernanceDelegate = await governanceDelegateFactory.deploy();
+
+		expect(
+			await proxyAdmin.getProxyImplementation(governanceDelegator.address)
+		).to.be.equal(governanceDelegate.address);
+
+		await createAndExecuteProposal(
+			governanceDelegator,
+			user1,
+			[user1],
+			[proxyAdmin.address, governanceDelegator.address],
+			[0, 0],
+			["upgrade(address,address)", "_setReleaseToken(address)"],
+			[["address", "address"], ["address"]],
+			[
+				[governanceDelegator.address, newGovernanceDelegate.address],
+				[ADDRESS_TEST],
+			]
+		);
+
+		expect(await governanceDelegator.releaseToken()).to.be.equal(
+			ADDRESS_TEST
+		);
+	});
+
+	it("should create proposal if user have enough tokens and stakingTokens", async function () {
+		await expect(createTreasuryTransferProposal(user6)).to.be.fulfilled;
+	});
+
+	it("should create and execute proposal if user have enough tokens and stakingTokens", async function () {
+		await createAndExecuteProposal(
+			governanceDelegator,
+			user6,
+			[user6],
+			[treasuryProxy.address],
+			[0],
+			["transfer(address,address,uint256)"],
+			[["address", "address", "uint256"]],
+			[[USDT.address, user2.address, parseEther("1234")]]
+		);
+
+		expect(await USDT.balanceOf(user2.address)).to.be.equal(
+			parseEther("1234")
+		);
 	});
 });

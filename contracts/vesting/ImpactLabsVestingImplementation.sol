@@ -103,7 +103,9 @@ contract ImpactLabsVestingImplementation is
         uint256 _claimAmount;
 
         while (_index <= _rewardPeriodCount) {
-            (_rewardPerBlock, , _startBlock, _endBlock, ) = donationMiner.rewardPeriods(_index);
+            (_rewardPerBlock, , _startBlock, _endBlock, , , , ) = donationMiner.rewardPeriods(
+                _index
+            );
 
             if (_endBlock >= block.number) {
                 break;

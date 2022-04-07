@@ -10,16 +10,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const accounts: SignerWithAddress[] = await ethers.getSigners();
 	const deployer = accounts[0];
 
-	await deploy(
-		"CommunityAdminImplementation",
-		{
-			from: deployer.address,
-			args: [],
-			log: true,
-			// gasLimit: 13000000,
-		}
-	);
+	await deploy("CommunityAdminImplementationOld", {
+		from: deployer.address,
+		args: [],
+		log: true,
+		// gasLimit: 13000000,
+	});
 };
 
 export default func;
-func.tags = ["CommunityAdminV2Prod", "Prod"];
+func.tags = ["CommunityAdminOldTest", "Test"];

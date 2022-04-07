@@ -146,17 +146,6 @@ async function deploy() {
 		await impactProxyAdmin.getProxyImplementation(
 			communityAdminProxy.address
 		)
-	).to.be.equal(CommunityAdminImplementationOld.address);
-	await expect(
-		impactProxyAdmin.upgrade(
-			communityAdminProxy.address,
-			CommunityAdminImplementation.address
-		)
-	).to.be.fulfilled;
-	expect(
-		await impactProxyAdmin.getProxyImplementation(
-			communityAdminProxy.address
-		)
 	).to.be.equal(CommunityAdminImplementation.address);
 
 	communityAdminProxy = await ethers.getContractAt(
