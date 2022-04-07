@@ -12,4 +12,5 @@ import "../../governor/ubiCommittee/interfaces/IUBICommittee.sol";
  */
 abstract contract CommunityAdminStorageV2 is CommunityAdminStorageV1 {
     IUBICommittee public override ubiCommittee;
+//    address public override communityMiddleProxy;
 }

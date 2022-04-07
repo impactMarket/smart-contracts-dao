@@ -19,6 +19,7 @@ interface ICommunityAdmin {
     function cUSD() external view returns(IERC20);
     function treasury() external view returns(ITreasury);
     function ubiCommittee() external view returns(IUBICommittee);
+//    function communityMiddleProxy() external view returns(address);
     function communities(address _community) external view returns(CommunityState);
     function communityTemplate() external view returns(ICommunity);
     function communityProxyAdmin() external view returns(ProxyAdmin);

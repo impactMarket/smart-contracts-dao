@@ -19,7 +19,7 @@ import { parseUnits } from "@ethersproject/units/src.ts";
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 
-describe.only("DonationMiner", () => {
+describe("DonationMiner", () => {
 	const START_BLOCK = 130;
 	const REWARD_PERIOD_SIZE = 20;
 	const CLAIM_DELAY = 5;

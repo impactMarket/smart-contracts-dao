@@ -530,21 +530,39 @@ contract CommunityAdminImplementation is
         uint256 _maxTranche,
         ICommunity _previousCommunity
     ) internal returns (address) {
+//        TransparentUpgradeableProxy _community = new TransparentUpgradeableProxy(
+//            address(communityTemplate),
+//            address(communityProxyAdmin),
+//            abi.encodeWithSignature(
+//                "initialize(address[],uint256,uint256,uint256,uint256,uint256,uint256,uint256,address)",
+//                _managers,
+//                _claimAmount,
+//                _maxClaim,
+//                _decreaseStep,
+//                _baseInterval,
+//                _incrementInterval,
+//                _minTranche,
+//                _maxTranche,
+//                address(_previousCommunity)
+//            )
+//        );
+
         TransparentUpgradeableProxy _community = new TransparentUpgradeableProxy(
             address(communityTemplate),
             address(communityProxyAdmin),
-            abi.encodeWithSignature(
-                "initialize(address[],uint256,uint256,uint256,uint256,uint256,uint256,uint256,address)",
-                _managers,
-                _claimAmount,
-                _maxClaim,
-                _decreaseStep,
-                _baseInterval,
-                _incrementInterval,
-                _minTranche,
-                _maxTranche,
-                address(_previousCommunity)
-            )
+            ""
+        );
+
+        ICommunity(address(_community)).initialize(
+            _managers,
+            _claimAmount,
+            _maxClaim,
+            _decreaseStep,
+            _baseInterval,
+            _incrementInterval,
+            _minTranche,
+            _maxTranche,
+            _previousCommunity
         );
 
         return address(_community);

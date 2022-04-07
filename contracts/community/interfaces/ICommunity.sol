@@ -20,6 +20,17 @@ interface ICommunity {
         uint256 lastClaim;       //block number of the last claim
     }
 
+    function initialize(
+        address[] memory _managers,
+        uint256 _claimAmount,
+        uint256 _maxClaim,
+        uint256 _decreaseStep,
+        uint256 _baseInterval,
+        uint256 _incrementInterval,
+        uint256 _minTranche,
+        uint256 _maxTranche,
+        ICommunity _previousCommunity
+    ) external;
     function getVersion() external returns(uint256);
     function previousCommunity() external view returns(ICommunity);
     function claimAmount() external view returns(uint256);

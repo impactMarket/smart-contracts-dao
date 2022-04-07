@@ -12,6 +12,8 @@ import "./interfaces/ICommunityOld.sol";
 import "./interfaces/ICommunityAdmin.sol";
 import "./interfaces/CommunityStorageV1.sol";
 
+import "hardhat/console.sol";
+
 /**
  * @notice Welcome to the Community contract. For each community
  * there will be one proxy contract deployed by CommunityAdmin.
@@ -229,7 +231,7 @@ contract Community is
         uint256 _minTranche,
         uint256 _maxTranche,
         ICommunity _previousCommunity
-    ) external initializer {
+    ) external override initializer {
         require(
             _baseInterval > _incrementInterval,
             "Community::initialize: baseInterval must be greater than incrementInterval"

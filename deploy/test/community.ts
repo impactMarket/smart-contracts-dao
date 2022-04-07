@@ -51,10 +51,25 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		// gasLimit: 13000000,
 	});
 
+	const communityProxyResult = await deploy("CommunityProxy", {
+		from: deployer.address,
+		args: [
+			communityResult.address,
+			communityAdminProxyResult.address,
+		],
+		log: true,
+		// gasLimit: 13000000,
+	});
+
 	await CommunityAdminContract.initialize(
-		communityResult.address,
+		communityProxyResult.address,
 		cUSDAddress
 	);
+
+	// console.log('communityAdminProxy address: ', CommunityAdminContract.address);
+	// console.log('communityAdminImplementation address: ', communityAdminImplementationResult.address);
+	// console.log('communityProxy address: ', communityProxyResult.address);
+	// console.log('communityTemplate address: ', communityResult.address);
 
 	const Treasury = await deployments.get("TreasuryProxy");
 

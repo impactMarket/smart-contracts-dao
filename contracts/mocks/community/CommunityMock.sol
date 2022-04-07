@@ -208,11 +208,70 @@ contract CommunityMock is
 
     /**
      * @notice Used to initialize a new Community contract
+     *
+     * @param _managers            Community's initial managers.
+     *                             Will be able to add others
+     * @param _claimAmount         Base amount to be claim by the beneficiary
+     * @param _maxClaim            Limit that a beneficiary can claim in total
+     * @param _decreaseStep        Value decreased from maxClaim each time a beneficiary is added
+     * @param _baseInterval        Base interval to start claiming
+     * @param _incrementInterval   Increment interval used in each claim
+     * @param _previousCommunity   Previous smart contract address of community
+     * @param _minTranche          Minimum amount that the community will receive when requesting funds
+     * @param _maxTranche          Maximum amount that the community will receive when requesting funds
      */
-    function initialize() external initializer {
-        //        __AccessControl_init();
-        //        __Ownable_init();
-        //        __ReentrancyGuard_init();
+    function initialize(
+        address[] memory _managers,
+        uint256 _claimAmount,
+        uint256 _maxClaim,
+        uint256 _decreaseStep,
+        uint256 _baseInterval,
+        uint256 _incrementInterval,
+        uint256 _minTranche,
+        uint256 _maxTranche,
+        ICommunity _previousCommunity
+    ) external override initializer {
+        require(
+            _baseInterval > _incrementInterval,
+            "Community::initialize: baseInterval must be greater than incrementInterval"
+        );
+        require(
+            _maxClaim > _claimAmount,
+            "Community::initialize: maxClaim must be greater than claimAmount"
+        );
+
+        require(
+            _minTranche <= _maxTranche,
+            "Community::initialize: minTranche should not be greater than maxTranche"
+        );
+
+        __AccessControl_init();
+        __Ownable_init();
+        __ReentrancyGuard_init();
+
+        claimAmount = _claimAmount;
+        baseInterval = _baseInterval;
+        incrementInterval = _incrementInterval;
+        maxClaim = _maxClaim;
+        minTranche = _minTranche;
+        maxTranche = _maxTranche;
+        previousCommunity = _previousCommunity;
+        communityAdmin = ICommunityAdmin(msg.sender);
+        decreaseStep = _decreaseStep;
+        locked = false;
+
+        transferOwnership(msg.sender);
+
+        // MANAGER_ROLE is the admin for the MANAGER_ROLE
+        // so every manager is able to add or remove other managers
+        _setRoleAdmin(MANAGER_ROLE, MANAGER_ROLE);
+
+        _setupRole(MANAGER_ROLE, msg.sender);
+        emit ManagerAdded(msg.sender, msg.sender);
+
+        for (uint256 i = 0; i < _managers.length; i++) {
+            addManager(_managers[i]);
+        }
     }
 
     /**
