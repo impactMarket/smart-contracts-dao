@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./ICommunity.sol";
 import "../../treasury/interfaces/ITreasury.sol";
 import "../../governor/ubiCommittee/interfaces/IUBICommittee.sol";
+import "../../ambassadors/interfaces/IAmbassadors.sol";
 
 interface ICommunityAdmin {
     enum CommunityState {
@@ -19,14 +20,17 @@ interface ICommunityAdmin {
     function cUSD() external view returns(IERC20);
     function treasury() external view returns(ITreasury);
     function ubiCommittee() external view returns(IUBICommittee);
+    function ambassadors() external view returns(IAmbassadors);
     function communities(address _community) external view returns(CommunityState);
     function communityTemplate() external view returns(ICommunity);
     function communityProxyAdmin() external view returns(ProxyAdmin);
     function communityListAt(uint256 _index) external view returns (address);
     function communityListLength() external view returns (uint256);
+    function isAmbassadorOfCommunity(address _community, address _ambassador) external view returns (bool);
 
     function updateTreasury(ITreasury _newTreasury) external;
     function updateUbiCommittee(IUBICommittee _newUbiCommittee) external;
+    function updateAmbassadors(IAmbassadors _newAmbassadors) external;
     function updateCommunityTemplate(ICommunity _communityTemplate_) external;
     function updateBeneficiaryParams(
         ICommunity _community,
@@ -44,6 +48,7 @@ interface ICommunityAdmin {
     function updateProxyImplementation(address _communityProxy, address _newLogic) external;
     function addCommunity(
         address[] memory _managers,
+        address _ambassador,
         uint256 _claimAmount,
         uint256 _maxClaim,
         uint256 _decreaseStep,

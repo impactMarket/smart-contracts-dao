@@ -242,6 +242,14 @@ contract CommunityMock is
     }
 
     /**
+     * @notice Enforces sender to be the community ambassador
+     */
+    modifier onlyAmbassador() {
+        require(communityAdmin.isAmbassadorOfCommunity(address(this), msg.sender), "Community: NOT_AMBASSADOR");
+        _;
+    }
+
+    /**
      * @notice Returns the cUSD contract address
      */
     function cUSD() public view override returns (IERC20) {
@@ -376,7 +384,7 @@ contract CommunityMock is
      *
      * @param _account address of the manager to be added
      */
-    function addManager(address _account) public override onlyManagers {
+    function addManager(address _account) public override onlyAmbassador {
         if (!hasRole(MANAGER_ROLE, _account)) {
             super.grantRole(MANAGER_ROLE, _account);
             emit ManagerAdded(msg.sender, _account);
@@ -388,7 +396,7 @@ contract CommunityMock is
      *
      * @param _account address of the manager to be removed
      */
-    function removeManager(address _account) external override onlyManagers {
+    function removeManager(address _account) external override onlyAmbassador {
         require(
             hasRole(MANAGER_ROLE, _account),
             "Community::removeManager: This account doesn't have manager role"
