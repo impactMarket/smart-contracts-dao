@@ -63,7 +63,7 @@ async function deploy() {
 
 	const communityAdmin = await deployments.get("CommunityAdminProxy");
 	communityAdminProxy = await ethers.getContractAt(
-		"CommunityAdminImplementationOld",
+		"CommunityAdminImplementation",
 		communityAdmin.address
 	);
 
@@ -73,28 +73,28 @@ async function deploy() {
 		treasury.address
 	);
 
-	const CommunityAdminImplementationOld = await deployments.get(
-		"CommunityAdminImplementationOld"
-	);
-	const CommunityAdminImplementation = await deployments.get(
-		"CommunityAdminImplementation"
-	);
-	expect(
-		await impactProxyAdmin.getProxyImplementation(
-			communityAdminProxy.address
-		)
-	).to.be.equal(CommunityAdminImplementationOld.address);
-	await expect(
-		impactProxyAdmin.upgrade(
-			communityAdminProxy.address,
-			CommunityAdminImplementation.address
-		)
-	).to.be.fulfilled;
-	expect(
-		await impactProxyAdmin.getProxyImplementation(
-			communityAdminProxy.address
-		)
-	).to.be.equal(CommunityAdminImplementation.address);
+	// const CommunityAdminImplementationOld = await deployments.get(
+	// 	"CommunityAdminImplementationOld"
+	// );
+	// const CommunityAdminImplementation = await deployments.get(
+	// 	"CommunityAdminImplementation"
+	// );
+	// expect(
+	// 	await impactProxyAdmin.getProxyImplementation(
+	// 		communityAdminProxy.address
+	// 	)
+	// ).to.be.equal(CommunityAdminImplementationOld.address);
+	// await expect(
+	// 	impactProxyAdmin.upgrade(
+	// 		communityAdminProxy.address,
+	// 		CommunityAdminImplementation.address
+	// 	)
+	// ).to.be.fulfilled;
+	// expect(
+	// 	await impactProxyAdmin.getProxyImplementation(
+	// 		communityAdminProxy.address
+	// 	)
+	// ).to.be.equal(CommunityAdminImplementation.address);
 
 	communityAdminProxy = await ethers.getContractAt(
 		"CommunityAdminImplementation",
