@@ -428,16 +428,16 @@ contract CommunityAdminImplementationMock is
     /**
      * @notice Updates proxy implementation address of a community
      *
-     * @param communityProxy_ address of the community
+     * @param CommunityMiddleProxy_ address of the community
      * @param newCommunityTemplate_ address of new implementation contract
      */
-    function updateProxyImplementation(address communityProxy_, address newCommunityTemplate_)
+    function updateProxyImplementation(address CommunityMiddleProxy_, address newCommunityTemplate_)
         external
         override
         onlyOwner
     {
         communityProxyAdmin.upgrade(
-            TransparentUpgradeableProxy(payable(communityProxy_)),
+            TransparentUpgradeableProxy(payable(CommunityMiddleProxy_)),
             newCommunityTemplate_
         );
     }

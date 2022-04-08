@@ -441,16 +441,16 @@ contract CommunityAdminImplementationOld is
     /**
      * @notice Updates proxy implementation address of a community
      *
-     * @param _communityProxy address of the community
+     * @param _CommunityMiddleProxy address of the community
      * @param _newCommunityTemplate address of new implementation contract
      */
-    function updateProxyImplementation(address _communityProxy, address _newCommunityTemplate)
+    function updateProxyImplementation(address _CommunityMiddleProxy, address _newCommunityTemplate)
         external
         override
         onlyOwner
     {
         communityProxyAdmin.upgrade(
-            TransparentUpgradeableProxy(payable(_communityProxy)),
+            TransparentUpgradeableProxy(payable(_CommunityMiddleProxy)),
             _newCommunityTemplate
         );
     }

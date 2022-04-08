@@ -95,7 +95,6 @@ const communityMaxTranche = parseEther("5000");
 const managerRole = keccak256(ethers.utils.toUtf8Bytes("MANAGER_ROLE"));
 
 describe.only("Community", () => {
-
 	async function init() {
 		const accounts: SignerWithAddress[] = await ethers.getSigners();
 
@@ -182,7 +181,7 @@ describe.only("Community", () => {
 	}
 
 	describe("CommunityAdmin", () => {
-		before(async function() {
+		before(async function () {
 			await init();
 		});
 
@@ -213,7 +212,9 @@ describe.only("Community", () => {
 			(await communityInstance.maxClaim()).should.be.equal(
 				maxClaimTen.toString()
 			);
-			(await communityInstance.validBeneficiaryCount()).should.be.equal(0);
+			(await communityInstance.validBeneficiaryCount()).should.be.equal(
+				0
+			);
 			(await communityInstance.treasuryFunds()).should.be.equal(
 				parseEther("100")
 			);
@@ -221,12 +222,14 @@ describe.only("Community", () => {
 			(await communityInstance.communityAdmin()).should.be.equal(
 				communityAdminProxy.address
 			);
-			(await communityInstance.cUSD()).should.be.equal(cUSDInstance.address);
+			(await communityInstance.cUSD()).should.be.equal(
+				cUSDInstance.address
+			);
 			(await communityInstance.locked()).should.be.equal(false);
 			(await communityInstance.decreaseStep()).should.be.equal(oneCent);
 		});
 
-		it("should add a community if admin", async () => {
+		it.only("should add a community if admin", async () => {
 			await cUSDInstance.mint(
 				treasuryInstance.address,
 				mintAmount.toString()
@@ -330,11 +333,14 @@ describe.only("Community", () => {
 			).to.be.rejected;
 		});
 
-		it("Should transfer founds from communityAdmin to address if admin", async function() {
+		it("Should transfer founds from communityAdmin to address if admin", async function () {
 			expect(
 				await cUSDInstance.balanceOf(communityAdminProxy.address)
 			).to.be.equal(0);
-			await cUSDInstance.mint(communityAdminProxy.address, parseEther("100"));
+			await cUSDInstance.mint(
+				communityAdminProxy.address,
+				parseEther("100")
+			);
 			expect(
 				await cUSDInstance.balanceOf(communityAdminProxy.address)
 			).to.be.equal(parseEther("100"));
@@ -346,16 +352,19 @@ describe.only("Community", () => {
 			expect(
 				await cUSDInstance.balanceOf(communityAdminProxy.address)
 			).to.be.equal(0);
-			expect(await cUSDInstance.balanceOf(adminAccount1.address)).to.be.equal(
-				parseEther("100")
-			);
+			expect(
+				await cUSDInstance.balanceOf(adminAccount1.address)
+			).to.be.equal(parseEther("100"));
 		});
 
-		it("Should not transfer founds from communityAdmin to address if not admin", async function() {
+		it("Should not transfer founds from communityAdmin to address if not admin", async function () {
 			expect(
 				await cUSDInstance.balanceOf(communityAdminProxy.address)
 			).to.be.equal(0);
-			await cUSDInstance.mint(communityAdminProxy.address, parseEther("100"));
+			await cUSDInstance.mint(
+				communityAdminProxy.address,
+				parseEther("100")
+			);
 			expect(
 				await cUSDInstance.balanceOf(communityAdminProxy.address)
 			).to.be.equal(parseEther("100"));
@@ -372,12 +381,12 @@ describe.only("Community", () => {
 			expect(
 				await cUSDInstance.balanceOf(communityAdminProxy.address)
 			).to.be.equal(parseEther("100"));
-			expect(await cUSDInstance.balanceOf(adminAccount2.address)).to.be.equal(
-				parseEther("0")
-			);
+			expect(
+				await cUSDInstance.balanceOf(adminAccount2.address)
+			).to.be.equal(parseEther("0"));
 		});
 
-		it("Should not update CommunityAdmin implementation if not owner", async function() {
+		it("Should not update CommunityAdmin implementation if not owner", async function () {
 			const CommunityAdminMockFactory = await ethers.getContractFactory(
 				"CommunityAdminImplementationMock"
 			);
@@ -395,7 +404,7 @@ describe.only("Community", () => {
 			).to.be.rejectedWith("Ownable: caller is not the owner");
 		});
 
-		it("Should have same storage after update communityAdmin implementation", async function() {
+		it("Should have same storage after update communityAdmin implementation", async function () {
 			const CommunityAdminMockFactory = await ethers.getContractFactory(
 				"CommunityAdminImplementationMock"
 			);
@@ -427,7 +436,9 @@ describe.only("Community", () => {
 			expect(
 				await communityAdminProxy.communities(communityInstance.address)
 			).to.be.equal(CommunityState.Valid);
-			expect(await communityAdminProxy.communityListLength()).to.be.equal(1);
+			expect(await communityAdminProxy.communityListLength()).to.be.equal(
+				1
+			);
 			expect(await communityAdminProxy.communityListAt(0)).to.be.equal(
 				communityInstance.address
 			);
@@ -435,7 +446,7 @@ describe.only("Community", () => {
 	});
 
 	describe("Community", () => {
-		before(async function() {
+		before(async function () {
 			await init();
 		});
 
@@ -450,10 +461,9 @@ describe.only("Community", () => {
 			await addDefaultCommunity();
 		});
 
-		it("should return correct values", async () => {
-		});
+		it("should return correct values", async () => {});
 
-		it("Should transfer founds from community to address if admin", async function() {
+		it("Should transfer founds from community to address if admin", async function () {
 			expect(
 				await cUSDInstance.balanceOf(communityInstance.address)
 			).to.be.equal(parseEther("100"));
@@ -466,12 +476,12 @@ describe.only("Community", () => {
 			expect(
 				await cUSDInstance.balanceOf(communityInstance.address)
 			).to.be.equal(0);
-			expect(await cUSDInstance.balanceOf(adminAccount1.address)).to.be.equal(
-				parseEther("100")
-			);
+			expect(
+				await cUSDInstance.balanceOf(adminAccount1.address)
+			).to.be.equal(parseEther("100"));
 		});
 
-		it("Should not transfer founds from community to address if not admin #1", async function() {
+		it("Should not transfer founds from community to address if not admin #1", async function () {
 			expect(
 				await cUSDInstance.balanceOf(communityInstance.address)
 			).to.be.equal(parseEther("100"));
@@ -488,12 +498,12 @@ describe.only("Community", () => {
 			expect(
 				await cUSDInstance.balanceOf(communityInstance.address)
 			).to.be.equal(parseEther("100"));
-			expect(await cUSDInstance.balanceOf(adminAccount2.address)).to.be.equal(
-				parseEther("0")
-			);
+			expect(
+				await cUSDInstance.balanceOf(adminAccount2.address)
+			).to.be.equal(parseEther("0"));
 		});
 
-		it("Should not transfer founds from community to address if not admin #2", async function() {
+		it("Should not transfer founds from community to address if not admin #2", async function () {
 			expect(
 				await cUSDInstance.balanceOf(communityInstance.address)
 			).to.be.equal(parseEther("100"));
@@ -511,17 +521,18 @@ describe.only("Community", () => {
 			expect(
 				await cUSDInstance.balanceOf(communityInstance.address)
 			).to.be.equal(parseEther("100"));
-			expect(await cUSDInstance.balanceOf(adminAccount2.address)).to.be.equal(
-				parseEther("0")
-			);
+			expect(
+				await cUSDInstance.balanceOf(adminAccount2.address)
+			).to.be.equal(parseEther("0"));
 		});
 
-		it("Should not update Community implementation if not owner #1", async function() {
+		it("Should not update Community implementation if not owner #1", async function () {
 			const CommunityMockFactory = await ethers.getContractFactory(
 				"CommunityMock"
 			);
 
-			const newCommunityImplementation = await CommunityMockFactory.deploy();
+			const newCommunityImplementation =
+				await CommunityMockFactory.deploy();
 
 			await expect(
 				impactProxyAdmin
@@ -533,12 +544,13 @@ describe.only("Community", () => {
 			).to.be.rejectedWith("Ownable: caller is not the owner");
 		});
 
-		it("Should not update Community implementation if not owner #2", async function() {
+		it("Should not update Community implementation if not owner #2", async function () {
 			const CommunityMockFactory = await ethers.getContractFactory(
 				"CommunityMock"
 			);
 
-			const newCommunityImplementation = await CommunityMockFactory.deploy();
+			const newCommunityImplementation =
+				await CommunityMockFactory.deploy();
 
 			await expect(
 				communityAdminProxy
@@ -550,7 +562,7 @@ describe.only("Community", () => {
 			).to.be.rejectedWith("Ownable: caller is not the owner");
 		});
 
-		it("Should have same storage after update community implementation", async function() {
+		it("Should have same storage after update community implementation", async function () {
 			const CommunityMockFactory = await ethers.getContractFactory(
 				"CommunityMock"
 			);
@@ -565,7 +577,8 @@ describe.only("Community", () => {
 				.connect(communityManagerA)
 				.addBeneficiary(beneficiaryB.address);
 
-			const newCommunityImplementation = await CommunityMockFactory.deploy();
+			const newCommunityImplementation =
+				await CommunityMockFactory.deploy();
 
 			await expect(
 				communityAdminProxy.updateProxyImplementation(
@@ -602,7 +615,9 @@ describe.only("Community", () => {
 			expect(await communityInstance.maxClaim()).to.be.equal(
 				maxClaimTen.sub(oneCent.mul(2))
 			);
-			expect(await communityInstance.validBeneficiaryCount()).to.be.equal(2);
+			expect(await communityInstance.validBeneficiaryCount()).to.be.equal(
+				2
+			);
 			expect(await communityInstance.treasuryFunds()).to.be.equal(
 				communityMinTranche
 			);
@@ -621,15 +636,20 @@ describe.only("Community", () => {
 				communityAdminProxy.address
 			);
 			expect(
-				(await communityInstance.beneficiaries(beneficiaryA.address)).state
+				(await communityInstance.beneficiaries(beneficiaryA.address))
+					.state
 			).to.be.equal(BeneficiaryState.Locked);
 			expect(
-				(await communityInstance.beneficiaries(beneficiaryB.address)).state
+				(await communityInstance.beneficiaries(beneficiaryB.address))
+					.state
 			).to.be.equal(BeneficiaryState.Valid);
 			expect(
-				(await communityInstance.beneficiaries(beneficiaryC.address)).state
+				(await communityInstance.beneficiaries(beneficiaryC.address))
+					.state
 			).to.be.equal(BeneficiaryState.Valid);
-			expect(await communityInstance.beneficiaryListLength()).to.be.equal(3);
+			expect(await communityInstance.beneficiaryListLength()).to.be.equal(
+				3
+			);
 			expect(await communityInstance.beneficiaryListAt(0)).to.be.equal(
 				beneficiaryA.address
 			);
@@ -643,7 +663,7 @@ describe.only("Community", () => {
 	});
 
 	describe("Community - Beneficiary", () => {
-		before(async function() {
+		before(async function () {
 			await init();
 		});
 
@@ -772,7 +792,7 @@ describe.only("Community", () => {
 	});
 
 	describe("Community - Claim", () => {
-		before(async function() {
+		before(async function () {
 			await init();
 		});
 
@@ -834,7 +854,9 @@ describe.only("Community", () => {
 			expect(
 				await communityInstance.lastInterval(beneficiaryA.address)
 			).to.be.equal(baseInterval + 2 * incrementInterval);
-			await advanceTimeAndBlockNTimes(baseInterval + 2 * incrementInterval);
+			await advanceTimeAndBlockNTimes(
+				baseInterval + 2 * incrementInterval
+			);
 			await expect(communityInstance.connect(beneficiaryA).claim()).to.be
 				.fulfilled;
 		});
@@ -893,7 +915,9 @@ describe.only("Community", () => {
 			await expect(
 				communityInstance.connect(beneficiaryA).claim()
 			).to.be.rejectedWith("NOT_YET");
-			await advanceTimeAndBlockNTimes(baseInterval + 2 * incrementInterval);
+			await advanceTimeAndBlockNTimes(
+				baseInterval + 2 * incrementInterval
+			);
 			await expect(communityInstance.connect(beneficiaryA).claim()).to.be
 				.fulfilled;
 		});
@@ -913,9 +937,9 @@ describe.only("Community", () => {
 					.claimedAmount
 			).to.be.equal(claimAmountTwo);
 
-			(await cUSDInstance.balanceOf(beneficiaryA.address)).should.be.equal(
-				claimAmountTwo.add(fiveCents)
-			);
+			(
+				await cUSDInstance.balanceOf(beneficiaryA.address)
+			).should.be.equal(claimAmountTwo.add(fiveCents));
 		});
 
 		it("should not claim after max claim", async () => {
@@ -945,7 +969,7 @@ describe.only("Community", () => {
 	});
 
 	describe("Community - Governance (2)", () => {
-		before(async function() {
+		before(async function () {
 			await init();
 		});
 
@@ -1261,7 +1285,7 @@ describe.only("Community", () => {
 				.should.be.equal(currentBalance);
 		};
 
-		before(async function() {
+		before(async function () {
 			await init();
 		});
 		beforeEach(async () => {
@@ -1351,8 +1375,8 @@ describe.only("Community", () => {
 			previousCommunityBalance
 				.sub(currentCommunityBalance)
 				.should.be.equal(
-				claimAmount.mul(5 + maxClaimsPerUser).add(fiveCents.mul(4))
-			);
+					claimAmount.mul(5 + maxClaimsPerUser).add(fiveCents.mul(4))
+				);
 		});
 
 		it("many beneficiaries to many communities", async () => {
@@ -1399,7 +1423,9 @@ describe.only("Community", () => {
 			// beneficiary B claims it all
 			const claimAmountA = await communityInstanceA.claimAmount();
 			const maxClaimAmountA = await communityInstanceA.maxClaim();
-			const maxClaimsPerUserA = maxClaimAmountA.div(claimAmountA).toNumber();
+			const maxClaimsPerUserA = maxClaimAmountA
+				.div(claimAmountA)
+				.toNumber();
 			for (let index = 0; index < maxClaimsPerUserA; index++) {
 				await waitClaimTime(communityInstanceA, beneficiaryB);
 				await beneficiaryClaim(communityInstanceA, beneficiaryB);
@@ -1407,7 +1433,9 @@ describe.only("Community", () => {
 			// beneficiary C claims it all
 			const claimAmountB = await communityInstanceB.claimAmount();
 			const maxClaimAmountB = await communityInstanceB.maxClaim();
-			const maxClaimsPerUserB = maxClaimAmountB.div(claimAmountB).toNumber();
+			const maxClaimsPerUserB = maxClaimAmountB
+				.div(claimAmountB)
+				.toNumber();
 			for (let index = 0; index < maxClaimsPerUserB; index++) {
 				await waitClaimTime(communityInstanceB, beneficiaryC);
 				await beneficiaryClaim(communityInstanceB, beneficiaryC);
@@ -1442,21 +1470,25 @@ describe.only("Community", () => {
 			previousCommunityBalanceA
 				.sub(currentCommunityBalanceA)
 				.should.be.equal(
-				claimAmountA.mul(3 + maxClaimsPerUserA).add(fiveCents.mul(2))
-			);
+					claimAmountA
+						.mul(3 + maxClaimsPerUserA)
+						.add(fiveCents.mul(2))
+				);
 			const currentCommunityBalanceB = await cUSDInstance.balanceOf(
 				communityInstanceB.address
 			);
 			previousCommunityBalanceB
 				.sub(currentCommunityBalanceB)
 				.should.be.equal(
-				claimAmountB.mul(4 + maxClaimsPerUserB).add(fiveCents.mul(2))
-			);
+					claimAmountB
+						.mul(4 + maxClaimsPerUserB)
+						.add(fiveCents.mul(2))
+				);
 		});
 	});
 
 	describe("Community - getFunds", () => {
-		before(async function() {
+		before(async function () {
 			await init();
 		});
 
@@ -1723,7 +1755,9 @@ describe.only("Community", () => {
 
 			await expect(
 				communityInstance.connect(communityManagerA).requestFunds()
-			).to.be.rejectedWith("CommunityAdmin::fundCommunity: Not enough funds");
+			).to.be.rejectedWith(
+				"CommunityAdmin::fundCommunity: Not enough funds"
+			);
 
 			expect(await communityInstance.lastFundRequest()).to.be.equal(0);
 		});
@@ -1736,8 +1770,14 @@ describe.only("Community", () => {
 				await cUSDInstance.balanceOf(communityInstance.address)
 			).to.be.equal(communityMinTranche);
 
-			await cUSDInstance.approve(communityInstance.address, user1Donation);
-			await communityInstance.donate(adminAccount1.address, user1Donation);
+			await cUSDInstance.approve(
+				communityInstance.address,
+				user1Donation
+			);
+			await communityInstance.donate(
+				adminAccount1.address,
+				user1Donation
+			);
 
 			expect(
 				await cUSDInstance.balanceOf(communityInstance.address)
@@ -1758,8 +1798,14 @@ describe.only("Community", () => {
 				await cUSDInstance.balanceOf(communityInstance.address)
 			).to.be.equal(communityMinTranche);
 
-			await cUSDInstance.approve(communityInstance.address, user1Donation);
-			await communityInstance.donate(adminAccount1.address, user1Donation);
+			await cUSDInstance.approve(
+				communityInstance.address,
+				user1Donation
+			);
+			await communityInstance.donate(
+				adminAccount1.address,
+				user1Donation
+			);
 
 			expect(
 				await cUSDInstance.balanceOf(communityInstance.address)
@@ -1795,9 +1841,9 @@ describe.only("Community", () => {
 			expect(
 				await cUSDInstance.balanceOf(communityInstance.address)
 			).to.be.equal("0");
-			expect(await cUSDInstance.balanceOf(adminAccount1.address)).to.be.equal(
-				userInitialBalance.add(communityInitialBalance)
-			);
+			expect(
+				await cUSDInstance.balanceOf(adminAccount1.address)
+			).to.be.equal(userInitialBalance.add(communityInitialBalance));
 		});
 
 		it("should get more funds if have private donations", async () => {
@@ -1808,8 +1854,14 @@ describe.only("Community", () => {
 				.addBeneficiary(beneficiaryA.address);
 
 			await cUSDInstance.mint(adminAccount1.address, user1Donation);
-			await cUSDInstance.approve(communityInstance.address, user1Donation);
-			await communityInstance.donate(adminAccount1.address, user1Donation);
+			await cUSDInstance.approve(
+				communityInstance.address,
+				user1Donation
+			);
+			await communityInstance.donate(
+				adminAccount1.address,
+				user1Donation
+			);
 
 			await communityAdminProxy.transferFromCommunity(
 				communityInstance.address,
@@ -1833,7 +1885,7 @@ describe.only("Community", () => {
 	});
 
 	describe("Old Community", () => {
-		before(async function() {
+		before(async function () {
 			await init();
 
 			OldCommunity = await ethers.getContractFactory("CommunityOld");
@@ -2093,11 +2145,12 @@ describe.only("Community", () => {
 					.beneficiaryJoinFromMigrated(beneficiaryA.address)
 			).to.be.fulfilled;
 
-			const beneficiaryADetails = await newCommunityInstance.beneficiaries(
-				beneficiaryA.address
-			);
+			const beneficiaryADetails =
+				await newCommunityInstance.beneficiaries(beneficiaryA.address);
 			expect(beneficiaryADetails.claims).to.be.equal(1);
-			expect(beneficiaryADetails.claimedAmount).to.be.equal(claimAmountTwo);
+			expect(beneficiaryADetails.claimedAmount).to.be.equal(
+				claimAmountTwo
+			);
 			// expect(beneficiaryADetails.lastClaim).to.be.equal(9);
 
 			await newCommunityInstance

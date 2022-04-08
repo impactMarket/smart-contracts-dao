@@ -95,6 +95,14 @@ contract CommunityAdminImplementation is
     event UBICommitteeUpdated(address indexed oldUbiCommittee, address indexed newUbiCommittee);
 
     /**
+     * @notice Triggered when the ubi communityMiddleProxy address has been updated
+     *
+     * @param oldCommunityMiddleProxy   Old communityMiddleProxy address
+     * @param newCommunityMiddleProxy   New communityMiddleProxy address
+     */
+    event CommunityMiddleProxyUpdated(address oldCommunityMiddleProxy, address newCommunityMiddleProxy);
+
+    /**
      * @notice Triggered when the communityTemplate address has been updated
      *
      * @param oldCommunityTemplate    Old communityTemplate address
@@ -467,16 +475,16 @@ contract CommunityAdminImplementation is
     /**
      * @notice Updates proxy implementation address of a community
      *
-     * @param _communityProxy address of the community
+     * @param _CommunityMiddleProxy address of the community
      * @param _newCommunityTemplate address of new implementation contract
      */
-    function updateProxyImplementation(address _communityProxy, address _newCommunityTemplate)
+    function updateProxyImplementation(address _CommunityMiddleProxy, address _newCommunityTemplate)
         external
         override
         onlyOwner
     {
         communityProxyAdmin.upgrade(
-            TransparentUpgradeableProxy(payable(_communityProxy)),
+            TransparentUpgradeableProxy(payable(_CommunityMiddleProxy)),
             _newCommunityTemplate
         );
     }
@@ -491,6 +499,18 @@ contract CommunityAdminImplementation is
         ubiCommittee = _newUbiCommittee;
 
         emit UBICommitteeUpdated(oldUbiCommittee, address(_newUbiCommittee));
+    }
+
+    /**
+     * @notice Updates communityMiddleProxy address
+     *
+     * @param _newCommunityMiddleProxy address of new implementation contract
+     */
+    function updateCommunityMiddleProxy(address _newCommunityMiddleProxy) external override onlyOwner {
+        address _oldCommunityMiddleProxy = communityMiddleProxy;
+        communityMiddleProxy = _newCommunityMiddleProxy;
+
+        emit CommunityMiddleProxyUpdated(_oldCommunityMiddleProxy,_newCommunityMiddleProxy);
     }
 
     /**
@@ -530,25 +550,25 @@ contract CommunityAdminImplementation is
         uint256 _maxTranche,
         ICommunity _previousCommunity
     ) internal returns (address) {
-//        TransparentUpgradeableProxy _community = new TransparentUpgradeableProxy(
-//            address(communityTemplate),
-//            address(communityProxyAdmin),
-//            abi.encodeWithSignature(
-//                "initialize(address[],uint256,uint256,uint256,uint256,uint256,uint256,uint256,address)",
-//                _managers,
-//                _claimAmount,
-//                _maxClaim,
-//                _decreaseStep,
-//                _baseInterval,
-//                _incrementInterval,
-//                _minTranche,
-//                _maxTranche,
-//                address(_previousCommunity)
-//            )
-//        );
+        //        TransparentUpgradeableProxy _community = new TransparentUpgradeableProxy(
+        //            address(communityTemplate),
+        //            address(communityProxyAdmin),
+        //            abi.encodeWithSignature(
+        //                "initialize(address[],uint256,uint256,uint256,uint256,uint256,uint256,uint256,address)",
+        //                _managers,
+        //                _claimAmount,
+        //                _maxClaim,
+        //                _decreaseStep,
+        //                _baseInterval,
+        //                _incrementInterval,
+        //                _minTranche,
+        //                _maxTranche,
+        //                address(_previousCommunity)
+        //            )
+        //        );
 
         TransparentUpgradeableProxy _community = new TransparentUpgradeableProxy(
-            address(communityTemplate),
+            address(communityMiddleProxy),
             address(communityProxyAdmin),
             ""
         );

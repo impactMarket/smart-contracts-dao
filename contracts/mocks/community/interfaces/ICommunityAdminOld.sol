@@ -38,7 +38,7 @@ interface ICommunityAdminOld {
         uint256 _minTranche,
         uint256 _maxTranche
     ) external;
-    function updateProxyImplementation(address _communityProxy, address _newLogic) external;
+    function updateProxyImplementation(address _CommunityMiddleProxy, address _newLogic) external;
     function addCommunity(
         address[] memory _managers,
         uint256 _claimAmount,
