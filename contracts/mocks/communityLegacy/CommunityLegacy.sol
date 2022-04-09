@@ -3,7 +3,7 @@ pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "../../community/interfaces/ICommunityOld.sol";
+import "../../community/interfaces/ICommunityLegacy.sol";
 
 /**
  * @notice Welcome to the Community contract. For each community
@@ -13,7 +13,7 @@ import "../../community/interfaces/ICommunityOld.sol";
  * in one single contract. Each community has it's own members and
  * and managers.
  */
-contract CommunityOld is AccessControl {
+contract CommunityLegacy is AccessControl {
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
     enum BeneficiaryState {
         NONE,
@@ -228,7 +228,7 @@ contract CommunityOld is AccessControl {
         external
         onlyImpactMarket
     {
-        ICommunityOld newCommunity = ICommunityOld(_newCommunity);
+        ICommunityLegacy newCommunity = ICommunityLegacy(_newCommunity);
         require(newCommunity.hasRole(MANAGER_ROLE, _newCommunityManager) == true, "NOT_ALLOWED");
         require(newCommunity.previousCommunityContract() == address(this), "NOT_ALLOWED");
         uint256 balance = IERC20(cUSDAddress).balanceOf(address(this));

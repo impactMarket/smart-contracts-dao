@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "../../community/interfaces/ICommunity.sol";
-import "../../community/interfaces/ICommunityOld.sol";
+import "../../community/interfaces/ICommunityLegacy.sol";
 import "../../community/interfaces/ICommunityAdmin.sol";
 import "../../community/interfaces/CommunityStorageV1.sol";
 import "./CommunityStorageV2Mock.sol";
@@ -688,33 +688,33 @@ contract CommunityMock is
             _beneficiary.lastClaim = _oldBeneficiaryLastClaim;
             _beneficiary.claimedAmount = _oldBeneficiaryClaimedAmount;
         } else {
-            ICommunityOld _oldCommunity = ICommunityOld(address(previousCommunity));
-            uint256 _oldBeneficiaryLastInterval = _oldCommunity.lastInterval(_beneficiaryAddress);
+            ICommunityLegacy _legacyCommunity = ICommunityLegacy(address(previousCommunity));
+            uint256 _legacyBeneficiaryLastInterval = _legacyCommunity.lastInterval(_beneficiaryAddress);
             _changeBeneficiaryState(
                 _beneficiary,
-                BeneficiaryState(_oldCommunity.beneficiaries(_beneficiaryAddress))
+                BeneficiaryState(_legacyCommunity.beneficiaries(_beneficiaryAddress))
             );
 
-            uint256 _oldBeneficiaryCooldown = _oldCommunity.cooldown(_beneficiaryAddress);
+            uint256 _legacyBeneficiaryCooldown = _legacyCommunity.cooldown(_beneficiaryAddress);
 
-            if (_oldBeneficiaryCooldown >= _oldBeneficiaryLastInterval + _firstBlockTimestamp()) {
+            if (_legacyBeneficiaryCooldown >= _legacyBeneficiaryLastInterval + _firstBlockTimestamp()) {
                 // seconds to blocks conversion
                 _beneficiary.lastClaim =
-                    (_oldBeneficiaryCooldown -
-                        _oldBeneficiaryLastInterval -
+                    (_legacyBeneficiaryCooldown -
+                    _legacyBeneficiaryLastInterval -
                         _firstBlockTimestamp()) /
                     5;
             } else {
                 _beneficiary.lastClaim = 0;
             }
 
-            _beneficiary.claimedAmount = _oldCommunity.claimed(_beneficiaryAddress);
+            _beneficiary.claimedAmount = _legacyCommunity.claimed(_beneficiaryAddress);
 
-            uint256 _previousBaseInterval = _oldCommunity.baseInterval();
-            if (_oldBeneficiaryLastInterval >= _previousBaseInterval) {
+            uint256 _previousBaseInterval = _legacyCommunity.baseInterval();
+            if (_legacyBeneficiaryLastInterval >= _previousBaseInterval) {
                 _beneficiary.claims =
-                    (_oldBeneficiaryLastInterval - _previousBaseInterval) /
-                    _oldCommunity.incrementInterval() +
+                    (_legacyBeneficiaryLastInterval - _previousBaseInterval) /
+                    _legacyCommunity.incrementInterval() +
                     1;
             } else {
                 _beneficiary.claims = 0;

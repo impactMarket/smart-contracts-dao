@@ -67,11 +67,9 @@ let beneficiaryC: SignerWithAddress;
 let beneficiaryD: SignerWithAddress;
 
 let Community: ethersTypes.ContractFactory;
-let OldCommunity: ethersTypes.ContractFactory;
 
 let communityInstance: ethersTypes.Contract;
 let newCommunityInstance: ethersTypes.Contract;
-let oldCommunityInstance: ethersTypes.Contract;
 let communityAdminProxy: ethersTypes.Contract;
 let treasuryInstance: ethersTypes.Contract;
 let cUSDInstance: ethersTypes.Contract;
@@ -229,7 +227,7 @@ describe.only("Community", () => {
 			(await communityInstance.decreaseStep()).should.be.equal(oneCent);
 		});
 
-		it.only("should add a community if admin", async () => {
+		it("should add a community if admin", async () => {
 			await cUSDInstance.mint(
 				treasuryInstance.address,
 				mintAmount.toString()
@@ -1885,10 +1883,15 @@ describe.only("Community", () => {
 	});
 
 	describe("Old Community", () => {
+		let legacyCommunity: ethersTypes.ContractFactory;
+		let legacyCommunityInstance: ethersTypes.Contract;
+
 		before(async function () {
 			await init();
 
-			OldCommunity = await ethers.getContractFactory("CommunityOld");
+			legacyCommunity = await ethers.getContractFactory(
+				"CommunityLegacy"
+			);
 		});
 
 		beforeEach(async () => {
@@ -1901,7 +1904,7 @@ describe.only("Community", () => {
 
 			await addDefaultCommunity();
 
-			oldCommunityInstance = await OldCommunity.deploy(
+			legacyCommunityInstance = await legacyCommunity.deploy(
 				communityManagerA.address,
 				claimAmountTwo,
 				maxClaimTen,
@@ -1913,27 +1916,27 @@ describe.only("Community", () => {
 			);
 
 			await cUSDInstance.mint(
-				oldCommunityInstance.address,
+				legacyCommunityInstance.address,
 				mintAmount.toString()
 			);
 
-			oldCommunityInstance
+			legacyCommunityInstance
 				.connect(communityManagerA)
 				.addBeneficiary(beneficiaryA.address);
-			oldCommunityInstance
+			legacyCommunityInstance
 				.connect(communityManagerA)
 				.addBeneficiary(beneficiaryB.address);
-			oldCommunityInstance
+			legacyCommunityInstance
 				.connect(communityManagerA)
 				.addBeneficiary(beneficiaryC.address);
 
-			oldCommunityInstance
+			legacyCommunityInstance
 				.connect(communityManagerA)
 				.addManager(communityManagerB.address);
-			oldCommunityInstance
+			legacyCommunityInstance
 				.connect(communityManagerB)
 				.addManager(communityManagerC.address);
-			oldCommunityInstance
+			legacyCommunityInstance
 				.connect(communityManagerC)
 				.removeManager(communityManagerB.address);
 		});
@@ -1941,7 +1944,7 @@ describe.only("Community", () => {
 		async function migrateCommunity() {
 			const newTx = await communityAdminProxy.migrateCommunity(
 				[communityManagerA.address],
-				oldCommunityInstance.address
+				legacyCommunityInstance.address
 			);
 
 			let receipt = await newTx.wait();
@@ -1962,7 +1965,7 @@ describe.only("Community", () => {
 			await expect(
 				communityAdminProxy.migrateCommunity(
 					[communityManagerA.address],
-					oldCommunityInstance.address
+					legacyCommunityInstance.address
 				)
 			).to.be.fulfilled;
 		});
@@ -1973,7 +1976,7 @@ describe.only("Community", () => {
 					.connect(adminAccount2)
 					.migrateCommunity(
 						[communityManagerA.address],
-						oldCommunityInstance.address
+						legacyCommunityInstance.address
 					)
 			).to.be.rejectedWith("CommunityAdmin: Not Owner Or UBICommittee");
 		});
@@ -1982,13 +1985,13 @@ describe.only("Community", () => {
 			await expect(
 				communityAdminProxy.migrateCommunity(
 					[communityManagerA.address],
-					oldCommunityInstance.address
+					legacyCommunityInstance.address
 				)
 			).to.be.fulfilled;
 			await expect(
 				communityAdminProxy.migrateCommunity(
 					[communityManagerA.address],
-					oldCommunityInstance.address
+					legacyCommunityInstance.address
 				)
 			).to.be.rejectedWith(
 				"CommunityAdmin::migrateCommunity: this community has been migrated"
@@ -2056,7 +2059,7 @@ describe.only("Community", () => {
 
 		it("should join from migrated if locked beneficiary", async () => {
 			await migrateCommunity();
-			await oldCommunityInstance
+			await legacyCommunityInstance
 				.connect(communityManagerA)
 				.lockBeneficiary(beneficiaryA.address);
 
@@ -2077,7 +2080,7 @@ describe.only("Community", () => {
 
 		it("should join from migrated if removed beneficiary", async () => {
 			await migrateCommunity();
-			await oldCommunityInstance
+			await legacyCommunityInstance
 				.connect(communityManagerA)
 				.removeBeneficiary(beneficiaryA.address);
 
@@ -2137,7 +2140,7 @@ describe.only("Community", () => {
 			await newCommunityInstance
 				.connect(communityManagerA)
 				.addBeneficiary(beneficiaryB.address);
-			await oldCommunityInstance.connect(beneficiaryA).claim();
+			await legacyCommunityInstance.connect(beneficiaryA).claim();
 
 			await expect(
 				newCommunityInstance

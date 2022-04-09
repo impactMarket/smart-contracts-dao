@@ -9,7 +9,6 @@ import "../interfaces/ITransparentUpgradeableProxy.sol";
 import "hardhat/console.sol";
 
 contract CommunityMiddleProxy is TransparentUpgradeableProxy {
-
     /** @notice Calls the TransparentUpgradeableProxy constructor
      *
      * @param _fakeLogic       any contract address
@@ -21,7 +20,8 @@ contract CommunityMiddleProxy is TransparentUpgradeableProxy {
      *     the real logic ans proxy admin values are stored into the CommunityProxy
      */
     constructor(address _fakeLogic, address _fakeProxyAdmin)
-        TransparentUpgradeableProxy(_fakeLogic, _fakeProxyAdmin, ""){}
+        TransparentUpgradeableProxy(_fakeLogic, _fakeProxyAdmin, "")
+    {}
 
     /**
      * @notice Returns the community implementation address.

@@ -100,7 +100,10 @@ contract CommunityAdminImplementation is
      * @param oldCommunityMiddleProxy   Old communityMiddleProxy address
      * @param newCommunityMiddleProxy   New communityMiddleProxy address
      */
-    event CommunityMiddleProxyUpdated(address oldCommunityMiddleProxy, address newCommunityMiddleProxy);
+    event CommunityMiddleProxyUpdated(
+        address oldCommunityMiddleProxy,
+        address newCommunityMiddleProxy
+    );
 
     /**
      * @notice Triggered when the communityTemplate address has been updated
@@ -506,11 +509,15 @@ contract CommunityAdminImplementation is
      *
      * @param _newCommunityMiddleProxy address of new implementation contract
      */
-    function updateCommunityMiddleProxy(address _newCommunityMiddleProxy) external override onlyOwner {
+    function updateCommunityMiddleProxy(address _newCommunityMiddleProxy)
+        external
+        override
+        onlyOwner
+    {
         address _oldCommunityMiddleProxy = communityMiddleProxy;
         communityMiddleProxy = _newCommunityMiddleProxy;
 
-        emit CommunityMiddleProxyUpdated(_oldCommunityMiddleProxy,_newCommunityMiddleProxy);
+        emit CommunityMiddleProxyUpdated(_oldCommunityMiddleProxy, _newCommunityMiddleProxy);
     }
 
     /**

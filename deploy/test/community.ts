@@ -60,14 +60,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		// gasLimit: 13000000,
 	});
 
-
 	await CommunityAdminContract.initialize(
 		communityResult.address,
 		cUSDAddress
 	);
 
-	CommunityAdminContract.updateCommunityMiddleProxy(CommunityMiddleProxyResult.address);
-
+	CommunityAdminContract.updateCommunityMiddleProxy(
+		CommunityMiddleProxyResult.address
+	);
 
 	// console.log('communityAdminProxy address: ', CommunityAdminContract.address);
 	// console.log('communityAdminImplementation address: ', communityAdminImplementationResult.address);

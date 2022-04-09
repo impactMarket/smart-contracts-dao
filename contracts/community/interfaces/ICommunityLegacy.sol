@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.4;
 
-interface ICommunityOld {
+interface ICommunityLegacy {
     function cooldown(address _account) external returns(uint256);
     function lastInterval(address _account) external returns(uint256);
     function claimed(address _account) external returns(uint256);
