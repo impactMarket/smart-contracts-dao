@@ -65,6 +65,11 @@ let beneficiaryA: SignerWithAddress;
 let beneficiaryB: SignerWithAddress;
 let beneficiaryC: SignerWithAddress;
 let beneficiaryD: SignerWithAddress;
+// ambassadors
+let ambassadorA: SignerWithAddress;
+let ambassadorB: SignerWithAddress;
+// ambassadors entity
+let ambassadorsEntityA: SignerWithAddress;
 
 let Community: ethersTypes.ContractFactory;
 
@@ -108,6 +113,11 @@ describe.only("Community", () => {
 		beneficiaryB = accounts[7];
 		beneficiaryC = accounts[8];
 		beneficiaryD = accounts[9];
+		// ambassadors
+		ambassadorA = accounts[10];
+		ambassadorB = accounts[11];
+		// ambassadors entity
+		ambassadorsEntityA = accounts[12];
 
 		Community = await ethers.getContractFactory("Community");
 	}
@@ -154,13 +164,26 @@ describe.only("Community", () => {
 		);
 
 		const UBICommitteeProxy = await deployments.get("UBICommitteeProxy");
+		const AmbassadorsProxy = await deployments.get("AmbassadorsProxy");
 
 		await communityAdminProxy.updateUbiCommittee(UBICommitteeProxy.address);
+		await communityAdminProxy.updateAmbassadors(AmbassadorsProxy.address);
+
+		const ambassadors = await ethers.getContractAt(
+			"AmbassadorsImplementation",
+			AmbassadorsProxy.address
+		);
+
+		await ambassadors.addEntity(ambassadorsEntityA.address);
+		await ambassadors
+			.connect(ambassadorsEntityA)
+			.addAmbassador(ambassadorA.address);
 	}
 
 	async function addDefaultCommunity() {
 		const tx = await communityAdminProxy.addCommunity(
 			[communityManagerA.address],
+			ambassadorA.address,
 			claimAmountTwo,
 			maxClaimTen,
 			oneCent,
@@ -235,6 +258,7 @@ describe.only("Community", () => {
 
 			const tx = await communityAdminProxy.addCommunity(
 				[communityManagerA.address],
+				ambassadorA.address,
 				claimAmountTwo.toString(),
 				maxClaimTen.toString(),
 				oneCent.toString(),
@@ -264,6 +288,7 @@ describe.only("Community", () => {
 			await expect(
 				communityAdminProxy.addCommunity(
 					[],
+					ambassadorA.address,
 					claimAmountTwo.toString(),
 					maxClaimTen.toString(),
 					oneCent.toString(),
@@ -285,6 +310,7 @@ describe.only("Community", () => {
 
 			const tx = await communityAdminProxy.addCommunity(
 				[communityManagerA.address],
+				ambassadorA.address,
 				claimAmountTwo.toString(),
 				maxClaimTen.toString(),
 				oneCent.toString(),
@@ -301,13 +327,16 @@ describe.only("Community", () => {
 			})[0]["args"]["communityAddress"];
 			communityInstance = await Community.attach(communityAddress);
 
-			await communityAdminProxy.removeCommunity(communityAddress);
+			await communityAdminProxy.removeCommunity(
+				communityInstance.address
+			);
 		});
 
 		it("should not create a community with invalid values", async () => {
 			await expect(
 				communityAdminProxy.addCommunity(
 					[communityManagerA.address],
+					ambassadorA.address,
 					claimAmountTwo.toString(),
 					maxClaimTen.toString(),
 					oneCent.toString(),
@@ -320,6 +349,7 @@ describe.only("Community", () => {
 			await expect(
 				communityAdminProxy.addCommunity(
 					[communityManagerA.address],
+					ambassadorA.address,
 					maxClaimTen.toString(), // it's supposed to be wrong!
 					claimAmountTwo.toString(),
 					oneCent.toString(),
@@ -884,9 +914,9 @@ describe.only("Community", () => {
 		});
 
 		it("should not claim if community is locked", async () => {
-			await expect(communityInstance.connect(communityManagerA).lock())
+			await expect(communityInstance.connect(ambassadorA).lock())
 				.to.emit(communityInstance, "CommunityLocked")
-				.withArgs(communityManagerA.address);
+				.withArgs(ambassadorA.address);
 			await expect(
 				communityInstance.connect(beneficiaryA).claim()
 			).to.be.rejectedWith("LOCKED");
@@ -1142,52 +1172,71 @@ describe.only("Community", () => {
 			).to.be.rejected;
 		});
 
-		it("should not add manager to community if not manager", async () => {
+		it("should not add manager to community if manager", async () => {
 			await expect(
 				communityInstance
 					.connect(communityManagerC)
 					.addManager(communityManagerB.address)
-			).to.be.rejectedWith("NOT_MANAGER");
+			).to.be.rejectedWith("NOT_AMBASSADOR");
 		});
 
-		it("should not remove manager from community if not manager", async () => {
+		it("should not remove manager from community if manager", async () => {
 			await communityInstance
-				.connect(communityManagerA)
+				.connect(ambassadorA)
 				.addManager(communityManagerB.address);
 			await expect(
 				communityInstance
-					.connect(communityManagerC)
+					.connect(communityManagerA)
 					.removeManager(communityManagerB.address)
-			).to.be.rejectedWith("NOT_MANAGER");
+			).to.be.rejectedWith("NOT_AMBASSADOR");
 		});
 
-		it("should add manager to community if manager", async () => {
+		it("should not add manager to community if not ambassador", async () => {
 			await expect(
 				communityInstance
-					.connect(communityManagerA)
+					.connect(ambassadorB)
+					.addManager(communityManagerB.address)
+			).to.be.rejectedWith("NOT_AMBASSADOR");
+		});
+
+		it("should not remove manager from community if not ambassador", async () => {
+			await communityInstance
+				.connect(ambassadorA)
+				.addManager(communityManagerB.address);
+			await expect(
+				communityInstance
+					.connect(ambassadorB)
+					.removeManager(communityManagerB.address)
+			).to.be.rejectedWith("NOT_AMBASSADOR");
+		});
+
+		it("should add manager to community if ambassador", async () => {
+			await expect(
+				communityInstance
+					.connect(ambassadorA)
 					.addManager(communityManagerB.address)
 			).to.be.fulfilled;
 			await expect(
 				communityInstance
-					.connect(communityManagerB)
+					.connect(ambassadorA)
 					.addManager(communityManagerC.address)
 			).to.be.fulfilled;
 		});
 
-		it("should remove manager to community if manager", async () => {
+		it("should remove manager from community if ambassador", async () => {
 			await expect(
 				communityInstance
-					.connect(communityManagerA)
+					.connect(ambassadorA)
 					.addManager(communityManagerB.address)
 			).to.be.fulfilled;
 			await expect(
 				communityInstance
-					.connect(communityManagerA)
+					.connect(ambassadorA)
 					.removeManager(communityManagerB.address)
 			).to.be.fulfilled;
 		});
 
-		it("should renounce from manager of community if manager", async () => {
+		xit("should renounce from manager of community if manager", async () => {
 			await communityInstance
 				.connect(communityManagerA)
 				.addManager(communityManagerB.address);
@@ -1198,20 +1247,10 @@ describe.only("Community", () => {
 			).to.be.fulfilled;
 		});
 
-		it("should lock community if manager", async () => {
-			await expect(communityInstance.connect(communityManagerA).lock())
-				.to.emit(communityInstance, "CommunityLocked")
-				.withArgs(communityManagerA.address);
-		});
-
-		it("should lock community if manager", async () => {
-			await expect(communityInstance.connect(communityManagerA).lock())
-				.to.emit(communityInstance, "CommunityLocked")
-				.withArgs(communityManagerA.address);
-
-			await expect(communityInstance.connect(communityManagerA).unlock())
-				.to.emit(communityInstance, "CommunityUnlocked")
-				.withArgs(communityManagerA.address);
+		it("should notlock community if manager", async () => {
+			await expect(
+				communityInstance.connect(communityManagerA).lock()
+			).to.be.rejectedWith("Community: NOT_AMBASSADOR");
 		});
 	});
 
@@ -1222,6 +1261,7 @@ describe.only("Community", () => {
 		): Promise<ethersTypes.Contract> => {
 			const tx = await communityAdminProxy.addCommunity(
 				[communityManager.address],
+				ambassadorA.address,
 				claimAmountTwo.toString(),
 				maxClaimTen.toString(),
 				oneCent.toString(),

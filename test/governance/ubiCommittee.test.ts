@@ -23,6 +23,8 @@ let PACTDelegate: ethersTypes.ContractFactory;
 let alice: SignerWithAddress;
 let bob: SignerWithAddress;
 let carol: SignerWithAddress;
+let entity: SignerWithAddress;
+let ambassador: SignerWithAddress;
 
 // contract instances
 let pactDelegator: ethersTypes.Contract;
@@ -40,6 +42,8 @@ describe("UBICommittee", function () {
 		alice = accounts[1];
 		bob = accounts[2];
 		carol = accounts[3];
+		entity = accounts[4];
+		ambassador = accounts[5];
 	});
 
 	beforeEach(async function () {
@@ -76,6 +80,7 @@ describe("UBICommittee", function () {
 		);
 
 		const ImpactProxyAdmin = await deployments.get("ImpactProxyAdmin");
+		const Ambassadors = await deployments.get("AmbassadorsProxy");
 		const impactProxyAdmin = await ethers.getContractAt(
 			"ImpactProxyAdmin",
 			ImpactProxyAdmin.address
@@ -99,7 +104,16 @@ describe("UBICommittee", function () {
 			communityAdmin.address
 		);
 
+		const ambassadors = await ethers.getContractAt(
+			"AmbassadorsImplementation",
+			Ambassadors.address
+		);
+
 		await communityAdmin.updateUbiCommittee(ubiCommittee.address);
+		await communityAdmin.updateAmbassadors(Ambassadors.address);
+
+		await ambassadors.addEntity(entity.address);
+		await ambassadors.connect(entity).addAmbassador(ambassador.address);
 
 		await communityAdmin.transferOwnership(pactDelegator.address);
 		await expect(ubiCommittee.addMember(alice.address)).to.be.fulfilled;
@@ -112,13 +126,14 @@ describe("UBICommittee", function () {
 
 	async function createCommunityProposal() {
 		const signatures = [
-			"addCommunity(address[],uint256,uint256,uint256,uint256,uint256,uint256,uint256)",
+			"addCommunity(address[],address,uint256,uint256,uint256,uint256,uint256,uint256,uint256)",
 		];
 
 		const calldatas = [
 			ethers.utils.defaultAbiCoder.encode(
 				[
 					"address[]",
+					"address",
 					"uint256",
 					"uint256",
 					"uint256",
@@ -129,6 +144,7 @@ describe("UBICommittee", function () {
 				],
 				[
 					[carol.address],
+					ambassador.address,
 					parseEther("100"),
 					parseEther("1000"),
 					parseEther("0.01"),
