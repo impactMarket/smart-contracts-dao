@@ -175,7 +175,7 @@ describe.only("Community", () => {
 			.addAmbassador(ambassadorA.address);
 	}
 
-	async function addCommunity() {
+	async function createCommunity() {
 		const tx = await communityAdminProxy.addCommunity(
 			[communityManagerA.address],
 			ambassadorA.address,
@@ -198,7 +198,7 @@ describe.only("Community", () => {
 	async function addDefaultCommunity() {
 		communityInstance = await ethers.getContractAt(
 			"CommunityImplementation",
-			await addCommunity()
+			await createCommunity()
 		);
 	}
 
@@ -627,25 +627,25 @@ describe.only("Community", () => {
 		});
 
 		it("Should have same storage after update community implementation #1", async function () {
-			const CommunityMockFactory = await ethers.getContractFactory(
-				"CommunityMock"
+			const CommunityImplementationMockFactory = await ethers.getContractFactory(
+				"CommunityImplementationMock"
 			);
 
 			communityInstance = await ethers.getContractAt(
-				"CommunityMock",
+				"CommunityImplementationMock",
 				communityInstance.address
 			);
 
 			const newCommunityImplementation =
-				await CommunityMockFactory.deploy();
+				await CommunityImplementationMockFactory.deploy();
 
-			communityInstance
+			await communityInstance
 				.connect(communityManagerA)
 				.addBeneficiary(beneficiaryA.address);
-			communityInstance
+			await communityInstance
 				.connect(communityManagerA)
 				.lockBeneficiary(beneficiaryA.address);
-			communityInstance
+			await communityInstance
 				.connect(communityManagerA)
 				.addBeneficiary(beneficiaryB.address);
 
@@ -659,7 +659,7 @@ describe.only("Community", () => {
 			// expect(await communityInstance.owner()).to.be.equal(zeroAddress);
 			// await communityInstance.initialize();
 
-			communityInstance
+			await communityInstance
 				.connect(communityManagerA)
 				.addBeneficiary(beneficiaryC.address);
 
@@ -726,20 +726,20 @@ describe.only("Community", () => {
 		});
 
 		it("Should have same storage after update community implementation #2", async function () {
-			const CommunityMockFactory = await ethers.getContractFactory(
-				"CommunityMock"
+			const CommunityImplementationMockFactory = await ethers.getContractFactory(
+				"CommunityImplementationMock"
 			);
 
 			const newCommunityImplementation =
-				await CommunityMockFactory.deploy();
+				await CommunityImplementationMockFactory.deploy();
 
-			communityInstance
+			await communityInstance
 				.connect(communityManagerA)
 				.addBeneficiary(beneficiaryA.address);
-			communityInstance
+			await communityInstance
 				.connect(communityManagerA)
 				.lockBeneficiary(beneficiaryA.address);
-			communityInstance
+			await communityInstance
 				.connect(communityManagerA)
 				.addBeneficiary(beneficiaryB.address);
 
@@ -750,7 +750,7 @@ describe.only("Community", () => {
 			).to.be.fulfilled;
 
 			communityInstance = await ethers.getContractAt(
-				"CommunityMock",
+				"CommunityImplementationMock",
 				communityInstance.address
 			);
 
@@ -760,17 +760,28 @@ describe.only("Community", () => {
 
 			await communityInstance.setParams();
 
-			expect(await  communityInstance.addressTest1()).to.be.equal('0x0000000000000000000000000000000000000001');
-			expect(await  communityInstance.addressTest2()).to.be.equal('0x0000000000000000000000000000000000000002');
-			expect(await  communityInstance.addressTest3()).to.be.equal('0x0000000000000000000000000000000000000003');
+			expect(await communityInstance.addressTest1()).to.be.equal(
+				"0x0000000000000000000000000000000000000001"
+			);
+			expect(await communityInstance.addressTest2()).to.be.equal(
+				"0x0000000000000000000000000000000000000002"
+			);
+			expect(await communityInstance.addressTest3()).to.be.equal(
+				"0x0000000000000000000000000000000000000003"
+			);
 
-			expect(await  communityInstance.uint256Test1()).to.be.equal(1);
-			expect(await  communityInstance.uint256Test2()).to.be.equal(2);
-			expect(await  communityInstance.uint256Test3()).to.be.equal(3);
+			expect(await communityInstance.uint256Test1()).to.be.equal(1);
+			expect(await communityInstance.uint256Test2()).to.be.equal(2);
+			expect(await communityInstance.uint256Test3()).to.be.equal(3);
 
-
-			expect(await  communityInstance.mapTest2('0x0000000000000000000000000000000000000001')).to.be.equal(true);
-			expect(await  communityInstance.mapTest3(1)).to.be.equal('0x0000000000000000000000000000000000000001');
+			expect(
+				await communityInstance.mapTest2(
+					"0x0000000000000000000000000000000000000001"
+				)
+			).to.be.equal(true);
+			expect(await communityInstance.mapTest3(1)).to.be.equal(
+				"0x0000000000000000000000000000000000000001"
+			);
 
 			expect(await communityInstance.owner()).to.be.equal(
 				communityAdminProxy.address
@@ -835,29 +846,27 @@ describe.only("Community", () => {
 		});
 
 		it("Should have update all communities by changing communityAdmin.communityTemplate #1", async function () {
-			const community2 = await ethers.getContractAt(
-				"CommunityImplementation",
-				await addCommunity()
-			);
-
-
-
-			const CommunityMockFactory = await ethers.getContractFactory(
-				"CommunityMock"
-			);
-
-			const newCommunityImplementation =
-				await CommunityMockFactory.deploy();
-
-			communityInstance
+			await communityInstance
 				.connect(communityManagerA)
 				.addBeneficiary(beneficiaryA.address);
-			communityInstance
+			await communityInstance
 				.connect(communityManagerA)
 				.lockBeneficiary(beneficiaryA.address);
-			communityInstance
+			await communityInstance
 				.connect(communityManagerA)
 				.addBeneficiary(beneficiaryB.address);
+
+			let communityInstance2 = await ethers.getContractAt(
+				"CommunityImplementation",
+				await createCommunity()
+			);
+			await communityInstance2
+				.connect(communityManagerA)
+				.addBeneficiary(beneficiaryB.address);
+
+			const newCommunityImplementation = await (
+				await ethers.getContractFactory("CommunityImplementationMock")
+			).deploy();
 
 			await expect(
 				communityAdminProxy.updateCommunityImplementation(
@@ -866,88 +875,172 @@ describe.only("Community", () => {
 			).to.be.fulfilled;
 
 			communityInstance = await ethers.getContractAt(
-				"CommunityMock",
+				"CommunityImplementationMock",
 				communityInstance.address
 			);
 
-			communityInstance
+			await communityInstance.setParams();
+
+			expect(await communityInstance.addressTest1()).to.be.equal(
+				"0x0000000000000000000000000000000000000001"
+			);
+			expect(await communityInstance.addressTest2()).to.be.equal(
+				"0x0000000000000000000000000000000000000002"
+			);
+			expect(await communityInstance.addressTest3()).to.be.equal(
+				"0x0000000000000000000000000000000000000003"
+			);
+
+			expect(await communityInstance.uint256Test1()).to.be.equal(1);
+			expect(await communityInstance.uint256Test2()).to.be.equal(2);
+			expect(await communityInstance.uint256Test3()).to.be.equal(3);
+
+			expect(
+				await communityInstance.mapTest2(
+					"0x0000000000000000000000000000000000000001"
+				)
+			).to.be.equal(true);
+			expect(await communityInstance.mapTest3(1)).to.be.equal(
+				"0x0000000000000000000000000000000000000001"
+			);
+
+			//*****************************************************************
+
+			communityInstance2 = await ethers.getContractAt(
+				"CommunityImplementationMock",
+				communityInstance2.address
+			);
+
+			await communityInstance2.setParams();
+
+			expect(await communityInstance2.addressTest1()).to.be.equal(
+				"0x0000000000000000000000000000000000000001"
+			);
+			expect(await communityInstance2.addressTest2()).to.be.equal(
+				"0x0000000000000000000000000000000000000002"
+			);
+			expect(await communityInstance2.addressTest3()).to.be.equal(
+				"0x0000000000000000000000000000000000000003"
+			);
+
+			expect(await communityInstance2.uint256Test1()).to.be.equal(1);
+			expect(await communityInstance2.uint256Test2()).to.be.equal(2);
+			expect(await communityInstance2.uint256Test3()).to.be.equal(3);
+
+			expect(
+				await communityInstance2.mapTest2(
+					"0x0000000000000000000000000000000000000001"
+				)
+			).to.be.equal(true);
+			expect(await communityInstance2.mapTest3(1)).to.be.equal(
+				"0x0000000000000000000000000000000000000001"
+			);
+		});
+
+		it("Should revert implementation for only one community", async function () {
+			await communityInstance
 				.connect(communityManagerA)
-				.addBeneficiary(beneficiaryC.address);
+				.addBeneficiary(beneficiaryA.address);
+			await communityInstance
+				.connect(communityManagerA)
+				.lockBeneficiary(beneficiaryA.address);
+			await communityInstance
+				.connect(communityManagerA)
+				.addBeneficiary(beneficiaryB.address);
+
+			let communityInstance2 = await ethers.getContractAt(
+				"CommunityImplementation",
+				await createCommunity()
+			);
+			await communityInstance2
+				.connect(communityManagerA)
+				.addBeneficiary(beneficiaryB.address);
+
+			const newCommunityImplementation = await (
+				await ethers.getContractFactory("CommunityImplementationMock")
+			).deploy();
+
+			await expect(
+				communityAdminProxy.updateCommunityImplementation(
+					newCommunityImplementation.address
+				)
+			).to.be.fulfilled;
+
+			communityInstance = await ethers.getContractAt(
+				"CommunityImplementationMock",
+				communityInstance.address
+			);
 
 			await communityInstance.setParams();
 
-			expect(await  communityInstance.addressTest1()).to.be.equal('0x0000000000000000000000000000000000000001');
-			expect(await  communityInstance.addressTest2()).to.be.equal('0x0000000000000000000000000000000000000002');
-			expect(await  communityInstance.addressTest3()).to.be.equal('0x0000000000000000000000000000000000000003');
+			expect(await communityInstance.addressTest1()).to.be.equal(
+				"0x0000000000000000000000000000000000000001"
+			);
+			expect(await communityInstance.addressTest2()).to.be.equal(
+				"0x0000000000000000000000000000000000000002"
+			);
+			expect(await communityInstance.addressTest3()).to.be.equal(
+				"0x0000000000000000000000000000000000000003"
+			);
 
-			expect(await  communityInstance.uint256Test1()).to.be.equal(1);
-			expect(await  communityInstance.uint256Test2()).to.be.equal(2);
-			expect(await  communityInstance.uint256Test3()).to.be.equal(3);
+			expect(await communityInstance.uint256Test1()).to.be.equal(1);
+			expect(await communityInstance.uint256Test2()).to.be.equal(2);
+			expect(await communityInstance.uint256Test3()).to.be.equal(3);
 
-
-			expect(await  communityInstance.mapTest2('0x0000000000000000000000000000000000000001')).to.be.equal(true);
-			expect(await  communityInstance.mapTest3(1)).to.be.equal('0x0000000000000000000000000000000000000001');
-
-			expect(await communityInstance.owner()).to.be.equal(
-				communityAdminProxy.address
-			);
-			expect(await communityInstance.locked()).to.be.equal(false);
-			expect(await communityInstance.claimAmount()).to.be.equal(
-				claimAmountTwo
-			);
-			expect(await communityInstance.baseInterval()).to.be.equal(
-				threeMinutesInBlocks
-			);
-			expect(await communityInstance.incrementInterval()).to.be.equal(
-				oneMinuteInBlocks
-			);
-			expect(await communityInstance.maxClaim()).to.be.equal(
-				maxClaimTen.sub(oneCent.mul(2))
-			);
-			expect(await communityInstance.validBeneficiaryCount()).to.be.equal(
-				2
-			);
-			expect(await communityInstance.treasuryFunds()).to.be.equal(
-				communityMinTranche
-			);
-			expect(await communityInstance.privateFunds()).to.be.equal("0");
-			expect(await communityInstance.decreaseStep()).to.be.equal(oneCent);
-			expect(await communityInstance.minTranche()).to.be.equal(
-				communityMinTranche
-			);
-			expect(await communityInstance.maxTranche()).to.be.equal(
-				communityMaxTranche
-			);
-			expect(await communityInstance.previousCommunity()).to.be.equal(
-				zeroAddress
-			);
-			expect(await communityInstance.communityAdmin()).to.be.equal(
-				communityAdminProxy.address
-			);
 			expect(
-				(await communityInstance.beneficiaries(beneficiaryA.address))
-					.state
-			).to.be.equal(BeneficiaryState.Locked);
+				await communityInstance.mapTest2(
+					"0x0000000000000000000000000000000000000001"
+				)
+			).to.be.equal(true);
+			expect(await communityInstance.mapTest3(1)).to.be.equal(
+				"0x0000000000000000000000000000000000000001"
+			);
+
+			//*****************************************************************
+
+			communityInstance2 = await ethers.getContractAt(
+				"CommunityImplementationMock",
+				communityInstance2.address
+			);
+
+			await communityInstance2.setParams();
+
+			expect(await communityInstance2.addressTest1()).to.be.equal(
+				"0x0000000000000000000000000000000000000001"
+			);
+			expect(await communityInstance2.addressTest2()).to.be.equal(
+				"0x0000000000000000000000000000000000000002"
+			);
+			expect(await communityInstance2.addressTest3()).to.be.equal(
+				"0x0000000000000000000000000000000000000003"
+			);
+
+			expect(await communityInstance2.uint256Test1()).to.be.equal(1);
+			expect(await communityInstance2.uint256Test2()).to.be.equal(2);
+			expect(await communityInstance2.uint256Test3()).to.be.equal(3);
+
 			expect(
-				(await communityInstance.beneficiaries(beneficiaryB.address))
-					.state
-			).to.be.equal(BeneficiaryState.Valid);
-			expect(
-				(await communityInstance.beneficiaries(beneficiaryC.address))
-					.state
-			).to.be.equal(BeneficiaryState.Valid);
-			expect(await communityInstance.beneficiaryListLength()).to.be.equal(
-				3
+				await communityInstance2.mapTest2(
+					"0x0000000000000000000000000000000000000001"
+				)
+			).to.be.equal(true);
+			expect(await communityInstance2.mapTest3(1)).to.be.equal(
+				"0x0000000000000000000000000000000000000001"
 			);
-			expect(await communityInstance.beneficiaryListAt(0)).to.be.equal(
-				beneficiaryA.address
-			);
-			expect(await communityInstance.beneficiaryListAt(1)).to.be.equal(
-				beneficiaryB.address
-			);
-			expect(await communityInstance.beneficiaryListAt(2)).to.be.equal(
-				beneficiaryC.address
-			);
+
+
+			//*****************************************************************
+			//revert to initial implementation for community2
+
+			await expect(
+				communityAdminProxy.updateProxyImplementation(
+					communityInstance2.address,
+					communityImplementation.address
+				)
+			).to.be.fulfilled;
+
+			await expect(communityInstance.setParams()).to.be.fulfilled;
+			await expect(communityInstance2.setParams()).to.be.rejectedWith('Transaction reverted without a reason string');
 		});
 	});
 
