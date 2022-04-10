@@ -34,8 +34,8 @@ contract CommunityMiddleProxy is TransparentUpgradeableProxy {
         // so:
         // CommunityAdmin.communityProxyAdmin = IProxyAdmin(_admin())
         // CommunityAdmin = (CommunityAdmin.communityProxyAdmin).owner = (IProxyAdmin(_admin())).owner()
-        // communityImplementation = CommunityAdmin.communityTemplate
-        // communityImplementation = ICommunityAdmin(IProxyAdmin(_admin()).owner()).communityTemplate()
-        return address(ICommunityAdmin(IProxyAdmin(_admin()).owner()).communityTemplate());
+        // communityImplementation = CommunityAdmin.communityImplementation
+        // communityImplementation = ICommunityAdmin(IProxyAdmin(_admin()).owner()).communityImplementation()
+        return address(ICommunityAdmin(IProxyAdmin(_admin()).owner()).communityImplementation());
     }
 }

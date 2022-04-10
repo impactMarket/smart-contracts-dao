@@ -22,7 +22,7 @@ import "hardhat/console.sol";
  * of having everything in one single contract.
  *Each community has it's own members and and managers.
  */
-contract Community is
+contract CommunityImplementation is
     Initializable,
     AccessControlUpgradeable,
     OwnableUpgradeable,

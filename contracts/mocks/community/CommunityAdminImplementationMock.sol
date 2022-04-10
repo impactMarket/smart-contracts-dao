@@ -83,14 +83,14 @@ contract CommunityAdminImplementationMock is
     event TreasuryUpdated(address indexed oldTreasury, address indexed newTreasury);
 
     /**
-     * @notice Triggered when the communityTemplate address has been updated
+     * @notice Triggered when the communityImplementation address has been updated
      *
-     * @param oldCommunityTemplate    Old communityTemplate address
-     * @param newCommunityTemplate    New communityTemplate address
+     * @param oldCommunityImplementation    Old communityImplementation address
+     * @param newCommunityImplementation    New communityImplementation address
      */
-    event CommunityTemplateUpdated(
-        address indexed oldCommunityTemplate,
-        address indexed newCommunityTemplate
+    event CommunityImplementationUpdated(
+        address indexed oldCommunityImplementation,
+        address indexed newCommunityImplementation
     );
 
     /**
@@ -179,15 +179,15 @@ contract CommunityAdminImplementationMock is
     }
 
     /**
-     * @notice Updates the address of the the communityTemplate
+     * @notice Updates the address of the the communityImplementation
      *
-     * @param newCommunityTemplate_ address of the new communityTemplate contract
+     * @param newCommunityImplementation_ address of the new communityImplementation contract
      */
-    function updateCommunityTemplate(ICommunity newCommunityTemplate_) external override onlyOwner {
-        address oldCommunityTemplateAddress = address(communityTemplate);
-        communityTemplate = newCommunityTemplate_;
+    function updateCommunityImplementation(ICommunity newCommunityImplementation_) external override onlyOwner {
+        address oldCommunityImplementationAddress = address(communityImplementation);
+        communityImplementation = newCommunityImplementation_;
 
-        emit CommunityTemplateUpdated(oldCommunityTemplateAddress, address(newCommunityTemplate_));
+        emit CommunityImplementationUpdated(oldCommunityImplementationAddress, address(newCommunityImplementation_));
     }
 
     /**
@@ -429,16 +429,16 @@ contract CommunityAdminImplementationMock is
      * @notice Updates proxy implementation address of a community
      *
      * @param CommunityMiddleProxy_ address of the community
-     * @param newCommunityTemplate_ address of new implementation contract
+     * @param newCommunityImplementation_ address of new implementation contract
      */
-    function updateProxyImplementation(address CommunityMiddleProxy_, address newCommunityTemplate_)
+    function updateProxyImplementation(address CommunityMiddleProxy_, address newCommunityImplementation_)
         external
         override
         onlyOwner
     {
         communityProxyAdmin.upgrade(
             TransparentUpgradeableProxy(payable(CommunityMiddleProxy_)),
-            newCommunityTemplate_
+            newCommunityImplementation_
         );
     }
 
@@ -480,7 +480,7 @@ contract CommunityAdminImplementationMock is
         ICommunity previousCommunity_
     ) internal returns (address) {
         TransparentUpgradeableProxy community = new TransparentUpgradeableProxy(
-            address(communityTemplate),
+            address(communityImplementation),
             address(communityProxyAdmin),
             abi.encodeWithSignature(
                 "initialize(address[],uint256,uint256,uint256,uint256,uint256,uint256,uint256,address)",

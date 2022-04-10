@@ -18,13 +18,13 @@ interface ICommunityAdminOld {
     function cUSD() external view returns(IERC20);
     function treasury() external view returns(ITreasury);
     function communities(address _community) external view returns(CommunityState);
-    function communityTemplate() external view returns(ICommunity);
+    function communityImplementation() external view returns(ICommunity);
     function communityProxyAdmin() external view returns(ProxyAdmin);
     function communityListAt(uint256 _index) external view returns (address);
     function communityListLength() external view returns (uint256);
 
     function updateTreasury(ITreasury _newTreasury) external;
-    function updateCommunityTemplate(ICommunity _communityTemplate_) external;
+    function updateCommunityImplementation(ICommunity _communityImplementation_) external;
     function updateBeneficiaryParams(
         ICommunity _community,
         uint256 _claimAmount,

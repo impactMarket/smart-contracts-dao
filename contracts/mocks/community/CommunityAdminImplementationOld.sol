@@ -85,14 +85,14 @@ contract CommunityAdminImplementationOld is
     event TreasuryUpdated(address indexed oldTreasury, address indexed newTreasury);
 
     /**
-     * @notice Triggered when the communityTemplate address has been updated
+     * @notice Triggered when the communityImplementation address has been updated
      *
-     * @param oldCommunityTemplate    Old communityTemplate address
-     * @param newCommunityTemplate    New communityTemplate address
+     * @param oldCommunityImplementation    Old communityImplementation address
+     * @param newCommunityImplementation    New communityImplementation address
      */
-    event CommunityTemplateUpdated(
-        address indexed oldCommunityTemplate,
-        address indexed newCommunityTemplate
+    event CommunityImplementationUpdated(
+        address indexed oldCommunityImplementation,
+        address indexed newCommunityImplementation
     );
 
     /**
@@ -123,15 +123,15 @@ contract CommunityAdminImplementationOld is
     /**
      * @notice Used to initialize a new CommunityAdmin contract
      *
-     * @param _communityTemplate    Address of the Community implementation
+     * @param _communityImplementation    Address of the Community implementation
      *                              used for deploying new communities
      * @param _cUSD                 Address of the cUSD token
      */
-    function initialize(ICommunity _communityTemplate, IERC20 _cUSD) external initializer {
+    function initialize(ICommunity _communityImplementation, IERC20 _cUSD) external initializer {
         __Ownable_init();
         __ReentrancyGuard_init();
 
-        communityTemplate = _communityTemplate;
+        communityImplementation = _communityImplementation;
         cUSD = _cUSD;
 
         communityProxyAdmin = new ProxyAdmin();
@@ -176,15 +176,15 @@ contract CommunityAdminImplementationOld is
     }
 
     /**
-     * @notice Updates the address of the the communityTemplate
+     * @notice Updates the address of the the communityImplementation
      *
-     * @param _newCommunityTemplate address of the new communityTemplate contract
+     * @param _newCommunityImplementation address of the new communityImplementation contract
      */
-    function updateCommunityTemplate(ICommunity _newCommunityTemplate) external override onlyOwner {
-        address _oldCommunityTemplateAddress = address(communityTemplate);
-        communityTemplate = _newCommunityTemplate;
+    function updateCommunityImplementation(ICommunity _newCommunityImplementation) external override onlyOwner {
+        address _oldCommunityImplementationAddress = address(communityImplementation);
+        communityImplementation = _newCommunityImplementation;
 
-        emit CommunityTemplateUpdated(_oldCommunityTemplateAddress, address(_newCommunityTemplate));
+        emit CommunityImplementationUpdated(_oldCommunityImplementationAddress, address(_newCommunityImplementation));
     }
 
     /**
@@ -442,16 +442,16 @@ contract CommunityAdminImplementationOld is
      * @notice Updates proxy implementation address of a community
      *
      * @param _CommunityMiddleProxy address of the community
-     * @param _newCommunityTemplate address of new implementation contract
+     * @param _newCommunityImplementation address of new implementation contract
      */
-    function updateProxyImplementation(address _CommunityMiddleProxy, address _newCommunityTemplate)
+    function updateProxyImplementation(address _CommunityMiddleProxy, address _newCommunityImplementation)
         external
         override
         onlyOwner
     {
         communityProxyAdmin.upgrade(
             TransparentUpgradeableProxy(payable(_CommunityMiddleProxy)),
-            _newCommunityTemplate
+            _newCommunityImplementation
         );
     }
 
@@ -493,7 +493,7 @@ contract CommunityAdminImplementationOld is
         ICommunity _previousCommunity
     ) internal returns (address) {
         TransparentUpgradeableProxy _community = new TransparentUpgradeableProxy(
-            address(communityTemplate),
+            address(communityImplementation),
             address(communityProxyAdmin),
             abi.encodeWithSignature(
                 "initialize(address[],uint256,uint256,uint256,uint256,uint256,uint256,uint256,address)",

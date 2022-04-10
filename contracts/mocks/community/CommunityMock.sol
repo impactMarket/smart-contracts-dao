@@ -11,7 +11,7 @@ import "../../community/interfaces/ICommunity.sol";
 import "../../community/interfaces/ICommunityLegacy.sol";
 import "../../community/interfaces/ICommunityAdmin.sol";
 import "../../community/interfaces/CommunityStorageV1.sol";
-import "./CommunityStorageV2Mock.sol";
+import "./interfaces/CommunityStorageV2Mock.sol";
 
 /**
  * @notice Welcome to the Community contract. For each community
