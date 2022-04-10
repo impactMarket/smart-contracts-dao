@@ -44,12 +44,15 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		communityAdminProxyResult.address
 	);
 
-	const communityImplementationResult = await deploy("CommunityImplementation", {
-		from: deployer.address,
-		args: [],
-		log: true,
-		// gasLimit: 13000000,
-	});
+	const communityImplementationResult = await deploy(
+		"CommunityImplementation",
+		{
+			from: deployer.address,
+			args: [],
+			log: true,
+			// gasLimit: 13000000,
+		}
+	);
 
 	// constructor's parameters are not important because this is a middle proxy contract
 	// so, we can use any contract address and any address in order to create the contract

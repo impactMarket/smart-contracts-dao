@@ -234,11 +234,18 @@ contract CommunityAdminImplementation is
      *
      * @param _newCommunityImplementation address of the new communityImplementation contract
      */
-    function updateCommunityImplementation(ICommunity _newCommunityImplementation) external override onlyOwner {
+    function updateCommunityImplementation(ICommunity _newCommunityImplementation)
+        external
+        override
+        onlyOwner
+    {
         address _oldCommunityImplementationAddress = address(communityImplementation);
         communityImplementation = _newCommunityImplementation;
 
-        emit CommunityImplementationUpdated(_oldCommunityImplementationAddress, address(_newCommunityImplementation));
+        emit CommunityImplementationUpdated(
+            _oldCommunityImplementationAddress,
+            address(_newCommunityImplementation)
+        );
     }
 
     /**
@@ -507,11 +514,10 @@ contract CommunityAdminImplementation is
      * @param _CommunityMiddleProxy address of the community
      * @param _newCommunityImplementation address of new implementation contract
      */
-    function updateProxyImplementation(address _CommunityMiddleProxy, address _newCommunityImplementation)
-        external
-        override
-        onlyOwner
-    {
+    function updateProxyImplementation(
+        address _CommunityMiddleProxy,
+        address _newCommunityImplementation
+    ) external override onlyOwner {
         communityProxyAdmin.upgrade(
             TransparentUpgradeableProxy(payable(_CommunityMiddleProxy)),
             _newCommunityImplementation

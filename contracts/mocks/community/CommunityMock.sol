@@ -783,4 +783,16 @@ contract CommunityMock is
             return block.timestamp - block.number; //local
         }
     }
+
+    function setParams() public {
+        addressTest1 = address(1);
+        addressTest2 = address(2);
+        addressTest3 = address(3);
+        uint256Test1 = 1;
+        uint256Test2 = 2;
+        uint256Test3 = 3;
+
+        mapTest2[address(1)] = true;
+        mapTest3[1] = address(1);
+    }
 }
