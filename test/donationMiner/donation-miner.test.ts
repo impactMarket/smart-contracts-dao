@@ -19,7 +19,7 @@ import { parseUnits } from "@ethersproject/units/src.ts";
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 
-describe.only("DonationMiner", () => {
+describe("DonationMiner", () => {
 	const START_BLOCK = 130;
 	const REWARD_PERIOD_SIZE = 20;
 	const CLAIM_DELAY = 5;
@@ -36,6 +36,8 @@ describe.only("DonationMiner", () => {
 	let user7: SignerWithAddress;
 	let user8: SignerWithAddress;
 	let user9: SignerWithAddress;
+	let entity: SignerWithAddress;
+	let ambassador: SignerWithAddress;
 
 	let ImpactProxyAdmin: ethersTypes.Contract;
 	let DonationMiner: ethersTypes.Contract;
@@ -117,8 +119,21 @@ describe.only("DonationMiner", () => {
 	const deploy = deployments.createFixture(async () => {
 		await deployments.fixture("Test", { fallbackToGlobal: false });
 
-		[owner, user1, user2, user3, user4, user5, user6, user7, user8, user9] =
-			await ethers.getSigners();
+		[
+			owner,
+			user1,
+			user2,
+			user3,
+			user4,
+			user5,
+			user6,
+			user7,
+			user8,
+			user9,
+			entity,
+			ambassador,
+		] = await ethers.getSigners();
+
 
 		ImpactProxyAdmin = await ethers.getContractAt(
 			"ImpactProxyAdmin",
@@ -3247,10 +3262,23 @@ describe.only("DonationMiner", () => {
 				).address
 			);
 
+			const Ambassadors = await deployments.get("AmbassadorsProxy");
+
+			const ambassadors = await ethers.getContractAt(
+				"AmbassadorsImplementation",
+				Ambassadors.address
+			);
+
+			await CommunityAdmin.updateAmbassadors(Ambassadors.address);
+
+			await ambassadors.addEntity(entity.address);
+			await ambassadors.connect(entity).addAmbassador(ambassador.address);
+
 			await cUSD.mint(Treasury.address, mintAmount.toString());
 
 			const tx = await CommunityAdmin.addCommunity(
 				[owner.address],
+				ambassador.address,
 				claimAmountTwo.toString(),
 				maxClaimTen.toString(),
 				oneCent.toString(),
@@ -3636,10 +3664,10 @@ describe.only("DonationMiner", () => {
 				)
 			).to.be.equal(
 				user1Stake1 +
-					user1Stake2 +
-					user1Stake3 +
-					user3Stake2 -
-					user1Unstake1
+				user1Stake2 +
+				user1Stake3 +
+				user3Stake2 -
+				user1Unstake1
 			);
 			expect(
 				await DonationMiner.rewardPeriodDonorStakeAmounts(
@@ -3666,11 +3694,11 @@ describe.only("DonationMiner", () => {
 				)
 			).to.be.equal(
 				user1Stake1 +
-					user1Stake2 +
-					user1Stake3 +
-					user3Stake2 -
-					user1Unstake1 -
-					user1Unstake2
+				user1Stake2 +
+				user1Stake3 +
+				user3Stake2 -
+				user1Unstake1 -
+				user1Unstake2
 			);
 			expect(
 				await DonationMiner.rewardPeriodDonorStakeAmounts(
@@ -3679,10 +3707,10 @@ describe.only("DonationMiner", () => {
 				)
 			).to.be.equal(
 				user2Stake1 +
-					user2Stake2 -
-					user2Unstake1 +
-					user2Stake3 -
-					user2Unstake2
+				user2Stake2 -
+				user2Unstake1 +
+				user2Stake3 -
+				user2Unstake2
 			);
 			expect(
 				await DonationMiner.rewardPeriodDonorStakeAmounts(

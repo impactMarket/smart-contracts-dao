@@ -91,6 +91,14 @@ contract CommunityAdminImplementationV2Mock is
     event UBICommitteeUpdated(address indexed oldUbiCommittee, address indexed newUbiCommittee);
 
     /**
+     * @notice Triggered when the ambassadors has been updated
+     *
+     * @param oldAmbassadors   Old Ambassador address
+     * @param newAmbassadors   New Ambassador address
+     */
+    event AmbassadorsUpdated(address indexed oldAmbassadors, address indexed newAmbassadors);
+
+    /**
      * @notice Triggered when the communityTemplate address has been updated
      *
      * @param oldCommunityTemplate    Old communityTemplate address
@@ -175,6 +183,15 @@ contract CommunityAdminImplementationV2Mock is
     }
 
     /**
+     * @notice Returns if an address is the ambassador of the community
+     *
+     * @return bool true if the address is an ambassador of the community
+     */
+    function isAmbassadorOfCommunity(address _community, address _ambassador) external view override returns (bool) {
+        return ambassadors.isAmbassadorOf(_ambassador, _community);
+    }
+
+    /**
      * @notice Updates the address of the treasury
      *
      * @param newTreasury_ address of the new treasury contract
@@ -212,6 +229,7 @@ contract CommunityAdminImplementationV2Mock is
      */
     function addCommunity(
         address[] memory managers_,
+        address ambassador_,
         uint256 claimAmount_,
         uint256 maxClaim_,
         uint256 decreaseStep_,
@@ -234,6 +252,7 @@ contract CommunityAdminImplementationV2Mock is
         require(communityAddress != address(0), "CommunityAdmin::addCommunity: NOT_VALID");
         communities[communityAddress] = CommunityState.Valid;
         communityList.add(communityAddress);
+        ambassadors.setCommunityToAmbassador(ambassador_, address(communityAddress));
 
         emit CommunityAdded(
             communityAddress,
@@ -460,6 +479,18 @@ contract CommunityAdminImplementationV2Mock is
         ubiCommittee = _newUbiCommittee;
 
         emit UBICommitteeUpdated(oldUbiCommittee, address(_newUbiCommittee));
+    }
+
+    /**
+     * @notice Updates proxy implementation address of ambassadors
+     *
+     * @param _newAmbassadors address of new implementation contract
+     */
+    function updateAmbassadors(IAmbassadors _newAmbassadors) external override onlyOwner {
+        address oldAmbassadors = address(ambassadors);
+        ambassadors = _newAmbassadors;
+
+        emit AmbassadorsUpdated(oldAmbassadors, address(_newAmbassadors));
     }
 
     /**

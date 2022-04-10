@@ -300,6 +300,17 @@ contract Community is
     }
 
     /**
+     * @notice Enforces sender to be the community ambassador
+     */
+    modifier onlyAmbassador() {
+        require(
+            communityAdmin.isAmbassadorOfCommunity(address(this), msg.sender),
+            "Community: NOT_AMBASSADOR"
+        );
+        _;
+    }
+
+    /**
      * @notice Returns the cUSD contract address
      */
     function cUSD() public view override returns (IERC20) {
@@ -434,9 +445,9 @@ contract Community is
      *
      * @param _account address of the manager to be added
      */
-    function addManager(address _account) public override onlyManagers {
+    function addManager(address _account) public override onlyAmbassador {
         if (!hasRole(MANAGER_ROLE, _account)) {
-            super.grantRole(MANAGER_ROLE, _account);
+            super._grantRole(MANAGER_ROLE, _account);
             emit ManagerAdded(msg.sender, _account);
         }
     }
@@ -446,7 +457,7 @@ contract Community is
      *
      * @param _account address of the manager to be removed
      */
-    function removeManager(address _account) external override onlyManagers {
+    function removeManager(address _account) external override onlyAmbassador {
         require(
             hasRole(MANAGER_ROLE, _account),
             "Community::removeManager: This account doesn't have manager role"
@@ -455,7 +466,7 @@ contract Community is
             _account != address(communityAdmin),
             "Community::removeManager: You are not allow to remove communityAdmin"
         );
-        super.revokeRole(MANAGER_ROLE, _account);
+        super._revokeRole(MANAGER_ROLE, _account);
         emit ManagerRemoved(msg.sender, _account);
     }
 
@@ -484,6 +495,8 @@ contract Community is
         onlyManagers
         nonReentrant
     {
+        require(!locked, "LOCKED");
+
         Beneficiary storage _beneficiary = beneficiaries[_beneficiaryAddress];
         require(
             _beneficiary.state == BeneficiaryState.NONE,
@@ -507,6 +520,8 @@ contract Community is
      * @param _beneficiaryAddress address of the beneficiary to be locked
      */
     function lockBeneficiary(address _beneficiaryAddress) external override onlyManagers {
+        require(!locked, "LOCKED");
+
         Beneficiary storage _beneficiary = beneficiaries[_beneficiaryAddress];
 
         require(
@@ -523,6 +538,8 @@ contract Community is
      * @param _beneficiaryAddress address of the beneficiary to be unlocked
      */
     function unlockBeneficiary(address _beneficiaryAddress) external override onlyManagers {
+        require(!locked, "LOCKED");
+
         Beneficiary storage _beneficiary = beneficiaries[_beneficiaryAddress];
 
         require(
@@ -596,17 +613,17 @@ contract Community is
     }
 
     /**
-     * @notice Locks the community claims
+     * @notice Locks the community
      */
-    function lock() external override onlyManagers {
+    function lock() external override onlyAmbassador {
         locked = true;
         emit CommunityLocked(msg.sender);
     }
 
     /**
-     * @notice Unlocks the community claims
+     * @notice Unlocks the community
      */
-    function unlock() external override onlyManagers {
+    function unlock() external override onlyAmbassador {
         locked = false;
         emit CommunityUnlocked(msg.sender);
     }
@@ -615,6 +632,8 @@ contract Community is
      * @notice Requests treasury funds from the communityAdmin
      */
     function requestFunds() external override onlyManagers {
+        require(!locked, "LOCKED");
+
         communityAdmin.fundCommunity();
 
         lastFundRequest = block.number;
