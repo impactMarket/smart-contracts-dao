@@ -19,7 +19,7 @@ import { parseUnits } from "@ethersproject/units/src.ts";
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 
-describe("DonationMiner", () => {
+describe.only("DonationMiner", () => {
 	const START_BLOCK = 130;
 	const REWARD_PERIOD_SIZE = 20;
 	const CLAIM_DELAY = 5;
@@ -133,7 +133,6 @@ describe("DonationMiner", () => {
 			entity,
 			ambassador,
 		] = await ethers.getSigners();
-
 
 		ImpactProxyAdmin = await ethers.getContractAt(
 			"ImpactProxyAdmin",
@@ -3664,10 +3663,10 @@ describe("DonationMiner", () => {
 				)
 			).to.be.equal(
 				user1Stake1 +
-				user1Stake2 +
-				user1Stake3 +
-				user3Stake2 -
-				user1Unstake1
+					user1Stake2 +
+					user1Stake3 +
+					user3Stake2 -
+					user1Unstake1
 			);
 			expect(
 				await DonationMiner.rewardPeriodDonorStakeAmounts(
@@ -3694,11 +3693,11 @@ describe("DonationMiner", () => {
 				)
 			).to.be.equal(
 				user1Stake1 +
-				user1Stake2 +
-				user1Stake3 +
-				user3Stake2 -
-				user1Unstake1 -
-				user1Unstake2
+					user1Stake2 +
+					user1Stake3 +
+					user3Stake2 -
+					user1Unstake1 -
+					user1Unstake2
 			);
 			expect(
 				await DonationMiner.rewardPeriodDonorStakeAmounts(
@@ -3707,10 +3706,10 @@ describe("DonationMiner", () => {
 				)
 			).to.be.equal(
 				user2Stake1 +
-				user2Stake2 -
-				user2Unstake1 +
-				user2Stake3 -
-				user2Unstake2
+					user2Stake2 -
+					user2Unstake1 +
+					user2Stake3 -
+					user2Unstake2
 			);
 			expect(
 				await DonationMiner.rewardPeriodDonorStakeAmounts(
