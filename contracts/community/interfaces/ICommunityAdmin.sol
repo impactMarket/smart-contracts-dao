@@ -27,7 +27,7 @@ interface ICommunityAdmin {
     function communityProxyAdmin() external view returns(ProxyAdmin);
     function communityListAt(uint256 _index) external view returns (address);
     function communityListLength() external view returns (uint256);
-    function isAmbassadorOfCommunity(address _community, address _ambassador) external view returns (bool);
+    function isAmbassadorOrEntityOfCommunity(address _community, address _ambassadorOrEntity) external view returns (bool);
 
     function updateTreasury(ITreasury _newTreasury) external;
     function updateUbiCommittee(IUBICommittee _newUbiCommittee) external;

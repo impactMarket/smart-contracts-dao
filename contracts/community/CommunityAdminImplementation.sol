@@ -204,17 +204,19 @@ contract CommunityAdminImplementation is
     }
 
     /**
-     * @notice Returns if an address is the ambassador of the community
+     * @notice Returns if an address is the ambassador or entity of the community
      *
-     * @return bool true if the address is an ambassador of the community
+     * @return bool true if the address is an ambassador or entity of the community
      */
-    function isAmbassadorOfCommunity(address _community, address _ambassador)
+    function isAmbassadorOrEntityOfCommunity(address _community, address _ambassadorOrEntity)
         external
         view
         override
         returns (bool)
     {
-        return ambassadors.isAmbassadorOf(_ambassador, _community);
+        return
+            ambassadors.isAmbassadorOf(_ambassadorOrEntity, _community) ||
+            ambassadors.isEntityOf(_ambassadorOrEntity, _community);
     }
 
     /**

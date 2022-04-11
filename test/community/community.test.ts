@@ -974,8 +974,6 @@ describe("Community", () => {
 
 			await expect(communityProxy.setParams()).to.be.fulfilled;
 
-
-
 			// yarn coverage throws this error message
 			// await expect(communityProxy2.setParams()).to.be.rejectedWith(
 			// 	"Transaction reverted: function selector was not recognized and there's no fallback function"
@@ -987,8 +985,9 @@ describe("Community", () => {
 			// );
 
 			// this error message matches both cases
-			await expect(communityProxy2.setParams()).to.be.rejectedWith("Transaction reverted");
-
+			await expect(communityProxy2.setParams()).to.be.rejectedWith(
+				"Transaction reverted"
+			);
 
 			expect(await communityProxy2.communityAdmin()).to.be.equal(
 				communityAdminProxy.address
@@ -1524,6 +1523,19 @@ describe("Community", () => {
 			).to.be.fulfilled;
 		});
 
+		it("should add manager to community if entity with an ambassador responsible", async () => {
+			await expect(
+				communityProxy
+					.connect(ambassadorsEntityA)
+					.addManager(communityManagerB.address)
+			).to.be.fulfilled;
+			await expect(
+				communityProxy
+					.connect(ambassadorsEntityA)
+					.addManager(communityManagerC.address)
+			).to.be.fulfilled;
+		});
+
 		it("should remove manager from community if ambassador", async () => {
 			await expect(
 				communityProxy
@@ -1548,10 +1560,20 @@ describe("Community", () => {
 			).to.be.fulfilled;
 		});
 
-		it("should notlock community if manager", async () => {
+		it("should not lock community if manager", async () => {
 			await expect(
 				communityProxy.connect(communityManagerA).lock()
-			).to.be.rejectedWith("Community: NOT_AMBASSADOR");
+			).to.be.rejectedWith("Community: NOT_AMBASSADOR_OR_ENTITY");
+		});
+
+		it("should be able to lock community if ambassador", async () => {
+			await expect(communityProxy.connect(ambassadorA).lock()).to.be
+				.fulfilled;
+		});
+
+		it("should be able to lock community if entity with ambassador responsible", async () => {
+			await expect(communityProxy.connect(ambassadorsEntityA).lock()).to
+				.be.fulfilled;
 		});
 	});
 

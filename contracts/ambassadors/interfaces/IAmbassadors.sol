@@ -5,6 +5,7 @@ interface IAmbassadors {
     function getVersion() external returns(uint256);
     function isAmbassador(address _ambassador) external view returns (bool);
     function isAmbassadorOf(address _ambassador, address _community) external view returns (bool);
+    function isEntityOf(address _ambassador, address _entityAddress) external view returns (bool);
     function isAmbassadorAt(address _ambassador, address _entityAddress) external view returns (bool);
 
     function addEntity(address _entity) external;
