@@ -25,16 +25,20 @@ contract DonationMinerImplementation is
     /**
      * @notice Triggered when a donation has been added
      *
-     * @param donationId  Id of the donation
-     * @param donor       Address of the donner
-     * @param amount      Value of the donation
-     * @param target      Address of the receiver (community or treasury)
-     *                    or address of the DonationMiner contract otherwise
+     * @param donationId        Id of the donation
+     * @param delegateAddress   Address of the delegate
+     * @param amount            Value of the donation
+     * @param token             Address of the token after conversion
+     * @param amount            Number of token donated
+     * @param target            Address of the receiver (community or treasury)
+     *                          or address of the DonationMiner contract otherwise
      */
     event DonationAdded(
         uint256 indexed donationId,
-        address indexed donor,
+        address indexed delegateAddress,
         uint256 amount,
+        address token,
+        uint256 initialAmount,
         address indexed target
     );
 
@@ -370,37 +374,54 @@ contract DonationMinerImplementation is
     /**
      * @notice Transfers cUSD tokens to the treasury contract
      *
+     * @param _token address of the token
      * @param _amount Amount of cUSD tokens to deposit.
+     * @param _delegateAddress the address that will claim the reward for the donation
      */
-    function donate(uint256 _amount) external override whenNotPaused whenStarted nonReentrant {
-        // Transfer the cUSD from the donor to the treasury
-        cUSD.safeTransferFrom(msg.sender, address(treasury), _amount);
+    function donate(
+        IERC20 _token,
+        uint256 _amount,
+        address _delegateAddress
+    ) external override whenNotPaused whenStarted nonReentrant {
+        require(
+            _token == cUSD || treasury.isToken(address(_token)),
+            "DonationMiner::donate: Invalid token"
+        );
 
-        addDonation(msg.sender, _amount, address(treasury));
+        _token.safeTransferFrom(msg.sender, address(treasury), _amount);
+
+        addDonation(_delegateAddress, _token, _amount, address(treasury));
     }
 
     /**
      * @dev Transfers cUSD tokens to the community contract
      *
      * @param _community address of the community
+     * @param _token address of the token
      * @param _amount amount of cUSD tokens to deposit
+     * @param _delegateAddress the address that will claim the reward for the donation
      */
-    function donateToCommunity(ICommunity _community, uint256 _amount)
-        external
-        override
-        whenNotPaused
-        whenStarted
-        nonReentrant
-    {
+    function donateToCommunity(
+        ICommunity _community,
+        IERC20 _token,
+        uint256 _amount,
+        address _delegateAddress
+    ) external override whenNotPaused whenStarted nonReentrant {
         ICommunityAdmin _communityAdmin = treasury.communityAdmin();
         require(
             _communityAdmin.communities(address(_community)) ==
                 ICommunityAdmin.CommunityState.Valid,
             "DonationMiner::donateToCommunity: This is not a valid community address"
         );
+
+        require(
+            address(_token) == address(_community.cUSD()),
+            "DonationMiner::donateToCommunity: Invalid token"
+        );
+
         // Transfer the cUSD from the donor to the community
         _community.donate(msg.sender, _amount);
-        addDonation(msg.sender, _amount, address(_community));
+        addDonation(_delegateAddress, _token, _amount, address(_community));
     }
 
     /**
@@ -654,31 +675,41 @@ contract DonationMinerImplementation is
     /**
      * @notice Adds a new donation in donations list
      *
-     * @param _donorAddress address of the donner
-     * @param _amount amount of the donation
+     * @param _delegateAddress address of the wallet that will claim the reward
+     * @param _initialAmount amount of the donation
      * @param _target address of the receiver (community or treasury)
      */
     function addDonation(
-        address _donorAddress,
-        uint256 _amount,
+        address _delegateAddress,
+        IERC20 _token,
+        uint256 _initialAmount,
         address _target
     ) internal {
         initializeRewardPeriods();
 
         donationCount++;
         Donation storage _donation = donations[donationCount];
-        _donation.donor = _donorAddress;
+        _donation.donor = _delegateAddress;
         _donation.target = _target;
-        _donation.amount = _amount;
+        _donation.amount = (_token == cUSD)
+            ? _initialAmount
+            : treasury.getConvertedAmount(address(_token), _initialAmount);
         _donation.blockNumber = block.number;
         _donation.rewardPeriod = rewardPeriodCount;
-        _donation.token = cUSD;
-        _donation.tokenPrice = 1e18;
+        _donation.token = _token;
+        _donation.initialAmount = _initialAmount;
 
-        updateRewardPeriodAmounts(rewardPeriodCount, msg.sender, _amount);
-        addCurrentRewardPeriodToDonor(msg.sender);
+        updateRewardPeriodAmounts(rewardPeriodCount, _delegateAddress, _donation.amount);
+        addCurrentRewardPeriodToDonor(_delegateAddress);
 
-        emit DonationAdded(donationCount, msg.sender, _amount, _target);
+        emit DonationAdded(
+            donationCount,
+            _delegateAddress,
+            _donation.amount,
+            address(_token),
+            _initialAmount,
+            _target
+        );
     }
 
     /**

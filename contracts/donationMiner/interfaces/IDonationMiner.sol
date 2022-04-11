@@ -47,9 +47,9 @@ interface IDonationMiner {
         address target;  //address of the receiver (community or treasury)
         uint256 rewardPeriod;  //number of the reward period in which the donation was made
         uint256 blockNumber;  //number of the block in which the donation was executed
-        uint256 amount;  //number of tokens donated
+        uint256 amount;  //the convertedAmount value
         IERC20 token;  //address of the token
-        uint256 tokenPrice;  //the price of the token in cUSD
+        uint256 initialAmount;  //number of tokens donated
     }
 
     function getVersion() external returns(uint256);
@@ -103,8 +103,8 @@ interface IDonationMiner {
     function updateAgainstPeriods(uint256 _newAgainstPeriods) external;
     function updateTreasury(ITreasury _newTreasury) external;
     function updateStaking(IStaking _newStaking) external;
-    function donate(uint256 _amount) external;
-    function donateToCommunity(ICommunity _community, uint256 _amount) external;
+    function donate(IERC20 _token, uint256 _amount, address _delegateAddress) external;
+    function donateToCommunity(ICommunity _community, IERC20 _token, uint256 _amount, address _delegateAddress) external;
     function claimRewards() external;
     function claimRewardsPartial(uint256 _lastPeriodNumber) external;
     function stakeRewards() external;

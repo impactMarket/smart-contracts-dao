@@ -104,7 +104,11 @@ describe("Impact Labs Vesting", () => {
 
 		await advanceBlockNTimes(10 * REWARD_PERIOD_SIZE);
 		await cUSD.connect(donor1).approve(DonationMiner.address, 1);
-		await DonationMiner.connect(donor1).donate(1);
+		await DonationMiner.connect(donor1).donate(
+			cUSD.address,
+			1,
+			donor1.address
+		);
 		await ImpactLabsVesting.claim();
 		expect(await PACT.balanceOf(owner.address)).to.be.equal(INITIAL_REWARD);
 		expect(await ImpactLabsVesting.advancePayment()).to.be.equal(
@@ -113,7 +117,11 @@ describe("Impact Labs Vesting", () => {
 
 		await advanceBlockNTimes(10 * REWARD_PERIOD_SIZE);
 		await cUSD.connect(donor1).approve(DonationMiner.address, 1);
-		await DonationMiner.connect(donor1).donate(1);
+		await DonationMiner.connect(donor1).donate(
+			cUSD.address,
+			1,
+			donor1.address
+		);
 		await ImpactLabsVesting.claim();
 		expect(await PACT.balanceOf(owner.address)).to.be.equal(INITIAL_REWARD);
 		expect(await ImpactLabsVesting.advancePayment()).to.be.equal(
@@ -122,7 +130,11 @@ describe("Impact Labs Vesting", () => {
 
 		await advanceBlockNTimes(11 * REWARD_PERIOD_SIZE);
 		await cUSD.connect(donor1).approve(DonationMiner.address, 1);
-		await DonationMiner.connect(donor1).donate(1);
+		await DonationMiner.connect(donor1).donate(
+			cUSD.address,
+			1,
+			donor1.address
+		);
 		await ImpactLabsVesting.claim();
 		expect(await PACT.balanceOf(owner.address)).to.be.equal(INITIAL_REWARD);
 		expect(await ImpactLabsVesting.advancePayment()).to.be.equal(
@@ -131,7 +143,11 @@ describe("Impact Labs Vesting", () => {
 
 		await advanceBlockNTimes(REWARD_PERIOD_SIZE);
 		await cUSD.connect(donor1).approve(DonationMiner.address, 1);
-		await DonationMiner.connect(donor1).donate(1);
+		await DonationMiner.connect(donor1).donate(
+			cUSD.address,
+			1,
+			donor1.address
+		);
 		await ImpactLabsVesting.claim();
 		expect(await PACT.balanceOf(owner.address)).to.be.equal(
 			parseEther("101934691.331176674943971135")
@@ -142,7 +158,11 @@ describe("Impact Labs Vesting", () => {
 
 		await advanceBlockNTimes(8 * REWARD_PERIOD_SIZE);
 		await cUSD.connect(donor1).approve(DonationMiner.address, 1);
-		await DonationMiner.connect(donor1).donate(1);
+		await DonationMiner.connect(donor1).donate(
+			cUSD.address,
+			1,
+			donor1.address
+		);
 		await ImpactLabsVesting.claim();
 		expect(await PACT.balanceOf(owner.address)).to.be.equal(
 			parseEther("126863338.341679958786368725")
@@ -158,7 +178,11 @@ describe("Impact Labs Vesting", () => {
 
 		await cUSD.connect(donor1).approve(DonationMiner.address, 1);
 
-		await DonationMiner.connect(donor1).donate(1);
+		await DonationMiner.connect(donor1).donate(
+			cUSD.address,
+			1,
+			donor1.address
+		);
 
 		// Claim their rewards
 		await ImpactLabsVesting.claim();

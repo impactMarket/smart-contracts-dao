@@ -19,7 +19,7 @@ import { parseUnits } from "@ethersproject/units/src.ts";
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 
-describe("Donation", () => {
+describe.only("DonationMiner", () => {
 	const START_BLOCK = 130;
 	const REWARD_PERIOD_SIZE = 20;
 	const CLAIM_DELAY = 5;
@@ -196,12 +196,6 @@ describe("Donation", () => {
 				await deployments.get("TreasuryProxy")
 			).address
 		);
-
-		// Mint each of the test some cUSD
-		await cUSD.mint(user1.address, toEther("1000000"));
-		await cUSD.mint(user2.address, toEther("10000000"));
-		await cUSD.mint(user3.address, toEther("100000000"));
-		await cUSD.mint(user4.address, toEther("100000000"));
 	});
 
 	async function showRewardPeriods(DonationMiner: any) {
@@ -253,17 +247,29 @@ describe("Donation", () => {
 			.connect(user1)
 			.approve(DonationMiner.address, user1Donation1);
 
-		await DonationMiner.connect(user1).donate(user1Donation1);
+		await DonationMiner.connect(user1).donate(
+			cUSD.address,
+			user1Donation1,
+			user1.address
+		);
 
 		await cUSD.connect(user2).approve(DonationMiner.address, user2Donation);
 
-		await DonationMiner.connect(user2).donate(user2Donation);
+		await DonationMiner.connect(user2).donate(
+			cUSD.address,
+			user2Donation,
+			user2.address
+		);
 
 		await cUSD
 			.connect(user1)
 			.approve(DonationMiner.address, user1Donation2);
 
-		await DonationMiner.connect(user1).donate(user1Donation2);
+		await DonationMiner.connect(user1).donate(
+			cUSD.address,
+			user1Donation2,
+			user1.address
+		);
 
 		//third block donations
 		await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE - 6);
@@ -274,11 +280,19 @@ describe("Donation", () => {
 			.connect(user1)
 			.approve(DonationMiner.address, user1Donation3);
 
-		await DonationMiner.connect(user1).donate(user1Donation3);
+		await DonationMiner.connect(user1).donate(
+			cUSD.address,
+			user1Donation3,
+			user1.address
+		);
 
 		await cUSD.connect(user3).approve(DonationMiner.address, user3Donation);
 
-		await DonationMiner.connect(user3).donate(user3Donation);
+		await DonationMiner.connect(user3).donate(
+			cUSD.address,
+			user3Donation,
+			user3.address
+		);
 
 		//forth block donations
 		await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE - 5);
@@ -291,7 +305,11 @@ describe("Donation", () => {
 
 		await cUSD.connect(user4).approve(DonationMiner.address, user4Donation);
 
-		await DonationMiner.connect(user4).donate(user4Donation);
+		await DonationMiner.connect(user4).donate(
+			cUSD.address,
+			user4Donation,
+			user4.address
+		);
 
 		return {
 			user1Donation1,
@@ -424,7 +442,7 @@ describe("Donation", () => {
 			.lessThanOrEqual(169);
 		expect(donation1.amount).to.equal(user1Donation1);
 		expect(donation1.token).to.equal(cUSD.address);
-		expect(donation1.tokenPrice).to.equal(toEther("1"));
+		expect(donation1.initialAmount).to.equal(user1Donation1);
 		const donation2 = await DonationMiner.donations(2);
 		expect(donation2.donor).to.equal(user2.address);
 		expect(donation2.target).to.equal(Treasury.address);
@@ -434,7 +452,7 @@ describe("Donation", () => {
 			.lessThanOrEqual(169);
 		expect(donation2.amount).to.equal(user2Donation);
 		expect(donation2.token).to.equal(cUSD.address);
-		expect(donation2.tokenPrice).to.equal(toEther("1"));
+		expect(donation2.initialAmount).to.equal(user2Donation);
 		const donation3 = await DonationMiner.donations(3);
 		expect(donation3.donor).to.equal(user1.address);
 		expect(donation3.target).to.equal(Treasury.address);
@@ -444,7 +462,7 @@ describe("Donation", () => {
 			.lessThanOrEqual(169);
 		expect(donation3.amount).to.equal(user1Donation2);
 		expect(donation3.token).to.equal(cUSD.address);
-		expect(donation3.tokenPrice).to.equal(toEther("1"));
+		expect(donation3.initialAmount).to.equal(user1Donation2);
 		const donation4 = await DonationMiner.donations(4);
 		expect(donation4.donor).to.equal(user1.address);
 		expect(donation4.target).to.equal(Treasury.address);
@@ -454,7 +472,7 @@ describe("Donation", () => {
 			.lessThanOrEqual(189);
 		expect(donation4.amount).to.equal(user1Donation3);
 		expect(donation4.token).to.equal(cUSD.address);
-		expect(donation4.tokenPrice).to.equal(toEther("1"));
+		expect(donation4.initialAmount).to.equal(user1Donation3);
 		const donation5 = await DonationMiner.donations(5);
 		expect(donation5.donor).to.equal(user3.address);
 		expect(donation5.target).to.equal(Treasury.address);
@@ -464,7 +482,7 @@ describe("Donation", () => {
 			.lessThanOrEqual(189);
 		expect(donation5.amount).to.equal(user3Donation);
 		expect(donation5.token).to.equal(cUSD.address);
-		expect(donation5.tokenPrice).to.equal(toEther("1"));
+		expect(donation5.initialAmount).to.equal(user3Donation);
 		const donation6 = await DonationMiner.donations(6);
 		expect(donation6.donor).to.equal(user4.address);
 		expect(donation6.target).to.equal(Treasury.address);
@@ -474,7 +492,7 @@ describe("Donation", () => {
 			.lessThanOrEqual(229);
 		expect(donation6.amount).to.equal(user4Donation);
 		expect(donation6.token).to.equal(cUSD.address);
-		expect(donation6.tokenPrice).to.equal(toEther("1"));
+		expect(donation6.initialAmount).to.equal(user4Donation);
 	}
 
 	async function chunkAdvance(chunk: number, rewardExpected: string) {
@@ -483,7 +501,11 @@ describe("Donation", () => {
 		// Approve
 		await cUSD.connect(user1).approve(DonationMiner.address, 1);
 
-		await DonationMiner.connect(user1).donate(1);
+		await DonationMiner.connect(user1).donate(
+			cUSD.address,
+			1,
+			user1.address
+		);
 
 		// Claim their rewards
 		await DonationMiner.connect(user1).claimRewards();
@@ -523,10 +545,10 @@ describe("Donation", () => {
 		beforeEach(async () => {
 			await deploy();
 
-			DonationMiner = await ethers.getContractAt(
-				"DonationMinerImplementation",
-				DonationMiner.address
-			);
+			await cUSD.mint(user1.address, toEther("1000000"));
+			await cUSD.mint(user2.address, toEther("10000000"));
+			await cUSD.mint(user3.address, toEther("100000000"));
+			await cUSD.mint(user4.address, toEther("100000000"));
 		});
 
 		it("Should have correct values", async function () {
@@ -579,7 +601,11 @@ describe("Donation", () => {
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation1);
 
-			await DonationMiner.connect(user1).donate(user1Donation1);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation1,
+				user1.address
+			);
 
 			//second block donations
 
@@ -597,7 +623,11 @@ describe("Donation", () => {
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation1);
 
-			await DonationMiner.connect(user1).donate(user1Donation1);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation1,
+				user1.address
+			);
 
 			await advanceTimeAndBlockNTimes(2 * REWARD_PERIOD_SIZE);
 
@@ -685,7 +715,11 @@ describe("Donation", () => {
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation);
 
-			await DonationMiner.connect(user1).donate(user1Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
 
 			expect(await cUSD.balanceOf(Treasury.address)).to.be.equal(
 				user1Donation
@@ -702,7 +736,11 @@ describe("Donation", () => {
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation);
 
-			await DonationMiner.connect(user1).donate(user1Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
 
 			const userBalance = await cUSD.balanceOf(user1.address);
 			expect(userBalance).to.equal(toEther("999800"));
@@ -719,7 +757,11 @@ describe("Donation", () => {
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation);
 
-			await DonationMiner.connect(user1).donate(user1Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
 
@@ -744,7 +786,11 @@ describe("Donation", () => {
 				.approve(DonationMiner.address, user1Donation);
 
 			await advanceTimeAndBlockNTimes(1);
-			await DonationMiner.connect(user1).donate(user1Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
 
 			// Claim the rewards
 			await DonationMiner.connect(user1).claimRewards();
@@ -771,8 +817,16 @@ describe("Donation", () => {
 				.connect(user2)
 				.approve(DonationMiner.address, user2Donation);
 
-			await DonationMiner.connect(user1).donate(user1Donation);
-			await DonationMiner.connect(user2).donate(user2Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
+			await DonationMiner.connect(user2).donate(
+				cUSD.address,
+				user2Donation,
+				user2.address
+			);
 
 			// Claim their rewards
 			await DonationMiner.connect(user1).claimRewards();
@@ -798,7 +852,11 @@ describe("Donation", () => {
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation);
 
-			await DonationMiner.connect(user1).donate(user1Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
 
@@ -827,8 +885,16 @@ describe("Donation", () => {
 				.connect(user2)
 				.approve(DonationMiner.address, user2Donation);
 
-			await DonationMiner.connect(user1).donate(user1Donation);
-			await DonationMiner.connect(user2).donate(user2Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
+			await DonationMiner.connect(user2).donate(
+				cUSD.address,
+				user2Donation,
+				user2.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
 
@@ -861,13 +927,25 @@ describe("Donation", () => {
 				.connect(user2)
 				.approve(DonationMiner.address, user2Donation);
 
-			await DonationMiner.connect(user1).donate(user1Donation1);
-			await DonationMiner.connect(user2).donate(user2Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation1,
+				user1.address
+			);
+			await DonationMiner.connect(user2).donate(
+				cUSD.address,
+				user2Donation,
+				user2.address
+			);
 
 			await cUSD
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation2);
-			await DonationMiner.connect(user1).donate(user1Donation2);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation2,
+				user1.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
 
@@ -900,8 +978,16 @@ describe("Donation", () => {
 				.connect(user2)
 				.approve(DonationMiner.address, user2Donation);
 
-			await DonationMiner.connect(user1).donate(user1Donation);
-			await DonationMiner.connect(user2).donate(user2Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
+			await DonationMiner.connect(user2).donate(
+				cUSD.address,
+				user2Donation,
+				user2.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
 
@@ -934,8 +1020,16 @@ describe("Donation", () => {
 				.connect(user2)
 				.approve(DonationMiner.address, user2Donation);
 
-			await DonationMiner.connect(user1).donate(user1Donation);
-			await DonationMiner.connect(user2).donate(user2Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
+			await DonationMiner.connect(user2).donate(
+				cUSD.address,
+				user2Donation,
+				user2.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
 
@@ -968,8 +1062,16 @@ describe("Donation", () => {
 				.connect(user2)
 				.approve(DonationMiner.address, user2Donation);
 
-			await DonationMiner.connect(user1).donate(user1Donation);
-			await DonationMiner.connect(user2).donate(user2Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
+			await DonationMiner.connect(user2).donate(
+				cUSD.address,
+				user2Donation,
+				user2.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
 
@@ -999,7 +1101,9 @@ describe("Donation", () => {
 			await expect(
 				DonationMiner.connect(user1).donateToCommunity(
 					user1.address,
-					user1Donation
+					cUSD.address,
+					user1Donation,
+					user1.address
 				)
 			).to.be.revertedWith(
 				"DonationMiner::donateToCommunity: This is not a valid community address"
@@ -1017,7 +1121,11 @@ describe("Donation", () => {
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation);
 
-			await DonationMiner.connect(user1).donate(user1Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
 
 			await advanceTimeAndBlockNTimes(3 * REWARD_PERIOD_SIZE);
 
@@ -1026,7 +1134,11 @@ describe("Donation", () => {
 				.connect(user2)
 				.approve(DonationMiner.address, user1Donation);
 
-			await DonationMiner.connect(user2).donate(user1Donation);
+			await DonationMiner.connect(user2).donate(
+				cUSD.address,
+				user1Donation,
+				user2.address
+			);
 
 			// Claim their rewards
 			await DonationMiner.connect(user1).claimRewards();
@@ -1048,7 +1160,11 @@ describe("Donation", () => {
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation);
 
-			await DonationMiner.connect(user1).donate(user1Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
 
@@ -1057,7 +1173,11 @@ describe("Donation", () => {
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation);
 
-			await DonationMiner.connect(user1).donate(user1Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
 
@@ -1082,7 +1202,11 @@ describe("Donation", () => {
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation);
 
-			await DonationMiner.connect(user1).donate(user1Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
 
 			await advanceToRewardPeriodN(2);
 
@@ -1091,7 +1215,11 @@ describe("Donation", () => {
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation);
 
-			await DonationMiner.connect(user1).donate(user1Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
 
 			// Claim their rewards
 			await DonationMiner.connect(user1).claimRewards();
@@ -1124,7 +1252,11 @@ describe("Donation", () => {
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation);
 
-			await DonationMiner.connect(user1).donate(user1Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
 
 			//second reward period
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
@@ -1133,7 +1265,11 @@ describe("Donation", () => {
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation);
 
-			await DonationMiner.connect(user1).donate(user1Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
 
 			expect(
 				(await DonationMiner.calculateClaimableRewards(user1.address))
@@ -1158,7 +1294,11 @@ describe("Donation", () => {
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation);
 
-			await DonationMiner.connect(user1).donate(user1Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
 
 			expect(
 				(await DonationMiner.calculateClaimableRewards(user2.address))
@@ -1180,7 +1320,11 @@ describe("Donation", () => {
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation);
 
-			await DonationMiner.connect(user1).donate(user1Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
 
 			expect(
 				await DonationMiner.estimateClaimableReward(user1.address)
@@ -1193,7 +1337,11 @@ describe("Donation", () => {
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation);
 
-			await DonationMiner.connect(user1).donate(user1Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
 
 			expect(
 				await DonationMiner.estimateClaimableReward(user1.address)
@@ -1203,7 +1351,11 @@ describe("Donation", () => {
 				.connect(user2)
 				.approve(DonationMiner.address, user2Donation);
 
-			await DonationMiner.connect(user2).donate(user2Donation);
+			await DonationMiner.connect(user2).donate(
+				cUSD.address,
+				user2Donation,
+				user2.address
+			);
 
 			expect(
 				await DonationMiner.estimateClaimableReward(user1.address)
@@ -1246,7 +1398,11 @@ describe("Donation", () => {
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation);
 
-			await DonationMiner.connect(user1).donate(user1Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
 
@@ -1265,7 +1421,11 @@ describe("Donation", () => {
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation);
 
-			await DonationMiner.connect(user1).donate(user1Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
 
@@ -1284,7 +1444,11 @@ describe("Donation", () => {
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation);
 
-			await DonationMiner.connect(user1).donate(user1Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
 
@@ -1303,7 +1467,11 @@ describe("Donation", () => {
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation);
 
-			await DonationMiner.connect(user1).donate(user1Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
 
@@ -1332,6 +1500,36 @@ describe("Donation", () => {
 				toEther("100")
 			);
 		});
+
+		it("Should donate with delegate", async function () {
+			const user1Donation = toEther("100");
+			const user2ExpectedReward = toEther("8635256.64");
+
+			await advanceToRewardPeriodN(2);
+
+			// Approve
+			await cUSD
+				.connect(user1)
+				.approve(DonationMiner.address, user1Donation);
+
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user2.address
+			);
+
+			await advanceToRewardPeriodN(3);
+
+			// Claim their rewards
+			await DonationMiner.connect(user1).claimRewards();
+			await DonationMiner.connect(user2).claimRewards();
+
+			// Check their PACT balance
+			expect(await PACT.balanceOf(user1.address)).to.equal(0);
+			expect(await PACT.balanceOf(user2.address)).to.equal(
+				user2ExpectedReward
+			);
+		});
 	});
 
 	describe("Donation Miner (claimDelay != 0, againstPeriods = 0)", () => {
@@ -1339,6 +1537,11 @@ describe("Donation", () => {
 
 		beforeEach(async () => {
 			await deploy();
+
+			await cUSD.mint(user1.address, toEther("1000000"));
+			await cUSD.mint(user2.address, toEther("10000000"));
+			await cUSD.mint(user3.address, toEther("100000000"));
+			await cUSD.mint(user4.address, toEther("100000000"));
 
 			await DonationMiner.updateClaimDelay(CLAIM_DELAY);
 		});
@@ -1359,13 +1562,25 @@ describe("Donation", () => {
 				.connect(user2)
 				.approve(DonationMiner.address, user2Donation);
 
-			await DonationMiner.connect(user1).donate(user1Donation1);
-			await DonationMiner.connect(user2).donate(user2Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation1,
+				user1.address
+			);
+			await DonationMiner.connect(user2).donate(
+				cUSD.address,
+				user2Donation,
+				user2.address
+			);
 
 			await cUSD
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation2);
-			await DonationMiner.connect(user1).donate(user1Donation2);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation2,
+				user1.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
 
@@ -1394,13 +1609,25 @@ describe("Donation", () => {
 				.connect(user2)
 				.approve(DonationMiner.address, user2Donation);
 
-			await DonationMiner.connect(user1).donate(user1Donation1);
-			await DonationMiner.connect(user2).donate(user2Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation1,
+				user1.address
+			);
+			await DonationMiner.connect(user2).donate(
+				cUSD.address,
+				user2Donation,
+				user2.address
+			);
 
 			await cUSD
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation2);
-			await DonationMiner.connect(user1).donate(user1Donation2);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation2,
+				user1.address
+			);
 
 			await advanceTimeAndBlockNTimes(
 				(CLAIM_DELAY + 1) * REWARD_PERIOD_SIZE
@@ -1424,7 +1651,11 @@ describe("Donation", () => {
 			estimatedReward: BigNumber,
 			expectedClaimableReward: BigNumber
 		) {
-			await DonationMiner.connect(user1).donate(donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				donation,
+				user1.address
+			);
 			expect(
 				await DonationMiner.estimateClaimableReward(user1.address)
 			).to.be.equal(estimatedReward);
@@ -1701,6 +1932,11 @@ describe("Donation", () => {
 		beforeEach(async () => {
 			await deploy();
 
+			await cUSD.mint(user1.address, toEther("1000000"));
+			await cUSD.mint(user2.address, toEther("10000000"));
+			await cUSD.mint(user3.address, toEther("100000000"));
+			await cUSD.mint(user4.address, toEther("100000000"));
+
 			await DonationMiner.updateAgainstPeriods(AGAINST_PERIODS);
 		});
 
@@ -1710,7 +1946,11 @@ describe("Donation", () => {
 			estimatedReward: BigNumber,
 			expectedClaimableReward: BigNumber
 		) {
-			await DonationMiner.connect(donor).donate(donation);
+			await DonationMiner.connect(donor).donate(
+				cUSD.address,
+				donation,
+				donor.address
+			);
 			expect(
 				await DonationMiner.estimateClaimableReward(donor.address)
 			).to.be.equal(estimatedReward);
@@ -1937,6 +2177,11 @@ describe("Donation", () => {
 		beforeEach(async () => {
 			await deploy();
 
+			await cUSD.mint(user1.address, toEther("1000000"));
+			await cUSD.mint(user2.address, toEther("10000000"));
+			await cUSD.mint(user3.address, toEther("100000000"));
+			await cUSD.mint(user4.address, toEther("100000000"));
+
 			await DonationMiner.updateAgainstPeriods(2);
 		});
 
@@ -1958,8 +2203,16 @@ describe("Donation", () => {
 			await cUSD
 				.connect(user2)
 				.approve(DonationMiner.address, user2Donation);
-			await DonationMiner.connect(user1).donate(user1Donation);
-			await DonationMiner.connect(user2).donate(user2Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
+			await DonationMiner.connect(user2).donate(
+				cUSD.address,
+				user2Donation,
+				user2.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
 			// Claim their rewards
@@ -2028,8 +2281,16 @@ describe("Donation", () => {
 			await cUSD
 				.connect(user2)
 				.approve(DonationMiner.address, user2Donation);
-			await DonationMiner.connect(user1).donate(user1Donation);
-			await DonationMiner.connect(user2).donate(user2Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
+			await DonationMiner.connect(user2).donate(
+				cUSD.address,
+				user2Donation,
+				user2.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE * 5);
 
@@ -2056,14 +2317,22 @@ describe("Donation", () => {
 			await cUSD
 				.connect(user2)
 				.approve(DonationMiner.address, user2Donation);
-			await DonationMiner.connect(user2).donate(user2Donation);
+			await DonationMiner.connect(user2).donate(
+				cUSD.address,
+				user2Donation,
+				user2.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
 
 			await cUSD
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation2);
-			await DonationMiner.connect(user1).donate(user1Donation2);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation2,
+				user1.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE * 4);
 
@@ -2100,8 +2369,16 @@ describe("Donation", () => {
 			await cUSD
 				.connect(user2)
 				.approve(DonationMiner.address, user2Donation);
-			await DonationMiner.connect(user1).donate(user1Donation1);
-			await DonationMiner.connect(user2).donate(user2Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation1,
+				user1.address
+			);
+			await DonationMiner.connect(user2).donate(
+				cUSD.address,
+				user2Donation,
+				user2.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
 
@@ -2119,7 +2396,11 @@ describe("Donation", () => {
 			await cUSD
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation2);
-			await DonationMiner.connect(user1).donate(user1Donation2);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation2,
+				user1.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
 
@@ -2176,15 +2457,27 @@ describe("Donation", () => {
 			await cUSD
 				.connect(user2)
 				.approve(DonationMiner.address, user2Donation);
-			await DonationMiner.connect(user1).donate(user1Donation1);
-			await DonationMiner.connect(user2).donate(user2Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation1,
+				user1.address
+			);
+			await DonationMiner.connect(user2).donate(
+				cUSD.address,
+				user2Donation,
+				user2.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
 
 			await cUSD
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation2);
-			await DonationMiner.connect(user1).donate(user1Donation2);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation2,
+				user1.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE * 4);
 
@@ -2217,8 +2510,16 @@ describe("Donation", () => {
 			await cUSD
 				.connect(user2)
 				.approve(DonationMiner.address, user2Donation);
-			await DonationMiner.connect(user1).donate(user1Donation1);
-			await DonationMiner.connect(user2).donate(user2Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation1,
+				user1.address
+			);
+			await DonationMiner.connect(user2).donate(
+				cUSD.address,
+				user2Donation,
+				user2.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
 
@@ -2228,7 +2529,11 @@ describe("Donation", () => {
 			await cUSD
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation2);
-			await DonationMiner.connect(user1).donate(user1Donation2);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation2,
+				user1.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE * 8);
 
@@ -2250,6 +2555,11 @@ describe("Donation", () => {
 		beforeEach(async () => {
 			await deploy();
 
+			await cUSD.mint(user1.address, toEther("1000000"));
+			await cUSD.mint(user2.address, toEther("10000000"));
+			await cUSD.mint(user3.address, toEther("100000000"));
+			await cUSD.mint(user4.address, toEther("100000000"));
+
 			await DonationMiner.updateAgainstPeriods(5);
 		});
 
@@ -2263,14 +2573,22 @@ describe("Donation", () => {
 			await cUSD
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation);
-			await DonationMiner.connect(user1).donate(user1Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
 
 			await cUSD
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation);
-			await DonationMiner.connect(user1).donate(user1Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE * 4);
 
@@ -2309,8 +2627,16 @@ describe("Donation", () => {
 			await cUSD
 				.connect(user2)
 				.approve(DonationMiner.address, user2Donation);
-			await DonationMiner.connect(user1).donate(user1Donation);
-			await DonationMiner.connect(user2).donate(user2Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
+			await DonationMiner.connect(user2).donate(
+				cUSD.address,
+				user2Donation,
+				user2.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
 
@@ -2320,8 +2646,16 @@ describe("Donation", () => {
 			await cUSD
 				.connect(user2)
 				.approve(DonationMiner.address, user2Donation);
-			await DonationMiner.connect(user1).donate(user1Donation);
-			await DonationMiner.connect(user2).donate(user2Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
+			await DonationMiner.connect(user2).donate(
+				cUSD.address,
+				user2Donation,
+				user2.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE * 4);
 
@@ -2363,14 +2697,22 @@ describe("Donation", () => {
 			await cUSD
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation);
-			await DonationMiner.connect(user1).donate(user1Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
 
 			await cUSD
 				.connect(user2)
 				.approve(DonationMiner.address, user2Donation);
-			await DonationMiner.connect(user2).donate(user2Donation);
+			await DonationMiner.connect(user2).donate(
+				cUSD.address,
+				user2Donation,
+				user2.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE * 4);
 
@@ -2406,6 +2748,11 @@ describe("Donation", () => {
 		beforeEach(async () => {
 			await deploy();
 
+			await cUSD.mint(user1.address, toEther("1000000"));
+			await cUSD.mint(user2.address, toEther("10000000"));
+			await cUSD.mint(user3.address, toEther("100000000"));
+			await cUSD.mint(user4.address, toEther("100000000"));
+
 			await DonationMiner.updateAgainstPeriods(5);
 		});
 
@@ -2419,13 +2766,21 @@ describe("Donation", () => {
 			await cUSD
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation);
-			await DonationMiner.connect(user1).donate(user1Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
 			await cUSD
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation);
-			await DonationMiner.connect(user1).donate(user1Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE * 4);
 			await DonationMiner.connect(user1).claimRewards();
@@ -2457,13 +2812,21 @@ describe("Donation", () => {
 			await cUSD
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation);
-			await DonationMiner.connect(user1).donate(user1Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
 			await cUSD
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation);
-			await DonationMiner.connect(user1).donate(user1Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE * 4);
 			await DonationMiner.connect(user1).claimRewards();
@@ -2495,13 +2858,21 @@ describe("Donation", () => {
 			await cUSD
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation);
-			await DonationMiner.connect(user1).donate(user1Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
 			await cUSD
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation);
-			await DonationMiner.connect(user1).donate(user1Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE * 2);
 			await DonationMiner.updateAgainstPeriods(8);
@@ -2529,13 +2900,21 @@ describe("Donation", () => {
 			await cUSD
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation);
-			await DonationMiner.connect(user1).donate(user1Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
 			await cUSD
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation);
-			await DonationMiner.connect(user1).donate(user1Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE * 2);
 			await expect(DonationMiner.updateAgainstPeriods(5)).to.be.fulfilled;
@@ -2563,13 +2942,21 @@ describe("Donation", () => {
 			await cUSD
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation);
-			await DonationMiner.connect(user1).donate(user1Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
 			await cUSD
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation);
-			await DonationMiner.connect(user1).donate(user1Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE * 4);
 			await DonationMiner.connect(user1).claimRewards();
@@ -2609,8 +2996,16 @@ describe("Donation", () => {
 			await cUSD
 				.connect(user2)
 				.approve(DonationMiner.address, user2Donation);
-			await DonationMiner.connect(user1).donate(user1Donation);
-			await DonationMiner.connect(user2).donate(user2Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
+			await DonationMiner.connect(user2).donate(
+				cUSD.address,
+				user2Donation,
+				user2.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
 
@@ -2620,8 +3015,16 @@ describe("Donation", () => {
 			await cUSD
 				.connect(user2)
 				.approve(DonationMiner.address, user2Donation);
-			await DonationMiner.connect(user1).donate(user1Donation);
-			await DonationMiner.connect(user2).donate(user2Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
+			await DonationMiner.connect(user2).donate(
+				cUSD.address,
+				user2Donation,
+				user2.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE * 4);
 
@@ -2679,14 +3082,22 @@ describe("Donation", () => {
 			await cUSD
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation);
-			await DonationMiner.connect(user1).donate(user1Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
 
 			await cUSD
 				.connect(user2)
 				.approve(DonationMiner.address, user2Donation);
-			await DonationMiner.connect(user2).donate(user2Donation);
+			await DonationMiner.connect(user2).donate(
+				cUSD.address,
+				user2Donation,
+				user2.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE * 4);
 
@@ -2745,7 +3156,11 @@ describe("Donation", () => {
 			await cUSD
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation);
-			await DonationMiner.connect(user1).donate(user1Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE * 4);
 			await DonationMiner.connect(user1).claimRewards();
@@ -2758,7 +3173,11 @@ describe("Donation", () => {
 			await cUSD
 				.connect(user2)
 				.approve(DonationMiner.address, user2Donation);
-			await DonationMiner.connect(user2).donate(user2Donation);
+			await DonationMiner.connect(user2).donate(
+				cUSD.address,
+				user2Donation,
+				user2.address
+			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
 			await DonationMiner.updateAgainstPeriods(8);
@@ -2767,7 +3186,11 @@ describe("Donation", () => {
 			await cUSD
 				.connect(user2)
 				.approve(DonationMiner.address, user2Donation);
-			await DonationMiner.connect(user2).donate(user2Donation);
+			await DonationMiner.connect(user2).donate(
+				cUSD.address,
+				user2Donation,
+				user2.address
+			);
 
 			await DonationMiner.connect(user1).claimRewards();
 			await DonationMiner.connect(user2).claimRewards();
@@ -2825,6 +3248,11 @@ describe("Donation", () => {
 
 		beforeEach(async () => {
 			await deploy();
+
+			await cUSD.mint(user1.address, toEther("1000000"));
+			await cUSD.mint(user2.address, toEther("10000000"));
+			await cUSD.mint(user3.address, toEther("100000000"));
+			await cUSD.mint(user4.address, toEther("100000000"));
 
 			CommunityAdmin = await ethers.getContractAt(
 				"CommunityAdminImplementation",
@@ -2886,7 +3314,9 @@ describe("Donation", () => {
 
 			await DonationMiner.connect(user1).donateToCommunity(
 				Community.address,
-				user1Donation
+				cUSD.address,
+				user1Donation,
+				user1.address
 			);
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
@@ -2912,7 +3342,70 @@ describe("Donation", () => {
 				.lessThanOrEqual(149);
 			expect(donation1.amount).to.equal(user1Donation);
 			expect(donation1.token).to.equal(cUSD.address);
-			expect(donation1.tokenPrice).to.equal(toEther("1"));
+			expect(donation1.initialAmount).to.equal(user1Donation);
+		});
+
+		it("Should approve and donate to community, advance time and claim the reward with delegate", async function () {
+			const user1Donation = toEther("100");
+			const user2ExpectedReward = toEther("4320000");
+
+			const communityInitialBalance = await cUSD.balanceOf(
+				Community.address
+			);
+
+			await advanceToRewardPeriodN(1);
+
+			// Approve
+			await cUSD.connect(user1).approve(Community.address, user1Donation);
+
+			await DonationMiner.connect(user1).donateToCommunity(
+				Community.address,
+				cUSD.address,
+				user1Donation,
+				user2.address
+			);
+
+			await advanceToRewardPeriodN(2);
+
+			// Claim the rewards
+			await DonationMiner.connect(user1).claimRewards();
+			await DonationMiner.connect(user2).claimRewards();
+
+			// Check their PACT balance
+			expect(await PACT.balanceOf(user1.address)).to.equal(0);
+			expect(await PACT.balanceOf(user2.address)).to.equal(
+				user2ExpectedReward
+			);
+
+			expect(await cUSD.balanceOf(Community.address)).to.equal(
+				communityInitialBalance.add(user1Donation)
+			);
+
+			const donation1 = await DonationMiner.donations(1);
+			expect(donation1.donor).to.equal(user2.address);
+			expect(donation1.target).to.equal(Community.address);
+			expect(donation1.rewardPeriod).to.equal(1);
+			expect(donation1.blockNumber.toNumber())
+				.to.be.greaterThanOrEqual(START_BLOCK)
+				.lessThanOrEqual(149);
+			expect(donation1.amount).to.equal(user1Donation);
+			expect(donation1.token).to.equal(cUSD.address);
+			expect(donation1.initialAmount).to.equal(user1Donation);
+		});
+
+		it("Should not donate to community an invalid token", async function () {
+			await advanceToRewardPeriodN(1);
+
+			await expect(
+				DonationMiner.connect(user1).donateToCommunity(
+					Community.address,
+					PACT.address,
+					100,
+					user2.address
+				)
+			).to.be.rejectedWith(
+				"DonationMiner::donateToCommunity: Invalid token"
+			);
 		});
 	});
 
@@ -2927,6 +3420,11 @@ describe("Donation", () => {
 
 		beforeEach(async () => {
 			await deploy();
+
+			await cUSD.mint(user1.address, toEther("1000000"));
+			await cUSD.mint(user2.address, toEther("10000000"));
+			await cUSD.mint(user3.address, toEther("100000000"));
+			await cUSD.mint(user4.address, toEther("100000000"));
 
 			await DonationMiner.updateAgainstPeriods(AGAINST_PERIODS);
 			await DonationMiner.updateClaimDelay(CLAIM_DELAY);
@@ -3272,7 +3770,11 @@ describe("Donation", () => {
 			await cUSD
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation);
-			await DonationMiner.connect(user1).donate(user1Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
 
 			await advanceToRewardPeriodN(2);
 
@@ -3309,7 +3811,11 @@ describe("Donation", () => {
 			await cUSD
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation);
-			await DonationMiner.connect(user1).donate(user1Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
 
 			await advanceToRewardPeriodN(2);
 
@@ -3366,7 +3872,11 @@ describe("Donation", () => {
 			await cUSD
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation);
-			await DonationMiner.connect(user1).donate(user1Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
 
 			await advanceToRewardPeriodN(2);
 
@@ -3393,14 +3903,22 @@ describe("Donation", () => {
 			await cUSD
 				.connect(user3)
 				.approve(DonationMiner.address, user3Donation);
-			await DonationMiner.connect(user3).donate(user3Donation);
+			await DonationMiner.connect(user3).donate(
+				cUSD.address,
+				user3Donation,
+				user3.address
+			);
 
 			await advanceToRewardPeriodN(2);
 
 			await cUSD
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation);
-			await DonationMiner.connect(user1).donate(user1Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
 
 			await PACT.connect(user2).approve(Staking.address, user2Stake);
 			await Staking.connect(user2).stake(user2.address, user2Stake);
@@ -3533,7 +4051,11 @@ describe("Donation", () => {
 			await cUSD
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation);
-			await DonationMiner.connect(user1).donate(user1Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
 
 			await PACT.connect(user2).approve(Staking.address, user2Stake);
 			await Staking.connect(user2).stake(user2.address, user2Stake);
@@ -3583,7 +4105,11 @@ describe("Donation", () => {
 			await cUSD
 				.connect(user1)
 				.approve(DonationMiner.address, user1Donation);
-			await DonationMiner.connect(user1).donate(user1Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation,
+				user1.address
+			);
 			//***********************************************************
 
 			await advanceToRewardPeriodN(2 * CLAIM_DELAY + 4);
@@ -3630,6 +4156,247 @@ describe("Donation", () => {
 			);
 			expect(await PACT.balanceOf(user2.address)).to.be.equal(
 				user2InitialPACTBalance.sub(user2Stake).add(user2Reward).add(2)
+			);
+		});
+	});
+
+	describe("Donation Miner + Treasury", () => {
+		let mUSD: ethersTypes.Contract;
+		let celo: ethersTypes.Contract;
+
+		before(async function () {});
+
+		beforeEach(async () => {
+			await deploy();
+
+			const tokenFactory = await ethers.getContractFactory("TokenMock");
+
+			mUSD = await tokenFactory.deploy("mUSD", "mUSD");
+			celo = await tokenFactory.deploy("celo", "celo");
+
+			await cUSD.mint(user9.address, toEther(1000000));
+			await mUSD.mint(user9.address, toEther(2000000));
+			await celo.mint(user9.address, toEther(500000));
+
+			let UniswapRouter = await ethers.getContractAt(
+				"UniswapV2Router02",
+				(
+					await deployments.get("UniswapV2Router02")
+				).address
+			);
+
+			await Treasury.updateUniswapRouter(UniswapRouter.address);
+
+			await cUSD
+				.connect(user9)
+				.approve(UniswapRouter.address, toEther(1000000));
+			await mUSD
+				.connect(user9)
+				.approve(UniswapRouter.address, toEther(2000000));
+			await celo
+				.connect(user9)
+				.approve(UniswapRouter.address, toEther(500000));
+
+			await UniswapRouter.connect(user9).addLiquidity(
+				cUSD.address,
+				mUSD.address,
+				toEther(1000000),
+				toEther(1000000),
+				0,
+				0,
+				user9.address,
+				Math.floor(new Date().getTime() / 1000) + 30 * 60
+			);
+
+			await UniswapRouter.connect(user9).addLiquidity(
+				mUSD.address,
+				celo.address,
+				toEther(1000000),
+				toEther(500000),
+				0,
+				0,
+				user9.address,
+				Math.floor(new Date().getTime() / 1000) + 30 * 60
+			);
+
+			await Treasury.setToken(mUSD.address, toEther(0.9), [
+				mUSD.address,
+				cUSD.address,
+			]);
+			await Treasury.setToken(celo.address, toEther(0.5), [
+				celo.address,
+				mUSD.address,
+				cUSD.address,
+			]);
+
+			await advanceToRewardPeriodN(1);
+		});
+
+		it("Should not donate an invalid token", async function () {
+			await expect(
+				DonationMiner.connect(user1).donate(
+					PACT.address,
+					100,
+					user1.address
+				)
+			).to.be.rejectedWith("DonationMiner::donate: Invalid token");
+		});
+
+		it("Should donate other token #1", async function () {
+			const user1Donation = toEther("100");
+			const user1ExpectedReward = toEther("4320000");
+
+			await mUSD.mint(user1.address, user1Donation);
+
+			await mUSD
+				.connect(user1)
+				.approve(DonationMiner.address, user1Donation);
+
+			await DonationMiner.connect(user1).donate(
+				mUSD.address,
+				user1Donation,
+				user1.address
+			);
+
+			const user1ConvertedDonation = await Treasury.getConvertedAmount(
+				mUSD.address,
+				user1Donation
+			);
+			expect(user1ConvertedDonation).to.be.equal(
+				toEther("89.721054810835359714")
+			);
+
+			expect(
+				(await DonationMiner.rewardPeriods(1)).donationsAmount
+			).to.be.equal(user1ConvertedDonation);
+
+			const donation1 = await DonationMiner.donations(1);
+			expect(donation1.donor).to.equal(user1.address);
+			expect(donation1.target).to.equal(Treasury.address);
+			expect(donation1.rewardPeriod).to.equal(1);
+			expect(donation1.amount).to.equal(user1ConvertedDonation);
+			expect(donation1.token).to.equal(mUSD.address);
+			expect(donation1.initialAmount).to.equal(user1Donation);
+
+			await advanceToRewardPeriodN(2);
+
+			await DonationMiner.connect(user1).claimRewards();
+
+			expect(await PACT.balanceOf(user1.address)).to.equal(
+				user1ExpectedReward
+			);
+		});
+
+		it("Should donate other token #2", async function () {
+			const user1Donation = toEther("100");
+			const user1ExpectedReward = toEther("4320000");
+
+			await celo.mint(user1.address, user1Donation);
+
+			await celo
+				.connect(user1)
+				.approve(DonationMiner.address, user1Donation);
+
+			await DonationMiner.connect(user1).donate(
+				celo.address,
+				user1Donation,
+				user1.address
+			);
+
+			const user1ConvertedDonation = await Treasury.getConvertedAmount(
+				celo.address,
+				user1Donation
+			);
+			expect(user1ConvertedDonation).to.be.equal(
+				toEther("99.361334137895888408")
+			);
+
+			expect(
+				(await DonationMiner.rewardPeriods(1)).donationsAmount
+			).to.be.equal(user1ConvertedDonation);
+
+			const donation1 = await DonationMiner.donations(1);
+			expect(donation1.donor).to.equal(user1.address);
+			expect(donation1.target).to.equal(Treasury.address);
+			expect(donation1.rewardPeriod).to.equal(1);
+			expect(donation1.amount).to.equal(user1ConvertedDonation);
+			expect(donation1.token).to.equal(celo.address);
+			expect(donation1.initialAmount).to.equal(user1Donation);
+
+			await advanceToRewardPeriodN(2);
+
+			await DonationMiner.connect(user1).claimRewards();
+
+			expect(await PACT.balanceOf(user1.address)).to.equal(
+				user1ExpectedReward
+			);
+		});
+
+		it("Should donate other token, and get correct reward", async function () {
+			const user1Donation = toEther("100");
+			const user2Donation = toEther("100");
+			const user1ExpectedReward = toEther("2153080.311846274641735414");
+			const user2ExpectedReward = toEther("2166919.688153725358264585");
+
+			await celo.mint(user1.address, user1Donation);
+			await cUSD.mint(user2.address, user1Donation);
+
+			await celo
+				.connect(user1)
+				.approve(DonationMiner.address, user1Donation);
+			await cUSD
+				.connect(user2)
+				.approve(DonationMiner.address, user2Donation);
+
+			await DonationMiner.connect(user1).donate(
+				celo.address,
+				user1Donation,
+				user1.address
+			);
+			await DonationMiner.connect(user2).donate(
+				cUSD.address,
+				user2Donation,
+				user2.address
+			);
+
+			const user1ConvertedDonation = await Treasury.getConvertedAmount(
+				celo.address,
+				user1Donation
+			);
+			expect(user1ConvertedDonation).to.be.equal(
+				toEther("99.361334137895888408")
+			);
+
+			expect(
+				(await DonationMiner.rewardPeriods(1)).donationsAmount
+			).to.be.equal(user1ConvertedDonation.add(user2Donation));
+
+			const donation1 = await DonationMiner.donations(1);
+			expect(donation1.donor).to.equal(user1.address);
+			expect(donation1.target).to.equal(Treasury.address);
+			expect(donation1.rewardPeriod).to.equal(1);
+			expect(donation1.amount).to.equal(user1ConvertedDonation);
+			expect(donation1.token).to.equal(celo.address);
+			expect(donation1.initialAmount).to.equal(user1Donation);
+
+			const donation2 = await DonationMiner.donations(2);
+			expect(donation2.donor).to.equal(user2.address);
+			expect(donation2.target).to.equal(Treasury.address);
+			expect(donation2.rewardPeriod).to.equal(1);
+			expect(donation2.amount).to.equal(user1Donation);
+			expect(donation2.token).to.equal(cUSD.address);
+			expect(donation2.initialAmount).to.equal(user1Donation);
+
+			await advanceToRewardPeriodN(2);
+
+			await DonationMiner.connect(user1).claimRewards();
+			await DonationMiner.connect(user2).claimRewards();
+
+			expect(await PACT.balanceOf(user1.address)).to.equal(
+				user1ExpectedReward
+			);
+			expect(await PACT.balanceOf(user2.address)).to.equal(
+				user2ExpectedReward
 			);
 		});
 	});
