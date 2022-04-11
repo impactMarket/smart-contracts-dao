@@ -181,7 +181,7 @@ contract CommunityAdminImplementation is
      * @notice Returns the current implementation version
      */
     function getVersion() external pure override returns (uint256) {
-        return 1;
+        return 2;
     }
 
     /**
@@ -634,18 +634,10 @@ contract CommunityAdminImplementation is
     {
         uint256 _validBeneficiaries = _community.validBeneficiaryCount();
         uint256 _claimAmount = _community.claimAmount();
-        uint256 _treasuryFunds = _community.treasuryFunds();
-        uint256 _privateFunds = _community.privateFunds();
         uint256 _minTranche = _community.minTranche();
         uint256 _maxTranche = _community.maxTranche();
 
-        // `treasuryFunds` can't be zero.
-        // Otherwise, migrated communities will have zero.
-        _treasuryFunds = _treasuryFunds > 0 ? _treasuryFunds : 1e18;
-
-        uint256 _trancheAmount = (_validBeneficiaries *
-            _claimAmount *
-            (_treasuryFunds + _privateFunds)) / _treasuryFunds;
+        uint256 _trancheAmount = _validBeneficiaries * _claimAmount;
 
         if (_trancheAmount < _minTranche) {
             _trancheAmount = _minTranche;

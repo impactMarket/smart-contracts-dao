@@ -6,8 +6,6 @@ import "./interfaces/ICommunityAdmin.sol";
 import "../interfaces/IProxyAdmin.sol";
 import "../interfaces/ITransparentUpgradeableProxy.sol";
 
-import "hardhat/console.sol";
-
 contract CommunityMiddleProxy is TransparentUpgradeableProxy {
     /** @notice Calls the TransparentUpgradeableProxy constructor
      *

@@ -8,10 +8,6 @@ import "../interfaces/IUniswapV2Factory.sol";
 import "./SafeMath.sol";
 
 
-
-import 'hardhat/console.sol';
-
-
 library UniswapV2Library {
     using SafeMathUniswap for uint;
 

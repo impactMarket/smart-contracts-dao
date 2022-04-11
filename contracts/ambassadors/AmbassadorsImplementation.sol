@@ -238,6 +238,15 @@ contract AmbassadorsImplementation is
             ambassadorToEntity[ambassadorByAddress[_ambassador]] == entityByAddress[_entityAddress];
     }
 
+    /** Updates the address of the communityAdmin
+     *
+     * @param _newCommunityAdmin address of the new communityAdmin
+     * @dev used only for testing the new community upgrade flow
+     */
+    function updateCommunityAdmin(ICommunityAdmin _newCommunityAdmin) external onlyOwner {
+        communityAdmin = _newCommunityAdmin;
+    }
+
     /**
      * @notice Registers an entity.
      *
