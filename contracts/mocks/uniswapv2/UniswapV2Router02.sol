@@ -9,9 +9,6 @@ import './interfaces/IUniswapV2Router02.sol';
 import './interfaces/IUniswapV2Factory.sol';
 import './interfaces/IERC20.sol';
 
-
-import 'hardhat/console.sol';
-
 contract UniswapV2Router02 is IUniswapV2Router02 {
     using SafeMathUniswap for uint;
 

@@ -14,4 +14,5 @@ import "../../ambassadors/interfaces/IAmbassadors.sol";
 abstract contract CommunityAdminStorageV2 is CommunityAdminStorageV1 {
     IUBICommittee public override ubiCommittee;
     IAmbassadors public override ambassadors;
+    address public override communityMiddleProxy;
 }

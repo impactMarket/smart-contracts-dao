@@ -21,8 +21,9 @@ interface ICommunityAdmin {
     function treasury() external view returns(ITreasury);
     function ubiCommittee() external view returns(IUBICommittee);
     function ambassadors() external view returns(IAmbassadors);
+    function communityMiddleProxy() external view returns(address);
     function communities(address _community) external view returns(CommunityState);
-    function communityTemplate() external view returns(ICommunity);
+    function communityImplementation() external view returns(ICommunity);
     function communityProxyAdmin() external view returns(ProxyAdmin);
     function communityListAt(uint256 _index) external view returns (address);
     function communityListLength() external view returns (uint256);
@@ -31,7 +32,8 @@ interface ICommunityAdmin {
     function updateTreasury(ITreasury _newTreasury) external;
     function updateUbiCommittee(IUBICommittee _newUbiCommittee) external;
     function updateAmbassadors(IAmbassadors _newAmbassadors) external;
-    function updateCommunityTemplate(ICommunity _communityTemplate_) external;
+    function updateCommunityMiddleProxy(address _communityMiddleProxy) external;
+    function updateCommunityImplementation(ICommunity _communityImplementation_) external;
     function updateBeneficiaryParams(
         ICommunity _community,
         uint256 _claimAmount,
@@ -45,7 +47,7 @@ interface ICommunityAdmin {
         uint256 _minTranche,
         uint256 _maxTranche
     ) external;
-    function updateProxyImplementation(address _communityProxy, address _newLogic) external;
+    function updateProxyImplementation(address _CommunityMiddleProxy, address _newLogic) external;
     function addCommunity(
         address[] memory _managers,
         address _ambassador,

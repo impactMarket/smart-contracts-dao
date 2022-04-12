@@ -7,11 +7,10 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "../../community/interfaces/ICommunity.sol";
-import "../../community/interfaces/ICommunityLegacy.sol";
-import "../../community/interfaces/ICommunityAdmin.sol";
-import "../../community/interfaces/CommunityStorageV1.sol";
-import "./interfaces/CommunityStorageV2Mock.sol";
+import "./interfaces/ICommunity.sol";
+import "./interfaces/ICommunityLegacy.sol";
+import "./interfaces/ICommunityAdmin.sol";
+import "./interfaces/CommunityStorageV1.sol";
 
 /**
  * @notice Welcome to the Community contract. For each community
@@ -21,12 +20,12 @@ import "./interfaces/CommunityStorageV2Mock.sol";
  * of having everything in one single contract.
  *Each community has it's own members and and managers.
  */
-contract CommunityImplementationMock is
+contract CommunityImplementation is
     Initializable,
     AccessControlUpgradeable,
     OwnableUpgradeable,
     ReentrancyGuardUpgradeable,
-    CommunityStorageV2Mock
+    CommunityStorageV1
 {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -278,7 +277,7 @@ contract CommunityImplementationMock is
      * @notice Returns the current implementation version
      */
     function getVersion() external pure override returns (uint256) {
-        return 1;
+        return 2;
     }
 
     /**
@@ -304,7 +303,10 @@ contract CommunityImplementationMock is
      * @notice Enforces sender to be the community ambassador
      */
     modifier onlyAmbassador() {
-        require(communityAdmin.isAmbassadorOfCommunity(address(this), msg.sender), "Community: NOT_AMBASSADOR");
+        require(
+            communityAdmin.isAmbassadorOfCommunity(address(this), msg.sender),
+            "Community: NOT_AMBASSADOR"
+        );
         _;
     }
 
@@ -445,7 +447,7 @@ contract CommunityImplementationMock is
      */
     function addManager(address _account) public override onlyAmbassador {
         if (!hasRole(MANAGER_ROLE, _account)) {
-            super.grantRole(MANAGER_ROLE, _account);
+            super._grantRole(MANAGER_ROLE, _account);
             emit ManagerAdded(msg.sender, _account);
         }
     }
@@ -464,7 +466,7 @@ contract CommunityImplementationMock is
             _account != address(communityAdmin),
             "Community::removeManager: You are not allow to remove communityAdmin"
         );
-        super.revokeRole(MANAGER_ROLE, _account);
+        super._revokeRole(MANAGER_ROLE, _account);
         emit ManagerRemoved(msg.sender, _account);
     }
 
@@ -493,6 +495,8 @@ contract CommunityImplementationMock is
         onlyManagers
         nonReentrant
     {
+        require(!locked, "LOCKED");
+
         Beneficiary storage _beneficiary = beneficiaries[_beneficiaryAddress];
         require(
             _beneficiary.state == BeneficiaryState.NONE,
@@ -516,6 +520,8 @@ contract CommunityImplementationMock is
      * @param _beneficiaryAddress address of the beneficiary to be locked
      */
     function lockBeneficiary(address _beneficiaryAddress) external override onlyManagers {
+        require(!locked, "LOCKED");
+
         Beneficiary storage _beneficiary = beneficiaries[_beneficiaryAddress];
 
         require(
@@ -532,6 +538,8 @@ contract CommunityImplementationMock is
      * @param _beneficiaryAddress address of the beneficiary to be unlocked
      */
     function unlockBeneficiary(address _beneficiaryAddress) external override onlyManagers {
+        require(!locked, "LOCKED");
+
         Beneficiary storage _beneficiary = beneficiaries[_beneficiaryAddress];
 
         require(
@@ -605,17 +613,17 @@ contract CommunityImplementationMock is
     }
 
     /**
-     * @notice Locks the community claims
+     * @notice Locks the community
      */
-    function lock() external override onlyManagers {
+    function lock() external override onlyAmbassador {
         locked = true;
         emit CommunityLocked(msg.sender);
     }
 
     /**
-     * @notice Unlocks the community claims
+     * @notice Unlocks the community
      */
-    function unlock() external override onlyManagers {
+    function unlock() external override onlyAmbassador {
         locked = false;
         emit CommunityUnlocked(msg.sender);
     }
@@ -624,7 +632,11 @@ contract CommunityImplementationMock is
      * @notice Requests treasury funds from the communityAdmin
      */
     function requestFunds() external override onlyManagers {
+        require(!locked, "LOCKED");
+
         communityAdmin.fundCommunity();
+
+        lastFundRequest = block.number;
 
         emit FundsRequested(msg.sender);
     }
@@ -697,7 +709,9 @@ contract CommunityImplementationMock is
             _beneficiary.claimedAmount = _oldBeneficiaryClaimedAmount;
         } else {
             ICommunityLegacy _legacyCommunity = ICommunityLegacy(address(previousCommunity));
-            uint256 _legacyBeneficiaryLastInterval = _legacyCommunity.lastInterval(_beneficiaryAddress);
+            uint256 _legacyBeneficiaryLastInterval = _legacyCommunity.lastInterval(
+                _beneficiaryAddress
+            );
             _changeBeneficiaryState(
                 _beneficiary,
                 BeneficiaryState(_legacyCommunity.beneficiaries(_beneficiaryAddress))
@@ -705,11 +719,14 @@ contract CommunityImplementationMock is
 
             uint256 _legacyBeneficiaryCooldown = _legacyCommunity.cooldown(_beneficiaryAddress);
 
-            if (_legacyBeneficiaryCooldown >= _legacyBeneficiaryLastInterval + _firstBlockTimestamp()) {
+            if (
+                _legacyBeneficiaryCooldown >=
+                _legacyBeneficiaryLastInterval + _firstBlockTimestamp()
+            ) {
                 // seconds to blocks conversion
                 _beneficiary.lastClaim =
                     (_legacyBeneficiaryCooldown -
-                    _legacyBeneficiaryLastInterval -
+                        _legacyBeneficiaryLastInterval -
                         _firstBlockTimestamp()) /
                     5;
             } else {
@@ -782,17 +799,5 @@ contract CommunityImplementationMock is
         } else {
             return block.timestamp - block.number; //local
         }
-    }
-
-    function setParams() public {
-        addressTest1 = address(1);
-        addressTest2 = address(2);
-        addressTest3 = address(3);
-        uint256Test1 = 1;
-        uint256Test2 = 2;
-        uint256Test3 = 3;
-
-        mapTest2[address(1)] = true;
-        mapTest3[1] = address(1);
     }
 }

@@ -3,9 +3,9 @@ pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts-upgradeable/access/IAccessControlUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./ICommunityAdmin.sol";
+import "./ICommunityAdminOld.sol";
 
-interface ICommunity {
+interface ICommunityOld {
     enum BeneficiaryState {
         NONE, //the beneficiary hasn't been added yet
         Valid,
@@ -20,19 +20,8 @@ interface ICommunity {
         uint256 lastClaim;       //block number of the last claim
     }
 
-    function initialize(
-        address[] memory _managers,
-        uint256 _claimAmount,
-        uint256 _maxClaim,
-        uint256 _decreaseStep,
-        uint256 _baseInterval,
-        uint256 _incrementInterval,
-        uint256 _minTranche,
-        uint256 _maxTranche,
-        ICommunity _previousCommunity
-    ) external;
     function getVersion() external returns(uint256);
-    function previousCommunity() external view returns(ICommunity);
+    function previousCommunity() external view returns(ICommunityOld);
     function claimAmount() external view returns(uint256);
     function baseInterval() external view returns(uint256);
     function incrementInterval() external view returns(uint256);
@@ -40,7 +29,7 @@ interface ICommunity {
     function validBeneficiaryCount() external view returns(uint);
     function treasuryFunds() external view returns(uint);
     function privateFunds() external view returns(uint);
-    function communityAdmin() external view returns(ICommunityAdmin);
+    function communityAdmin() external view returns(ICommunityAdminOld);
     function cUSD() external view  returns(IERC20);
     function locked() external view returns(bool);
     function beneficiaries(address _beneficiaryAddress) external view returns(
@@ -57,8 +46,8 @@ interface ICommunity {
     function maxTranche() external view returns(uint256);
     function lastFundRequest() external view returns(uint256);
 
-    function updateCommunityAdmin(ICommunityAdmin _communityAdmin) external;
-    function updatePreviousCommunity(ICommunity _newPreviousCommunity) external;
+    function updateCommunityAdmin(ICommunityAdminOld _communityAdmin) external;
+    function updatePreviousCommunity(ICommunityOld _newPreviousCommunity) external;
     function updateBeneficiaryParams(
         uint256 _claimAmount,
         uint256 _maxClaim,
@@ -85,6 +74,6 @@ interface ICommunity {
     function lock() external;
     function unlock() external;
     function requestFunds() external;
-    function beneficiaryJoinFromMigrated(address _beneficiaryAddress) external;
+    function beneficiaryJoinFromMigrated() external;
     function getInitialMaxClaim() external view returns (uint256);
 }

@@ -7,10 +7,9 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "./interfaces/ICommunity.sol";
-import "./interfaces/ICommunityOld.sol";
-import "./interfaces/ICommunityAdmin.sol";
-import "./interfaces/CommunityStorageV1.sol";
+import "../../community/interfaces/ICommunityLegacy.sol";
+import "./interfaces/ICommunityAdminOld.sol";
+import "./interfaces/CommunityStorageV1Old.sol";
 
 /**
  * @notice Welcome to the Community contract. For each community
@@ -20,12 +19,12 @@ import "./interfaces/CommunityStorageV1.sol";
  * of having everything in one single contract.
  *Each community has it's own members and and managers.
  */
-contract Community is
+contract CommunityImplementationOld is
     Initializable,
     AccessControlUpgradeable,
     OwnableUpgradeable,
     ReentrancyGuardUpgradeable,
-    CommunityStorageV1
+    CommunityStorageV1Old
 {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -228,7 +227,7 @@ contract Community is
         uint256 _incrementInterval,
         uint256 _minTranche,
         uint256 _maxTranche,
-        ICommunity _previousCommunity
+        ICommunityOld _previousCommunity
     ) external initializer {
         require(
             _baseInterval > _incrementInterval,
@@ -255,7 +254,7 @@ contract Community is
         minTranche = _minTranche;
         maxTranche = _maxTranche;
         previousCommunity = _previousCommunity;
-        communityAdmin = ICommunityAdmin(msg.sender);
+        communityAdmin = ICommunityAdminOld(msg.sender);
         decreaseStep = _decreaseStep;
         locked = false;
 
@@ -300,17 +299,6 @@ contract Community is
     }
 
     /**
-     * @notice Enforces sender to be the community ambassador
-     */
-    modifier onlyAmbassador() {
-        require(
-            communityAdmin.isAmbassadorOfCommunity(address(this), msg.sender),
-            "Community: NOT_AMBASSADOR"
-        );
-        _;
-    }
-
-    /**
      * @notice Returns the cUSD contract address
      */
     function cUSD() public view override returns (IERC20) {
@@ -346,7 +334,7 @@ contract Community is
      *
      * @param _newCommunityAdmin address of the new communityAdmin
      */
-    function updateCommunityAdmin(ICommunityAdmin _newCommunityAdmin) external override onlyOwner {
+    function updateCommunityAdmin(ICommunityAdminOld _newCommunityAdmin) external override onlyOwner {
         address _oldCommunityAdminAddress = address(communityAdmin);
         communityAdmin = _newCommunityAdmin;
 
@@ -359,7 +347,7 @@ contract Community is
      *
      * @param _newPreviousCommunity address of the new previousCommunity
      */
-    function updatePreviousCommunity(ICommunity _newPreviousCommunity) external override onlyOwner {
+    function updatePreviousCommunity(ICommunityOld _newPreviousCommunity) external override onlyOwner {
         address _oldPreviousCommunityAddress = address(previousCommunity);
         previousCommunity = _newPreviousCommunity;
 
@@ -422,9 +410,9 @@ contract Community is
      * @param _maxTranche maximum amount that the community will receive when requesting funds
      */
     function updateCommunityParams(uint256 _minTranche, uint256 _maxTranche)
-        external
-        override
-        onlyOwner
+    external
+    override
+    onlyOwner
     {
         require(
             _minTranche <= _maxTranche,
@@ -445,9 +433,9 @@ contract Community is
      *
      * @param _account address of the manager to be added
      */
-    function addManager(address _account) public override onlyAmbassador {
+    function addManager(address _account) public override onlyManagers {
         if (!hasRole(MANAGER_ROLE, _account)) {
-            super._grantRole(MANAGER_ROLE, _account);
+            super.grantRole(MANAGER_ROLE, _account);
             emit ManagerAdded(msg.sender, _account);
         }
     }
@@ -457,7 +445,7 @@ contract Community is
      *
      * @param _account address of the manager to be removed
      */
-    function removeManager(address _account) external override onlyAmbassador {
+    function removeManager(address _account) external override onlyManagers {
         require(
             hasRole(MANAGER_ROLE, _account),
             "Community::removeManager: This account doesn't have manager role"
@@ -466,7 +454,7 @@ contract Community is
             _account != address(communityAdmin),
             "Community::removeManager: You are not allow to remove communityAdmin"
         );
-        super._revokeRole(MANAGER_ROLE, _account);
+        super.revokeRole(MANAGER_ROLE, _account);
         emit ManagerRemoved(msg.sender, _account);
     }
 
@@ -490,13 +478,11 @@ contract Community is
      * @param _beneficiaryAddress address of the beneficiary to be added
      */
     function addBeneficiary(address _beneficiaryAddress)
-        external
-        override
-        onlyManagers
-        nonReentrant
+    external
+    override
+    onlyManagers
+    nonReentrant
     {
-        require(!locked, "LOCKED");
-
         Beneficiary storage _beneficiary = beneficiaries[_beneficiaryAddress];
         require(
             _beneficiary.state == BeneficiaryState.NONE,
@@ -520,8 +506,6 @@ contract Community is
      * @param _beneficiaryAddress address of the beneficiary to be locked
      */
     function lockBeneficiary(address _beneficiaryAddress) external override onlyManagers {
-        require(!locked, "LOCKED");
-
         Beneficiary storage _beneficiary = beneficiaries[_beneficiaryAddress];
 
         require(
@@ -538,8 +522,6 @@ contract Community is
      * @param _beneficiaryAddress address of the beneficiary to be unlocked
      */
     function unlockBeneficiary(address _beneficiaryAddress) external override onlyManagers {
-        require(!locked, "LOCKED");
-
         Beneficiary storage _beneficiary = beneficiaries[_beneficiaryAddress];
 
         require(
@@ -560,7 +542,7 @@ contract Community is
 
         require(
             _beneficiary.state == BeneficiaryState.Valid ||
-                _beneficiary.state == BeneficiaryState.Locked,
+            _beneficiary.state == BeneficiaryState.Locked,
             "Community::removeBeneficiary: NOT_YET"
         );
         _changeBeneficiaryState(_beneficiary, BeneficiaryState.Removed);
@@ -613,17 +595,17 @@ contract Community is
     }
 
     /**
-     * @notice Locks the community
+     * @notice Locks the community claims
      */
-    function lock() external override onlyAmbassador {
+    function lock() external override onlyManagers {
         locked = true;
         emit CommunityLocked(msg.sender);
     }
 
     /**
-     * @notice Unlocks the community
+     * @notice Unlocks the community claims
      */
-    function unlock() external override onlyAmbassador {
+    function unlock() external override onlyManagers {
         locked = false;
         emit CommunityUnlocked(msg.sender);
     }
@@ -632,8 +614,6 @@ contract Community is
      * @notice Requests treasury funds from the communityAdmin
      */
     function requestFunds() external override onlyManagers {
-        require(!locked, "LOCKED");
-
         communityAdmin.fundCommunity();
 
         lastFundRequest = block.number;
@@ -685,9 +665,9 @@ contract Community is
     /**
      * @notice Allows a beneficiary from the previousCommunity to join in this community
      */
-    function beneficiaryJoinFromMigrated(address _beneficiaryAddress) external override {
+    function beneficiaryJoinFromMigrated() external override {
         // no need to check if it's a beneficiary, as the state is copied
-        Beneficiary storage _beneficiary = beneficiaries[_beneficiaryAddress];
+        Beneficiary storage _beneficiary = beneficiaries[msg.sender];
 
         require(
             _beneficiary.state == BeneficiaryState.NONE,
@@ -697,53 +677,53 @@ contract Community is
         //if the previousCommunity is deployed with the new type of smart contract
         if (previousCommunity.impactMarketAddress() == address(0)) {
             (
-                BeneficiaryState _oldBeneficiaryState,
-                uint256 _oldBeneficiaryClaims,
-                uint256 _oldBeneficiaryClaimedAmount,
-                uint256 _oldBeneficiaryLastClaim
-            ) = previousCommunity.beneficiaries(_beneficiaryAddress);
+            BeneficiaryState _oldBeneficiaryState,
+            uint256 _oldBeneficiaryClaims,
+            uint256 _oldBeneficiaryClaimedAmount,
+            uint256 _oldBeneficiaryLastClaim
+            ) = previousCommunity.beneficiaries(msg.sender);
 
             _changeBeneficiaryState(_beneficiary, _oldBeneficiaryState);
             _beneficiary.claims = _oldBeneficiaryClaims;
             _beneficiary.lastClaim = _oldBeneficiaryLastClaim;
             _beneficiary.claimedAmount = _oldBeneficiaryClaimedAmount;
         } else {
-            ICommunityOld _oldCommunity = ICommunityOld(address(previousCommunity));
-            uint256 _oldBeneficiaryLastInterval = _oldCommunity.lastInterval(_beneficiaryAddress);
+            ICommunityLegacy _oldCommunity = ICommunityLegacy(address(previousCommunity));
+            uint256 _oldBeneficiaryLastInterval = _oldCommunity.lastInterval(msg.sender);
             _changeBeneficiaryState(
                 _beneficiary,
-                BeneficiaryState(_oldCommunity.beneficiaries(_beneficiaryAddress))
+                BeneficiaryState(_oldCommunity.beneficiaries(msg.sender))
             );
 
-            uint256 _oldBeneficiaryCooldown = _oldCommunity.cooldown(_beneficiaryAddress);
+            uint256 _oldBeneficiaryCooldown = _oldCommunity.cooldown(msg.sender);
 
             if (_oldBeneficiaryCooldown >= _oldBeneficiaryLastInterval + _firstBlockTimestamp()) {
                 // seconds to blocks conversion
                 _beneficiary.lastClaim =
-                    (_oldBeneficiaryCooldown -
-                        _oldBeneficiaryLastInterval -
-                        _firstBlockTimestamp()) /
-                    5;
+                (_oldBeneficiaryCooldown -
+                _oldBeneficiaryLastInterval -
+                _firstBlockTimestamp()) /
+                5;
             } else {
                 _beneficiary.lastClaim = 0;
             }
 
-            _beneficiary.claimedAmount = _oldCommunity.claimed(_beneficiaryAddress);
+            _beneficiary.claimedAmount = _oldCommunity.claimed(msg.sender);
 
             uint256 _previousBaseInterval = _oldCommunity.baseInterval();
             if (_oldBeneficiaryLastInterval >= _previousBaseInterval) {
                 _beneficiary.claims =
-                    (_oldBeneficiaryLastInterval - _previousBaseInterval) /
-                    _oldCommunity.incrementInterval() +
-                    1;
+                (_oldBeneficiaryLastInterval - _previousBaseInterval) /
+                _oldCommunity.incrementInterval() +
+                1;
             } else {
                 _beneficiary.claims = 0;
             }
         }
 
-        beneficiaryList.add(_beneficiaryAddress);
+        beneficiaryList.add(msg.sender);
 
-        emit BeneficiaryJoined(_beneficiaryAddress);
+        emit BeneficiaryJoined(msg.sender);
     }
 
     /**
@@ -760,7 +740,7 @@ contract Community is
      * @param _newState new state
      */
     function _changeBeneficiaryState(Beneficiary storage _beneficiary, BeneficiaryState _newState)
-        internal
+    internal
     {
         if (_beneficiary.state == _newState) {
             return;

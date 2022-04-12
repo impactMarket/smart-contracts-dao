@@ -16,7 +16,7 @@ import "../../../treasury/interfaces/ITreasury.sol";
 abstract contract CommunityAdminStorageV1Old is ICommunityAdminOld {
     IERC20 public override cUSD;
     ITreasury public override treasury;
-    ICommunity public override communityTemplate;
+    ICommunityOld public override communityImplementation;
     ProxyAdmin public override communityProxyAdmin;
 
     mapping(address => CommunityState) public override communities;

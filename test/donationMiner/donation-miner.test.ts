@@ -19,12 +19,13 @@ import { parseUnits } from "@ethersproject/units/src.ts";
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 
-describe.only("DonationMiner", () => {
+describe("DonationMiner", () => {
 	const START_BLOCK = 130;
 	const REWARD_PERIOD_SIZE = 20;
 	const CLAIM_DELAY = 5;
 	const AGAINST_PERIODS = 8;
 	const STAKING_DONATION_RATIO = 1000000;
+	const COMMUNITY_DONATION_RATIO = 2;
 
 	let owner: SignerWithAddress;
 	let user1: SignerWithAddress;
@@ -3294,7 +3295,7 @@ describe.only("DonationMiner", () => {
 			})[0]["args"]["communityAddress"];
 
 			Community = await ethers.getContractAt(
-				"Community",
+				"CommunityImplementation",
 				communityAddress
 			);
 		});
@@ -3340,7 +3341,9 @@ describe.only("DonationMiner", () => {
 			expect(donation1.blockNumber.toNumber())
 				.to.be.greaterThanOrEqual(START_BLOCK)
 				.lessThanOrEqual(149);
-			expect(donation1.amount).to.equal(user1Donation);
+			expect(donation1.amount).to.equal(
+				user1Donation.div(COMMUNITY_DONATION_RATIO)
+			);
 			expect(donation1.token).to.equal(cUSD.address);
 			expect(donation1.initialAmount).to.equal(user1Donation);
 		});
@@ -3388,7 +3391,9 @@ describe.only("DonationMiner", () => {
 			expect(donation1.blockNumber.toNumber())
 				.to.be.greaterThanOrEqual(START_BLOCK)
 				.lessThanOrEqual(149);
-			expect(donation1.amount).to.equal(user1Donation);
+			expect(donation1.amount).to.equal(
+				user1Donation.div(COMMUNITY_DONATION_RATIO)
+			);
 			expect(donation1.token).to.equal(cUSD.address);
 			expect(donation1.initialAmount).to.equal(user1Donation);
 		});

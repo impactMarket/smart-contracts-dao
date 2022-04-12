@@ -9,8 +9,6 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "./interfaces/DonationMinerStorageV4.sol";
 
-import "hardhat/console.sol";
-
 contract DonationMinerImplementation is
     Initializable,
     OwnableUpgradeable,
@@ -20,7 +18,7 @@ contract DonationMinerImplementation is
 {
     using SafeERC20 for IERC20;
 
-    uint256 private constant PRECISION = 10e8;
+    uint256 private constant COMMUNITY_DONATION_RATIO = 2;
 
     /**
      * @notice Triggered when a donation has been added
@@ -390,11 +388,11 @@ contract DonationMinerImplementation is
 
         _token.safeTransferFrom(msg.sender, address(treasury), _amount);
 
-        addDonation(_delegateAddress, _token, _amount, address(treasury));
+        _addDonation(_delegateAddress, _token, _amount, address(treasury));
     }
 
     /**
-     * @dev Transfers cUSD tokens to the community contract
+     * @dev Transfers tokens to the community contract
      *
      * @param _community address of the community
      * @param _token address of the token
@@ -419,9 +417,8 @@ contract DonationMinerImplementation is
             "DonationMiner::donateToCommunity: Invalid token"
         );
 
-        // Transfer the cUSD from the donor to the community
         _community.donate(msg.sender, _amount);
-        addDonation(_delegateAddress, _token, _amount, address(_community));
+        _addDonation(_delegateAddress, _token, _amount, address(_community));
     }
 
     /**
@@ -679,7 +676,7 @@ contract DonationMinerImplementation is
      * @param _initialAmount amount of the donation
      * @param _target address of the receiver (community or treasury)
      */
-    function addDonation(
+    function _addDonation(
         address _delegateAddress,
         IERC20 _token,
         uint256 _initialAmount,
@@ -691,13 +688,18 @@ contract DonationMinerImplementation is
         Donation storage _donation = donations[donationCount];
         _donation.donor = _delegateAddress;
         _donation.target = _target;
-        _donation.amount = (_token == cUSD)
-            ? _initialAmount
-            : treasury.getConvertedAmount(address(_token), _initialAmount);
         _donation.blockNumber = block.number;
         _donation.rewardPeriod = rewardPeriodCount;
         _donation.token = _token;
         _donation.initialAmount = _initialAmount;
+
+        if (_target == address(treasury)) {
+            _donation.amount = (_token == cUSD)
+                ? _initialAmount
+                : treasury.getConvertedAmount(address(_token), _initialAmount);
+        } else {
+            _donation.amount = _initialAmount / COMMUNITY_DONATION_RATIO;
+        }
 
         updateRewardPeriodAmounts(rewardPeriodCount, _delegateAddress, _donation.amount);
         addCurrentRewardPeriodToDonor(_delegateAddress);
@@ -930,23 +932,12 @@ contract DonationMinerImplementation is
                         (_donorAmount * _stakingDonationRatio + _lastDonorStakeAmount)) /
                     (_totalAmount * _stakingDonationRatio + _stakesAmount);
             }
-            //            console.log('+++++++++++++++++++++++++++++++++++++++++++++++++');
-            //            console.log('_index: ', _index);
-            //            console.log('_rewardAmount: ', _rewardAmount);
-            //            console.log('_donorAmount: ', _donorAmount);
-            //            console.log('_stakingDonationRatio: ', _stakingDonationRatio);
-            //            console.log('_lastDonorStakeAmount: ', _lastDonorStakeAmount);
-            //            console.log('_totalAmount: ', _totalAmount);
-            //            console.log('_stakesAmount: ', _stakesAmount);
-            //            console.log('_claimAmount: ', _claimAmount);
 
             _index++;
 
             _previousRewardPeriod = _currentRewardPeriod;
             _currentRewardPeriod = rewardPeriods[_index];
         }
-
-        //        console.log('**************************************************************************************');
 
         return (_claimAmount, _lastDonorStakeAmount);
     }

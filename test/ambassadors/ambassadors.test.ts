@@ -23,7 +23,7 @@ let ambassador1: SignerWithAddress;
 let ambassador2: SignerWithAddress;
 let ambassador3: SignerWithAddress;
 
-let Community: ethersTypes.ContractFactory;
+let CommunityImplementationFactory: ethersTypes.ContractFactory;
 let OldCommunity: ethersTypes.ContractFactory;
 
 let communityInstance: ethersTypes.Contract;
@@ -46,7 +46,9 @@ async function init() {
 	ambassador2 = accounts[5];
 	ambassador3 = accounts[6];
 
-	Community = await ethers.getContractFactory("Community");
+	CommunityImplementationFactory = await ethers.getContractFactory(
+		"CommunityImplementation"
+	);
 }
 
 async function deploy() {
@@ -143,7 +145,9 @@ async function addDefaultCommunity(
 	const communityAddress = receipt.events?.filter((x: any) => {
 		return x.event == "CommunityAdded";
 	})[0]["args"]["communityAddress"];
-	communityInstance = await Community.attach(communityAddress);
+	communityInstance = await CommunityImplementationFactory.attach(
+		communityAddress
+	);
 }
 
 describe("Ambassadors", function () {

@@ -7,7 +7,6 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "../../community/interfaces/ICommunity.sol";
 import "./interfaces/CommunityAdminStorageV1Old.sol";
 
 /**
@@ -85,14 +84,14 @@ contract CommunityAdminImplementationOld is
     event TreasuryUpdated(address indexed oldTreasury, address indexed newTreasury);
 
     /**
-     * @notice Triggered when the communityTemplate address has been updated
+     * @notice Triggered when the communityImplementation address has been updated
      *
-     * @param oldCommunityTemplate    Old communityTemplate address
-     * @param newCommunityTemplate    New communityTemplate address
+     * @param oldCommunityImplementation    Old communityImplementation address
+     * @param newCommunityImplementation    New communityImplementation address
      */
-    event CommunityTemplateUpdated(
-        address indexed oldCommunityTemplate,
-        address indexed newCommunityTemplate
+    event CommunityImplementationUpdated(
+        address indexed oldCommunityImplementation,
+        address indexed newCommunityImplementation
     );
 
     /**
@@ -123,15 +122,15 @@ contract CommunityAdminImplementationOld is
     /**
      * @notice Used to initialize a new CommunityAdmin contract
      *
-     * @param _communityTemplate    Address of the Community implementation
+     * @param _communityImplementation    Address of the Community implementation
      *                              used for deploying new communities
      * @param _cUSD                 Address of the cUSD token
      */
-    function initialize(ICommunity _communityTemplate, IERC20 _cUSD) external initializer {
+    function initialize(ICommunityOld _communityImplementation, IERC20 _cUSD) external initializer {
         __Ownable_init();
         __ReentrancyGuard_init();
 
-        communityTemplate = _communityTemplate;
+        communityImplementation = _communityImplementation;
         cUSD = _cUSD;
 
         communityProxyAdmin = new ProxyAdmin();
@@ -176,15 +175,15 @@ contract CommunityAdminImplementationOld is
     }
 
     /**
-     * @notice Updates the address of the the communityTemplate
+     * @notice Updates the address of the the communityImplementation
      *
-     * @param _newCommunityTemplate address of the new communityTemplate contract
+     * @param _newCommunityImplementation address of the new communityImplementation contract
      */
-    function updateCommunityTemplate(ICommunity _newCommunityTemplate) external override onlyOwner {
-        address _oldCommunityTemplateAddress = address(communityTemplate);
-        communityTemplate = _newCommunityTemplate;
+    function updateCommunityImplementation(ICommunityOld _newCommunityImplementation) external override onlyOwner {
+        address _oldCommunityImplementationAddress = address(communityImplementation);
+        communityImplementation = _newCommunityImplementation;
 
-        emit CommunityTemplateUpdated(_oldCommunityTemplateAddress, address(_newCommunityTemplate));
+        emit CommunityImplementationUpdated(_oldCommunityImplementationAddress, address(_newCommunityImplementation));
     }
 
     /**
@@ -222,7 +221,7 @@ contract CommunityAdminImplementationOld is
             _incrementInterval,
             _minTranche,
             _maxTranche,
-            ICommunity(address(0))
+            ICommunityOld(address(0))
         );
         require(_communityAddress != address(0), "CommunityAdmin::addCommunity: NOT_VALID");
         communities[_communityAddress] = CommunityState.Valid;
@@ -240,7 +239,7 @@ contract CommunityAdminImplementationOld is
             _maxTranche
         );
 
-        transferToCommunity(ICommunity(_communityAddress), _minTranche);
+        transferToCommunity(ICommunityOld(_communityAddress), _minTranche);
         treasury.transfer(cUSD, address(_managers[0]), DEFAULT_AMOUNT);
     }
 
@@ -250,7 +249,7 @@ contract CommunityAdminImplementationOld is
      * @param _managers address of the community managers
      * @param _previousCommunity address of the community to be migrated
      */
-    function migrateCommunity(address[] memory _managers, ICommunity _previousCommunity)
+    function migrateCommunity(address[] memory _managers, ICommunityOld _previousCommunity)
         external
         override
         onlyOwner
@@ -311,7 +310,7 @@ contract CommunityAdminImplementationOld is
      * @param _community address of the community
      * @param _account address to be added as community manager
      */
-    function addManagerToCommunity(ICommunity _community, address _account)
+    function addManagerToCommunity(ICommunityOld _community, address _account)
         external
         override
         onlyOwner
@@ -324,7 +323,7 @@ contract CommunityAdminImplementationOld is
      *
      * @param _community address of the community
      */
-    function removeCommunity(ICommunity _community) external override onlyOwner nonReentrant {
+    function removeCommunity(ICommunityOld _community) external override onlyOwner nonReentrant {
         require(
             communities[address(_community)] == CommunityState.Valid,
             "CommunityAdmin::removeCommunity: this isn't a valid community"
@@ -339,7 +338,7 @@ contract CommunityAdminImplementationOld is
      * @dev Funds an existing community if it hasn't enough funds
      */
     function fundCommunity() external override onlyCommunities {
-        ICommunity _community = ICommunity(msg.sender);
+        ICommunityOld _community = ICommunityOld(msg.sender);
         uint256 _balance = cUSD.balanceOf(msg.sender);
         require(
             _balance < _community.minTranche(),
@@ -350,7 +349,7 @@ contract CommunityAdminImplementationOld is
             "CommunityAdmin::fundCommunity: this community is not allowed to request yet"
         );
 
-        uint256 _trancheAmount = calculateCommunityTrancheAmount(ICommunity(msg.sender));
+        uint256 _trancheAmount = calculateCommunityTrancheAmount(ICommunityOld(msg.sender));
 
         if (_trancheAmount > _balance) {
             uint256 _amount = _trancheAmount - _balance;
@@ -390,7 +389,7 @@ contract CommunityAdminImplementationOld is
      * @param _amount amount of the transaction
      */
     function transferFromCommunity(
-        ICommunity _community,
+        ICommunityOld _community,
         IERC20 _token,
         address _to,
         uint256 _amount
@@ -408,7 +407,7 @@ contract CommunityAdminImplementationOld is
      * @param _incrementInterval increment interval used in each claim
      */
     function updateBeneficiaryParams(
-        ICommunity _community,
+        ICommunityOld _community,
         uint256 _claimAmount,
         uint256 _maxClaim,
         uint256 _decreaseStep,
@@ -431,7 +430,7 @@ contract CommunityAdminImplementationOld is
      * @param _maxTranche maximum amount that the community will receive when requesting funds
      */
     function updateCommunityParams(
-        ICommunity _community,
+        ICommunityOld _community,
         uint256 _minTranche,
         uint256 _maxTranche
     ) external override onlyOwner {
@@ -441,17 +440,17 @@ contract CommunityAdminImplementationOld is
     /**
      * @notice Updates proxy implementation address of a community
      *
-     * @param _communityProxy address of the community
-     * @param _newCommunityTemplate address of new implementation contract
+     * @param _CommunityMiddleProxy address of the community
+     * @param _newCommunityImplementation address of new implementation contract
      */
-    function updateProxyImplementation(address _communityProxy, address _newCommunityTemplate)
+    function updateProxyImplementation(address _CommunityMiddleProxy, address _newCommunityImplementation)
         external
         override
         onlyOwner
     {
         communityProxyAdmin.upgrade(
-            TransparentUpgradeableProxy(payable(_communityProxy)),
-            _newCommunityTemplate
+            TransparentUpgradeableProxy(payable(_CommunityMiddleProxy)),
+            _newCommunityImplementation
         );
     }
 
@@ -461,7 +460,7 @@ contract CommunityAdminImplementationOld is
      * @param _community address of the community
      * @param _amount amount of the transaction
      */
-    function transferToCommunity(ICommunity _community, uint256 _amount) internal nonReentrant {
+    function transferToCommunity(ICommunityOld _community, uint256 _amount) internal nonReentrant {
         treasury.transfer(cUSD, address(_community), _amount);
         _community.addTreasuryFunds(_amount);
 
@@ -490,10 +489,10 @@ contract CommunityAdminImplementationOld is
         uint256 _incrementInterval,
         uint256 _minTranche,
         uint256 _maxTranche,
-        ICommunity _previousCommunity
+        ICommunityOld _previousCommunity
     ) internal returns (address) {
         TransparentUpgradeableProxy _community = new TransparentUpgradeableProxy(
-            address(communityTemplate),
+            address(communityImplementation),
             address(communityProxyAdmin),
             abi.encodeWithSignature(
                 "initialize(address[],uint256,uint256,uint256,uint256,uint256,uint256,uint256,address)",
@@ -517,7 +516,7 @@ contract CommunityAdminImplementationOld is
      * @param _community address of the community
      * @return uint256 the value of the tranche amount
      */
-    function calculateCommunityTrancheAmount(ICommunity _community)
+    function calculateCommunityTrancheAmount(ICommunityOld _community)
         internal
         view
         returns (uint256)
@@ -552,7 +551,7 @@ contract CommunityAdminImplementationOld is
      * @param _community address of the community
      * @return bool true if the community is deployed with the new type of smart contract
      */
-    function isCommunityNewType(ICommunity _community) internal pure returns (bool) {
+    function isCommunityNewType(ICommunityOld _community) internal pure returns (bool) {
         return _community.impactMarketAddress() == address(0);
     }
 }

@@ -103,14 +103,25 @@ contract CommunityAdminImplementation is
     event AmbassadorsUpdated(address indexed oldAmbassadors, address indexed newAmbassadors);
 
     /**
-     * @notice Triggered when the communityTemplate address has been updated
+     * @notice Triggered when the ubi communityMiddleProxy address has been updated
      *
-     * @param oldCommunityTemplate    Old communityTemplate address
-     * @param newCommunityTemplate    New communityTemplate address
+     * @param oldCommunityMiddleProxy   Old communityMiddleProxy address
+     * @param newCommunityMiddleProxy   New communityMiddleProxy address
      */
-    event CommunityTemplateUpdated(
-        address indexed oldCommunityTemplate,
-        address indexed newCommunityTemplate
+    event CommunityMiddleProxyUpdated(
+        address oldCommunityMiddleProxy,
+        address newCommunityMiddleProxy
+    );
+
+    /**
+     * @notice Triggered when the communityImplementation address has been updated
+     *
+     * @param oldCommunityImplementation    Old communityImplementation address
+     * @param newCommunityImplementation    New communityImplementation address
+     */
+    event CommunityImplementationUpdated(
+        address indexed oldCommunityImplementation,
+        address indexed newCommunityImplementation
     );
 
     /**
@@ -152,15 +163,15 @@ contract CommunityAdminImplementation is
     /**
      * @notice Used to initialize a new CommunityAdmin contract
      *
-     * @param _communityTemplate    Address of the Community implementation
+     * @param _communityImplementation    Address of the Community implementation
      *                              used for deploying new communities
      * @param _cUSD                 Address of the cUSD token
      */
-    function initialize(ICommunity _communityTemplate, IERC20 _cUSD) external initializer {
+    function initialize(ICommunity _communityImplementation, IERC20 _cUSD) external initializer {
         __Ownable_init();
         __ReentrancyGuard_init();
 
-        communityTemplate = _communityTemplate;
+        communityImplementation = _communityImplementation;
         cUSD = _cUSD;
 
         communityProxyAdmin = new ProxyAdmin();
@@ -170,7 +181,7 @@ contract CommunityAdminImplementation is
      * @notice Returns the current implementation version
      */
     function getVersion() external pure override returns (uint256) {
-        return 1;
+        return 2;
     }
 
     /**
@@ -219,15 +230,22 @@ contract CommunityAdminImplementation is
     }
 
     /**
-     * @notice Updates the address of the the communityTemplate
+     * @notice Updates the address of the the communityImplementation
      *
-     * @param _newCommunityTemplate address of the new communityTemplate contract
+     * @param _newCommunityImplementation address of the new communityImplementation contract
      */
-    function updateCommunityTemplate(ICommunity _newCommunityTemplate) external override onlyOwner {
-        address _oldCommunityTemplateAddress = address(communityTemplate);
-        communityTemplate = _newCommunityTemplate;
+    function updateCommunityImplementation(ICommunity _newCommunityImplementation)
+        external
+        override
+        onlyOwner
+    {
+        address _oldCommunityImplementationAddress = address(communityImplementation);
+        communityImplementation = _newCommunityImplementation;
 
-        emit CommunityTemplateUpdated(_oldCommunityTemplateAddress, address(_newCommunityTemplate));
+        emit CommunityImplementationUpdated(
+            _oldCommunityImplementationAddress,
+            address(_newCommunityImplementation)
+        );
     }
 
     /**
@@ -493,17 +511,16 @@ contract CommunityAdminImplementation is
     /**
      * @notice Updates proxy implementation address of a community
      *
-     * @param _communityProxy address of the community
-     * @param _newCommunityTemplate address of new implementation contract
+     * @param _CommunityMiddleProxy address of the community
+     * @param _newCommunityImplementation address of new implementation contract
      */
-    function updateProxyImplementation(address _communityProxy, address _newCommunityTemplate)
-        external
-        override
-        onlyOwner
-    {
+    function updateProxyImplementation(
+        address _CommunityMiddleProxy,
+        address _newCommunityImplementation
+    ) external override onlyOwner {
         communityProxyAdmin.upgrade(
-            TransparentUpgradeableProxy(payable(_communityProxy)),
-            _newCommunityTemplate
+            TransparentUpgradeableProxy(payable(_CommunityMiddleProxy)),
+            _newCommunityImplementation
         );
     }
 
@@ -529,6 +546,22 @@ contract CommunityAdminImplementation is
         ambassadors = _newAmbassadors;
 
         emit AmbassadorsUpdated(oldAmbassadors, address(_newAmbassadors));
+    }
+
+    /**
+     * @notice Updates communityMiddleProxy address
+     *
+     * @param _newCommunityMiddleProxy address of new implementation contract
+     */
+    function updateCommunityMiddleProxy(address _newCommunityMiddleProxy)
+        external
+        override
+        onlyOwner
+    {
+        address _oldCommunityMiddleProxy = communityMiddleProxy;
+        communityMiddleProxy = _newCommunityMiddleProxy;
+
+        emit CommunityMiddleProxyUpdated(_oldCommunityMiddleProxy, _newCommunityMiddleProxy);
     }
 
     /**
@@ -569,20 +602,21 @@ contract CommunityAdminImplementation is
         ICommunity _previousCommunity
     ) internal returns (address) {
         TransparentUpgradeableProxy _community = new TransparentUpgradeableProxy(
-            address(communityTemplate),
+            address(communityMiddleProxy),
             address(communityProxyAdmin),
-            abi.encodeWithSignature(
-                "initialize(address[],uint256,uint256,uint256,uint256,uint256,uint256,uint256,address)",
-                _managers,
-                _claimAmount,
-                _maxClaim,
-                _decreaseStep,
-                _baseInterval,
-                _incrementInterval,
-                _minTranche,
-                _maxTranche,
-                address(_previousCommunity)
-            )
+            ""
+        );
+
+        ICommunity(address(_community)).initialize(
+            _managers,
+            _claimAmount,
+            _maxClaim,
+            _decreaseStep,
+            _baseInterval,
+            _incrementInterval,
+            _minTranche,
+            _maxTranche,
+            _previousCommunity
         );
 
         return address(_community);
@@ -600,18 +634,10 @@ contract CommunityAdminImplementation is
     {
         uint256 _validBeneficiaries = _community.validBeneficiaryCount();
         uint256 _claimAmount = _community.claimAmount();
-        uint256 _treasuryFunds = _community.treasuryFunds();
-        uint256 _privateFunds = _community.privateFunds();
         uint256 _minTranche = _community.minTranche();
         uint256 _maxTranche = _community.maxTranche();
 
-        // `treasuryFunds` can't be zero.
-        // Otherwise, migrated communities will have zero.
-        _treasuryFunds = _treasuryFunds > 0 ? _treasuryFunds : 1e18;
-
-        uint256 _trancheAmount = (_validBeneficiaries *
-            _claimAmount *
-            (_treasuryFunds + _privateFunds)) / _treasuryFunds;
+        uint256 _trancheAmount = _validBeneficiaries * _claimAmount;
 
         if (_trancheAmount < _minTranche) {
             _trancheAmount = _minTranche;

@@ -86,9 +86,6 @@ describe("UBICommittee", function () {
 			ImpactProxyAdmin.address
 		);
 
-		const CommunityAdminImplementationOld = await deployments.get(
-			"CommunityAdminImplementationOld"
-		);
 		const CommunityAdminImplementation = await deployments.get(
 			"CommunityAdminImplementation"
 		);
