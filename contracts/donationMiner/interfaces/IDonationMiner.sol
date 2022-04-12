@@ -105,6 +105,7 @@ interface IDonationMiner {
     function updateStaking(IStaking _newStaking) external;
     function donate(IERC20 _token, uint256 _amount, address _delegateAddress) external;
     function donateToCommunity(ICommunity _community, IERC20 _token, uint256 _amount, address _delegateAddress) external;
+    function lastPeriodsDonations(address _donor) external view returns (uint256, uint256);
     function claimRewards() external;
     function claimRewardsPartial(uint256 _lastPeriodNumber) external;
     function stakeRewards() external;

@@ -2494,6 +2494,89 @@ describe("DonationMiner", () => {
 			);
 		});
 
+		it("Should many donates be calculated, multiple donors #1", async function () {
+			const user1Donation1 = toEther("50");
+			const user1Donation2 = toEther("100");
+			const user2Donation = toEther("100");
+
+			await advanceToBlockN(START_BLOCK);
+
+			await cUSD
+				.connect(user1)
+				.approve(DonationMiner.address, user1Donation1);
+			await cUSD
+				.connect(user2)
+				.approve(DonationMiner.address, user2Donation);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation1,
+				user1.address
+			);
+			await DonationMiner.connect(user2).donate(
+				cUSD.address,
+				user2Donation,
+				user2.address
+			);
+
+			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
+
+			await cUSD
+				.connect(user1)
+				.approve(DonationMiner.address, user1Donation2);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation2,
+				user1.address
+			);
+
+			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
+
+			// Check their PACT balance
+			const user1Donations = await DonationMiner.lastPeriodsDonations(
+				user1.address
+			);
+			const user2Donations = await DonationMiner.lastPeriodsDonations(
+				user2.address
+			);
+			const user3Donations = await DonationMiner.lastPeriodsDonations(
+				user3.address
+			);
+			const user4Donations = await DonationMiner.lastPeriodsDonations(
+				"0x0000000000000000000000000000000000000000"
+			);
+
+			expect(user1Donations[0].toString()).to.equal(toEther("150"));
+			expect(user1Donations[1].toString()).to.equal(toEther("250"));
+
+			expect(user2Donations[0].toString()).to.equal(toEther("100"));
+			expect(user2Donations[1].toString()).to.equal(toEther("250"));
+
+			expect(user3Donations[0].toString()).to.equal(toEther("0"));
+			expect(user3Donations[1].toString()).to.equal(toEther("250"));
+
+			expect(user4Donations[0].toString()).to.equal(toEther("0"));
+			expect(user4Donations[1].toString()).to.equal(toEther("250"));
+
+			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE * 4);
+
+			await cUSD
+				.connect(user1)
+				.approve(DonationMiner.address, user1Donation2);
+			await DonationMiner.connect(user1).donate(
+				cUSD.address,
+				user1Donation2,
+				user1.address
+			);
+
+			// Check their PACT balance
+			const user2Donations2 = await DonationMiner.lastPeriodsDonations(
+				user2.address
+			);
+
+			expect(user2Donations2[0].toString()).to.equal(toEther("0"));
+			expect(user2Donations2[1].toString()).to.equal(toEther("100"));
+		});
+
 		it("Should delay many donates reward only end claim delay, multiple donors #1", async function () {
 			DonationMiner.updateClaimDelay(3);
 
