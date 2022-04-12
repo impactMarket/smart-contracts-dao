@@ -300,12 +300,12 @@ contract CommunityImplementation is
     }
 
     /**
-     * @notice Enforces sender to be the community ambassador
+     * @notice Enforces sender to be the community ambassador or entity ambassador responsible
      */
-    modifier onlyAmbassador() {
+    modifier onlyAmbassadorOrEntity() {
         require(
-            communityAdmin.isAmbassadorOfCommunity(address(this), msg.sender),
-            "Community: NOT_AMBASSADOR"
+            communityAdmin.isAmbassadorOrEntityOfCommunity(address(this), msg.sender),
+            "Community: NOT_AMBASSADOR_OR_ENTITY"
         );
         _;
     }
@@ -445,7 +445,7 @@ contract CommunityImplementation is
      *
      * @param _account address of the manager to be added
      */
-    function addManager(address _account) public override onlyAmbassador {
+    function addManager(address _account) public override onlyAmbassadorOrEntity {
         if (!hasRole(MANAGER_ROLE, _account)) {
             super._grantRole(MANAGER_ROLE, _account);
             emit ManagerAdded(msg.sender, _account);
@@ -457,7 +457,7 @@ contract CommunityImplementation is
      *
      * @param _account address of the manager to be removed
      */
-    function removeManager(address _account) external override onlyAmbassador {
+    function removeManager(address _account) external override onlyAmbassadorOrEntity {
         require(
             hasRole(MANAGER_ROLE, _account),
             "Community::removeManager: This account doesn't have manager role"
@@ -615,7 +615,7 @@ contract CommunityImplementation is
     /**
      * @notice Locks the community
      */
-    function lock() external override onlyAmbassador {
+    function lock() external override onlyAmbassadorOrEntity {
         locked = true;
         emit CommunityLocked(msg.sender);
     }
@@ -623,7 +623,7 @@ contract CommunityImplementation is
     /**
      * @notice Unlocks the community
      */
-    function unlock() external override onlyAmbassador {
+    function unlock() external override onlyAmbassadorOrEntity {
         locked = false;
         emit CommunityUnlocked(msg.sender);
     }
