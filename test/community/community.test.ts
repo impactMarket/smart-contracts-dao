@@ -973,9 +973,22 @@ describe("Community", () => {
 			).to.be.fulfilled;
 
 			await expect(communityProxy.setParams()).to.be.fulfilled;
-			await expect(communityProxy2.setParams()).to.be.rejectedWith(
-				"Transaction reverted without a reason string"
-			);
+
+
+
+			// yarn coverage throws this error message
+			// await expect(communityProxy2.setParams()).to.be.rejectedWith(
+			// 	"Transaction reverted: function selector was not recognized and there's no fallback function"
+			// );
+
+			// yarn test throws this error message
+			// await expect(communityProxy2.setParams()).to.be.rejectedWith(
+			// 	"Transaction reverted without a reason string"
+			// );
+
+			// this error message matches both cases
+			await expect(communityProxy2.setParams()).to.be.rejectedWith("Transaction reverted");
+
 
 			expect(await communityProxy2.communityAdmin()).to.be.equal(
 				communityAdminProxy.address
