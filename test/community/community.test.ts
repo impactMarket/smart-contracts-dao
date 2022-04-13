@@ -573,7 +573,7 @@ describe("Community", () => {
 						communityProxy.address,
 						FAKE_ADDRESS
 					)
-			).to.be.rejectedWith("Ownable: caller is not the owner");
+			).to.be.rejectedWith("CommunityAdmin: Not Owner Or UBICommittee");
 		});
 
 		it("Should have same storage after update community implementation #1", async function () {
