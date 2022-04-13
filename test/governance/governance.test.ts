@@ -753,9 +753,15 @@ describe("Governance - with one token", function () {
 	});
 
 	it("should update communityAdmin & community to V2", async function () {
-		const communityImplementationAddress = (await deployments.get("CommunityImplementation")).address;
-		const communityMiddleProxyAddress = (await deployments.get("CommunityMiddleProxy")).address;
-		const communityAdminImplementationAddress = (await deployments.get("CommunityAdminImplementation")).address;
+		const communityImplementationAddress = (
+			await deployments.get("CommunityImplementation")
+		).address;
+		const communityMiddleProxyAddress = (
+			await deployments.get("CommunityMiddleProxy")
+		).address;
+		const communityAdminImplementationAddress = (
+			await deployments.get("CommunityAdminImplementation")
+		).address;
 
 		await communityAdminProxy.transferOwnership(timelock.address);
 
@@ -763,18 +769,25 @@ describe("Governance - with one token", function () {
 			governanceDelegator,
 			user4,
 			[user4],
-			[proxyAdmin.address, communityAdminProxy.address, communityAdminProxy.address],
-			[0,0,0],
-			["upgrade(address,address)","updateCommunityMiddleProxy(address)","updateCommunityImplementation(address)"],
 			[
-				["address", "address"],
-				["address"],
-				["address"]
+				proxyAdmin.address,
+				communityAdminProxy.address,
+				communityAdminProxy.address,
 			],
+			[0, 0, 0],
 			[
-				[communityAdminProxy.address, communityAdminImplementationAddress],
+				"upgrade(address,address)",
+				"updateCommunityMiddleProxy(address)",
+				"updateCommunityImplementation(address)",
+			],
+			[["address", "address"], ["address"], ["address"]],
+			[
+				[
+					communityAdminProxy.address,
+					communityAdminImplementationAddress,
+				],
 				[communityMiddleProxyAddress],
-				[communityImplementationAddress]
+				[communityImplementationAddress],
 			]
 		);
 

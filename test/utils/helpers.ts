@@ -102,13 +102,13 @@ export async function createProposal(
 		targets.length != calldataTyeps.length ||
 		targets.length != calldataValues.length
 	) {
-		throw new Error('proposal function information arity mismatch');
+		throw new Error("proposal function information arity mismatch");
 	}
 
 	const calldatas: string[] = [];
 	for (let i = 0; i < calldataTyeps.length; i++) {
 		if (calldataTyeps[i].length != calldataValues[i].length) {
-			throw new Error('proposal calldata information arity mismatch');
+			throw new Error("proposal calldata information arity mismatch");
 		}
 
 		calldatas.push(
