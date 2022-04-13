@@ -20,7 +20,7 @@ function getMnemonic(network:string) : string {
 
 function getPrivateKey(network:string) : string {
   require("dotenv").config({ path: `.env.${network}` });
-  return process.env.PRIVATE_KEY || '';
+  return process.env.PRIVATE_KEY || '0000000000000000000000000000000000000000000000000000000000000001';
 };
 
 export default {
