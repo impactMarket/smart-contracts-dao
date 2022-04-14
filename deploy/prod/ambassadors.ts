@@ -7,20 +7,20 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const { deploy } = deployments;
 	const { deployer } = await getNamedAccounts();
 
-	const PACTTimelock = await deployments.get("PACTTimelock"); //prod
-	const ownerAddress = PACTTimelock.address; //prod
-	// const ownerAddress = deployer; //dev
+	const timelockAddress = "0x6d685f10974B1085bfF728faF124B4637477c63F";
+	const proxyAdminAddress = "0x63431dDac59f49f0d27E4B5e36D9Aae7c7424D1A";
+	const communityAdminProxyAddress = "0xaD8C06F1b2808E7919141A5B818B4D0D5d7A129a";
 
-	const ImpactProxyAdminContract = await deployments.get("ImpactProxyAdmin");
-
+	await new Promise((resolve) => setTimeout(resolve, 6000));
 	const implementationResult = await deploy("AmbassadorsImplementation", {
 		from: deployer,
 		log: true,
 	});
 
+	await new Promise((resolve) => setTimeout(resolve, 6000));
 	const proxyResult = await deploy("AmbassadorsProxy", {
 		from: deployer,
-		args: [implementationResult.address, ImpactProxyAdminContract.address],
+		args: [implementationResult.address, proxyAdminAddress],
 		log: true,
 	});
 
@@ -29,12 +29,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		proxyResult.address
 	);
 
-	const communityAdminProxy = await deployments.get("CommunityAdminProxy");
-
-	await Ambassadors.initialize(communityAdminProxy.address);
-	await Ambassadors.transferOwnership(ownerAddress);
+	await new Promise((resolve) => setTimeout(resolve, 6000));
+	await Ambassadors.initialize(communityAdminProxyAddress);
+	await new Promise((resolve) => setTimeout(resolve, 6000));
+	await Ambassadors.transferOwnership(timelockAddress);
 };
 
-func.dependencies = ["ImpactProxyAdminProd", "CommunityProd"];
-func.tags = ["AmbassadorsProd", "Prod"];
+func.tags = ["AmbassadorsProd"];
 export default func;

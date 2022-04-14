@@ -752,7 +752,7 @@ describe("Governance - with one token", function () {
 		expect(await ubiCommittee.members(user8.address)).to.be.equal(true);
 	});
 
-	it("should update communityAdmin & community to V2", async function () {
+	it.only("should update communityAdmin & community to V2", async function () {
 		const communityImplementationAddress = (
 			await deployments.get("CommunityImplementation")
 		).address;

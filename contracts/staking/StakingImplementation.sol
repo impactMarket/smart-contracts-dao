@@ -47,7 +47,7 @@ contract StakingImplementation is
      * @param _PACT                 Address of the PACT Token
      * @param _SPACT                Address of the SPACT Token
      * @param _donationMiner        Address of the DonationMiner
-     * @param _cooldown   Number of blocks after a user can claim a stake
+     * @param _cooldown             Number of blocks after a user can claim a stake
      */
     function initialize(
         IERC20 _PACT,

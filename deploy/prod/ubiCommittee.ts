@@ -6,9 +6,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const { deployments, getNamedAccounts, ethers } = hre;
 	const { deploy } = deployments;
 	const { deployer } = await getNamedAccounts();
-	const committeeMember = deployer; // not recomeded to prod
+	const committeeMember = deployer; // not recommended to prod
 
-	const ImpactProxyAdminContract = await deployments.get("ImpactProxyAdmin");
+	const timelockAddress = "0x6d685f10974B1085bfF728faF124B4637477c63F";
+	const proxyAdminAddress = "0x63431dDac59f49f0d27E4B5e36D9Aae7c7424D1A";
+	const communityAdminProxyAddress = "0xaD8C06F1b2808E7919141A5B818B4D0D5d7A129a";
 
 	const implementationResult = await deploy("UBICommitteeImplementation", {
 		from: deployer,
@@ -17,7 +19,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	const proxyResult = await deploy("UBICommitteeProxy", {
 		from: deployer,
-		args: [implementationResult.address, ImpactProxyAdminContract.address],
+		args: [implementationResult.address, proxyAdminAddress],
 		log: true,
 	});
 
@@ -26,13 +28,15 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		proxyResult.address
 	);
 
-	const communityAdminProxy = await deployments.get("CommunityAdminProxy");
+	await ubiCommittee.initialize(
+		1,
+		communityAdminProxyAddress,
+		[committeeMember,]
+	);
 
-	await ubiCommittee.initialize(1, communityAdminProxy.address, [
-		committeeMember,
-	]);
+	await new Promise((resolve) => setTimeout(resolve, 6000));
+	await ubiCommittee.transferOwnership(timelockAddress);
 };
 
-func.dependencies = ["ImpactProxyAdminProd", "CommunityProd"];
-func.tags = ["UBICommitteeProd", "Prod"];
+func.tags = ["UBICommitteeProd"];
 export default func;
