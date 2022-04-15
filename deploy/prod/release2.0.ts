@@ -2,9 +2,7 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { deployments, ethers } from "hardhat";
-import {
-	createProposal,
-} from "../../test/utils/helpers";
+import { createProposal } from "../../test/utils/helpers";
 import * as ethersTypes from "ethers";
 
 const { deploy } = deployments;
@@ -58,7 +56,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 };
 
 async function deployNewCommunity() {
-	console.log('Deploying new contracts for community');
+	console.log("Deploying new contracts for community");
 
 	// await new Promise((resolve) => setTimeout(resolve, 6000));
 	communityNewImplementationAddress = (
@@ -97,139 +95,132 @@ async function deployNewCommunity() {
 }
 
 async function deployAmbassadors() {
-	console.log('Deploying ambassadors contracts');
+	console.log("Deploying ambassadors contracts");
 
-	try {
-		ambassadorsProxyAddress = (await deployments.get("AmbassadorsProxy")).address;
-	} catch (e) {
+	await new Promise((resolve) => setTimeout(resolve, 6000));
+	const implementationResult = await deploy("AmbassadorsImplementation", {
+		from: deployer.address,
+		log: true,
+	});
 
-		await new Promise((resolve) => setTimeout(resolve, 6000));
-		const implementationResult = await deploy("AmbassadorsImplementation", {
-			from: deployer.address,
-			log: true,
-		});
+	await new Promise((resolve) => setTimeout(resolve, 6000));
+	const proxyResult = await deploy("AmbassadorsProxy", {
+		from: deployer.address,
+		args: [implementationResult.address, proxyAdminAddress],
+		log: true,
+	});
 
-		await new Promise((resolve) => setTimeout(resolve, 6000));
-		const proxyResult = await deploy("AmbassadorsProxy", {
-			from: deployer.address,
-			args: [implementationResult.address, proxyAdminAddress],
-			log: true,
-		});
+	await new Promise((resolve) => setTimeout(resolve, 6000));
+	const Ambassadors = await ethers.getContractAt(
+		"AmbassadorsImplementation",
+		proxyResult.address
+	);
 
-		await new Promise((resolve) => setTimeout(resolve, 6000));
-		const Ambassadors = await ethers.getContractAt(
-			"AmbassadorsImplementation",
-			proxyResult.address
-		);
+	await new Promise((resolve) => setTimeout(resolve, 6000));
+	await Ambassadors.initialize(communityAdminProxyAddress);
 
-		await new Promise((resolve) => setTimeout(resolve, 6000));
-		await Ambassadors.initialize(communityAdminProxyAddress);
+	await new Promise((resolve) => setTimeout(resolve, 6000));
+	await Ambassadors.transferOwnership(timelockAddress);
 
-		await new Promise((resolve) => setTimeout(resolve, 6000));
-		await Ambassadors.transferOwnership(timelockAddress);
-
-		ambassadorsProxyAddress = proxyResult.address
-	}
+	ambassadorsProxyAddress = proxyResult.address;
 }
 
 async function deployUBICommittee() {
-	console.log('Deploying UBICommittee contracts');
+	console.log("Deploying UBICommittee contracts");
 
-	try {
-		UBICommitteeProxyAddress = (await deployments.get("UBICommitteeProxy")).address;
-	} catch (e) {
-		await new Promise((resolve) => setTimeout(resolve, 6000));
-		const implementationResult = await deploy("UBICommitteeImplementation", {
+	await new Promise((resolve) => setTimeout(resolve, 6000));
+	const implementationResult = await deploy(
+		"UBICommitteeImplementation",
+		{
 			from: deployer.address,
 			log: true,
-		});
+		}
+	);
 
-		await new Promise((resolve) => setTimeout(resolve, 6000));
-		const proxyResult = await deploy("UBICommitteeProxy", {
-			from: deployer.address,
-			args: [implementationResult.address, proxyAdminAddress],
-			log: true,
-		});
+	await new Promise((resolve) => setTimeout(resolve, 6000));
+	const proxyResult = await deploy("UBICommitteeProxy", {
+		from: deployer.address,
+		args: [implementationResult.address, proxyAdminAddress],
+		log: true,
+	});
 
-		const ubiCommittee = await ethers.getContractAt(
-			"UBICommitteeImplementation",
-			proxyResult.address
-		);
+	const ubiCommittee = await ethers.getContractAt(
+		"UBICommitteeImplementation",
+		proxyResult.address
+	);
 
-		await new Promise((resolve) => setTimeout(resolve, 6000));
-		await ubiCommittee.initialize(
-			1,
-			communityAdminProxyAddress,
-			committeeMember
-		);
+	await new Promise((resolve) => setTimeout(resolve, 6000));
+	await ubiCommittee.initialize(
+		1,
+		communityAdminProxyAddress,
+		committeeMember
+	);
 
-		await new Promise((resolve) => setTimeout(resolve, 6000));
-		await ubiCommittee.transferOwnership(timelockAddress);
+	await new Promise((resolve) => setTimeout(resolve, 6000));
+	await ubiCommittee.transferOwnership(timelockAddress);
 
-		UBICommitteeProxyAddress = proxyResult.address;
-	}
+	UBICommitteeProxyAddress = proxyResult.address;
 }
 
 async function deployStaking() {
-	console.log('Deploying Staking contracts');
+	console.log("Deploying Staking contracts");
 
-	try {
-		stakingProxyAddress = (await deployments.get("StakingProxy")).address;
-	} catch (e) {
-		await new Promise((resolve) => setTimeout(resolve, 6000));
-		const SPACTTokenResult = await deploy("SPACTToken", {
-			from: deployer.address,
-			args: [],
-			log: true,
-		});
+	await new Promise((resolve) => setTimeout(resolve, 6000));
+	const SPACTTokenResult = await deploy("SPACTToken", {
+		from: deployer.address,
+		args: [],
+		log: true,
+	});
 
-		const SPACTToken = await ethers.getContractAt(
-			"SPACTToken",
-			SPACTTokenResult.address
-		);
+	const SPACTToken = await ethers.getContractAt(
+		"SPACTToken",
+		SPACTTokenResult.address
+	);
 
-		await new Promise((resolve) => setTimeout(resolve, 6000));
-		const stakingImplementationResult = await deploy("StakingImplementation", {
+	await new Promise((resolve) => setTimeout(resolve, 6000));
+	const stakingImplementationResult = await deploy(
+		"StakingImplementation",
+		{
 			from: deployer.address,
 			args: [],
 			log: true,
 			// gasLimit: 13000000,
-		});
+		}
+	);
 
-		await new Promise((resolve) => setTimeout(resolve, 6000));
-		const stakingProxyResult = await deploy("StakingProxy", {
-			from: deployer.address,
-			args: [stakingImplementationResult.address, proxyAdminAddress],
-			log: true,
-			// gasLimit: 13000000,
-		});
+	await new Promise((resolve) => setTimeout(resolve, 6000));
+	const stakingProxyResult = await deploy("StakingProxy", {
+		from: deployer.address,
+		args: [stakingImplementationResult.address, proxyAdminAddress],
+		log: true,
+		// gasLimit: 13000000,
+	});
 
-		const stakingContract = await ethers.getContractAt(
-			"StakingImplementation",
-			stakingProxyResult.address
-		);
+	const stakingContract = await ethers.getContractAt(
+		"StakingImplementation",
+		stakingProxyResult.address
+	);
 
-		await new Promise((resolve) => setTimeout(resolve, 6000));
-		await stakingContract.initialize(
-			PACTTokenAddress,
-			SPACTTokenResult.address,
-			donationMinerProxyAddress,
-			stakingCooldown
-		);
+	await new Promise((resolve) => setTimeout(resolve, 6000));
+	await stakingContract.initialize(
+		PACTTokenAddress,
+		SPACTTokenResult.address,
+		donationMinerProxyAddress,
+		stakingCooldown
+	);
 
-		await new Promise((resolve) => setTimeout(resolve, 6000));
-		await stakingContract.transferOwnership(timelockAddress);
+	await new Promise((resolve) => setTimeout(resolve, 6000));
+	await stakingContract.transferOwnership(timelockAddress);
 
-		await new Promise((resolve) => setTimeout(resolve, 6000));
-		await SPACTToken.transferOwnership(stakingContract.address);
+	await new Promise((resolve) => setTimeout(resolve, 6000));
+	await SPACTToken.transferOwnership(stakingContract.address);
 
-		stakingProxyAddress = stakingProxyResult.address;
-		SPACTTokenAddress = SPACTToken.address;
-	}
+	stakingProxyAddress = stakingProxyResult.address;
+	SPACTTokenAddress = SPACTToken.address;
 }
 
 async function deployNewDonationMiner() {
-	console.log('Deploying new contract for donation miner');
+	console.log("Deploying new contract for donation miner");
 	await new Promise((resolve) => setTimeout(resolve, 6000));
 	donationMinerNewImplementationAddress = (
 		await deploy("DonationMinerImplementation", {
@@ -242,10 +233,10 @@ async function deployNewDonationMiner() {
 }
 
 async function deployNewGovernance() {
-	console.log('Deploying new contract for governance');
+	console.log("Deploying new contract for governance");
 	await new Promise((resolve) => setTimeout(resolve, 6000));
 	governanceNewImplementationAddress = (
-		await deploy("DonationMinerImplementation", {
+		await deploy("IPCTDelegate", {
 			from: deployer.address,
 			args: [],
 			log: true,
@@ -255,7 +246,7 @@ async function deployNewGovernance() {
 }
 
 async function createUpgradeCommunityProposal() {
-	console.log('Creating new proposal for community');
+	console.log("Creating new proposal for community");
 
 	await new Promise((resolve) => setTimeout(resolve, 6000));
 	await createProposal(
@@ -276,9 +267,18 @@ async function createUpgradeCommunityProposal() {
 			"updateAmbassadors(address)",
 			"updateUbiCommittee(address)",
 		],
-		[["address", "address"], ["address"], ["address"], ["address"], ["address"]],
 		[
-			[communityAdminProxyAddress, communityAdminNewImplementationAddress],
+			["address", "address"],
+			["address"],
+			["address"],
+			["address"],
+			["address"],
+		],
+		[
+			[
+				communityAdminProxyAddress,
+				communityAdminNewImplementationAddress,
+			],
 			[communityMiddleProxyAddress],
 			[communityNewImplementationAddress],
 			[ambassadorsProxyAddress],
@@ -288,7 +288,7 @@ async function createUpgradeCommunityProposal() {
 }
 
 async function createUpgradeDonationMinerProposal() {
-	console.log('Creating new proposal for donation miner');
+	console.log("Creating new proposal for donation miner");
 
 	await new Promise((resolve) => setTimeout(resolve, 6000));
 	await createProposal(
@@ -297,7 +297,7 @@ async function createUpgradeDonationMinerProposal() {
 		[
 			proxyAdminAddress,
 			donationMinerProxyAddress,
-			donationMinerProxyAddress
+			donationMinerProxyAddress,
 		],
 		[0, 0, 0],
 		[
@@ -315,29 +315,21 @@ async function createUpgradeDonationMinerProposal() {
 }
 
 async function createUpgradeGovernanceProposal() {
-	console.log('Creating new proposal for governance');
+	console.log("Creating new proposal for governance");
 
 	await new Promise((resolve) => setTimeout(resolve, 6000));
 	await createProposal(
 		GovernanceProxy,
 		deployer,
+		[proxyAdminAddress],
+		[0],
+		["upgrade(address,address)"],
+		[["address", "address"]],
 		[
-			proxyAdminAddress,
-			governanceDelegatorAddress,
-		],
-		[0, 0],
-		[
-			"upgrade(address,address)",
-			"_setReleaseToken(address)"
-		],
-		[["address", "address"], ["address"]],
-		[
-			[governanceDelegatorAddress, governanceNewImplementationAddress],
-			[SPACTTokenAddress],
+			[governanceDelegatorAddress, governanceNewImplementationAddress]
 		]
 	);
 }
-
 
 export default func;
 func.tags = ["Release2Prod"];

@@ -119,7 +119,7 @@ export async function createProposal(
 		);
 	}
 
-	console.log('***************************************');
+	console.log("***************************************");
 	console.log(proposer.address);
 	console.log(targets);
 	console.log(values);

@@ -826,7 +826,7 @@ describe("Governance - with two tokens", function () {
 		await stakingToken.connect(user6).delegate(user6.address);
 	});
 
-	it("should upgrade and set release token", async function () {
+	it.only("should upgrade and set release token", async function () {
 		const governanceDelegateFactory = await ethers.getContractFactory(
 			"PACTDelegate"
 		);
