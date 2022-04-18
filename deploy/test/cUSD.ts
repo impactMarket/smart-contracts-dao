@@ -1,6 +1,7 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
-import { parseEther } from "@ethersproject/units";
+import { formatEther, parseEther } from "@ethersproject/units";
+import { ethers } from "hardhat";
 
 let cUSDAddress: string;
 
@@ -30,6 +31,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		args: ["cUSD", "cUSD"],
 		log: true,
 	});
+
+	const cUSD = await ethers.getContractAt("TokenMock", cUSDResult.address);
+	await cUSD.mint(deployer, parseEther("1000000000"));
 	cUSDAddress = cUSDResult.address;
 	// }
 	// }

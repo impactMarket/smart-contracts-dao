@@ -332,4 +332,4 @@ async function createUpgradeGovernanceProposal() {
 }
 
 export default func;
-func.tags = ["Release2Prod"];
+func.tags = ["Release4Prod"];
