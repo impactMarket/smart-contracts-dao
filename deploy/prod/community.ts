@@ -47,7 +47,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		communityAdminProxyResult.address
 	);
 
-	const communityResult = await deploy("Community", {
+	const communityResult = await deploy("CommunityImplementation", {
 		from: deployer.address,
 		args: [],
 		log: true,
