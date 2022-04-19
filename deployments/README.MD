@@ -1,8 +1,8 @@
-#Alfajores
+# Alfajores
 
 cUSD (custom): `0x861d24eb75de1498a21bc676c9e6b9deae587263`
 
-###Legacy contract addresses:
+### Legacy contract addresses:
 Impact market: `0x4791E7ec9b1668988A194feD971D9b02c4aDd5CB`
 
 Community factory: `0x203a45bcA65E047d2dd44bf70aDE0dBD0688e591`
