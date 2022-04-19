@@ -126,13 +126,10 @@ async function deployUBICommittee() {
 	console.log("Deploying UBICommittee contracts");
 
 	await new Promise((resolve) => setTimeout(resolve, 6000));
-	const implementationResult = await deploy(
-		"UBICommitteeImplementation",
-		{
-			from: deployer.address,
-			log: true,
-		}
-	);
+	const implementationResult = await deploy("UBICommitteeImplementation", {
+		from: deployer.address,
+		log: true,
+	});
 
 	await new Promise((resolve) => setTimeout(resolve, 6000));
 	const proxyResult = await deploy("UBICommitteeProxy", {
@@ -175,15 +172,12 @@ async function deployStaking() {
 	);
 
 	// await new Promise((resolve) => setTimeout(resolve, 6000));
-	const stakingImplementationResult = await deploy(
-		"StakingImplementation",
-		{
-			from: deployer.address,
-			args: [],
-			log: true,
-			// gasLimit: 13000000,
-		}
-	);
+	const stakingImplementationResult = await deploy("StakingImplementation", {
+		from: deployer.address,
+		args: [],
+		log: true,
+		// gasLimit: 13000000,
+	});
 
 	// await new Promise((resolve) => setTimeout(resolve, 6000));
 	const stakingProxyResult = await deploy("StakingProxy", {

@@ -562,11 +562,11 @@ contract PACTDelegate is
             return token.getPriorVotes(_voter, _beforeBlock);
         }
         return
-        add96(
-            token.getPriorVotes(_voter, _beforeBlock),
-            releaseToken.getPriorVotes(_voter, _beforeBlock),
-            "getPriorVotes overflow"
-        );
+            add96(
+                token.getPriorVotes(_voter, _beforeBlock),
+                releaseToken.getPriorVotes(_voter, _beforeBlock),
+                "getPriorVotes overflow"
+            );
     }
 
     /**

@@ -10,7 +10,7 @@ let deployer: SignerWithAddress;
 
 const governanceDelegatorAddress = "0x7De1E20fcbe8beBaaCb1973afB795dCD00Cd6745";
 const proxyAdminAddress = "0xc472dC6EceB2D5AB4407d9456511FB081077aefc";
-const SPACTTokenAddress =  "0xC472Cc65bCbbDBd705429D14f09e20526cd7B5E4";
+const SPACTTokenAddress = "0xC472Cc65bCbbDBd705429D14f09e20526cd7B5E4";
 
 let governanceNewImplementationAddress: string;
 
@@ -32,8 +32,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	await createUpgradeGovernanceProposal();
 };
 
-
-
 async function deployNewGovernance() {
 	console.log("Deploying new contract for governance");
 	await new Promise((resolve) => setTimeout(resolve, 6000));
@@ -54,15 +52,9 @@ async function createUpgradeGovernanceProposal() {
 	await createProposal(
 		GovernanceProxy,
 		deployer,
-		[
-			proxyAdminAddress,
-			governanceDelegatorAddress,
-		],
+		[proxyAdminAddress, governanceDelegatorAddress],
 		[0, 0],
-		[
-			"upgrade(address,address)",
-			"_setReleaseToken(address)"
-		],
+		["upgrade(address,address)", "_setReleaseToken(address)"],
 		[["address", "address"], ["address"]],
 		[
 			[governanceDelegatorAddress, governanceNewImplementationAddress],
