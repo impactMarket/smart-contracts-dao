@@ -519,7 +519,7 @@ contract CommunityAdminImplementation is
     function updateProxyImplementation(
         address _CommunityMiddleProxy,
         address _newCommunityImplementation
-    ) external override onlyOwner {
+    ) external override onlyOwnerOrUBICommittee {
         communityProxyAdmin.upgrade(
             TransparentUpgradeableProxy(payable(_CommunityMiddleProxy)),
             _newCommunityImplementation
