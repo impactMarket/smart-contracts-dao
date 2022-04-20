@@ -2,21 +2,17 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { deployments, ethers } from "hardhat";
-import { createProposal } from "../../test/utils/helpers";
+import { createProposal } from "../../../test/utils/helpers";
 import * as ethersTypes from "ethers";
 
 const { deploy } = deployments;
 let deployer: SignerWithAddress;
 
-const PACTTokenAddress = "0x571eB8374fD5960AE22f1cd11CCD7dD562796c51";
-const timelockAddress = "0x345C246b71979E5c45Cc10d75c60AA3834fc8637";
-const governanceDelegatorAddress = "0x7De1E20fcbe8beBaaCb1973afB795dCD00Cd6745";
-const proxyAdminAddress = "0xc472dC6EceB2D5AB4407d9456511FB081077aefc";
-const communityAdminProxyAddress = "0x1d6CcED6AcdbaE5cc05c744fEcD839005282E0e8";
-const donationMinerProxyAddress = "0xdEcAE5f8720fC4151b507bb4E5703Ef8533E5a9c";
+const timelockAddress = "0xcb0C15AdE117C812E4d96165472EbF83Bed231B0";
+const governanceDelegatorAddress = "0x5c27e2600a3eDEF53DE0Ec32F01efCF145419eDF";
+const proxyAdminAddress = "0x79f9ca5f1A01e1768b9C24AD37FF63A0199E3Fe5";
+const communityAdminProxyAddress = "0x1c33D75bcE52132c7a0e220c1C338B9db7cf3f3A";
 
-const stakingDonationRatio = 1000000000;
-const stakingCooldown = 1000;
 let committeeMember: string[] = [];
 
 let communityNewImplementationAddress: string;
@@ -24,9 +20,6 @@ let communityMiddleProxyAddress: string;
 let communityAdminNewImplementationAddress: string;
 let ambassadorsProxyAddress: string;
 let UBICommitteeProxyAddress: string;
-let donationMinerNewImplementationAddress: string;
-let stakingProxyAddress: string;
-let SPACTTokenAddress: string;
 
 let GovernanceProxy: ethersTypes.Contract;
 
@@ -43,13 +36,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		governanceDelegatorAddress
 	);
 
-	// await deployNewCommunity();
-	// await deployAmbassadors();
-	// await deployUBICommittee();
-	// await createUpgradeCommunityProposal();
-	await deployStaking();
-	await deployNewDonationMiner();
-	await createUpgradeDonationMinerProposal();
+	await deployNewCommunity();
+	await deployAmbassadors();
+	await deployUBICommittee();
+	await createUpgradeCommunityProposal();
 };
 
 async function deployNewCommunity() {
@@ -156,73 +146,6 @@ async function deployUBICommittee() {
 	UBICommitteeProxyAddress = proxyResult.address;
 }
 
-async function deployStaking() {
-	console.log("Deploying Staking contracts");
-
-	// await new Promise((resolve) => setTimeout(resolve, 6000));
-	const SPACTTokenResult = await deploy("SPACTToken", {
-		from: deployer.address,
-		args: [],
-		log: true,
-	});
-
-	const SPACTToken = await ethers.getContractAt(
-		"SPACTToken",
-		SPACTTokenResult.address
-	);
-
-	// await new Promise((resolve) => setTimeout(resolve, 6000));
-	const stakingImplementationResult = await deploy("StakingImplementation", {
-		from: deployer.address,
-		args: [],
-		log: true,
-		// gasLimit: 13000000,
-	});
-
-	// await new Promise((resolve) => setTimeout(resolve, 6000));
-	const stakingProxyResult = await deploy("StakingProxy", {
-		from: deployer.address,
-		args: [stakingImplementationResult.address, proxyAdminAddress],
-		log: true,
-		// gasLimit: 13000000,
-	});
-
-	const stakingContract = await ethers.getContractAt(
-		"StakingImplementation",
-		stakingProxyResult.address
-	);
-
-	// await new Promise((resolve) => setTimeout(resolve, 6000));
-	// await stakingContract.initialize(
-	// 	PACTTokenAddress,
-	// 	SPACTTokenResult.address,
-	// 	donationMinerProxyAddress,
-	// 	stakingCooldown
-	// );
-
-	// await new Promise((resolve) => setTimeout(resolve, 6000));
-	// await stakingContract.transferOwnership(timelockAddress);
-	//
-	// await new Promise((resolve) => setTimeout(resolve, 6000));
-	// await SPACTToken.transferOwnership(stakingContract.address);
-
-	stakingProxyAddress = stakingProxyResult.address;
-	SPACTTokenAddress = SPACTToken.address;
-}
-
-async function deployNewDonationMiner() {
-	console.log("Deploying new contract for donation miner");
-	await new Promise((resolve) => setTimeout(resolve, 6000));
-	donationMinerNewImplementationAddress = (
-		await deploy("DonationMinerImplementation", {
-			from: deployer.address,
-			args: [],
-			log: true,
-			// gasLimit: 13000000,
-		})
-	).address;
-}
-
 async function createUpgradeCommunityProposal() {
 	console.log("Creating new proposal for community");
 
@@ -264,32 +187,6 @@ async function createUpgradeCommunityProposal() {
 		]
 	);
 }
-async function createUpgradeDonationMinerProposal() {
-	console.log("Creating new proposal for donation miner");
-
-	await new Promise((resolve) => setTimeout(resolve, 6000));
-	await createProposal(
-		GovernanceProxy,
-		deployer,
-		[
-			proxyAdminAddress,
-			donationMinerProxyAddress,
-			donationMinerProxyAddress,
-		],
-		[0, 0, 0],
-		[
-			"upgrade(address,address)",
-			"updateStaking(address)",
-			"updateStakingDonationRatio(uint256)",
-		],
-		[["address", "address"], ["address"], ["uint256"]],
-		[
-			[donationMinerProxyAddress, donationMinerNewImplementationAddress],
-			[stakingProxyAddress],
-			[stakingDonationRatio],
-		]
-	);
-}
 
 export default func;
-func.tags = ["Release4"];
+func.tags = ["Release4Community"];

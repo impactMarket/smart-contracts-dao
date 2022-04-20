@@ -2,15 +2,15 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { deployments, ethers } from "hardhat";
-import { createProposal } from "../../test/utils/helpers";
+import { createProposal } from "../../../test/utils/helpers";
 import * as ethersTypes from "ethers";
 
 const { deploy } = deployments;
 let deployer: SignerWithAddress;
 
-const governanceDelegatorAddress = "0x7De1E20fcbe8beBaaCb1973afB795dCD00Cd6745";
-const proxyAdminAddress = "0xc472dC6EceB2D5AB4407d9456511FB081077aefc";
-const SPACTTokenAddress = "0xC472Cc65bCbbDBd705429D14f09e20526cd7B5E4";
+const governanceDelegatorAddress = "0x5c27e2600a3eDEF53DE0Ec32F01efCF145419eDF";
+const proxyAdminAddress = "0x79f9ca5f1A01e1768b9C24AD37FF63A0199E3Fe5";
+const SPACTTokenAddress = "0x6732B3e5643dEBfaB7d1570f313271dD9E24c58C";
 
 let governanceNewImplementationAddress: string;
 
