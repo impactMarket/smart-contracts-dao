@@ -428,6 +428,7 @@ describe("Community", () => {
 		});
 
 		it("Should transfer founds from communityAdmin to address if admin", async function () {
+			const initialBalance = await cUSD.balanceOf(adminAccount1.address);
 			expect(
 				await cUSD.balanceOf(communityAdminProxy.address)
 			).to.be.equal(0);
@@ -444,11 +445,12 @@ describe("Community", () => {
 				await cUSD.balanceOf(communityAdminProxy.address)
 			).to.be.equal(0);
 			expect(await cUSD.balanceOf(adminAccount1.address)).to.be.equal(
-				parseEther("100")
+				initialBalance.add(parseEther("100"))
 			);
 		});
 
 		it("Should not transfer founds from communityAdmin to address if not admin", async function () {
+			const initialBalance = await cUSD.balanceOf(adminAccount1.address);
 			expect(
 				await cUSD.balanceOf(communityAdminProxy.address)
 			).to.be.equal(0);
@@ -469,8 +471,8 @@ describe("Community", () => {
 			expect(
 				await cUSD.balanceOf(communityAdminProxy.address)
 			).to.be.equal(parseEther("100"));
-			expect(await cUSD.balanceOf(adminAccount2.address)).to.be.equal(
-				parseEther("0")
+			expect(await cUSD.balanceOf(adminAccount1.address)).to.be.equal(
+				initialBalance.add(parseEther("0"))
 			);
 		});
 
@@ -497,6 +499,7 @@ describe("Community", () => {
 		});
 
 		it("Should transfer founds from community to address if admin", async function () {
+			const initialBalance = await cUSD.balanceOf(adminAccount1.address);
 			expect(await cUSD.balanceOf(communityProxy.address)).to.be.equal(
 				parseEther("100")
 			);
@@ -508,7 +511,7 @@ describe("Community", () => {
 			);
 			expect(await cUSD.balanceOf(communityProxy.address)).to.be.equal(0);
 			expect(await cUSD.balanceOf(adminAccount1.address)).to.be.equal(
-				parseEther("100")
+				initialBalance.add(parseEther("100"))
 			);
 		});
 

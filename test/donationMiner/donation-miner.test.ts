@@ -1486,6 +1486,7 @@ describe("DonationMiner", () => {
 		});
 
 		it("Should transfer founds to address", async function () {
+			const initialBalance = await cUSD.balanceOf(owner.address);
 			expect(await cUSD.balanceOf(DonationMiner.address)).to.be.equal(0);
 			await cUSD.mint(DonationMiner.address, toEther("100"));
 			expect(await cUSD.balanceOf(DonationMiner.address)).to.be.equal(
@@ -1498,7 +1499,7 @@ describe("DonationMiner", () => {
 			);
 			expect(await cUSD.balanceOf(DonationMiner.address)).to.be.equal(0);
 			expect(await cUSD.balanceOf(owner.address)).to.be.equal(
-				toEther("100")
+				initialBalance.add(toEther("100"))
 			);
 		});
 
