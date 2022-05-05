@@ -183,6 +183,7 @@ describe("Treasury", () => {
 	});
 
 	it("Should transfer founds to address is owner", async function () {
+		const initialBalance = await cUSD.balanceOf(owner.address);
 		expect(await cUSD.balanceOf(Treasury.address)).to.be.equal(0);
 		await cUSD.mint(Treasury.address, toEther("100"));
 		expect(await cUSD.balanceOf(Treasury.address)).to.be.equal(
@@ -190,7 +191,9 @@ describe("Treasury", () => {
 		);
 		await Treasury.transfer(cUSD.address, owner.address, toEther("100"));
 		expect(await cUSD.balanceOf(Treasury.address)).to.be.equal(0);
-		expect(await cUSD.balanceOf(owner.address)).to.be.equal(toEther("100"));
+		expect(await cUSD.balanceOf(owner.address)).to.be.equal(
+			initialBalance.add(toEther("100"))
+		);
 	});
 
 	it("Should update communityAdmin if owner", async function () {
@@ -199,6 +202,7 @@ describe("Treasury", () => {
 	});
 
 	it("Should transfer founds to address is communityAdmin", async function () {
+		const initialBalance = await cUSD.balanceOf(owner.address);
 		await Treasury.updateCommunityAdmin(user1.address);
 
 		expect(await cUSD.balanceOf(Treasury.address)).to.be.equal(0);
@@ -212,7 +216,9 @@ describe("Treasury", () => {
 			toEther("100")
 		);
 		expect(await cUSD.balanceOf(Treasury.address)).to.be.equal(0);
-		expect(await cUSD.balanceOf(owner.address)).to.be.equal(toEther("100"));
+		expect(await cUSD.balanceOf(owner.address)).to.be.equal(
+			initialBalance.add(toEther("100"))
+		);
 	});
 
 	it("Should update implementation if owner", async function () {

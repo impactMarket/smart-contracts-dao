@@ -436,7 +436,10 @@ contract DonationMinerImplementation is
     {
         uint256 _donorValue = 0;
         uint256 _everyoneValue = 0;
-        for (uint256 i = rewardPeriodCount - againstPeriods; i <= rewardPeriodCount; i++) {
+        uint256 _startPeriod = rewardPeriodCount > againstPeriods
+            ? rewardPeriodCount - againstPeriods
+            : 0;
+        for (uint256 i = _startPeriod; i <= rewardPeriodCount; i++) {
             _everyoneValue += rewardPeriods[i].donationsAmount;
             _donorValue += rewardPeriods[i].donorAmounts[_donor];
         }

@@ -557,6 +557,18 @@ contract PACTDelegate is
         emit ReleaseTokenSet(address(_oldReleaseToken), address(_newReleaseToken));
     }
 
+    function getPriorVotes(address _voter, uint256 _beforeBlock) public view returns (uint96) {
+        if (address(releaseToken) == address(0)) {
+            return token.getPriorVotes(_voter, _beforeBlock);
+        }
+        return
+            add96(
+                token.getPriorVotes(_voter, _beforeBlock),
+                releaseToken.getPriorVotes(_voter, _beforeBlock),
+                "getPriorVotes overflow"
+            );
+    }
+
     /**
      * @notice Transfers an amount of an ERC20 from this contract to an address
      *
@@ -591,18 +603,6 @@ contract PACTDelegate is
             _chainId := chainid()
         }
         return _chainId;
-    }
-
-    function getPriorVotes(address _voter, uint256 _beforeBlock) internal view returns (uint96) {
-        if (address(releaseToken) == address(0)) {
-            return token.getPriorVotes(_voter, _beforeBlock);
-        }
-        return
-            add96(
-                token.getPriorVotes(_voter, _beforeBlock),
-                releaseToken.getPriorVotes(_voter, _beforeBlock),
-                "getPriorVotes overflow"
-            );
     }
 
     function add96(

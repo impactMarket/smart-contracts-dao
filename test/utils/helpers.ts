@@ -24,6 +24,20 @@ export function fromEther(value: number | string | BigNumber): string {
 	return formatEther(value.toString());
 }
 
+//E.g.
+// await createAndExecuteProposal(
+// 	governanceDelegator,
+// 	user1,
+// 	[user1],
+// 	[proxyAdmin.address, governanceDelegator.address],
+// 	[0, 0],
+// 	["upgrade(address,address)", "_setReleaseToken(address)"],
+// 	[["address", "address"], ["address"]],
+// 	[
+// 		[governanceDelegator.address, newGovernanceDelegate.address],
+// 		[ADDRESS_TEST],
+// 	]
+// );
 export async function createAndExecuteProposal(
 	governanceDelegator: ethersTypes.Contract,
 	proposer: SignerWithAddress,
@@ -35,19 +49,16 @@ export async function createAndExecuteProposal(
 	calldataValues: any[][],
 	description: string = ""
 ) {
-	const calldatas: string[] = [];
-	for (let i = 0; i < calldataTyeps.length; i++) {
-		calldatas.push(
-			ethers.utils.defaultAbiCoder.encode(
-				calldataTyeps[i],
-				calldataValues[i]
-			)
-		);
-	}
-
-	await governanceDelegator
-		.connect(proposer)
-		.propose(targets, values, signatures, calldatas, description);
+	await createProposal(
+		governanceDelegator,
+		proposer,
+		targets,
+		values,
+		signatures,
+		calldataTyeps,
+		calldataValues,
+		description
+	);
 
 	await advanceBlockNTimes(governanceParams.VOTING_DELAY);
 	for (let i = 0; i < voters.length; i++) {
@@ -60,4 +71,64 @@ export async function createAndExecuteProposal(
 	await advanceNSeconds(governanceParams.EXECUTION_DELAY);
 
 	await governanceDelegator.execute(1);
+}
+
+//E.g.
+// await createProposal(
+// 	governanceDelegator,
+// 	user1,
+// 	[proxyAdmin.address, governanceDelegator.address],
+// 	[0, 0],
+// 	["upgrade(address,address)", "_setReleaseToken(address)"],
+// 	[["address", "address"], ["address"]],
+// 	[
+// 		[governanceDelegator.address, newGovernanceDelegate.address],
+// 		[ADDRESS_TEST],
+// 	]
+// );
+export async function createProposal(
+	governanceDelegator: ethersTypes.Contract,
+	proposer: SignerWithAddress,
+	targets: string[],
+	values: any[],
+	signatures: string[],
+	calldataTyeps: string[][],
+	calldataValues: any[][],
+	description: string = ""
+) {
+	if (
+		targets.length != values.length ||
+		targets.length != signatures.length ||
+		targets.length != calldataTyeps.length ||
+		targets.length != calldataValues.length
+	) {
+		throw new Error("proposal function information arity mismatch");
+	}
+
+	const calldatas: string[] = [];
+	for (let i = 0; i < calldataTyeps.length; i++) {
+		if (calldataTyeps[i].length != calldataValues[i].length) {
+			throw new Error("proposal calldata information arity mismatch");
+		}
+
+		calldatas.push(
+			ethers.utils.defaultAbiCoder.encode(
+				calldataTyeps[i],
+				calldataValues[i]
+			)
+		);
+	}
+
+	// console.log("***************************************");
+	// console.log(proposer.address);
+	// console.log(targets);
+	// console.log(values);
+	// console.log(signatures);
+	// console.log(calldatas);
+	// console.log(description);
+	await governanceDelegator
+		.connect(proposer)
+		.propose(targets, values, signatures, calldatas, description);
+
+	return await governanceDelegator.proposalCount();
 }

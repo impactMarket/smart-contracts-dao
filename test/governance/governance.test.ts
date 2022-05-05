@@ -50,6 +50,8 @@ let timelock: ethersTypes.Contract;
 let proxyAdmin: ethersTypes.Contract;
 let treasuryProxy: ethersTypes.Contract;
 let ubiCommittee: ethersTypes.Contract;
+let communityMiddleProxy: ethersTypes.Contract;
+let communityAdminProxy: ethersTypes.Contract;
 
 const ADDRESS_TEST = "0x0000000000000000000000000000000123456789";
 const ADDRESS_ZERO = "0x0000000000000000000000000000000000000000";
@@ -143,6 +145,20 @@ async function deployGovernance() {
 		"UBICommitteeImplementation",
 		(
 			await deployments.get("UBICommitteeProxy")
+		).address
+	);
+
+	communityAdminProxy = await ethers.getContractAt(
+		"CommunityAdminImplementation",
+		(
+			await deployments.get("CommunityAdminProxy")
+		).address
+	);
+
+	communityMiddleProxy = await ethers.getContractAt(
+		"CommunityMiddleProxy",
+		(
+			await deployments.get("CommunityMiddleProxy")
 		).address
 	);
 
@@ -734,6 +750,54 @@ describe("Governance - with one token", function () {
 			.fulfilled;
 
 		expect(await ubiCommittee.members(user8.address)).to.be.equal(true);
+	});
+
+	it("should update communityAdmin & community to V2", async function () {
+		const communityImplementationAddress = (
+			await deployments.get("CommunityImplementation")
+		).address;
+		const communityMiddleProxyAddress = (
+			await deployments.get("CommunityMiddleProxy")
+		).address;
+		const communityAdminImplementationAddress = (
+			await deployments.get("CommunityAdminImplementation")
+		).address;
+
+		await communityAdminProxy.transferOwnership(timelock.address);
+
+		await createAndExecuteProposal(
+			governanceDelegator,
+			user4,
+			[user4],
+			[
+				proxyAdmin.address,
+				communityAdminProxy.address,
+				communityAdminProxy.address,
+			],
+			[0, 0, 0],
+			[
+				"upgrade(address,address)",
+				"updateCommunityMiddleProxy(address)",
+				"updateCommunityImplementation(address)",
+			],
+			[["address", "address"], ["address"], ["address"]],
+			[
+				[
+					communityAdminProxy.address,
+					communityAdminImplementationAddress,
+				],
+				[communityMiddleProxyAddress],
+				[communityImplementationAddress],
+			]
+		);
+
+		expect(await communityAdminProxy.communityMiddleProxy()).to.be.equal(
+			communityMiddleProxyAddress
+		);
+
+		expect(await communityAdminProxy.communityImplementation()).to.be.equal(
+			communityImplementationAddress
+		);
 	});
 });
 
