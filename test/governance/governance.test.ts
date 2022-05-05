@@ -752,7 +752,7 @@ describe("Governance - with one token", function () {
 		expect(await ubiCommittee.members(user8.address)).to.be.equal(true);
 	});
 
-	it.only("should update communityAdmin & community to V2", async function () {
+	it("should update communityAdmin & community to V2", async function () {
 		const communityImplementationAddress = (
 			await deployments.get("CommunityImplementation")
 		).address;
@@ -826,7 +826,7 @@ describe("Governance - with two tokens", function () {
 		await stakingToken.connect(user6).delegate(user6.address);
 	});
 
-	it.only("should upgrade and set release token", async function () {
+	it("should upgrade and set release token", async function () {
 		const governanceDelegateFactory = await ethers.getContractFactory(
 			"PACTDelegate"
 		);
