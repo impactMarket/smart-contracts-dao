@@ -19,11 +19,6 @@ const stakingDonationRatio = 1000000000;
 const stakingCooldown = 1000;
 let committeeMember: string[] = [];
 
-let communityNewImplementationAddress: string;
-let communityMiddleProxyAddress: string;
-let communityAdminNewImplementationAddress: string;
-let ambassadorsProxyAddress: string;
-let UBICommitteeProxyAddress: string;
 let donationMinerNewImplementationAddress: string;
 let stakingProxyAddress: string;
 let SPACTTokenAddress: string;
