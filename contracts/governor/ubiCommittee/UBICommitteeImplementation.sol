@@ -167,19 +167,6 @@ contract UBICommitteeImplementation is
         require(_signatures.length != 0, "PACT::propose: must provide actions");
         require(_signatures.length <= PROPOSAL_MAX_OPERATIONS, "PACT::propose: too many actions");
 
-        uint256 _latestProposalId = latestProposalIds[msg.sender];
-        if (_latestProposalId != 0) {
-            ProposalState proposersLatestProposalState = state(_latestProposalId);
-            require(
-                proposersLatestProposalState != ProposalState.Active,
-                "PACT::propose: one live proposal per proposer, found an already active proposal"
-            );
-            require(
-                proposersLatestProposalState != ProposalState.Pending,
-                "PACT::propose: one live proposal per proposer, found an already pending proposal"
-            );
-        }
-
         uint256 _endBlock = add256(block.number, MAX_VOTING_PERIOD); // (518400) 30 days
 
         Proposal memory _newProposal = Proposal({
