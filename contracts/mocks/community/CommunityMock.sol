@@ -486,31 +486,36 @@ contract CommunityImplementationMock is
     }
 
     /**
-     * @notice Adds a new beneficiary
+ * @notice Adds new beneficiaries
      *
-     * @param _beneficiaryAddress address of the beneficiary to be added
+     * @param _beneficiaryAddresses addresses of the beneficiaries to be added
      */
-    function addBeneficiary(address _beneficiaryAddress)
-        external
-        override
-        onlyManagers
-        nonReentrant
+    function addBeneficiaries(address[] memory _beneficiaryAddresses)
+    external
+    override
+    onlyManagers
+    nonReentrant
     {
-        Beneficiary storage _beneficiary = beneficiaries[_beneficiaryAddress];
-        require(
-            _beneficiary.state == BeneficiaryState.NONE,
-            "Community::addBeneficiary: Beneficiary exists"
-        );
-        _changeBeneficiaryState(_beneficiary, BeneficiaryState.Valid);
-        // solhint-disable-next-line not-rely-on-time
-        _beneficiary.lastClaim = block.number;
+        require(!locked, "LOCKED");
 
-        beneficiaryList.add(_beneficiaryAddress);
+        for(uint256 _index = 0; _index < _beneficiaryAddresses.length; _index++) {
+            Beneficiary storage _beneficiary = beneficiaries[_beneficiaryAddresses[_index]];
 
-        // send default amount when adding a new beneficiary
-        cUSD().safeTransfer(_beneficiaryAddress, DEFAULT_AMOUNT);
+            if (_beneficiary.state != BeneficiaryState.NONE) {
+                continue;
+            }
 
-        emit BeneficiaryAdded(msg.sender, _beneficiaryAddress);
+            _changeBeneficiaryState(_beneficiary, BeneficiaryState.Valid);
+            // solhint-disable-next-line not-rely-on-time
+            _beneficiary.lastClaim = block.number;
+
+            beneficiaryList.add(_beneficiaryAddresses[_index]);
+
+            // send default amount when adding a new beneficiary
+            cUSD().safeTransfer(_beneficiaryAddresses[_index], DEFAULT_AMOUNT);
+
+            emit BeneficiaryAdded(msg.sender, _beneficiaryAddresses[_index]);
+        }
     }
 
     /**

@@ -16,6 +16,7 @@ const communityAdminProxyAddress = "0x1c33D75bcE52132c7a0e220c1C338B9db7cf3f3A";
 const donationMinerProxyAddress = "0x09Cdc8f50994F63103bc165B139631A6ad18EF49";
 
 const stakingDonationRatio = 1000000000;
+const communityDonationRatio = 2;
 const stakingCooldown = 1000;
 let committeeMember: string[] = [];
 
@@ -121,18 +122,21 @@ async function createUpgradeDonationMinerProposal() {
 			proxyAdminAddress,
 			donationMinerProxyAddress,
 			donationMinerProxyAddress,
+			donationMinerProxyAddress,
 		],
-		[0, 0, 0],
+		[0, 0, 0, 0],
 		[
 			"upgrade(address,address)",
 			"updateStaking(address)",
 			"updateStakingDonationRatio(uint256)",
+			"updateCommunityDonationRatio(uint256)",
 		],
-		[["address", "address"], ["address"], ["uint256"]],
+		[["address", "address"], ["address"], ["uint256"], ["uint256"]],
 		[
 			[donationMinerProxyAddress, donationMinerNewImplementationAddress],
 			[stakingProxyAddress],
 			[stakingDonationRatio],
+			[communityDonationRatio],
 		]
 	);
 }

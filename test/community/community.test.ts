@@ -91,6 +91,7 @@ describe("Community", () => {
 	const communityMinTranche = parseEther("100");
 	const communityMaxTranche = parseEther("5000");
 	const managerRole = keccak256(ethers.utils.toUtf8Bytes("MANAGER_ROLE"));
+	const TREASURY_SAFETY_FACTOR = 10;
 
 	async function init() {
 		const accounts: SignerWithAddress[] = await ethers.getSigners();
@@ -593,13 +594,13 @@ describe("Community", () => {
 
 			await communityProxy
 				.connect(communityManagerA)
-				.addBeneficiary(beneficiaryA.address);
+				.addBeneficiaries([beneficiaryA.address]);
 			await communityProxy
 				.connect(communityManagerA)
 				.lockBeneficiary(beneficiaryA.address);
 			await communityProxy
 				.connect(communityManagerA)
-				.addBeneficiary(beneficiaryB.address);
+				.addBeneficiaries([beneficiaryB.address]);
 
 			await expect(
 				communityAdminProxy.updateProxyImplementation(
@@ -613,7 +614,7 @@ describe("Community", () => {
 
 			await communityProxy
 				.connect(communityManagerA)
-				.addBeneficiary(beneficiaryC.address);
+				.addBeneficiaries([beneficiaryC.address]);
 
 			expect(await communityProxy.owner()).to.be.equal(
 				communityAdminProxy.address
@@ -679,13 +680,13 @@ describe("Community", () => {
 
 			await communityProxy
 				.connect(communityManagerA)
-				.addBeneficiary(beneficiaryA.address);
+				.addBeneficiaries([beneficiaryA.address]);
 			await communityProxy
 				.connect(communityManagerA)
 				.lockBeneficiary(beneficiaryA.address);
 			await communityProxy
 				.connect(communityManagerA)
-				.addBeneficiary(beneficiaryB.address);
+				.addBeneficiaries([beneficiaryB.address]);
 
 			await expect(
 				communityAdminProxy.updateCommunityImplementation(
@@ -700,7 +701,7 @@ describe("Community", () => {
 
 			communityProxy
 				.connect(communityManagerA)
-				.addBeneficiary(beneficiaryC.address);
+				.addBeneficiaries([beneficiaryC.address]);
 
 			await communityProxy.setParams();
 
@@ -785,13 +786,13 @@ describe("Community", () => {
 		it("Should have update all communities by changing communityAdmin.communityTemplate #1", async function () {
 			await communityProxy
 				.connect(communityManagerA)
-				.addBeneficiary(beneficiaryA.address);
+				.addBeneficiaries([beneficiaryA.address]);
 			await communityProxy
 				.connect(communityManagerA)
 				.lockBeneficiary(beneficiaryA.address);
 			await communityProxy
 				.connect(communityManagerA)
-				.addBeneficiary(beneficiaryB.address);
+				.addBeneficiaries([beneficiaryB.address]);
 
 			let communityProxy2 = await ethers.getContractAt(
 				"CommunityImplementation",
@@ -799,7 +800,7 @@ describe("Community", () => {
 			);
 			await communityProxy2
 				.connect(communityManagerA)
-				.addBeneficiary(beneficiaryB.address);
+				.addBeneficiaries([beneficiaryB.address]);
 
 			const newCommunityImplementation = await (
 				await ethers.getContractFactory("CommunityImplementationMock")
@@ -877,13 +878,13 @@ describe("Community", () => {
 		it("Should revert implementation for only one community", async function () {
 			await communityProxy
 				.connect(communityManagerA)
-				.addBeneficiary(beneficiaryA.address);
+				.addBeneficiaries([beneficiaryA.address]);
 			await communityProxy
 				.connect(communityManagerA)
 				.lockBeneficiary(beneficiaryA.address);
 			await communityProxy
 				.connect(communityManagerA)
-				.addBeneficiary(beneficiaryB.address);
+				.addBeneficiaries([beneficiaryB.address]);
 
 			let communityProxy2 = await ethers.getContractAt(
 				"CommunityImplementation",
@@ -891,7 +892,7 @@ describe("Community", () => {
 			);
 			await communityProxy2
 				.connect(communityManagerA)
-				.addBeneficiary(beneficiaryB.address);
+				.addBeneficiaries([beneficiaryB.address]);
 
 			const newCommunityImplementation = await (
 				await ethers.getContractFactory("CommunityImplementationMock")
@@ -1017,10 +1018,65 @@ describe("Community", () => {
 			).state.should.be.equal(BeneficiaryState.NONE);
 			await communityProxy
 				.connect(communityManagerA)
-				.addBeneficiary(beneficiaryA.address);
+				.addBeneficiaries([beneficiaryA.address]);
 			(
 				await communityProxy.beneficiaries(beneficiaryA.address)
 			).state.should.be.equal(BeneficiaryState.Valid);
+		});
+
+		it("should add beneficiaries to community #1", async () => {
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.NONE);
+			(
+				await communityProxy.beneficiaries(beneficiaryB.address)
+			).state.should.be.equal(BeneficiaryState.NONE);
+
+			await communityProxy
+				.connect(communityManagerA)
+				.addBeneficiaries([beneficiaryA.address, beneficiaryB.address]);
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.Valid);
+			(
+				await communityProxy.beneficiaries(beneficiaryB.address)
+			).state.should.be.equal(BeneficiaryState.Valid);
+
+			(
+				await communityProxy.beneficiaries(beneficiaryC.address)
+			).state.should.be.equal(BeneficiaryState.NONE);
+			await communityProxy
+				.connect(communityManagerA)
+				.addBeneficiaries([
+					beneficiaryA.address,
+					beneficiaryB.address,
+					beneficiaryC.address,
+				]);
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.Valid);
+			(
+				await communityProxy.beneficiaries(beneficiaryB.address)
+			).state.should.be.equal(BeneficiaryState.Valid);
+			(
+				await communityProxy.beneficiaries(beneficiaryC.address)
+			).state.should.be.equal(BeneficiaryState.Valid);
+		});
+
+		xit("should add beneficiaries to community #2", async () => {
+			const newBeneficiariesNumber = 89;
+			const newBeneficiaries = [];
+
+			for (let i = 1; i <= newBeneficiariesNumber; i++) {
+				newBeneficiaries.push(ethers.Wallet.createRandom().address);
+			}
+			(await communityProxy.validBeneficiaryCount()).should.be.equal(0);
+			await communityProxy
+				.connect(communityManagerA)
+				.addBeneficiaries(newBeneficiaries);
+			(await communityProxy.validBeneficiaryCount()).should.be.equal(
+				newBeneficiariesNumber
+			);
 		});
 
 		it("should give beneficiary 5 cents when adding to community", async () => {
@@ -1029,7 +1085,7 @@ describe("Community", () => {
 				.should.be.equal("0");
 			await communityProxy
 				.connect(communityManagerA)
-				.addBeneficiary(beneficiaryA.address);
+				.addBeneficiaries([beneficiaryA.address]);
 			(await cUSD.balanceOf(beneficiaryA.address))
 				.toString()
 				.should.be.equal(fiveCents.toString());
@@ -1041,7 +1097,7 @@ describe("Community", () => {
 			).state.should.be.equal(BeneficiaryState.NONE);
 			await communityProxy
 				.connect(communityManagerA)
-				.addBeneficiary(beneficiaryA.address);
+				.addBeneficiaries([beneficiaryA.address]);
 			(
 				await communityProxy.beneficiaries(beneficiaryA.address)
 			).state.should.be.equal(BeneficiaryState.Valid);
@@ -1070,7 +1126,7 @@ describe("Community", () => {
 			).state.should.be.equal(BeneficiaryState.NONE);
 			await communityProxy
 				.connect(communityManagerA)
-				.addBeneficiary(beneficiaryA.address);
+				.addBeneficiaries([beneficiaryA.address]);
 			(
 				await communityProxy.beneficiaries(beneficiaryA.address)
 			).state.should.be.equal(BeneficiaryState.Valid);
@@ -1094,7 +1150,7 @@ describe("Community", () => {
 			).state.should.be.equal(BeneficiaryState.NONE);
 			await communityProxy
 				.connect(communityManagerA)
-				.addBeneficiary(beneficiaryA.address);
+				.addBeneficiaries([beneficiaryA.address]);
 			(
 				await communityProxy.beneficiaries(beneficiaryA.address)
 			).state.should.be.equal(BeneficiaryState.Valid);
@@ -1111,7 +1167,7 @@ describe("Community", () => {
 			).state.should.be.equal(BeneficiaryState.NONE);
 			await communityProxy
 				.connect(communityManagerA)
-				.addBeneficiary(beneficiaryA.address);
+				.addBeneficiaries([beneficiaryA.address]);
 			(
 				await communityProxy.beneficiaries(beneficiaryA.address)
 			).state.should.be.equal(BeneficiaryState.Valid);
@@ -1138,7 +1194,7 @@ describe("Community", () => {
 
 			await communityProxy
 				.connect(communityManagerA)
-				.addBeneficiary(beneficiaryA.address);
+				.addBeneficiaries([beneficiaryA.address]);
 		});
 
 		it("should return correct lastInterval values", async () => {
@@ -1272,6 +1328,35 @@ describe("Community", () => {
 			);
 		});
 
+		it("should claim maxClaim", async () => {
+			const baseInterval = (
+				await communityProxy.baseInterval()
+			).toNumber();
+			const incrementInterval = (
+				await communityProxy.incrementInterval()
+			).toNumber();
+			const claimAmount = await communityProxy.claimAmount();
+			const maxClaimAmount = await communityProxy.maxClaim();
+			let maxClaimsPerUser = maxClaimAmount.div(claimAmount).toNumber();
+			if (claimAmount.mul(maxClaimsPerUser) < maxClaimAmount) {
+				maxClaimsPerUser++;
+			}
+			for (let index = 0; index < maxClaimsPerUser; index++) {
+				await advanceTimeAndBlockNTimes(
+					baseInterval + incrementInterval * index + 5
+				);
+				await communityProxy.connect(beneficiaryA).claim();
+			}
+
+			const beneficiaryADetails = await communityProxy.beneficiaries(
+				beneficiaryA.address
+			);
+			expect(beneficiaryADetails.claims).to.be.equal(maxClaimsPerUser);
+			expect(beneficiaryADetails.claimedAmount).to.be.equal(
+				maxClaimAmount
+			);
+		});
+
 		it("should not claim after max claim", async () => {
 			const baseInterval = (
 				await communityProxy.baseInterval()
@@ -1281,9 +1366,11 @@ describe("Community", () => {
 			).toNumber();
 			const claimAmount = await communityProxy.claimAmount();
 			const maxClaimAmount = await communityProxy.maxClaim();
-			await communityProxy.connect(beneficiaryA).claim();
-			const maxClaimsPerUser = maxClaimAmount.div(claimAmount).toNumber();
-			for (let index = 0; index < maxClaimsPerUser - 1; index++) {
+			let maxClaimsPerUser = maxClaimAmount.div(claimAmount).toNumber();
+			if (claimAmount.mul(maxClaimsPerUser) < maxClaimAmount) {
+				maxClaimsPerUser++;
+			}
+			for (let index = 0; index < maxClaimsPerUser; index++) {
 				await advanceTimeAndBlockNTimes(
 					baseInterval + incrementInterval * index + 5
 				);
@@ -1294,7 +1381,9 @@ describe("Community", () => {
 			);
 			await expect(
 				communityProxy.connect(beneficiaryA).claim()
-			).to.be.rejectedWith("MAX_CLAIM");
+			).to.be.rejectedWith(
+				"Community::claim: Already claimed everything"
+			);
 		});
 	});
 
@@ -1344,11 +1433,11 @@ describe("Community", () => {
 		it("should call beneficiaryJoinFromMigrated", async () => {
 			await communityProxy
 				.connect(communityManagerA)
-				.addBeneficiary(beneficiaryA.address);
+				.addBeneficiaries([beneficiaryA.address]);
 
 			await communityProxy
 				.connect(communityManagerA)
-				.addBeneficiary(beneficiaryB.address);
+				.addBeneficiaries([beneficiaryB.address]);
 
 			const newTx = await communityAdminProxy.migrateCommunity(
 				[communityManagerA.address],
@@ -1434,6 +1523,10 @@ describe("Community", () => {
 
 			(await communityProxy.incrementInterval()).should.be.equal(
 				threeMinutesInBlocks.toString()
+			);
+
+			(await communityProxy.maxClaim()).should.be.equal(
+				maxClaimTen.toString()
 			);
 		});
 
@@ -1618,7 +1711,7 @@ describe("Community", () => {
 		): Promise<void> => {
 			const tx = await community
 				.connect(communityManagerAddress)
-				.addBeneficiary(beneficiaryAddress.address);
+				.addBeneficiaries([beneficiaryAddress.address]);
 			const block = await provider.getBlock(tx.blockNumber); // block is null; the regular provider apparently doesn't know about this block yet.
 
 			(
@@ -1713,22 +1806,34 @@ describe("Community", () => {
 			// beneficiary C claims it all
 			const claimAmount = await communityProxyA.claimAmount();
 			const maxClaimAmount = await communityProxyA.maxClaim();
-			const maxClaimsPerUser = maxClaimAmount.div(claimAmount).toNumber();
-			for (let index = 0; index < maxClaimsPerUser; index++) {
+			let maxClaimsPerUser = maxClaimAmount.div(claimAmount).toNumber();
+			if (claimAmount.mul(maxClaimsPerUser) < maxClaimAmount) {
+				maxClaimsPerUser++;
+			}
+			for (let index = 1; index < maxClaimsPerUser; index++) {
 				await waitClaimTime(communityProxyA, beneficiaryC);
 				await beneficiaryClaim(communityProxyA, beneficiaryC);
 			}
+			await waitClaimTime(communityProxyA, beneficiaryC);
+			await expect(communityProxyA.connect(beneficiaryC).claim()).to.be
+				.fulfilled;
+
 			// beneficiary B can still claim
 			await waitClaimTime(communityProxyA, beneficiaryB);
 			await beneficiaryClaim(communityProxyA, beneficiaryB);
 			// beneficiary A can still claim
 			await waitClaimTime(communityProxyA, beneficiaryA);
 			await beneficiaryClaim(communityProxyA, beneficiaryA);
+			// beneficiary A can still claim
+			await waitClaimTime(communityProxyA, beneficiaryA);
+			await beneficiaryClaim(communityProxyA, beneficiaryA);
 			// beneficiary C can't claim anymore
 			await waitClaimTime(communityProxyA, beneficiaryC);
 			await expect(
-				beneficiaryClaim(communityProxyA, beneficiaryC)
-			).to.be.rejectedWith("MAX_CLAIM");
+				communityProxyA.connect(beneficiaryC).claim()
+			).to.be.rejectedWith(
+				"Community::claim: Already claimed everything"
+			);
 			const currentCommunityBalance = await cUSD.balanceOf(
 				communityProxyA.address
 			);
@@ -1736,7 +1841,7 @@ describe("Community", () => {
 			previousCommunityBalance
 				.sub(currentCommunityBalance)
 				.should.be.equal(
-					claimAmount.mul(5 + maxClaimsPerUser).add(fiveCents.mul(4))
+					claimAmount.mul(6).add(maxClaimAmount).add(fiveCents.mul(4))
 				);
 		});
 
@@ -1781,23 +1886,35 @@ describe("Community", () => {
 			// beneficiary B claims it all
 			const claimAmountA = await communityProxyA.claimAmount();
 			const maxClaimAmountA = await communityProxyA.maxClaim();
-			const maxClaimsPerUserA = maxClaimAmountA
+			let maxClaimsPerUserA = maxClaimAmountA
 				.div(claimAmountA)
 				.toNumber();
-			for (let index = 0; index < maxClaimsPerUserA; index++) {
+			if (claimAmountA.mul(maxClaimsPerUserA) < maxClaimAmountA) {
+				maxClaimsPerUserA++;
+			}
+			for (let index = 1; index < maxClaimsPerUserA; index++) {
 				await waitClaimTime(communityProxyA, beneficiaryB);
 				await beneficiaryClaim(communityProxyA, beneficiaryB);
 			}
+			await waitClaimTime(communityProxyA, beneficiaryB);
+			await expect(communityProxyA.connect(beneficiaryB).claim()).to.be
+				.fulfilled;
 			// beneficiary C claims it all
 			const claimAmountB = await communityProxyB.claimAmount();
 			const maxClaimAmountB = await communityProxyB.maxClaim();
-			const maxClaimsPerUserB = maxClaimAmountB
+			let maxClaimsPerUserB = maxClaimAmountB
 				.div(claimAmountB)
 				.toNumber();
-			for (let index = 0; index < maxClaimsPerUserB; index++) {
+			if (claimAmountB.mul(maxClaimsPerUserB) < maxClaimAmountB) {
+				maxClaimsPerUserB++;
+			}
+			for (let index = 1; index < maxClaimsPerUserB; index++) {
 				await waitClaimTime(communityProxyB, beneficiaryC);
 				await beneficiaryClaim(communityProxyB, beneficiaryC);
 			}
+			await waitClaimTime(communityProxyB, beneficiaryC);
+			await expect(communityProxyB.connect(beneficiaryC).claim()).to.be
+				.fulfilled;
 			// beneficiary D claims three times
 			await waitClaimTime(communityProxyB, beneficiaryD);
 			await beneficiaryClaim(communityProxyB, beneficiaryD);
@@ -1811,13 +1928,17 @@ describe("Community", () => {
 			// beneficiary C can't claim anymore
 			await waitClaimTime(communityProxyB, beneficiaryC);
 			await expect(
-				beneficiaryClaim(communityProxyB, beneficiaryC)
-			).to.be.rejectedWith("MAX_CLAIM");
+				communityProxyB.connect(beneficiaryC).claim()
+			).to.be.rejectedWith(
+				"Community::claim: Already claimed everything"
+			);
 			// beneficiary B can't claim anymore
 			await waitClaimTime(communityProxyB, beneficiaryC);
 			await expect(
-				beneficiaryClaim(communityProxyB, beneficiaryC)
-			).to.be.rejectedWith("MAX_CLAIM");
+				communityProxyB.connect(beneficiaryC).claim()
+			).to.be.rejectedWith(
+				"Community::claim: Already claimed everything"
+			);
 			// beneficiary D can still claim
 			await waitClaimTime(communityProxyB, beneficiaryD);
 			await beneficiaryClaim(communityProxyB, beneficiaryD);
@@ -1829,7 +1950,8 @@ describe("Community", () => {
 				.sub(currentCommunityBalanceA)
 				.should.be.equal(
 					claimAmountA
-						.mul(3 + maxClaimsPerUserA)
+						.mul(3)
+						.add(maxClaimAmountA)
 						.add(fiveCents.mul(2))
 				);
 			const currentCommunityBalanceB = await cUSD.balanceOf(
@@ -1839,7 +1961,8 @@ describe("Community", () => {
 				.sub(currentCommunityBalanceB)
 				.should.be.equal(
 					claimAmountB
-						.mul(4 + maxClaimsPerUserB)
+						.mul(4)
+						.add(maxClaimAmountB)
 						.add(fiveCents.mul(2))
 				);
 		});
@@ -1862,7 +1985,7 @@ describe("Community", () => {
 		it("should get funds if manager", async () => {
 			await communityProxy
 				.connect(communityManagerA)
-				.addBeneficiary(beneficiaryA.address);
+				.addBeneficiaries([beneficiaryA.address]);
 
 			await communityProxy.connect(beneficiaryA).claim();
 
@@ -1983,7 +2106,7 @@ describe("Community", () => {
 
 			await communityProxy
 				.connect(communityManagerA)
-				.addBeneficiary(beneficiaryA.address);
+				.addBeneficiaries([beneficiaryA.address]);
 
 			communityProxy.connect(beneficiaryA).claim();
 
@@ -2007,7 +2130,7 @@ describe("Community", () => {
 
 			await communityProxy
 				.connect(communityManagerA)
-				.addBeneficiary(beneficiaryA.address);
+				.addBeneficiaries([beneficiaryA.address]);
 
 			communityProxy.connect(beneficiaryA).claim();
 
@@ -2050,7 +2173,7 @@ describe("Community", () => {
 
 			await communityProxy
 				.connect(communityManagerA)
-				.addBeneficiary(beneficiaryA.address);
+				.addBeneficiaries([beneficiaryA.address]);
 
 			communityProxy.connect(beneficiaryA).claim();
 
@@ -2104,17 +2227,24 @@ describe("Community", () => {
 
 			await communityProxy
 				.connect(communityManagerA)
-				.addBeneficiary(beneficiaryA.address);
+				.addBeneficiaries([beneficiaryA.address]);
 
 			communityProxy.connect(beneficiaryA).claim();
 
+			const communityBalance = await cUSD.balanceOf(
+				communityProxy.address
+			);
+			const treasurySafetyLimit = (
+				await cUSD.balanceOf(treasuryProxy.address)
+			).div(TREASURY_SAFETY_FACTOR);
+
 			await expect(
 				communityProxy.connect(communityManagerA).requestFunds()
-			).to.be.rejectedWith(
-				"CommunityAdmin::fundCommunity: Not enough funds"
-			);
+			).to.be.fulfilled;
 
-			expect(await communityProxy.lastFundRequest()).to.be.equal(0);
+			expect(await cUSD.balanceOf(communityProxy.address)).to.be.equal(
+				communityBalance.add(treasurySafetyLimit)
+			);
 		});
 
 		it("should donate directly in the community", async () => {
@@ -2194,7 +2324,7 @@ describe("Community", () => {
 
 			await communityProxy
 				.connect(communityManagerA)
-				.addBeneficiary(beneficiaryA.address);
+				.addBeneficiaries([beneficiaryA.address]);
 
 			await cUSD.mint(adminAccount1.address, user1Donation);
 			await cUSD.approve(communityProxy.address, user1Donation);
@@ -2475,7 +2605,7 @@ describe("Community", () => {
 			await migrateCommunity();
 			await newCommunityProxy
 				.connect(communityManagerA)
-				.addBeneficiary(beneficiaryB.address);
+				.addBeneficiaries([beneficiaryB.address]);
 			await legacyCommunityProxy.connect(beneficiaryA).claim();
 
 			await expect(
@@ -2495,7 +2625,7 @@ describe("Community", () => {
 
 			await newCommunityProxy
 				.connect(communityManagerA)
-				.addBeneficiary(beneficiaryC.address);
+				.addBeneficiaries([beneficiaryC.address]);
 
 			expect(await newCommunityProxy.beneficiaryListAt(0)).to.be.equal(
 				beneficiaryB.address

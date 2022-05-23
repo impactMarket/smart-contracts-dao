@@ -2,6 +2,7 @@ import { task } from "hardhat/config";
 import "solidity-coverage";
 import "hardhat-docgen";
 import "@nomiclabs/hardhat-waffle";
+import "@nomiclabs/hardhat-waffle";
 import "hardhat-deploy";
 import "@nomiclabs/hardhat-ethers";
 

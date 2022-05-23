@@ -61,6 +61,7 @@ interface IDonationMiner {
     function decayNumerator() external view returns (uint256);
     function decayDenominator() external view returns (uint256);
     function stakingDonationRatio() external view returns (uint256);
+    function communityDonationRatio() external view returns (uint256);
     function rewardPeriodCount() external view returns (uint256);
     function donationCount() external view returns (uint256);
     function rewardPeriods(uint256 _period) external view returns (
@@ -100,6 +101,7 @@ interface IDonationMiner {
     ) external;
     function updateClaimDelay(uint256 _newClaimDelay) external;
     function updateStakingDonationRatio(uint256 _newStakingDonationRatio) external;
+    function updateCommunityDonationRatio(uint256 _newCommunityDonationRatio) external;
     function updateAgainstPeriods(uint256 _newAgainstPeriods) external;
     function updateTreasury(ITreasury _newTreasury) external;
     function updateStaking(IStaking _newStaking) external;

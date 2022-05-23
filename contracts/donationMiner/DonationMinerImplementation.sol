@@ -18,8 +18,6 @@ contract DonationMinerImplementation is
 {
     using SafeERC20 for IERC20;
 
-    uint256 private constant COMMUNITY_DONATION_RATIO = 2;
-
     /**
      * @notice Triggered when a donation has been added
      *
@@ -122,6 +120,17 @@ contract DonationMinerImplementation is
     event StakingDonationRatioUpdated(
         uint256 oldStakingDonationRatio,
         uint256 newStakingDonationRatio
+    );
+
+    /**
+     * @notice Triggered when the communityDonationRatio value has been updated
+     *
+     * @param oldCommunityDonationRatio            Old communityDonationRatio value
+     * @param newCommunityDonationRatio            New communityDonationRatio value
+     */
+    event CommunityDonationRatioUpdated(
+        uint256 oldCommunityDonationRatio,
+        uint256 newCommunityDonationRatio
     );
 
     /**
@@ -329,6 +338,22 @@ contract DonationMinerImplementation is
         stakingDonationRatio = _newStakingDonationRatio;
 
         emit StakingDonationRatioUpdated(_oldStakingDonationRatio, _newStakingDonationRatio);
+    }
+
+    /**
+     * @notice Updates communityDonationRatio value
+     *
+     * @param _newCommunityDonationRatio    Ratio between 1USD donated into the treasury vs 1USD donated to a community
+     */
+    function updateCommunityDonationRatio(uint256 _newCommunityDonationRatio)
+        external
+        override
+        onlyOwner
+    {
+        uint256 _oldCommunityDonationRatio = communityDonationRatio;
+        communityDonationRatio = _newCommunityDonationRatio;
+
+        emit CommunityDonationRatioUpdated(_oldCommunityDonationRatio, _newCommunityDonationRatio);
     }
 
     /**
@@ -723,7 +748,7 @@ contract DonationMinerImplementation is
                 ? _initialAmount
                 : treasury.getConvertedAmount(address(_token), _initialAmount);
         } else {
-            _donation.amount = _initialAmount / COMMUNITY_DONATION_RATIO;
+            _donation.amount = _initialAmount / communityDonationRatio;
         }
 
         updateRewardPeriodAmounts(rewardPeriodCount, _delegateAddress, _donation.amount);
