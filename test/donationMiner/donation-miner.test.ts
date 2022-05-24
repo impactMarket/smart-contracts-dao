@@ -1500,6 +1500,51 @@ describe("DonationMiner", () => {
 			);
 		});
 
+		it("Should not transfer founds if not owner", async function () {
+			const initialBalance = await cUSD.balanceOf(user1.address);
+			expect(await cUSD.balanceOf(DonationMiner.address)).to.be.equal(0);
+			await cUSD.mint(DonationMiner.address, toEther("100"));
+			expect(await cUSD.balanceOf(DonationMiner.address)).to.be.equal(
+				toEther("100")
+			);
+			await expect(
+				DonationMiner.connect(user1).transfer(
+					cUSD.address,
+					user1.address,
+					toEther("100")
+				)
+			).to.be.rejectedWith("Ownable: caller is not the owner");
+			expect(await cUSD.balanceOf(DonationMiner.address)).to.be.equal(
+				toEther("100")
+			);
+			expect(await cUSD.balanceOf(user1.address)).to.be.equal(
+				initialBalance
+			);
+		});
+
+		it("Should not transfer PACTs", async function () {
+			const userInitialBalance = await PACT.balanceOf(user1.address);
+			const donationMinerInitialBalance = await PACT.balanceOf(
+				DonationMiner.address
+			);
+
+			await expect(
+				DonationMiner.transfer(
+					PACT.address,
+					user1.address,
+					toEther("100")
+				)
+			).to.be.rejectedWith(
+				"DonationMiner::transfer you are not allow to transfer PACTs"
+			);
+			expect(await PACT.balanceOf(user1.address)).to.be.equal(
+				userInitialBalance
+			);
+			expect(await PACT.balanceOf(DonationMiner.address)).to.be.equal(
+				donationMinerInitialBalance
+			);
+		});
+
 		it("Should transfer founds to address", async function () {
 			const initialBalance = await cUSD.balanceOf(owner.address);
 			expect(await cUSD.balanceOf(DonationMiner.address)).to.be.equal(0);
@@ -3557,7 +3602,6 @@ describe("DonationMiner", () => {
 		it("Should stake and claim, one donor #1", async function () {
 			const user1Stake = toEther("100");
 			const user1ExpectedReward1 = toEther("4320000");
-			const user1ExpectedReward2 = toEther("4320000");
 
 			await PACT.connect(user1).approve(Staking.address, user1Stake);
 			await Staking.connect(user1).stake(user1.address, user1Stake);
