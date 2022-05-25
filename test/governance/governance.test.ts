@@ -26,11 +26,10 @@ chai.use(chaiAsPromised);
 const expect = chai.expect;
 
 describe("Governance", function () {
-
-// Contracts
+	// Contracts
 	let delegate: ethersTypes.ContractFactory;
 
-//users
+	//users
 	let owner: SignerWithAddress;
 	let user1: SignerWithAddress;
 	let user2: SignerWithAddress;
@@ -42,7 +41,7 @@ describe("Governance", function () {
 	let user8: SignerWithAddress;
 	let user9: SignerWithAddress;
 
-// contract instances
+	// contract instances
 	let votingToken: ethersTypes.Contract;
 	let stakingToken: ethersTypes.Contract;
 	let USDT: ethersTypes.Contract;
@@ -119,7 +118,9 @@ describe("Governance", function () {
 			).address
 		);
 
-		governanceDelegator = await delegate.attach(governanceDelegator.address);
+		governanceDelegator = await delegate.attach(
+			governanceDelegator.address
+		);
 
 		await votingToken.transfer(user1.address, parseEther("100000001")); // 100 mil (1 %)
 		await votingToken.transfer(user2.address, parseEther("200000000")); // 200 mil (2 %)
@@ -186,19 +187,29 @@ describe("Governance", function () {
 		await USDT.mint(treasuryProxy.address, parseEther("1000000"));
 	}
 
-	describe("Governance - with one token", function() {
-		before(async function() {
+	describe("Governance - with one token", function () {
+		before(async function () {
 			delegate = await ethers.getContractFactory("PACTDelegate");
 
-			[owner, user1, user2, user3, user4, user5, user6, user7, user8, user9] =
-				await ethers.getSigners();
+			[
+				owner,
+				user1,
+				user2,
+				user3,
+				user4,
+				user5,
+				user6,
+				user7,
+				user8,
+				user9,
+			] = await ethers.getSigners();
 		});
 
-		beforeEach(async function() {
+		beforeEach(async function () {
 			await deployGovernance();
 		});
 
-		it("should have correct params", async function() {
+		it("should have correct params", async function () {
 			expect(await governanceDelegator.votingDelay()).to.be.equal(
 				governanceParams.VOTING_DELAY
 			);
@@ -221,7 +232,7 @@ describe("Governance", function () {
 			);
 		});
 
-		it("should create proposal if user has enough votingTokens", async function() {
+		it("should create proposal if user has enough votingTokens", async function () {
 			await expect(createTreasuryTransferProposal(user1)).to.be.fulfilled;
 
 			const startBlock = (await getBlockNumber()) + 1;
@@ -245,20 +256,22 @@ describe("Governance", function () {
 			);
 		});
 
-		it("should not create proposal if user doesn't have enough votingTokens", async function() {
-			await expect(createTreasuryTransferProposal(user6)).to.be.rejectedWith(
+		it("should not create proposal if user doesn't have enough votingTokens", async function () {
+			await expect(
+				createTreasuryTransferProposal(user6)
+			).to.be.rejectedWith(
 				"PACT::propose: proposer votes below proposal threshold"
 			);
 		});
 
-		it("should create proposal if user has been delegated", async function() {
+		it("should create proposal if user has been delegated", async function () {
 			await votingToken.connect(user6).delegate(user8.address);
 			await votingToken.connect(user7).delegate(user8.address);
 
 			await expect(createTreasuryTransferProposal(user8)).to.be.fulfilled;
 		});
 
-		it("should not vote too early", async function() {
+		it("should not vote too early", async function () {
 			await createTreasuryTransferProposal(user1);
 
 			await expect(
@@ -266,17 +279,17 @@ describe("Governance", function () {
 			).to.be.rejectedWith("PACT::castVoteInternal: voting is closed");
 		});
 
-		it("should vote on proposal after voting delay", async function() {
+		it("should vote on proposal after voting delay", async function () {
 			await createTreasuryTransferProposal(user1);
 
 			await advanceBlockNTimes(governanceParams.VOTING_DELAY);
 
-			await expect(governanceDelegator.connect(user1).castVote(1, 0)).to.be
-				.fulfilled; //  0=against
-			await expect(governanceDelegator.connect(user2).castVote(1, 1)).to.be
-				.fulfilled; //  1=for
-			await expect(governanceDelegator.connect(user3).castVote(1, 2)).to.be
-				.fulfilled; //  2=abstain
+			await expect(governanceDelegator.connect(user1).castVote(1, 0)).to
+				.be.fulfilled; //  0=against
+			await expect(governanceDelegator.connect(user2).castVote(1, 1)).to
+				.be.fulfilled; //  1=for
+			await expect(governanceDelegator.connect(user3).castVote(1, 2)).to
+				.be.fulfilled; //  2=abstain
 
 			const proposal = await governanceDelegator.proposals(1);
 			expect(proposal.againstVotes).to.be.equal(parseEther("100000001"));
@@ -288,23 +301,23 @@ describe("Governance", function () {
 			);
 		});
 
-		it("should vote on proposal after voting delay #2", async function() {
+		it("should vote on proposal after voting delay #2", async function () {
 			await createTreasuryTransferProposal(user1);
 
 			await advanceBlockNTimes(governanceParams.VOTING_DELAY);
 
-			await expect(governanceDelegator.connect(user1).castVote(1, 0)).to.be
-				.fulfilled; //  0=against
-			await expect(governanceDelegator.connect(user4).castVote(1, 0)).to.be
-				.fulfilled; //  0=against
-			await expect(governanceDelegator.connect(user2).castVote(1, 1)).to.be
-				.fulfilled; //  1=for
-			await expect(governanceDelegator.connect(user5).castVote(1, 1)).to.be
-				.fulfilled; //  1=for
-			await expect(governanceDelegator.connect(user3).castVote(1, 2)).to.be
-				.fulfilled; //  2=abstain
-			await expect(governanceDelegator.connect(user6).castVote(1, 2)).to.be
-				.fulfilled; //  2=abstain
+			await expect(governanceDelegator.connect(user1).castVote(1, 0)).to
+				.be.fulfilled; //  0=against
+			await expect(governanceDelegator.connect(user4).castVote(1, 0)).to
+				.be.fulfilled; //  0=against
+			await expect(governanceDelegator.connect(user2).castVote(1, 1)).to
+				.be.fulfilled; //  1=for
+			await expect(governanceDelegator.connect(user5).castVote(1, 1)).to
+				.be.fulfilled; //  1=for
+			await expect(governanceDelegator.connect(user3).castVote(1, 2)).to
+				.be.fulfilled; //  2=abstain
+			await expect(governanceDelegator.connect(user6).castVote(1, 2)).to
+				.be.fulfilled; //  2=abstain
 
 			const proposal = await governanceDelegator.proposals(1);
 			expect(proposal.againstVotes).to.be.equal(parseEther("500000001"));
@@ -316,7 +329,7 @@ describe("Governance", function () {
 			);
 		});
 
-		it("should not vote on invalid proposal", async function() {
+		it("should not vote on invalid proposal", async function () {
 			await createTreasuryTransferProposal(user1);
 
 			await advanceBlockNTimes(governanceParams.VOTING_DELAY);
@@ -326,7 +339,7 @@ describe("Governance", function () {
 			).to.be.rejectedWith("PACT::state: invalid proposal id");
 		});
 
-		it("should not vote on proposal twice", async function() {
+		it("should not vote on proposal twice", async function () {
 			await createTreasuryTransferProposal(user1);
 
 			await advanceBlockNTimes(governanceParams.VOTING_DELAY);
@@ -340,7 +353,7 @@ describe("Governance", function () {
 			expect(proposal.forVotes).to.be.equal(parseEther("100000001"));
 		});
 
-		it("should not queue proposal too early", async function() {
+		it("should not queue proposal too early", async function () {
 			await createTreasuryTransferProposal(user1);
 			await advanceBlockNTimes(governanceParams.VOTING_DELAY);
 			await governanceDelegator.connect(user5).castVote(1, 1);
@@ -353,7 +366,7 @@ describe("Governance", function () {
 			);
 		});
 
-		it("should not queue an invalid proposal", async function() {
+		it("should not queue an invalid proposal", async function () {
 			await createTreasuryTransferProposal(user1);
 			await advanceBlockNTimes(governanceParams.VOTING_DELAY);
 			await governanceDelegator.connect(user5).castVote(1, 1);
@@ -363,7 +376,7 @@ describe("Governance", function () {
 			);
 		});
 
-		it("should not queue an un-succeeded proposal", async function() {
+		it("should not queue an un-succeeded proposal", async function () {
 			await createTreasuryTransferProposal(user1);
 			await advanceBlockNTimes(governanceParams.VOTING_DELAY);
 			await governanceDelegator.connect(user4).castVote(1, 2);
@@ -378,7 +391,7 @@ describe("Governance", function () {
 			);
 		});
 
-		it("should queue a succeeded proposal", async function() {
+		it("should queue a succeeded proposal", async function () {
 			await createTreasuryTransferProposal(user1);
 			await advanceBlockNTimes(governanceParams.VOTING_DELAY);
 			await governanceDelegator.connect(user4).castVote(1, 1);
@@ -394,7 +407,7 @@ describe("Governance", function () {
 			);
 		});
 
-		it("should not execute an un-queued proposal", async function() {
+		it("should not execute an un-queued proposal", async function () {
 			await createTreasuryTransferProposal(user1);
 			await advanceBlockNTimes(governanceParams.VOTING_DELAY);
 			await governanceDelegator.connect(user4).castVote(1, 1);
@@ -406,7 +419,7 @@ describe("Governance", function () {
 			);
 		});
 
-		it("should not execute a proposal too early", async function() {
+		it("should not execute a proposal too early", async function () {
 			await createTreasuryTransferProposal(user1);
 			await advanceBlockNTimes(governanceParams.VOTING_DELAY);
 			await governanceDelegator.connect(user4).castVote(1, 1);
@@ -419,7 +432,7 @@ describe("Governance", function () {
 			);
 		});
 
-		it("should execute a proposal after execution delay", async function() {
+		it("should execute a proposal after execution delay", async function () {
 			await createTreasuryTransferProposal(user1);
 			await advanceBlockNTimes(governanceParams.VOTING_DELAY);
 			await governanceDelegator.connect(user4).castVote(1, 1);
@@ -435,7 +448,7 @@ describe("Governance", function () {
 			);
 		});
 
-		it("should not execute a proposal twice", async function() {
+		it("should not execute a proposal twice", async function () {
 			await createTreasuryTransferProposal(user1);
 			await advanceBlockNTimes(governanceParams.VOTING_DELAY);
 			await governanceDelegator.connect(user4).castVote(1, 1);
@@ -451,7 +464,7 @@ describe("Governance", function () {
 			);
 		});
 
-		it("should not execute a proposal too late", async function() {
+		it("should not execute a proposal too late", async function () {
 			await createTreasuryTransferProposal(user1);
 			await advanceBlockNTimes(governanceParams.VOTING_DELAY);
 			await governanceDelegator.connect(user4).castVote(1, 1);
@@ -470,7 +483,7 @@ describe("Governance", function () {
 			);
 		});
 
-		it("should cancel a proposal if it is not executed", async function() {
+		it("should cancel a proposal if it is not executed", async function () {
 			await createTreasuryTransferProposal(user1);
 			await advanceBlockNTimes(governanceParams.VOTING_DELAY);
 			await governanceDelegator.connect(user4).castVote(1, 1);
@@ -486,7 +499,7 @@ describe("Governance", function () {
 			);
 		});
 
-		it("should cancel a proposal if it is not executed and owner doesn't have enough voting tokens", async function() {
+		it("should cancel a proposal if it is not executed and owner doesn't have enough voting tokens", async function () {
 			await createTreasuryTransferProposal(user1);
 			await advanceBlockNTimes(governanceParams.VOTING_DELAY);
 			await governanceDelegator.connect(user4).castVote(1, 1);
@@ -509,7 +522,7 @@ describe("Governance", function () {
 			);
 		});
 
-		it("should not cancel a proposal if not owner", async function() {
+		it("should not cancel a proposal if not owner", async function () {
 			await createTreasuryTransferProposal(user1);
 			await advanceBlockNTimes(governanceParams.VOTING_DELAY);
 			await governanceDelegator.connect(user4).castVote(1, 1);
@@ -526,7 +539,7 @@ describe("Governance", function () {
 			);
 		});
 
-		it("should not cancel an executed proposal", async function() {
+		it("should not cancel an executed proposal", async function () {
 			await createTreasuryTransferProposal(user1);
 			await advanceBlockNTimes(governanceParams.VOTING_DELAY);
 			await governanceDelegator.connect(user4).castVote(1, 1);
@@ -540,13 +553,15 @@ describe("Governance", function () {
 
 			await expect(
 				governanceDelegator.connect(user2).cancel(1)
-			).to.be.rejectedWith("PACT::cancel: cannot cancel executed proposal");
+			).to.be.rejectedWith(
+				"PACT::cancel: cannot cancel executed proposal"
+			);
 			expect(await governanceDelegator.state(1)).to.be.equal(
 				ProposalState.Executed
 			);
 		});
 
-		it("should update governance params by proposal", async function() {
+		it("should update governance params by proposal", async function () {
 			const targets = [
 				governanceDelegator.address,
 				governanceDelegator.address,
@@ -574,7 +589,10 @@ describe("Governance", function () {
 					["uint256"],
 					[parseEther("200000000")]
 				),
-				ethers.utils.defaultAbiCoder.encode(["address"], [ADDRESS_TEST]),
+				ethers.utils.defaultAbiCoder.encode(
+					["address"],
+					[ADDRESS_TEST]
+				),
 			];
 			const descriptions = "description";
 
@@ -605,14 +623,20 @@ describe("Governance", function () {
 			);
 		});
 
-		it("should update timelock params by proposal", async function() {
+		it("should update timelock params by proposal", async function () {
 			const targets = [timelock.address, timelock.address];
 			const values = [0, 0];
-			const signatures = ["setDelay(uint256)", "setPendingAdmin(address)"];
+			const signatures = [
+				"setDelay(uint256)",
+				"setPendingAdmin(address)",
+			];
 
 			const calldatas = [
-				ethers.utils.defaultAbiCoder.encode(["uint256"], [3600*9]),
-				ethers.utils.defaultAbiCoder.encode(["address"], [owner.address]),
+				ethers.utils.defaultAbiCoder.encode(["uint256"], [3600 * 9]),
+				ethers.utils.defaultAbiCoder.encode(
+					["address"],
+					[owner.address]
+				),
 			];
 			const descriptions = "description";
 
@@ -630,11 +654,11 @@ describe("Governance", function () {
 
 			await expect(governanceDelegator.execute(1)).to.be.fulfilled;
 
-			expect(await timelock.delay()).to.be.equal(3600*9);
+			expect(await timelock.delay()).to.be.equal(3600 * 9);
 			expect(await timelock.pendingAdmin()).to.be.equal(owner.address);
 		});
 
-		it("should not update params if not timelock", async function() {
+		it("should not update params if not timelock", async function () {
 			await expect(
 				governanceDelegator.connect(user1)._setQuorumVotes(0)
 			).to.be.rejectedWith("Ownable: caller is not the owner");
@@ -648,18 +672,23 @@ describe("Governance", function () {
 				governanceDelegator.connect(user1)._setVotingPeriod(0)
 			).to.be.rejectedWith("Ownable: caller is not the owner");
 			await expect(
-				governanceDelegator.connect(user1)._setReleaseToken(ADDRESS_TEST)
+				governanceDelegator
+					.connect(user1)
+					._setReleaseToken(ADDRESS_TEST)
 			).to.be.rejectedWith("Ownable: caller is not the owner");
 		});
 
-		it("should update implementation by proposal", async function() {
+		it("should update implementation by proposal", async function () {
 			const governanceDelegateFactory = await ethers.getContractFactory(
 				"PACTDelegate"
 			);
-			const newGovernanceDelegate = await governanceDelegateFactory.deploy();
+			const newGovernanceDelegate =
+				await governanceDelegateFactory.deploy();
 
 			expect(
-				await proxyAdmin.getProxyImplementation(governanceDelegator.address)
+				await proxyAdmin.getProxyImplementation(
+					governanceDelegator.address
+				)
 			).to.be.equal(governanceDelegate.address);
 
 			const targets = [proxyAdmin.address];
@@ -677,13 +706,19 @@ describe("Governance", function () {
 			await expect(
 				governanceDelegator
 					.connect(user4)
-					.propose(targets, values, signatures, calldatas, descriptions)
+					.propose(
+						targets,
+						values,
+						signatures,
+						calldatas,
+						descriptions
+					)
 			).to.be.fulfilled;
 
 			await advanceBlockNTimes(governanceParams.VOTING_DELAY);
 
-			await expect(governanceDelegator.connect(user4).castVote(1, 1)).to.be
-				.fulfilled;
+			await expect(governanceDelegator.connect(user4).castVote(1, 1)).to
+				.be.fulfilled;
 
 			await advanceBlockNTimes(governanceParams.VOTING_PERIOD);
 
@@ -694,18 +729,23 @@ describe("Governance", function () {
 			await expect(governanceDelegator.execute(1)).to.be.fulfilled;
 
 			expect(
-				await proxyAdmin.getProxyImplementation(governanceDelegator.address)
+				await proxyAdmin.getProxyImplementation(
+					governanceDelegator.address
+				)
 			).to.be.equal(newGovernanceDelegate.address);
 		});
 
-		it("should not update implementation if not timelock", async function() {
+		it("should not update implementation if not timelock", async function () {
 			const governanceDelegateFactory = await ethers.getContractFactory(
 				"PACTDelegate"
 			);
-			const newGovernanceDelegate = await governanceDelegateFactory.deploy();
+			const newGovernanceDelegate =
+				await governanceDelegateFactory.deploy();
 
 			expect(
-				await proxyAdmin.getProxyImplementation(governanceDelegator.address)
+				await proxyAdmin.getProxyImplementation(
+					governanceDelegator.address
+				)
 			).to.be.equal(governanceDelegate.address);
 			await expect(
 				proxyAdmin.upgrade(
@@ -714,32 +754,43 @@ describe("Governance", function () {
 				)
 			).to.be.rejectedWith("Ownable: caller is not the owner");
 			expect(
-				await proxyAdmin.getProxyImplementation(governanceDelegator.address)
+				await proxyAdmin.getProxyImplementation(
+					governanceDelegator.address
+				)
 			).to.be.equal(governanceDelegate.address);
 		});
 
-		it("should add member to ubi committee", async function() {
+		it("should add member to ubi committee", async function () {
 			const targets = [ubiCommittee.address];
 			const values = [0];
 			const signatures = ["addMember(address)"];
 
 			const calldatas = [
-				ethers.utils.defaultAbiCoder.encode(["address"], [user8.address]),
+				ethers.utils.defaultAbiCoder.encode(
+					["address"],
+					[user8.address]
+				),
 			];
 			const descriptions = "description";
 
 			await expect(
 				governanceDelegator
 					.connect(user1)
-					.propose(targets, values, signatures, calldatas, descriptions)
+					.propose(
+						targets,
+						values,
+						signatures,
+						calldatas,
+						descriptions
+					)
 			).to.be.fulfilled;
 
 			await advanceBlockNTimes(governanceParams.VOTING_DELAY);
 
 			await expect(governanceDelegator.castVote(1, 1)).to.be.fulfilled;
 
-			await expect(governanceDelegator.connect(user1).castVote(1, 1)).to.be
-				.fulfilled;
+			await expect(governanceDelegator.connect(user1).castVote(1, 1)).to
+				.be.fulfilled;
 
 			await advanceBlockNTimes(governanceParams.VOTING_PERIOD);
 
@@ -754,7 +805,7 @@ describe("Governance", function () {
 			expect(await ubiCommittee.members(user8.address)).to.be.equal(true);
 		});
 
-		it("should update communityAdmin & community to V2", async function() {
+		it("should update communityAdmin & community to V2", async function () {
 			const communityImplementationAddress = (
 				await deployments.get("CommunityImplementation")
 			).address;
@@ -793,25 +844,35 @@ describe("Governance", function () {
 				]
 			);
 
-			expect(await communityAdminProxy.communityMiddleProxy()).to.be.equal(
-				communityMiddleProxyAddress
-			);
+			expect(
+				await communityAdminProxy.communityMiddleProxy()
+			).to.be.equal(communityMiddleProxyAddress);
 
-			expect(await communityAdminProxy.communityImplementation()).to.be.equal(
-				communityImplementationAddress
-			);
+			expect(
+				await communityAdminProxy.communityImplementation()
+			).to.be.equal(communityImplementationAddress);
 		});
 	});
 
-	describe("Governance - with two tokens", function() {
-		before(async function() {
+	describe("Governance - with two tokens", function () {
+		before(async function () {
 			delegate = await ethers.getContractFactory("PACTDelegate");
 
-			[owner, user1, user2, user3, user4, user5, user6, user7, user8, user9] =
-				await ethers.getSigners();
+			[
+				owner,
+				user1,
+				user2,
+				user3,
+				user4,
+				user5,
+				user6,
+				user7,
+				user8,
+				user9,
+			] = await ethers.getSigners();
 		});
 
-		beforeEach(async function() {
+		beforeEach(async function () {
 			await deployGovernance();
 
 			stakingToken = await ethers.getContractAt(
@@ -828,14 +889,17 @@ describe("Governance", function () {
 			await stakingToken.connect(user6).delegate(user6.address);
 		});
 
-		it("should upgrade and set release token", async function() {
+		it("should upgrade and set release token", async function () {
 			const governanceDelegateFactory = await ethers.getContractFactory(
 				"PACTDelegate"
 			);
-			const newGovernanceDelegate = await governanceDelegateFactory.deploy();
+			const newGovernanceDelegate =
+				await governanceDelegateFactory.deploy();
 
 			expect(
-				await proxyAdmin.getProxyImplementation(governanceDelegator.address)
+				await proxyAdmin.getProxyImplementation(
+					governanceDelegator.address
+				)
 			).to.be.equal(governanceDelegate.address);
 
 			await createAndExecuteProposal(
@@ -847,7 +911,10 @@ describe("Governance", function () {
 				["upgrade(address,address)", "_setReleaseToken(address)"],
 				[["address", "address"], ["address"]],
 				[
-					[governanceDelegator.address, newGovernanceDelegate.address],
+					[
+						governanceDelegator.address,
+						newGovernanceDelegate.address,
+					],
 					[ADDRESS_TEST],
 				]
 			);
@@ -857,11 +924,11 @@ describe("Governance", function () {
 			);
 		});
 
-		it("should create proposal if user have enough tokens and stakingTokens", async function() {
+		it("should create proposal if user have enough tokens and stakingTokens", async function () {
 			await expect(createTreasuryTransferProposal(user6)).to.be.fulfilled;
 		});
 
-		it("should create and execute proposal if user have enough tokens and stakingTokens", async function() {
+		it("should create and execute proposal if user have enough tokens and stakingTokens", async function () {
 			await createAndExecuteProposal(
 				governanceDelegator,
 				user6,
@@ -878,4 +945,4 @@ describe("Governance", function () {
 			);
 		});
 	});
-})
+});

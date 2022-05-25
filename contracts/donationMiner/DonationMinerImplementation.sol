@@ -209,10 +209,7 @@ contract DonationMinerImplementation is
             "DonationMiner::initialize: firstRewardPerBlock not set!"
         );
         require(_startingBlock != 0, "DonationMiner::initialize: startingRewardPeriod not set!");
-        require(
-            _rewardPeriodSize != 0,
-            "DonationMiner::initialize: rewardPeriodSize is invalid!"
-        );
+        require(_rewardPeriodSize != 0, "DonationMiner::initialize: rewardPeriodSize is invalid!");
 
         __Ownable_init();
         __Pausable_init();
@@ -315,7 +312,6 @@ contract DonationMinerImplementation is
         rewardPeriodSize = _newRewardPeriodSize;
         decayNumerator = _newDecayNumerator;
         decayDenominator = _newDecayDenominator;
-
     }
 
     /**

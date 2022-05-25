@@ -220,8 +220,13 @@ contract TreasuryImplementation is
             require(_amounts[_amounts.length - 1] > 0, "Treasury::setToken: invalid exchangePath");
         }
 
-        emit TokenSet(_tokenAddress, _tokens[_tokenAddress].rate, _tokens[_tokenAddress].exchangePath, _rate, _exchangePath);
-
+        emit TokenSet(
+            _tokenAddress,
+            _tokens[_tokenAddress].rate,
+            _tokens[_tokenAddress].exchangePath,
+            _rate,
+            _exchangePath
+        );
 
         _tokens[_tokenAddress].rate = _rate;
         _tokens[_tokenAddress].exchangePath = _exchangePath;

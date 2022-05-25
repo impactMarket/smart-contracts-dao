@@ -239,7 +239,10 @@ contract CommunityAdminImplementation is
         override
         onlyOwner
     {
-        emit CommunityImplementationUpdated(address(communityImplementation), address(_newCommunityImplementation));
+        emit CommunityImplementationUpdated(
+            address(communityImplementation),
+            address(_newCommunityImplementation)
+        );
         communityImplementation = _newCommunityImplementation;
     }
 

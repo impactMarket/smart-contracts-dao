@@ -40,7 +40,7 @@ contract StakingImplementation is
     event Claimed(address indexed holder, uint256 amount);
 
     /**
-    * @notice Triggered when some tokens have been partially claimed
+     * @notice Triggered when some tokens have been partially claimed
      *
      * @param holder          Address of the holder
      * @param amount          Claim amount
@@ -148,11 +148,7 @@ contract StakingImplementation is
         _holder.amount += _amount;
         currentTotalAmount += _amount;
 
-        donationMiner.setStakingAmounts(
-            _holderAddress,
-            _holder.amount,
-            currentTotalAmount
-        );
+        donationMiner.setStakingAmounts(_holderAddress, _holder.amount, currentTotalAmount);
 
         emit Staked(_holderAddress, _amount);
     }
@@ -166,12 +162,11 @@ contract StakingImplementation is
         require(_amount > 0, "Stake::unstake: Unstake amount should not be 0");
         require(_amount <= type(uint96).max, "Stake::unstake: Unstake amount too big");
 
-
         Holder storage _holder = holders[msg.sender];
 
         require(_holder.amount >= _amount, "Stake::unstake: Not enough funds");
 
-        _holder.unstakes.push(Unstake({amount : _amount, cooldownBlock : block.number + cooldown}));
+        _holder.unstakes.push(Unstake({amount: _amount, cooldownBlock: block.number + cooldown}));
 
         _holder.amount -= _amount;
         currentTotalAmount -= _amount;
@@ -187,23 +182,19 @@ contract StakingImplementation is
     function claim() external override nonReentrant {
         require(holders[msg.sender].unstakes.length > 0, "Stake::claim: No funds to claim");
 
-        emit Claimed(
-            msg.sender,
-            _claim(holders[msg.sender].unstakes.length - 1)
-        );
+        emit Claimed(msg.sender, _claim(holders[msg.sender].unstakes.length - 1));
     }
 
     /**
-    * @notice Claim all unstakes until _lastUnstakeId
-    */
+     * @notice Claim all unstakes until _lastUnstakeId
+     */
     function claimPartial(uint256 _lastUnstakeId) external override nonReentrant {
-        require(_lastUnstakeId < holders[msg.sender].unstakes.length, "Stake::claimPartial: lastUnstakeId too big");
-
-        emit ClaimedPartial(
-            msg.sender,
-            _claim(_lastUnstakeId),
-            _lastUnstakeId
+        require(
+            _lastUnstakeId < holders[msg.sender].unstakes.length,
+            "Stake::claimPartial: lastUnstakeId too big"
         );
+
+        emit ClaimedPartial(msg.sender, _claim(_lastUnstakeId), _lastUnstakeId);
     }
 
     function _claim(uint256 _lastUnstakeId) internal returns (uint256) {
@@ -212,10 +203,7 @@ contract StakingImplementation is
         uint256 _index = _holder.nextUnstakeId;
         uint256 _amount;
 
-        while (
-            _index <= _lastUnstakeId &&
-            _holder.unstakes[_index].cooldownBlock < block.number
-        ) {
+        while (_index <= _lastUnstakeId && _holder.unstakes[_index].cooldownBlock < block.number) {
             _amount += _holder.unstakes[_index].amount;
             _index++;
         }

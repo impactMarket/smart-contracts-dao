@@ -395,7 +395,9 @@ describe("Staking", () => {
 
 			await advanceBlockNTimes(COOLDOWN);
 
-			await expect(Staking.connect(user1).claimPartial(1)).to.be.rejectedWith("Stake::claimPartial: lastUnstakeId too big");
+			await expect(
+				Staking.connect(user1).claimPartial(1)
+			).to.be.rejectedWith("Stake::claimPartial: lastUnstakeId too big");
 		});
 
 		it("should claim partial #1", async function () {
@@ -412,7 +414,8 @@ describe("Staking", () => {
 
 			await advanceBlockNTimes(COOLDOWN);
 
-			await expect(Staking.connect(user1).claimPartial(0)).to.be.fulfilled;
+			await expect(Staking.connect(user1).claimPartial(0)).to.be
+				.fulfilled;
 
 			expect(await Staking.stakeholderAmount(user1.address)).to.be.equal(
 				toEther("30")
@@ -445,7 +448,8 @@ describe("Staking", () => {
 
 			await advanceBlockNTimes(COOLDOWN);
 
-			await expect(Staking.connect(user1).claimPartial(1)).to.be.fulfilled;
+			await expect(Staking.connect(user1).claimPartial(1)).to.be
+				.fulfilled;
 
 			expect(await Staking.stakeholderAmount(user1.address)).to.be.equal(
 				toEther("40")
