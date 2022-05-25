@@ -75,7 +75,7 @@ interface ICommunity {
     function transfer(IERC20 _token, address _to, uint256 _amount) external;
     function addManager(address _managerAddress) external;
     function removeManager(address _managerAddress) external;
-    function addBeneficiary(address _beneficiaryAddress) external;
+    function addBeneficiaries(address[] memory _beneficiaryAddresses) external;
     function lockBeneficiary(address _beneficiaryAddress) external;
     function unlockBeneficiary(address _beneficiaryAddress) external;
     function removeBeneficiary(address _beneficiaryAddress) external;

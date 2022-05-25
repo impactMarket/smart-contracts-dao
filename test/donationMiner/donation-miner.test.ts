@@ -685,6 +685,21 @@ describe("DonationMiner", () => {
 			expect(await DonationMiner.stakingDonationRatio()).to.be.equal(0);
 		});
 
+		it("Should update communityDonationRatio if admin", async function () {
+			expect(await DonationMiner.communityDonationRatio()).to.be.equal(0);
+			await expect(DonationMiner.updateCommunityDonationRatio(2)).to.be
+				.fulfilled;
+			expect(await DonationMiner.communityDonationRatio()).to.be.equal(2);
+		});
+
+		it("Should not update communityDonationRatio if not admin", async function () {
+			expect(await DonationMiner.communityDonationRatio()).to.be.equal(0);
+			await expect(
+				DonationMiner.connect(user1).updateCommunityDonationRatio(2)
+			).to.be.rejectedWith("Ownable: caller is not the owner");
+			expect(await DonationMiner.communityDonationRatio()).to.be.equal(0);
+		});
+
 		it("Should update treasury if admin", async function () {
 			expect(await DonationMiner.treasury()).to.be.equal(
 				Treasury.address
@@ -3334,6 +3349,10 @@ describe("DonationMiner", () => {
 		beforeEach(async () => {
 			await deploy();
 
+			await DonationMiner.updateCommunityDonationRatio(
+				COMMUNITY_DONATION_RATIO
+			);
+
 			await cUSD.mint(user1.address, toEther("1000000"));
 			await cUSD.mint(user2.address, toEther("10000000"));
 			await cUSD.mint(user3.address, toEther("100000000"));
@@ -3519,6 +3538,9 @@ describe("DonationMiner", () => {
 			await DonationMiner.updateClaimDelay(CLAIM_DELAY);
 			await DonationMiner.updateStakingDonationRatio(
 				STAKING_DONATION_RATIO
+			);
+			await DonationMiner.updateCommunityDonationRatio(
+				COMMUNITY_DONATION_RATIO
 			);
 
 			await PACT.transfer(user1.address, user1InitialPACTBalance);

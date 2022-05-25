@@ -428,10 +428,11 @@ contract CommunityAdminImplementation is
             uint256 _amount = _trancheAmount - _balance;
             uint256 _treasurySafetyBalance = cUSD.balanceOf(address(treasury)) /
                 TREASURY_SAFETY_FACTOR;
-            require(
-                _amount <= _treasurySafetyBalance,
-                "CommunityAdmin::fundCommunity: Not enough funds"
-            );
+
+            if (_amount > _treasurySafetyBalance) {
+                _amount = _treasurySafetyBalance;
+            }
+
             transferToCommunity(_community, _amount);
         }
     }
