@@ -56,8 +56,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const PACT = await deployments.get("PACTToken");
 	const PACTContract = await ethers.getContractAt("PACTToken", PACT.address);
 
-	await governance.transferOwnership(timelockResult.address);
-
 	// only for prod
 	// await PACTContract.transfer(
 	// 	delegatorResult.address,

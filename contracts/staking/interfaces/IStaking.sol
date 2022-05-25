@@ -3,7 +3,7 @@ pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../donationMiner/interfaces/IDonationMiner.sol";
-import "../../token/interfaces/IMintableToken.sol";
+import "../../interfaces/IMintableERC20.sol";
 
 interface IStaking {
     struct Unstake {
@@ -18,8 +18,9 @@ interface IStaking {
     }
 
     function getVersion() external returns(uint256);
+    function updateCooldown(uint256 _newCooldown) external;
     function PACT() external view returns (IERC20);
-    function SPACT() external view returns (IMintableToken);
+    function SPACT() external view returns (IMintableERC20);
     function donationMiner() external view returns (IDonationMiner);
     function cooldown() external returns(uint256);
     function currentTotalAmount() external returns(uint256);
@@ -30,4 +31,5 @@ interface IStaking {
     function stake(address _holder, uint256 _amount) external;
     function unstake(uint256 _amount) external;
     function claim() external;
+    function claimPartial(uint256 _lastUnstakeId) external;
 }

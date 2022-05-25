@@ -268,8 +268,10 @@ contract CommunityImplementation is
         _setupRole(MANAGER_ROLE, msg.sender);
         emit ManagerAdded(msg.sender, msg.sender);
 
-        for (uint256 i = 0; i < _managers.length; i++) {
-            addManager(_managers[i]);
+        uint256 _i;
+        uint256 _numberOfManagers = _managers.length;
+        for (; _i < _numberOfManagers; _i++) {
+            addManager(_managers[_i]);
         }
     }
 
@@ -347,12 +349,10 @@ contract CommunityImplementation is
      * @param _newCommunityAdmin address of the new communityAdmin
      */
     function updateCommunityAdmin(ICommunityAdmin _newCommunityAdmin) external override onlyOwner {
-        address _oldCommunityAdminAddress = address(communityAdmin);
+        emit CommunityAdminUpdated(address(communityAdmin), address(_newCommunityAdmin));
         communityAdmin = _newCommunityAdmin;
 
         addManager(address(communityAdmin));
-
-        emit CommunityAdminUpdated(_oldCommunityAdminAddress, address(_newCommunityAdmin));
     }
 
     /** Updates the address of the previousCommunity
@@ -360,10 +360,8 @@ contract CommunityImplementation is
      * @param _newPreviousCommunity address of the new previousCommunity
      */
     function updatePreviousCommunity(ICommunity _newPreviousCommunity) external override onlyOwner {
-        address _oldPreviousCommunityAddress = address(previousCommunity);
+        emit PreviousCommunityUpdated(address(previousCommunity), address(_newPreviousCommunity));
         previousCommunity = _newPreviousCommunity;
-
-        emit PreviousCommunityUpdated(_oldPreviousCommunityAddress, address(_newPreviousCommunity));
     }
 
     /** Updates beneficiary params
@@ -390,30 +388,24 @@ contract CommunityImplementation is
             "Community::constructor: maxClaim must be greater than claimAmount"
         );
 
-        uint256 _oldClaimAmount = claimAmount;
-        uint256 _oldMaxClaim = maxClaim;
-        uint256 _oldDecreaseStep = decreaseStep;
-        uint256 _oldBaseInterval = baseInterval;
-        uint256 _oldIncrementInterval = incrementInterval;
-
-        claimAmount = _claimAmount;
-        maxClaim = _maxClaim - validBeneficiaryCount * _decreaseStep;
-        decreaseStep = _decreaseStep;
-        baseInterval = _baseInterval;
-        incrementInterval = _incrementInterval;
-
         emit BeneficiaryParamsUpdated(
-            _oldClaimAmount,
-            _oldMaxClaim,
-            _oldDecreaseStep,
-            _oldBaseInterval,
-            _oldIncrementInterval,
+            claimAmount,
+            maxClaim,
+            decreaseStep,
+            baseInterval,
+            incrementInterval,
             _claimAmount,
             _maxClaim,
             _decreaseStep,
             _baseInterval,
             _incrementInterval
         );
+
+        claimAmount = _claimAmount;
+        maxClaim = _maxClaim - validBeneficiaryCount * _decreaseStep;
+        decreaseStep = _decreaseStep;
+        baseInterval = _baseInterval;
+        incrementInterval = _incrementInterval;
     }
 
     /** @notice Updates params of a community
@@ -431,13 +423,10 @@ contract CommunityImplementation is
             "Community::updateCommunityParams: minTranche should not be greater than maxTranche"
         );
 
-        uint256 _oldMinTranche = minTranche;
-        uint256 _oldMaxTranche = maxTranche;
+        emit CommunityParamsUpdated(minTranche, maxTranche, _minTranche, _maxTranche);
 
         minTranche = _minTranche;
         maxTranche = _maxTranche;
-
-        emit CommunityParamsUpdated(_oldMinTranche, _oldMaxTranche, _minTranche, _maxTranche);
     }
 
     /**
@@ -497,7 +486,9 @@ contract CommunityImplementation is
     {
         require(!locked, "LOCKED");
 
-        for (uint256 _index = 0; _index < _beneficiaryAddresses.length; _index++) {
+        uint256 _index;
+        uint256 _numberOfBeneficiaries = _beneficiaryAddresses.length;
+        for (; _index < _numberOfBeneficiaries; _index++) {
             Beneficiary storage _beneficiary = beneficiaries[_beneficiaryAddresses[_index]];
 
             if (_beneficiary.state != BeneficiaryState.NONE) {

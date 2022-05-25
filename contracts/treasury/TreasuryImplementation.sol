@@ -172,10 +172,8 @@ contract TreasuryImplementation is
      * @param _newCommunityAdmin address of the new CommunityAdmin contract
      */
     function updateCommunityAdmin(ICommunityAdmin _newCommunityAdmin) external override onlyOwner {
-        address _oldCommunityAdminAddress = address(communityAdmin);
+        emit CommunityAdminUpdated(address(communityAdmin), address(_newCommunityAdmin));
         communityAdmin = _newCommunityAdmin;
-
-        emit CommunityAdminUpdated(_oldCommunityAdminAddress, address(_newCommunityAdmin));
     }
 
     /**
@@ -184,10 +182,8 @@ contract TreasuryImplementation is
      * @param _newUniswapRouter address of the new UniswapRouter contract
      */
     function updateUniswapRouter(IUniswapV2Router _newUniswapRouter) external override onlyOwner {
-        address _oldUniswapRouterAddress = address(uniswapRouter);
+        emit UniswapRouterUpdated(address(uniswapRouter), address(_newUniswapRouter));
         uniswapRouter = _newUniswapRouter;
-
-        emit UniswapRouterUpdated(_oldUniswapRouterAddress, address(_newUniswapRouter));
     }
 
     /**
@@ -224,15 +220,18 @@ contract TreasuryImplementation is
             require(_amounts[_amounts.length - 1] > 0, "Treasury::setToken: invalid exchangePath");
         }
 
-        uint256 _oldRate = _tokens[_tokenAddress].rate;
-        address[] memory _oldExchangePath = _tokens[_tokenAddress].exchangePath;
+        emit TokenSet(
+            _tokenAddress,
+            _tokens[_tokenAddress].rate,
+            _tokens[_tokenAddress].exchangePath,
+            _rate,
+            _exchangePath
+        );
 
         _tokens[_tokenAddress].rate = _rate;
         _tokens[_tokenAddress].exchangePath = _exchangePath;
 
         _tokenList.add(_tokenAddress);
-
-        emit TokenSet(_tokenAddress, _oldRate, _oldExchangePath, _rate, _exchangePath);
     }
 
     function removeToken(address _tokenAddress) external override onlyOwner {

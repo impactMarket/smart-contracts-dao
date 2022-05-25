@@ -12,7 +12,7 @@ import "./IStaking.sol";
  */
 abstract contract StakingStorageV1 is IStaking {
     IERC20 public override PACT;
-    IMintableToken public override SPACT;
+    IMintableERC20 public override SPACT;
     IDonationMiner public override donationMiner;
     uint256 public override cooldown;
 

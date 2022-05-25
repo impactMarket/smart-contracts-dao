@@ -109,9 +109,11 @@ contract UBICommitteeImplementation is
         proposals[_dummyProposal.id] = _dummyProposal;
         latestProposalIds[_dummyProposal.proposer] = _dummyProposal.id;
 
-        for (uint256 index = 0; index < _members.length; index++) {
-            members[_members[index]] = true;
-            emit MemberAdded(_members[index]);
+        uint256 _index;
+        uint256 _numberOfMembers = _members.length;
+        for (; _index < _numberOfMembers; _index++) {
+            members[_members[_index]] = true;
+            emit MemberAdded(_members[_index]);
         }
 
         emit ProposalCreated(
@@ -208,14 +210,16 @@ contract UBICommitteeImplementation is
         );
         Proposal storage _proposal = proposals[_proposalId];
         _proposal.executed = true;
-        for (uint256 i = 0; i < proposalCalldatas[_proposalId].length; i++) {
+        uint256 _i;
+        uint256 _numberOfActions = proposalCalldatas[_proposalId].length;
+        for (; _i < _numberOfActions; _i++) {
             bytes memory _callData;
-            if (bytes(proposalSignatures[_proposalId][i]).length == 0) {
-                _callData = proposalCalldatas[_proposalId][i];
+            if (bytes(proposalSignatures[_proposalId][_i]).length == 0) {
+                _callData = proposalCalldatas[_proposalId][_i];
             } else {
                 _callData = abi.encodePacked(
-                    bytes4(keccak256(bytes(proposalSignatures[_proposalId][i]))),
-                    proposalCalldatas[_proposalId][i]
+                    bytes4(keccak256(bytes(proposalSignatures[_proposalId][_i]))),
+                    proposalCalldatas[_proposalId][_i]
                 );
             }
 
@@ -355,10 +359,9 @@ contract UBICommitteeImplementation is
     function setQuorumVotes(uint256 _newQuorumVotes) external onlyOwner {
         require(_newQuorumVotes >= 1, "PACT::_setQuorumVotes: invalid quorum votes");
 
-        uint256 _oldQuorumVotes = quorumVotes;
+        emit QuorumVotesSet(quorumVotes, _newQuorumVotes);
         quorumVotes = _newQuorumVotes;
 
-        emit QuorumVotesSet(_oldQuorumVotes, _newQuorumVotes);
     }
 
     function add256(uint256 _a, uint256 _b) internal pure returns (uint256) {

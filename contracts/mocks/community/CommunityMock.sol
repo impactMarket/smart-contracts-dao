@@ -269,8 +269,10 @@ contract CommunityImplementationMock is
         _setupRole(MANAGER_ROLE, msg.sender);
         emit ManagerAdded(msg.sender, msg.sender);
 
-        for (uint256 i = 0; i < _managers.length; i++) {
-            addManager(_managers[i]);
+        uint256 _i;
+        uint256 _numberOfManagers = _managers.length;
+        for (; _i < _numberOfManagers; _i++) {
+            addManager(_managers[_i]);
         }
     }
 

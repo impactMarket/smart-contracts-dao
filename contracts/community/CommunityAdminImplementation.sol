@@ -225,10 +225,8 @@ contract CommunityAdminImplementation is
      * @param _newTreasury address of the new treasury contract
      */
     function updateTreasury(ITreasury _newTreasury) external override onlyOwner {
-        address oldTreasuryAddress = address(treasury);
+        emit TreasuryUpdated(address(treasury), address(_newTreasury));
         treasury = _newTreasury;
-
-        emit TreasuryUpdated(oldTreasuryAddress, address(_newTreasury));
     }
 
     /**
@@ -241,13 +239,11 @@ contract CommunityAdminImplementation is
         override
         onlyOwner
     {
-        address _oldCommunityImplementationAddress = address(communityImplementation);
-        communityImplementation = _newCommunityImplementation;
-
         emit CommunityImplementationUpdated(
-            _oldCommunityImplementationAddress,
+            address(communityImplementation),
             address(_newCommunityImplementation)
         );
+        communityImplementation = _newCommunityImplementation;
     }
 
     /**
@@ -533,10 +529,8 @@ contract CommunityAdminImplementation is
      * @param _newUbiCommittee address of new implementation contract
      */
     function updateUbiCommittee(IUBICommittee _newUbiCommittee) external override onlyOwner {
-        address oldUbiCommittee = address(ubiCommittee);
+        emit UBICommitteeUpdated(address(ubiCommittee), address(_newUbiCommittee));
         ubiCommittee = _newUbiCommittee;
-
-        emit UBICommitteeUpdated(oldUbiCommittee, address(_newUbiCommittee));
     }
 
     /**
@@ -545,10 +539,8 @@ contract CommunityAdminImplementation is
      * @param _newAmbassadors address of new implementation contract
      */
     function updateAmbassadors(IAmbassadors _newAmbassadors) external override onlyOwner {
-        address oldAmbassadors = address(ambassadors);
+        emit AmbassadorsUpdated(address(ambassadors), address(_newAmbassadors));
         ambassadors = _newAmbassadors;
-
-        emit AmbassadorsUpdated(oldAmbassadors, address(_newAmbassadors));
     }
 
     /**
@@ -561,10 +553,8 @@ contract CommunityAdminImplementation is
         override
         onlyOwner
     {
-        address _oldCommunityMiddleProxy = communityMiddleProxy;
+        emit CommunityMiddleProxyUpdated(communityMiddleProxy, _newCommunityMiddleProxy);
         communityMiddleProxy = _newCommunityMiddleProxy;
-
-        emit CommunityMiddleProxyUpdated(_oldCommunityMiddleProxy, _newCommunityMiddleProxy);
     }
 
     /**
