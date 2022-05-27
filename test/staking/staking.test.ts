@@ -384,6 +384,90 @@ describe("Staking", () => {
 			);
 		});
 
+		it("should not claim partial if lastUnstakeId to big", async function () {
+			let spactBalance: any;
+			const stakeAmount = toEther("100");
+
+			await PACT.connect(user1).approve(Staking.address, stakeAmount);
+			await Staking.connect(user1).stake(user1.address, stakeAmount);
+			await expect(Staking.connect(user1).unstake(toEther("60"))).to.be
+				.fulfilled;
+
+			await advanceBlockNTimes(COOLDOWN);
+
+			await expect(
+				Staking.connect(user1).claimPartial(1)
+			).to.be.rejectedWith("Stake::claimPartial: lastUnstakeId too big");
+		});
+
+		it("should claim partial #1", async function () {
+			let spactBalance: any;
+			const stakeAmount = toEther("100");
+			const user1InitialPACTBalance = await PACT.balanceOf(user1.address);
+
+			await PACT.connect(user1).approve(Staking.address, stakeAmount);
+			await Staking.connect(user1).stake(user1.address, stakeAmount);
+			await expect(Staking.connect(user1).unstake(toEther("60"))).to.be
+				.fulfilled;
+			await expect(Staking.connect(user1).unstake(toEther("10"))).to.be
+				.fulfilled;
+
+			await advanceBlockNTimes(COOLDOWN);
+
+			await expect(Staking.connect(user1).claimPartial(0)).to.be
+				.fulfilled;
+
+			expect(await Staking.stakeholderAmount(user1.address)).to.be.equal(
+				toEther("30")
+			);
+			expect(await Staking.currentTotalAmount()).to.be.equal(
+				toEther("30")
+			);
+			await checkDonationMinerRewardPeriod(toEther("30"));
+
+			spactBalance = toEther("40");
+			expect(await SPACT.balanceOf(user1.address)).to.be.equal(
+				spactBalance
+			);
+			expect(await PACT.balanceOf(user1.address)).to.be.equal(
+				user1InitialPACTBalance.sub(spactBalance)
+			);
+		});
+
+		it("should claim partial #2", async function () {
+			let spactBalance: any;
+			const stakeAmount = toEther("100");
+			const user1InitialPACTBalance = await PACT.balanceOf(user1.address);
+
+			await PACT.connect(user1).approve(Staking.address, stakeAmount);
+			await Staking.connect(user1).stake(user1.address, stakeAmount);
+			await expect(Staking.connect(user1).unstake(toEther("50"))).to.be
+				.fulfilled;
+			await expect(Staking.connect(user1).unstake(toEther("10"))).to.be
+				.fulfilled;
+
+			await advanceBlockNTimes(COOLDOWN);
+
+			await expect(Staking.connect(user1).claimPartial(1)).to.be
+				.fulfilled;
+
+			expect(await Staking.stakeholderAmount(user1.address)).to.be.equal(
+				toEther("40")
+			);
+			expect(await Staking.currentTotalAmount()).to.be.equal(
+				toEther("40")
+			);
+			await checkDonationMinerRewardPeriod(toEther("40"));
+
+			spactBalance = toEther("40");
+			expect(await SPACT.balanceOf(user1.address)).to.be.equal(
+				spactBalance
+			);
+			expect(await PACT.balanceOf(user1.address)).to.be.equal(
+				user1InitialPACTBalance.sub(spactBalance)
+			);
+		});
+
 		it("should stake, unstake and claim multiple holders", async function () {
 			let spactBalance: any;
 			const user1StakeAmount1 = toEther("101");

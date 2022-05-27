@@ -4,7 +4,6 @@ pragma solidity 0.8.4;
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "./interfaces/DonationMinerStorageV3Old.sol";
@@ -571,8 +570,8 @@ contract DonationMinerImplementationOld is
     ) internal view returns (uint256, uint256) {
         uint256 _donorAmount;
         uint256 _totalAmount;
-        uint256 _index;
-        for (_index = _startPeriod; _index <= _endPeriod; _index++) {
+        uint256 _index = _startPeriod;
+        for (; _index <= _endPeriod; _index++) {
             RewardPeriod storage _rewardPeriod = rewardPeriods[_index];
             _donorAmount += _rewardPeriod.donorAmounts[_donorAddress];
             _totalAmount += _rewardPeriod.donationsAmount;

@@ -68,7 +68,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	);
 
 	// only for prod
-	await governance.transferOwnership(timelockResult.address);
 	const ImpactProxyAdmin = await ethers.getContractAt(
 		"ImpactProxyAdmin",
 		ImpactProxyAdminContract.address

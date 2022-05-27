@@ -1,11 +1,7 @@
 //SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.4;
 
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-
 contract PACTTimelock {
-    using SafeMath for uint256;
-
     event NewAdmin(address indexed newAdmin);
     event NewPendingAdmin(address indexed newPendingAdmin);
     event NewDelay(uint256 indexed newDelay);
@@ -35,7 +31,7 @@ contract PACTTimelock {
     );
 
     uint256 public constant GRACE_PERIOD = 14 days;
-    uint256 public constant MINIMUM_DELAY = 1 hours;
+    uint256 public constant MINIMUM_DELAY = 8 hours;
     uint256 public constant MAXIMUM_DELAY = 30 days;
 
     address public admin;
@@ -99,7 +95,7 @@ contract PACTTimelock {
     ) public returns (bytes32) {
         require(msg.sender == admin, "Timelock::queueTransaction: Call must come from admin.");
         require(
-            _eta >= getBlockTimestamp().add(delay),
+            _eta >= getBlockTimestamp() + delay,
             "Timelock::queueTransaction: Estimated execution block must satisfy delay."
         );
 
@@ -144,7 +140,7 @@ contract PACTTimelock {
             "Timelock::executeTransaction: Transaction hasn't surpassed time lock."
         );
         require(
-            getBlockTimestamp() <= _eta.add(GRACE_PERIOD),
+            getBlockTimestamp() <= _eta + GRACE_PERIOD,
             "Timelock::executeTransaction: Transaction is stale."
         );
 

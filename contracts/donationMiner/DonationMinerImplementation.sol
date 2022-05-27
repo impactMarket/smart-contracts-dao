@@ -4,10 +4,11 @@ pragma solidity 0.8.4;
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "./interfaces/DonationMinerStorageV4.sol";
+
+import "hardhat/console.sol";
 
 contract DonationMinerImplementation is
     Initializable,
@@ -208,6 +209,7 @@ contract DonationMinerImplementation is
             "DonationMiner::initialize: firstRewardPerBlock not set!"
         );
         require(_startingBlock != 0, "DonationMiner::initialize: startingRewardPeriod not set!");
+        require(_rewardPeriodSize != 0, "DonationMiner::initialize: rewardPeriodSize is invalid!");
 
         __Ownable_init();
         __Pausable_init();
@@ -291,24 +293,25 @@ contract DonationMinerImplementation is
         uint256 _newDecayNumerator,
         uint256 _newDecayDenominator
     ) external override onlyOwner {
+        require(
+            _newRewardPeriodSize != 0,
+            "DonationMiner::initialize: rewardPeriodSize is invalid!"
+        );
+
         initializeRewardPeriods();
 
-        uint256 _oldRewardPeriodSize = rewardPeriodSize;
-        uint256 _oldDecayNumerator = decayNumerator;
-        uint256 _oldDecayDenominator = decayDenominator;
-
-        rewardPeriodSize = _newRewardPeriodSize;
-        decayNumerator = _newDecayNumerator;
-        decayDenominator = _newDecayDenominator;
-
         emit RewardPeriodParamsUpdated(
-            _oldRewardPeriodSize,
-            _oldDecayNumerator,
-            _oldDecayDenominator,
+            rewardPeriodSize,
+            decayNumerator,
+            decayDenominator,
             _newRewardPeriodSize,
             _newDecayNumerator,
             _newDecayDenominator
         );
+
+        rewardPeriodSize = _newRewardPeriodSize;
+        decayNumerator = _newDecayNumerator;
+        decayDenominator = _newDecayDenominator;
     }
 
     /**
@@ -318,10 +321,9 @@ contract DonationMinerImplementation is
      *                            a donation until he will be able to claim his reward
      */
     function updateClaimDelay(uint256 _newClaimDelay) external override onlyOwner {
-        uint256 _oldClaimDelay = claimDelay;
-        claimDelay = _newClaimDelay;
+        emit ClaimDelayUpdated(claimDelay, _newClaimDelay);
 
-        emit ClaimDelayUpdated(_oldClaimDelay, _newClaimDelay);
+        claimDelay = _newClaimDelay;
     }
 
     /**
@@ -334,10 +336,11 @@ contract DonationMinerImplementation is
         override
         onlyOwner
     {
-        uint256 _oldStakingDonationRatio = stakingDonationRatio;
-        stakingDonationRatio = _newStakingDonationRatio;
+        initializeRewardPeriods();
 
-        emit StakingDonationRatioUpdated(_oldStakingDonationRatio, _newStakingDonationRatio);
+        emit StakingDonationRatioUpdated(stakingDonationRatio, _newStakingDonationRatio);
+
+        stakingDonationRatio = _newStakingDonationRatio;
     }
 
     /**
@@ -350,10 +353,8 @@ contract DonationMinerImplementation is
         override
         onlyOwner
     {
-        uint256 _oldCommunityDonationRatio = communityDonationRatio;
+        emit CommunityDonationRatioUpdated(communityDonationRatio, _newCommunityDonationRatio);
         communityDonationRatio = _newCommunityDonationRatio;
-
-        emit CommunityDonationRatioUpdated(_oldCommunityDonationRatio, _newCommunityDonationRatio);
     }
 
     /**
@@ -364,10 +365,8 @@ contract DonationMinerImplementation is
     function updateAgainstPeriods(uint256 _newAgainstPeriods) external override onlyOwner {
         initializeRewardPeriods();
 
-        uint256 _oldAgainstPeriods = againstPeriods;
+        emit AgainstPeriodsUpdated(againstPeriods, _newAgainstPeriods);
         againstPeriods = _newAgainstPeriods;
-
-        emit AgainstPeriodsUpdated(_oldAgainstPeriods, _newAgainstPeriods);
     }
 
     /**
@@ -376,10 +375,8 @@ contract DonationMinerImplementation is
      * @param _newTreasury address of new treasury_ contract
      */
     function updateTreasury(ITreasury _newTreasury) external override onlyOwner {
-        address _oldTreasuryAddress = address(treasury);
+        emit TreasuryUpdated(address(treasury), address(_newTreasury));
         treasury = _newTreasury;
-
-        emit TreasuryUpdated(_oldTreasuryAddress, address(_newTreasury));
     }
 
     /**
@@ -388,10 +385,8 @@ contract DonationMinerImplementation is
      * @param _newStaking address of new Staking contract
      */
     function updateStaking(IStaking _newStaking) external override onlyOwner {
-        address _oldStakingAddress = address(staking);
+        emit StakingUpdated(address(staking), address(_newStaking));
         staking = _newStaking;
-
-        emit StakingUpdated(_oldStakingAddress, address(_newStaking));
     }
 
     /**
@@ -464,9 +459,10 @@ contract DonationMinerImplementation is
         uint256 _startPeriod = rewardPeriodCount > againstPeriods
             ? rewardPeriodCount - againstPeriods
             : 0;
-        for (uint256 i = _startPeriod; i <= rewardPeriodCount; i++) {
-            _everyoneValue += rewardPeriods[i].donationsAmount;
-            _donorValue += rewardPeriods[i].donorAmounts[_donor];
+        uint256 _i = _startPeriod;
+        for (; _i <= rewardPeriodCount; _i++) {
+            _everyoneValue += rewardPeriods[_i].donationsAmount;
+            _donorValue += rewardPeriods[_i].donorAmounts[_donor];
         }
         return (_donorValue, _everyoneValue);
     }
@@ -478,7 +474,6 @@ contract DonationMinerImplementation is
         uint256 _claimAmount = _computeRewardsByPeriodNumber(msg.sender, _getLastClaimablePeriod());
 
         PACT.safeTransfer(msg.sender, _claimAmount);
-
         emit RewardClaimed(msg.sender, _claimAmount);
     }
 
@@ -635,7 +630,12 @@ contract DonationMinerImplementation is
             rewardPeriodCount
         );
 
-        _claimAmount += (_lastRewardPeriod.rewardAmount * _donorAmount) / _totalAmount;
+        uint256 _stakingDonationRatio = stakingDonationRatio > 0 ? stakingDonationRatio : 1;
+
+        _claimAmount =
+            (_lastRewardPeriod.rewardAmount *
+                (_donorAmount * _stakingDonationRatio + staking.SPACT().balanceOf(_donorAddress))) /
+            (_totalAmount * _stakingDonationRatio + staking.SPACT().totalSupply());
 
         return _claimAmount;
     }
@@ -663,6 +663,7 @@ contract DonationMinerImplementation is
         address _to,
         uint256 _amount
     ) external override onlyOwner nonReentrant {
+        require(_token != PACT, "DonationMiner::transfer you are not allow to transfer PACTs");
         _token.safeTransfer(_to, _amount);
 
         emit TransferERC20(address(_token), _to, _amount);
@@ -820,8 +821,8 @@ contract DonationMinerImplementation is
     ) internal view returns (uint256, uint256) {
         uint256 _donorAmount;
         uint256 _totalAmount;
-        uint256 _index;
-        for (_index = _startPeriod; _index <= _endPeriod; _index++) {
+        uint256 _index = _startPeriod;
+        for (; _index <= _endPeriod; _index++) {
             RewardPeriod storage _rewardPeriod = rewardPeriods[_index];
             _donorAmount += _rewardPeriod.donorAmounts[_donorAddress];
             _totalAmount += _rewardPeriod.donationsAmount;
@@ -912,7 +913,7 @@ contract DonationMinerImplementation is
 
         while (_index <= _lastPeriodNumber) {
             if (_currentRewardPeriod.startBlock > 0) {
-                // this case is used to calculate the reward for periods that have been initialized yet
+                // this case is used to calculate the reward for periods that have been initialized
 
                 if (_currentRewardPeriod.againstPeriods == 0) {
                     _donorAmount = _currentRewardPeriod.donorAmounts[_donorAddress];

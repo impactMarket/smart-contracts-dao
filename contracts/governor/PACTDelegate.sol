@@ -85,13 +85,12 @@ contract PACTDelegate is
         );
         require(_quorumVotes >= _proposalThreshold, "PACT::initialize: invalid quorum votes");
         timelock = TimelockInterface(_timelock);
-        require(
-            timelock.admin() == address(this),
-            "PACT::initialize: timelock admin is not assigned to PACTDelegate"
-        );
+        require(_token != address(0), "PACT::initialize: invalid _token address");
 
         __Ownable_init();
         __ReentrancyGuard_init();
+
+        transferOwnership(_timelock);
 
         token = IHasVotes(_token);
         releaseToken = IHasVotes(_releaseToken);
@@ -222,12 +221,14 @@ contract PACTDelegate is
         );
         Proposal storage _proposal = proposals[_proposalId];
         uint256 _eta = add256(block.timestamp, timelock.delay());
-        for (uint256 i = 0; i < proposalTargets[_proposalId].length; i++) {
+        uint256 _i;
+        uint256 _numberOfActions = proposalTargets[_proposalId].length;
+        for (; _i < _numberOfActions; _i++) {
             queueOrRevertInternal(
-                proposalTargets[_proposalId][i],
-                proposalValues[_proposalId][i],
-                proposalSignatures[_proposalId][i],
-                proposalCalldatas[_proposalId][i],
+                proposalTargets[_proposalId][_i],
+                proposalValues[_proposalId][_i],
+                proposalSignatures[_proposalId][_i],
+                proposalCalldatas[_proposalId][_i],
                 _eta
             );
         }
@@ -262,12 +263,14 @@ contract PACTDelegate is
         );
         Proposal storage _proposal = proposals[_proposalId];
         _proposal.executed = true;
-        for (uint256 i = 0; i < proposalTargets[_proposalId].length; i++) {
-            timelock.executeTransaction{value: proposalValues[_proposalId][i]}(
-                proposalTargets[_proposalId][i],
-                proposalValues[_proposalId][i],
-                proposalSignatures[_proposalId][i],
-                proposalCalldatas[_proposalId][i],
+        uint256 _i;
+        uint256 _numberOfActions = proposalTargets[_proposalId].length;
+        for (; _i < _numberOfActions; _i++) {
+            timelock.executeTransaction{value: proposalValues[_proposalId][_i]}(
+                proposalTargets[_proposalId][_i],
+                proposalValues[_proposalId][_i],
+                proposalSignatures[_proposalId][_i],
+                proposalCalldatas[_proposalId][_i],
                 _proposal.eta
             );
         }
@@ -292,12 +295,14 @@ contract PACTDelegate is
         );
 
         _proposal.canceled = true;
-        for (uint256 i = 0; i < proposalTargets[_proposalId].length; i++) {
+        uint256 _i;
+        uint256 _numberOfActions = proposalTargets[_proposalId].length;
+        for (; _i < _numberOfActions; _i++) {
             timelock.cancelTransaction(
-                proposalTargets[_proposalId][i],
-                proposalValues[_proposalId][i],
-                proposalSignatures[_proposalId][i],
-                proposalCalldatas[_proposalId][i],
+                proposalTargets[_proposalId][_i],
+                proposalValues[_proposalId][_i],
+                proposalSignatures[_proposalId][_i],
+                proposalCalldatas[_proposalId][_i],
                 _proposal.eta
             );
         }
@@ -461,7 +466,7 @@ contract PACTDelegate is
         require(_support <= 2, "PACT::castVoteInternal: invalid vote type");
         Proposal storage _proposal = proposals[_proposalId];
         Receipt storage _receipt = proposalReceipts[_proposalId][_voter];
-        require(_receipt.hasVoted == false, "PACT::castVoteInternal: voter already voted");
+        require(!_receipt.hasVoted, "PACT::castVoteInternal: voter already voted");
         uint96 _votes = getPriorVotes(_voter, _proposal.startBlock);
 
         if (_support == 0) {
@@ -504,10 +509,8 @@ contract PACTDelegate is
             "PACT::_setQuorumVotes: invalid quorum votes"
         );
 
-        uint256 _oldQuorumVotes = votingDelay;
+        emit QuorumVotesSet(quorumVotes, _newQuorumVotes);
         quorumVotes = _newQuorumVotes;
-
-        emit QuorumVotesSet(_oldQuorumVotes, _newQuorumVotes);
     }
 
     /**
@@ -519,10 +522,8 @@ contract PACTDelegate is
             _newVotingPeriod >= MIN_VOTING_PERIOD && _newVotingPeriod <= MAX_VOTING_PERIOD,
             "PACT::_setVotingPeriod: invalid voting period"
         );
-        uint256 _oldVotingPeriod = votingPeriod;
+        emit VotingPeriodSet(votingPeriod, _newVotingPeriod);
         votingPeriod = _newVotingPeriod;
-
-        emit VotingPeriodSet(_oldVotingPeriod, _newVotingPeriod);
     }
 
     /**
@@ -536,10 +537,8 @@ contract PACTDelegate is
                 _newProposalThreshold <= MAX_PROPOSAL_THRESHOLD,
             "PACT::_setProposalThreshold: invalid proposal threshold"
         );
-        uint256 _oldProposalThreshold = proposalThreshold;
+        emit ProposalThresholdSet(proposalThreshold, _newProposalThreshold);
         proposalThreshold = _newProposalThreshold;
-
-        emit ProposalThresholdSet(_oldProposalThreshold, _newProposalThreshold);
     }
 
     /**
@@ -551,10 +550,8 @@ contract PACTDelegate is
             _newReleaseToken != token,
             "PACT::_setReleaseToken: releaseToken and token must be different"
         );
-        IHasVotes _oldReleaseToken = releaseToken;
+        emit ReleaseTokenSet(address(releaseToken), address(_newReleaseToken));
         releaseToken = _newReleaseToken;
-
-        emit ReleaseTokenSet(address(_oldReleaseToken), address(_newReleaseToken));
     }
 
     function getPriorVotes(address _voter, uint256 _beforeBlock) public view returns (uint96) {
