@@ -442,32 +442,6 @@ contract DonationMinerImplementation is
     }
 
     /**
-     * @dev Calculate all donations on the last X epochs as well as everyone
-     * else in the same period.
-     *
-     * @param _donor address of the donor
-     * @return uint256, uint256 sum of all donor's and everyone else donations
-     */
-    function lastPeriodsDonations(address _donor)
-        external
-        view
-        override
-        returns (uint256, uint256)
-    {
-        uint256 _donorValue = 0;
-        uint256 _everyoneValue = 0;
-        uint256 _startPeriod = rewardPeriodCount > againstPeriods
-            ? rewardPeriodCount - againstPeriods
-            : 0;
-        uint256 _i = _startPeriod;
-        for (; _i <= rewardPeriodCount; _i++) {
-            _everyoneValue += rewardPeriods[_i].donationsAmount;
-            _donorValue += rewardPeriods[_i].donorAmounts[_donor];
-        }
-        return (_donorValue, _everyoneValue);
-    }
-
-    /**
      * @notice Transfers to the sender the rewards
      */
     function claimRewards() external override whenNotPaused whenStarted nonReentrant {
@@ -543,13 +517,12 @@ contract DonationMinerImplementation is
      *
      * @param _donorAddress address of the donor
      * @param _lastPeriodNumber last reward period number to be computed
-     * @return claimAmount uint256 sum of all donor's rewards that has not been claimed until _lastPeriodNumber
-     * @return lastDonorStakeAmount uint256 number of PACTs that are staked by the donor at the end of _lastPeriodNumber
+     * @return uint256 sum of all donor's rewards that has not been claimed until _lastPeriodNumber
      */
     function calculateClaimableRewardsByPeriodNumber(
         address _donorAddress,
         uint256 _lastPeriodNumber
-    ) external view override returns (uint256 claimAmount, uint256 lastDonorStakeAmount) {
+    ) external view override returns (uint256) {
         uint256 _maxRewardPeriod;
 
         if (rewardPeriods[rewardPeriodCount].endBlock < block.number) {
@@ -566,7 +539,8 @@ contract DonationMinerImplementation is
             "DonationMiner::calculateClaimableRewardsByPeriodNumber: This reward period isn't available yet"
         );
 
-        return _calculateRewardByPeriodNumber(_donorAddress, _lastPeriodNumber);
+        (uint256 _claimAmount, ) = _calculateRewardByPeriodNumber(_donorAddress, _lastPeriodNumber);
+        return _claimAmount;
     }
 
     /**
@@ -574,32 +548,25 @@ contract DonationMinerImplementation is
      *
      * @param _donorAddress address of the donor
      * @return claimAmount uint256 sum of all donor's rewards that has not been claimed until _lastPeriodNumber
-     * @return lastDonorStakeAmount uint256 number of PACTs that are staked by the donor at the end of _lastPeriodNumber
      */
     function calculateClaimableRewards(address _donorAddress)
         external
         view
         override
-        returns (uint256 claimAmount, uint256 lastDonorStakeAmount)
+        returns (uint256)
     {
-        uint256 _maxRewardPeriod;
-
-        if (rewardPeriods[rewardPeriodCount].endBlock < block.number) {
-            _maxRewardPeriod =
-                (block.number - rewardPeriods[rewardPeriodCount].endBlock) /
-                rewardPeriodSize;
-            _maxRewardPeriod += rewardPeriodCount;
-        } else {
-            _maxRewardPeriod = rewardPeriodCount - 1;
-        }
-
-        return _calculateRewardByPeriodNumber(_donorAddress, _maxRewardPeriod);
+        (uint256 _claimAmount, ) = _calculateRewardByPeriodNumber(
+            _donorAddress,
+            currentRewardPeriodNumber() - 1
+        );
+        return _claimAmount;
     }
 
     /**
      * @notice Calculates the estimate reward of a donor for current reward period
      *
-     * @param _donorAddress address of the donor
+     * @param _donorAddress             address of the donor
+     *
      * @return uint256 reward that donor will receive in current reward period if there isn't another donation
      */
     function estimateClaimableReward(address _donorAddress)
@@ -610,45 +577,93 @@ contract DonationMinerImplementation is
         whenNotPaused
         returns (uint256)
     {
-        if (!isCurrentRewardPeriodInitialized()) {
-            return 0;
-        }
-
-        RewardPeriod storage _lastRewardPeriod = rewardPeriods[rewardPeriodCount];
-
-        uint256 _totalAmount;
-        uint256 _donorAmount;
-        uint256 _claimAmount;
-
-        uint256 _startPeriod = (rewardPeriodCount > againstPeriods)
-            ? rewardPeriodCount - againstPeriods
-            : 0;
-
-        (_donorAmount, _totalAmount) = _calculateDonorIntervalAmounts(
-            _donorAddress,
-            _startPeriod,
-            rewardPeriodCount
-        );
-
-        uint256 _stakingDonationRatio = stakingDonationRatio > 0 ? stakingDonationRatio : 1;
-
-        _claimAmount =
-            (_lastRewardPeriod.rewardAmount *
-                (_donorAmount * _stakingDonationRatio + staking.SPACT().balanceOf(_donorAddress))) /
-            (_totalAmount * _stakingDonationRatio + staking.SPACT().totalSupply());
-
-        return _claimAmount;
+        return _estimateClaimableReward(_donorAddress, 0);
     }
 
     /**
-     * @notice Calculates the number of PACTs given for each block in current reward period
+     * @notice Calculates the estimate reward of a donor for the next x reward periods
      *
-     * @return uint256 current reward per block
+     * @param _donorAddress             address of the donor
+     *
+     * @return uint256 reward that donor will receive in current reward period if there isn't another donation
      */
-    function calculateRewardPerBlock() internal view returns (uint256) {
+    function estimateClaimableRewardAdvance(address _donorAddress)
+        external
+        view
+        override
+        whenStarted
+        whenNotPaused
+        returns (uint256)
+    {
+        return _estimateClaimableReward(_donorAddress, againstPeriods);
+    }
+
+    /**
+     * @notice Calculates the APR of a user based on his staking
+     *
+     * @param _stakeholderAddress      address of the stakeHolder
+     *
+     * @return uint256 APR of the user
+     */
+    function apr(address _stakeholderAddress)
+        external
+        view
+        override
+        whenStarted
+        whenNotPaused
+        returns (uint256)
+    {
+        uint256 _stakeholderAmount = staking.stakeholderAmount(_stakeholderAddress);
+        if (_stakeholderAmount == 0) {
+            return 0;
+        }
+
         return
-            (rewardPeriods[rewardPeriodCount - 1].rewardPerBlock * decayNumerator) /
-            decayDenominator;
+            (1e18 * 365100 * _estimateClaimableReward(_stakeholderAddress, 0)) / _stakeholderAmount;
+    }
+
+    /**
+     * @dev Calculate the score of a user based as
+     * this ratio (his donation and staking) / (all donation and staking)
+     * E.G. score = 0.01 * 1e18 => the donor have have 1% score
+     *      so he will get 1% of the reward
+     *
+     * @param _donorAddress  address of the donor
+     *
+     * @return uint256    donor's score
+     */
+    function donorScore(address _donorAddress) public view returns (uint256) {
+        return _calculateDonorShare(_donorAddress, 1e18);
+    }
+
+    /**
+     * @dev Calculate all donations on the last X epochs as well as everyone
+     * else in the same period.
+     *
+     * @param _donorAddress  address of the donor
+     *
+     * @return donorAmount uint256    sum of donor's donations
+     * @return totalAmount uint256    sum of all donations
+     */
+    function lastPeriodsDonations(address _donorAddress)
+        public
+        view
+        override
+        returns (uint256 donorAmount, uint256 totalAmount)
+    {
+        uint256 _currentRewardPeriodNumber = currentRewardPeriodNumber();
+
+        uint256 _startPeriod = _currentRewardPeriodNumber > againstPeriods
+            ? _currentRewardPeriodNumber - againstPeriods
+            : 1;
+
+        if (rewardPeriodCount >= _startPeriod) {
+            (donorAmount, totalAmount) = _calculateDonorIntervalAmounts(
+                _donorAddress,
+                _startPeriod,
+                rewardPeriodCount
+            );
+        }
     }
 
     /**
@@ -690,6 +705,18 @@ contract DonationMinerImplementation is
         }
     }
 
+    function currentRewardPeriodNumber() public view override returns (uint256) {
+        uint256 lastRewardPeriodEndBlock = rewardPeriods[rewardPeriodCount].endBlock;
+
+        return
+            lastRewardPeriodEndBlock > block.number
+                ? rewardPeriodCount
+                : rewardPeriodCount +
+                    (block.number - lastRewardPeriodEndBlock) /
+                    rewardPeriodSize +
+                    1;
+    }
+
     /**
      * @notice Initializes all reward periods that haven't been initialized yet until the current one.
      *         The first donor in a reward period will pay for that operation.
@@ -703,7 +730,9 @@ contract DonationMinerImplementation is
             _newPeriod.againstPeriods = againstPeriods;
             _newPeriod.startBlock = _lastPeriod.endBlock + 1;
             _newPeriod.endBlock = _newPeriod.startBlock + rewardPeriodSize - 1;
-            _newPeriod.rewardPerBlock = calculateRewardPerBlock();
+            _newPeriod.rewardPerBlock =
+                (_lastPeriod.rewardPerBlock * decayNumerator) /
+                decayDenominator;
             _newPeriod.stakesAmount = _lastPeriod.stakesAmount;
             _newPeriod.stakingDonationRatio = stakingDonationRatio;
             uint256 _rewardAmount = rewardPeriodSize * _newPeriod.rewardPerBlock;
@@ -1028,5 +1057,69 @@ contract DonationMinerImplementation is
             _startPeriod++;
         }
         return false;
+    }
+
+    /**
+     * @notice Calculates the estimate reward of a donor
+     *
+     * @param _donorAddress             address of the donor
+     * @param _inAdvanceRewardPeriods   number of reward periods in front
+     *                                   if _inAdvanceRewardPeriods is 0 the method returns
+     *                                        the estimated reward for current reward period
+     * @return uint256 reward that donor will receive in current reward period if there isn't another donation
+     */
+    function _estimateClaimableReward(address _donorAddress, uint256 _inAdvanceRewardPeriods)
+        internal
+        view
+        returns (uint256)
+    {
+        uint256 _currentPeriodReward = _calculateCurrentPeriodReward();
+        uint256 _totalReward = _currentPeriodReward;
+
+        while (_inAdvanceRewardPeriods > 0) {
+            _currentPeriodReward = (_currentPeriodReward * decayNumerator) / decayDenominator;
+            _totalReward += _currentPeriodReward;
+            _inAdvanceRewardPeriods--;
+        }
+        return _calculateDonorShare(_donorAddress, _totalReward);
+    }
+
+    /**
+     * @notice Calculates a donor share based on the donations and stakes from the last x rewardPeriods
+     *
+     *
+     * @return uint256  the share from the _total
+     */
+    function _calculateDonorShare(address _donorAddress, uint256 _total)
+        internal
+        view
+        returns (uint256)
+    {
+        uint256 _donorAmount;
+        uint256 _totalAmount;
+
+        (_donorAmount, _totalAmount) = lastPeriodsDonations(_donorAddress);
+
+        uint256 totalStakeAmount = staking.SPACT().totalSupply();
+        if (totalStakeAmount == 0 && _totalAmount == 0) {
+            return 0;
+        }
+
+        uint256 _stakingDonationRatio = stakingDonationRatio > 0 ? stakingDonationRatio : 1;
+
+        return
+            (_total *
+                (_donorAmount * _stakingDonationRatio + staking.stakeholderAmount(_donorAddress))) /
+            (_totalAmount * _stakingDonationRatio + staking.currentTotalAmount());
+    }
+
+    function _calculateCurrentPeriodReward() internal view returns (uint256) {
+        uint256 _currentRewardPeriodNumber = currentRewardPeriodNumber();
+
+        uint256 _rewardPerBlock = (rewardPeriods[rewardPeriodCount].rewardPerBlock *
+            decayNumerator**(_currentRewardPeriodNumber - rewardPeriodCount)) /
+            decayDenominator**(_currentRewardPeriodNumber - rewardPeriodCount);
+
+        return _rewardPerBlock * rewardPeriodSize;
     }
 }
