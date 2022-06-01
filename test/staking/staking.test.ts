@@ -335,6 +335,7 @@ describe("Staking", () => {
 		});
 
 		it("should not claim if not enough funds #1", async function () {
+			expect(await Staking.claimAmount(user1.address)).to.be.equal(0);
 			await expect(Staking.connect(user1).claim()).to.be.rejectedWith(
 				"Stake::claim: No funds to claim"
 			);
@@ -348,6 +349,7 @@ describe("Staking", () => {
 			await expect(Staking.connect(user1).unstake(toEther("50"))).to.be
 				.fulfilled;
 
+			expect(await Staking.claimAmount(user1.address)).to.be.equal(0);
 			await expect(Staking.connect(user1).claim()).to.be.rejectedWith(
 				"Stake::claim: No funds to claim"
 			);
@@ -363,9 +365,13 @@ describe("Staking", () => {
 			await expect(Staking.connect(user1).unstake(toEther("60"))).to.be
 				.fulfilled;
 
-			await advanceBlockNTimes(COOLDOWN);
+			await advanceBlockNTimes(COOLDOWN + 1);
 
+			expect(await Staking.claimAmount(user1.address)).to.be.equal(
+				toEther(60)
+			);
 			await expect(Staking.connect(user1).claim()).to.be.fulfilled;
+			expect(await Staking.claimAmount(user1.address)).to.be.equal(0);
 
 			expect(await Staking.stakeholderAmount(user1.address)).to.be.equal(
 				toEther("40")
@@ -385,7 +391,6 @@ describe("Staking", () => {
 		});
 
 		it("should not claim partial if lastUnstakeId to big", async function () {
-			let spactBalance: any;
 			const stakeAmount = toEther("100");
 
 			await PACT.connect(user1).approve(Staking.address, stakeAmount);
@@ -518,6 +523,9 @@ describe("Staking", () => {
 			await expect(Staking.connect(user1).unstake(toEther("80"))).to.be
 				.fulfilled;
 
+			expect(await Staking.claimAmount(user3.address)).to.be.equal(
+				toEther(60)
+			);
 			await expect(Staking.connect(user3).claim()).to.be.fulfilled;
 
 			await expect(
@@ -605,7 +613,11 @@ describe("Staking", () => {
 			await expect(Staking.connect(user2).unstake(toEther("40"))).to.be
 				.fulfilled;
 
+			expect(await Staking.claimAmount(user2.address)).to.be.equal(
+				toEther(50)
+			);
 			await expect(Staking.connect(user2).claim()).to.be.fulfilled;
+			expect(await Staking.claimAmount(user2.address)).to.be.equal(0);
 
 			expect(await SPACT.totalSupply()).to.be.equal(
 				totalAmount.sub(toEther(50 + 60))
@@ -626,7 +638,12 @@ describe("Staking", () => {
 			);
 
 			await advanceBlockNTimes(COOLDOWN);
+			expect(await Staking.claimAmount(user2.address)).to.be.equal(
+				toEther(10 + 20 + 30 + 40)
+			);
 			await expect(Staking.connect(user2).claim()).to.be.fulfilled;
+			expect(await Staking.claimAmount(user2.address)).to.be.equal(0);
+
 			expect(await SPACT.totalSupply()).to.be.equal(
 				totalAmount.sub(toEther(10 + 20 + 30 + 40 + 50 + 60))
 			);
@@ -652,8 +669,14 @@ describe("Staking", () => {
 						.sub(toEther(10 + 20 + 30 + 40 + 50))
 				)
 			).to.be.fulfilled;
-			await advanceBlockNTimes(COOLDOWN);
+			await advanceBlockNTimes(COOLDOWN + 1);
+			expect(await Staking.claimAmount(user2.address)).to.be.equal(
+				user2StakeAmount1
+					.add(user2StakeAmount2)
+					.sub(toEther(10 + 20 + 30 + 40 + 50))
+			);
 			await expect(Staking.connect(user2).claim()).to.be.fulfilled;
+			expect(await Staking.claimAmount(user2.address)).to.be.equal(0);
 			expect(await SPACT.balanceOf(user2.address)).to.be.equal(0);
 			expect(await PACT.balanceOf(user2.address)).to.be.equal(
 				user2InitialPACTBalance

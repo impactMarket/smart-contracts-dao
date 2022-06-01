@@ -32,4 +32,5 @@ interface IStaking {
     function unstake(uint256 _amount) external;
     function claim() external;
     function claimPartial(uint256 _lastUnstakeId) external;
+    function claimAmount(address _holderAddress) external view returns (uint256);
 }
