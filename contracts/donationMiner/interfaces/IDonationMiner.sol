@@ -107,14 +107,18 @@ interface IDonationMiner {
     function updateStaking(IStaking _newStaking) external;
     function donate(IERC20 _token, uint256 _amount, address _delegateAddress) external;
     function donateToCommunity(ICommunity _community, IERC20 _token, uint256 _amount, address _delegateAddress) external;
-    function lastPeriodsDonations(address _donor) external view returns (uint256, uint256);
     function claimRewards() external;
     function claimRewardsPartial(uint256 _lastPeriodNumber) external;
     function stakeRewards() external;
     function stakeRewardsPartial(uint256 _lastPeriodNumber) external;
-    function calculateClaimableRewards(address _donor) external returns (uint256 claimAmount, uint256 lastDonorStakeAmount);
-    function calculateClaimableRewardsByPeriodNumber(address _donor, uint256 _lastPeriodNumber) external returns (uint256 claimAmount, uint256 lastDonorStakeAmount);
+    function calculateClaimableRewards(address _donor) external returns (uint256);
+    function calculateClaimableRewardsByPeriodNumber(address _donor, uint256 _lastPeriodNumber) external returns (uint256);
     function estimateClaimableReward(address _donor) external view returns (uint256);
+    function estimateClaimableRewardAdvance(address _donor) external view returns (uint256);
+    function apr(address _stakeholderAddress) external view returns (uint256);
+    function lastPeriodsDonations(address _donor) external view returns (uint256 donorAmount, uint256 totalAmount);
     function transfer(IERC20 _token, address _to, uint256 _amount) external;
     function setStakingAmounts(address _holderAddress, uint256 _holderStakeAmount, uint256 _totalStakesAmount) external;
+    function currentRewardPeriodNumber() external view returns (uint256);
+
 }

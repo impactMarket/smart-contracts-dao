@@ -17,13 +17,13 @@ interface IStaking {
         Unstake[] unstakes;      //list of all unstakes amount
     }
 
-    function getVersion() external returns(uint256);
+    function getVersion() external view returns(uint256);
     function updateCooldown(uint256 _newCooldown) external;
     function PACT() external view returns (IERC20);
     function SPACT() external view returns (IMintableERC20);
     function donationMiner() external view returns (IDonationMiner);
-    function cooldown() external returns(uint256);
-    function currentTotalAmount() external returns(uint256);
+    function cooldown() external view returns(uint256);
+    function currentTotalAmount() external view returns(uint256);
     function stakeholderAmount(address _holderAddress) external view returns(uint256);
     function stakeholdersListAt(uint256 _index) external view returns (address);
     function stakeholdersListLength() external view returns (uint256);
