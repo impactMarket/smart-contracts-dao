@@ -9,10 +9,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	const ImpactProxyAdminContract = await deployments.get("ImpactProxyAdmin");
 
-	const implementationResult = await deploy("ImpactMarketCouncilImplementation", {
-		from: deployer,
-		log: true,
-	});
+	const implementationResult = await deploy(
+		"ImpactMarketCouncilImplementation",
+		{
+			from: deployer,
+			log: true,
+		}
+	);
 
 	const proxyResult = await deploy("ImpactMarketCouncilProxy", {
 		from: deployer,
@@ -27,7 +30,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	const communityAdminProxy = await deployments.get("CommunityAdminProxy");
 
-	await impactMarketCouncil.initialize(1, communityAdminProxy.address, [deployer]);
+	await impactMarketCouncil.initialize(1, communityAdminProxy.address, [
+		deployer,
+	]);
 };
 
 func.dependencies = ["ImpactProxyAdminTest", "CommunityTest"];

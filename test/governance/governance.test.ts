@@ -802,7 +802,9 @@ describe("Governance", function () {
 			await expect(governanceDelegator.connect(user1).execute(1)).to.be
 				.fulfilled;
 
-			expect(await impactMarketCouncil.members(user8.address)).to.be.equal(true);
+			expect(
+				await impactMarketCouncil.members(user8.address)
+			).to.be.equal(true);
 		});
 
 		it("should update communityAdmin & community to V2", async function () {

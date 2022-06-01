@@ -92,7 +92,10 @@ contract CommunityAdminImplementation is
      * @param oldImpactMarketCouncil   Old impactMarket Council address
      * @param newImpactMarketCouncil   New impactMarket Council address
      */
-    event ImpactMarketCouncilUpdated(address indexed oldImpactMarketCouncil, address indexed newImpactMarketCouncil);
+    event ImpactMarketCouncilUpdated(
+        address indexed oldImpactMarketCouncil,
+        address indexed newImpactMarketCouncil
+    );
 
     /**
      * @notice Triggered when the ambassadors has been updated
@@ -528,8 +531,15 @@ contract CommunityAdminImplementation is
      *
      * @param _newImpactMarketCouncil address of new implementation contract
      */
-    function updateImpactMarketCouncil(IImpactMarketCouncil _newImpactMarketCouncil) external override onlyOwner {
-        emit ImpactMarketCouncilUpdated(address(impactMarketCouncil), address(_newImpactMarketCouncil));
+    function updateImpactMarketCouncil(IImpactMarketCouncil _newImpactMarketCouncil)
+        external
+        override
+        onlyOwner
+    {
+        emit ImpactMarketCouncilUpdated(
+            address(impactMarketCouncil),
+            address(_newImpactMarketCouncil)
+        );
         impactMarketCouncil = _newImpactMarketCouncil;
     }
 
