@@ -180,6 +180,7 @@ describe("Treasury", () => {
 			CommunityAdmin.address
 		);
 		expect(await Treasury.owner()).to.be.equal(owner.address);
+		expect(await Treasury.getVersion()).to.be.equal(2);
 	});
 
 	it("Should transfer founds to address is owner", async function () {

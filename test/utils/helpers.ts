@@ -119,13 +119,13 @@ export async function createProposal(
 		);
 	}
 
-	// console.log("***************************************");
-	// console.log(proposer.address);
-	// console.log(targets);
-	// console.log(values);
-	// console.log(signatures);
-	// console.log(calldatas);
-	// console.log(description);
+	console.log("***************************************");
+	console.log(proposer.address);
+	console.log(targets);
+	console.log(values);
+	console.log(signatures);
+	console.log(calldatas);
+	console.log(description);
 	await governanceDelegator
 		.connect(proposer)
 		.propose(targets, values, signatures, calldatas, description);

@@ -184,7 +184,8 @@ async function createUpgradeCommunityProposal() {
 			[communityNewImplementationAddress],
 			[ambassadorsProxyAddress],
 			[UBICommitteeProxyAddress],
-		]
+		],
+		'Upgrade community and communityAdmin implementations'
 	);
 }
 

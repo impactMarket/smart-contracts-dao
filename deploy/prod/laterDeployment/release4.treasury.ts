@@ -10,9 +10,10 @@ let deployer: SignerWithAddress;
 
 const governanceDelegatorAddress = "0x5c27e2600a3eDEF53DE0Ec32F01efCF145419eDF";
 const proxyAdminAddress = "0x79f9ca5f1A01e1768b9C24AD37FF63A0199E3Fe5";
-const SPACTTokenAddress = "0x6732B3e5643dEBfaB7d1570f313271dD9E24c58C";
+const treasuryProxyAddress = "0xB0deEE097B5227C5E6bbE787665e4e62b4fE85f3";
+const ubeswapRouterAddress = "0xe3d8bd6aed4f159bc8000a9cd47cffdb95f96121";
 
-let governanceNewImplementationAddress: string;
+let treasuryNewImplementationAddress: string;
 
 let GovernanceProxy: ethersTypes.Contract;
 
@@ -33,10 +34,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 };
 
 async function deployNewGovernance() {
-	console.log("Deploying new contract for governance");
+	console.log("Deploying new contract for treasury");
 	await new Promise((resolve) => setTimeout(resolve, 6000));
-	governanceNewImplementationAddress = (
-		await deploy("PACTDelegate", {
+	treasuryNewImplementationAddress = (
+		await deploy("TreasuryImplementation", {
 			from: deployer.address,
 			args: [],
 			log: true,
@@ -46,23 +47,23 @@ async function deployNewGovernance() {
 }
 
 async function createUpgradeGovernanceProposal() {
-	console.log("Creating new proposal for governance");
+	console.log("Creating new proposal for updating treasury");
 
 	await new Promise((resolve) => setTimeout(resolve, 6000));
 	await createProposal(
 		GovernanceProxy,
 		deployer,
-		[proxyAdminAddress, governanceDelegatorAddress],
+		[proxyAdminAddress, treasuryProxyAddress],
 		[0, 0],
-		["upgrade(address,address)", "_setReleaseToken(address)"],
+		["upgrade(address,address)", "updateUniswapRouter(address)"],
 		[["address", "address"], ["address"]],
 		[
-			[governanceDelegatorAddress, governanceNewImplementationAddress],
-			[SPACTTokenAddress],
+			[treasuryProxyAddress, treasuryNewImplementationAddress],
+			[ubeswapRouterAddress],
 		],
-		'Upgrade governance implementation'
+		'Upgrade treasury implementation'
 	);
 }
 
 export default func;
-func.tags = ["Release4Governance"];
+func.tags = ["Release4Treasury"];
