@@ -197,6 +197,27 @@ contract StakingImplementation is
         emit ClaimedPartial(msg.sender, _claim(_lastUnstakeId), _lastUnstakeId);
     }
 
+    function claimAmount(address _holderAddress) external view override returns (uint256) {
+        Holder storage _holder = holders[_holderAddress];
+
+        if (_holder.unstakes.length == 0) {
+            return 0;
+        }
+
+        uint256 _index = _holder.nextUnstakeId;
+        uint256 _amount;
+
+        while (
+            _index < _holder.unstakes.length &&
+            _holder.unstakes[_index].cooldownBlock < block.number
+        ) {
+            _amount += _holder.unstakes[_index].amount;
+            _index++;
+        }
+
+        return _amount;
+    }
+
     function _claim(uint256 _lastUnstakeId) internal returns (uint256) {
         Holder storage _holder = holders[msg.sender];
 
