@@ -2740,21 +2740,21 @@ describe("Community", () => {
 				"CommunityAdminImplementation",
 				oldCommunityAdminProxy.address
 			);
-			// await expect(
-			// 	oldCommunityAdminProxy.communityMiddleProxy()
-			// ).to.be.rejectedWith(
-			// 	"Transaction reverted: function selector was not recognized and there's no fallback function"
-			// );
-			// await expect(
-			// 	oldCommunityAdminProxy.ambassadors()
-			// ).to.be.rejectedWith(
-			// 	"Transaction reverted: function selector was not recognized and there's no fallback function"
-			// );
-			// await expect(
-			// 	oldCommunityAdminProxy.impactMarketCouncil()
-			// ).to.be.rejectedWith(
-			// 	"Transaction reverted: function selector was not recognized and there's no fallback function"
-			// );
+			await expect(
+				oldCommunityAdminProxy.communityMiddleProxy()
+			).to.be.rejectedWith(
+				"Transaction reverted: function selector was not recognized and there's no fallback function"
+			);
+			await expect(
+				oldCommunityAdminProxy.ambassadors()
+			).to.be.rejectedWith(
+				"Transaction reverted: function selector was not recognized and there's no fallback function"
+			);
+			await expect(
+				oldCommunityAdminProxy.impactMarketCouncil()
+			).to.be.rejectedWith(
+				"Transaction reverted: function selector was not recognized and there's no fallback function"
+			);
 		});
 
 		it("Should upgrade communityAdmin implementation", async function () {
