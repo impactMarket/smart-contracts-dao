@@ -176,9 +176,9 @@ describe("Community", () => {
 			).address
 		);
 
-		await communityAdminProxy.updateUbiCommittee(
+		await communityAdminProxy.updateImpactMarketCouncil(
 			(
-				await deployments.get("UBICommitteeProxy")
+				await deployments.get("ImpactMarketCouncilProxy")
 			).address
 		);
 		await communityAdminProxy.updateAmbassadors(
@@ -577,7 +577,9 @@ describe("Community", () => {
 						communityProxy.address,
 						FAKE_ADDRESS
 					)
-			).to.be.rejectedWith("CommunityAdmin: Not Owner Or UBICommittee");
+			).to.be.rejectedWith(
+				"CommunityAdmin: Not Owner Or ImpactMarketCouncil"
+			);
 		});
 
 		it("Should have same storage after update community implementation #1", async function () {
@@ -1505,7 +1507,9 @@ describe("Community", () => {
 					[communityManagerA.address],
 					cUSD.address // wrong on purpose,
 				)
-			).to.be.rejectedWith("CommunityAdmin: Not Owner Or UBICommittee");
+			).to.be.rejectedWith(
+				"CommunityAdmin: Not Owner Or ImpactMarketCouncil"
+			);
 		});
 
 		it("should edit community if manager", async () => {
@@ -2019,7 +2023,9 @@ describe("Community", () => {
 						parseEther("50"),
 						parseEther("100")
 					)
-			).to.be.rejectedWith("CommunityAdmin: Not Owner Or UBICommittee");
+			).to.be.rejectedWith(
+				"CommunityAdmin: Not Owner Or ImpactMarketCouncil"
+			);
 		});
 
 		it("should change community tranche limits if admin", async () => {
@@ -2050,7 +2056,9 @@ describe("Community", () => {
 						parseEther("123"),
 						parseEther("124")
 					)
-			).to.be.rejectedWith("CommunityAdmin: Not Owner Or UBICommittee");
+			).to.be.rejectedWith(
+				"CommunityAdmin: Not Owner Or ImpactMarketCouncil"
+			);
 		});
 
 		it("should change communityMaxTranche if admin", async () => {
@@ -2444,7 +2452,9 @@ describe("Community", () => {
 						[communityManagerA.address],
 						legacyCommunityProxy.address
 					)
-			).to.be.rejectedWith("CommunityAdmin: Not Owner Or UBICommittee");
+			).to.be.rejectedWith(
+				"CommunityAdmin: Not Owner Or ImpactMarketCouncil"
+			);
 		});
 
 		it("should migrate an old community twice", async () => {
@@ -2741,7 +2751,7 @@ describe("Community", () => {
 				"Transaction reverted: function selector was not recognized and there's no fallback function"
 			);
 			await expect(
-				oldCommunityAdminProxy.ubiCommittee()
+				oldCommunityAdminProxy.impactMarketCouncil()
 			).to.be.rejectedWith(
 				"Transaction reverted: function selector was not recognized and there's no fallback function"
 			);

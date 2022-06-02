@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./interfaces/ICommunity.sol";
 import "./interfaces/CommunityAdminStorageV1.sol";
-import "../governor/ubiCommittee/interfaces/IUBICommittee.sol";
+import "../governor/impactMarketCouncil/interfaces/IImpactMarketCouncil.sol";
 import "./interfaces/CommunityAdminStorageV2.sol";
 
 /**
@@ -87,12 +87,15 @@ contract CommunityAdminImplementation is
     event TreasuryUpdated(address indexed oldTreasury, address indexed newTreasury);
 
     /**
-     * @notice Triggered when the ubi committee has been updated
+     * @notice Triggered when the impactMarket Council has been updated
      *
-     * @param oldUbiCommittee   Old UBI Committee address
-     * @param newUbiCommittee   New UBI Committee address
+     * @param oldImpactMarketCouncil   Old impactMarket Council address
+     * @param newImpactMarketCouncil   New impactMarket Council address
      */
-    event UBICommitteeUpdated(address indexed oldUbiCommittee, address indexed newUbiCommittee);
+    event ImpactMarketCouncilUpdated(
+        address indexed oldImpactMarketCouncil,
+        address indexed newImpactMarketCouncil
+    );
 
     /**
      * @notice Triggered when the ambassadors has been updated
@@ -103,7 +106,7 @@ contract CommunityAdminImplementation is
     event AmbassadorsUpdated(address indexed oldAmbassadors, address indexed newAmbassadors);
 
     /**
-     * @notice Triggered when the ubi communityMiddleProxy address has been updated
+     * @notice Triggered when the communityMiddleProxy address has been updated
      *
      * @param oldCommunityMiddleProxy   Old communityMiddleProxy address
      * @param newCommunityMiddleProxy   New communityMiddleProxy address
@@ -152,10 +155,10 @@ contract CommunityAdminImplementation is
     /**
      * @notice Enforces sender to be a valid community
      */
-    modifier onlyOwnerOrUBICommittee() {
+    modifier onlyOwnerOrImpactMarketCouncil() {
         require(
-            msg.sender == owner() || msg.sender == address(ubiCommittee),
-            "CommunityAdmin: Not Owner Or UBICommittee"
+            msg.sender == owner() || msg.sender == address(impactMarketCouncil),
+            "CommunityAdmin: Not Owner Or ImpactMarketCouncil"
         );
         _;
     }
@@ -269,7 +272,7 @@ contract CommunityAdminImplementation is
         uint256 _incrementInterval,
         uint256 _minTranche,
         uint256 _maxTranche
-    ) external override onlyOwnerOrUBICommittee {
+    ) external override onlyOwnerOrImpactMarketCouncil {
         require(
             _managers.length > 0,
             "CommunityAdmin::addCommunity: Community should have at least one manager"
@@ -315,7 +318,7 @@ contract CommunityAdminImplementation is
     function migrateCommunity(address[] memory _managers, ICommunity _previousCommunity)
         external
         override
-        onlyOwnerOrUBICommittee
+        onlyOwnerOrImpactMarketCouncil
         nonReentrant
     {
         require(
@@ -376,7 +379,7 @@ contract CommunityAdminImplementation is
     function addManagerToCommunity(ICommunity _community, address _account)
         external
         override
-        onlyOwnerOrUBICommittee
+        onlyOwnerOrImpactMarketCouncil
     {
         _community.addManager(_account);
     }
@@ -389,7 +392,7 @@ contract CommunityAdminImplementation is
     function removeCommunity(ICommunity _community)
         external
         override
-        onlyOwnerOrUBICommittee
+        onlyOwnerOrImpactMarketCouncil
         nonReentrant
     {
         require(
@@ -483,7 +486,7 @@ contract CommunityAdminImplementation is
         uint256 _decreaseStep,
         uint256 _baseInterval,
         uint256 _incrementInterval
-    ) external override onlyOwnerOrUBICommittee {
+    ) external override onlyOwnerOrImpactMarketCouncil {
         _community.updateBeneficiaryParams(
             _claimAmount,
             _maxClaim,
@@ -503,7 +506,7 @@ contract CommunityAdminImplementation is
         ICommunity _community,
         uint256 _minTranche,
         uint256 _maxTranche
-    ) external override onlyOwnerOrUBICommittee {
+    ) external override onlyOwnerOrImpactMarketCouncil {
         _community.updateCommunityParams(_minTranche, _maxTranche);
     }
 
@@ -516,7 +519,7 @@ contract CommunityAdminImplementation is
     function updateProxyImplementation(
         address _CommunityMiddleProxy,
         address _newCommunityImplementation
-    ) external override onlyOwnerOrUBICommittee {
+    ) external override onlyOwnerOrImpactMarketCouncil {
         communityProxyAdmin.upgrade(
             TransparentUpgradeableProxy(payable(_CommunityMiddleProxy)),
             _newCommunityImplementation
@@ -524,13 +527,20 @@ contract CommunityAdminImplementation is
     }
 
     /**
-     * @notice Updates proxy implementation address of ubi committee
+     * @notice Updates proxy implementation address of impactMarket council
      *
-     * @param _newUbiCommittee address of new implementation contract
+     * @param _newImpactMarketCouncil address of new implementation contract
      */
-    function updateUbiCommittee(IUBICommittee _newUbiCommittee) external override onlyOwner {
-        emit UBICommitteeUpdated(address(ubiCommittee), address(_newUbiCommittee));
-        ubiCommittee = _newUbiCommittee;
+    function updateImpactMarketCouncil(IImpactMarketCouncil _newImpactMarketCouncil)
+        external
+        override
+        onlyOwner
+    {
+        emit ImpactMarketCouncilUpdated(
+            address(impactMarketCouncil),
+            address(_newImpactMarketCouncil)
+        );
+        impactMarketCouncil = _newImpactMarketCouncil;
     }
 
     /**

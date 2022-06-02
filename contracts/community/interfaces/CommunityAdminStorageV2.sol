@@ -2,7 +2,7 @@
 pragma solidity 0.8.4;
 
 import "./CommunityAdminStorageV1.sol";
-import "../../governor/ubiCommittee/interfaces/IUBICommittee.sol";
+import "../../governor/impactMarketCouncil/interfaces/IImpactMarketCouncil.sol";
 import "../../ambassadors/interfaces/IAmbassadors.sol";
 
 /**
@@ -12,7 +12,7 @@ import "../../ambassadors/interfaces/IAmbassadors.sol";
  * CommunityAdminStorageVX.
  */
 abstract contract CommunityAdminStorageV2 is CommunityAdminStorageV1 {
-    IUBICommittee public override ubiCommittee;
+    IImpactMarketCouncil public override impactMarketCouncil;
     IAmbassadors public override ambassadors;
     address public override communityMiddleProxy;
 }

@@ -13,13 +13,13 @@ const governanceDelegatorAddress = "0x5c27e2600a3eDEF53DE0Ec32F01efCF145419eDF";
 const proxyAdminAddress = "0x79f9ca5f1A01e1768b9C24AD37FF63A0199E3Fe5";
 const communityAdminProxyAddress = "0x1c33D75bcE52132c7a0e220c1C338B9db7cf3f3A";
 
-let committeeMember: string[] = [];
+let impactMarketCouncilMember: string[] = [];
 
 let communityNewImplementationAddress: string;
 let communityMiddleProxyAddress: string;
 let communityAdminNewImplementationAddress: string;
 let ambassadorsProxyAddress: string;
-let UBICommitteeProxyAddress: string;
+let ImpactMarketCouncilProxyAddress: string;
 
 let GovernanceProxy: ethersTypes.Contract;
 
@@ -29,7 +29,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	const accounts: SignerWithAddress[] = await ethers.getSigners();
 	deployer = accounts[0];
-	committeeMember = [deployer.address];
+	impactMarketCouncilMember = [deployer.address];
 
 	GovernanceProxy = await ethers.getContractAt(
 		"PACTDelegate",
@@ -38,7 +38,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	await deployNewCommunity();
 	await deployAmbassadors();
-	await deployUBICommittee();
+	await deployImpactMarketCouncil();
 	await createUpgradeCommunityProposal();
 };
 
@@ -112,38 +112,38 @@ async function deployAmbassadors() {
 	ambassadorsProxyAddress = proxyResult.address;
 }
 
-async function deployUBICommittee() {
-	console.log("Deploying UBICommittee contracts");
+async function deployImpactMarketCouncil() {
+	console.log("Deploying ImpactMarketCouncil contracts");
 
 	await new Promise((resolve) => setTimeout(resolve, 6000));
-	const implementationResult = await deploy("UBICommitteeImplementation", {
+	const implementationResult = await deploy("ImpactMarketCouncilImplementation", {
 		from: deployer.address,
 		log: true,
 	});
 
 	await new Promise((resolve) => setTimeout(resolve, 6000));
-	const proxyResult = await deploy("UBICommitteeProxy", {
+	const proxyResult = await deploy("ImpactMarketCouncilProxy", {
 		from: deployer.address,
 		args: [implementationResult.address, proxyAdminAddress],
 		log: true,
 	});
 
-	const ubiCommittee = await ethers.getContractAt(
-		"UBICommitteeImplementation",
+	const impactMarketCouncil = await ethers.getContractAt(
+		"ImpactMarketCouncilImplementation",
 		proxyResult.address
 	);
 
 	await new Promise((resolve) => setTimeout(resolve, 6000));
-	await ubiCommittee.initialize(
+	await impactMarketCouncil.initialize(
 		1,
 		communityAdminProxyAddress,
-		committeeMember
+		impactMarketCouncilMember
 	);
 
 	await new Promise((resolve) => setTimeout(resolve, 6000));
-	await ubiCommittee.transferOwnership(timelockAddress);
+	await impactMarketCouncil.transferOwnership(timelockAddress);
 
-	UBICommitteeProxyAddress = proxyResult.address;
+	ImpactMarketCouncilProxyAddress = proxyResult.address;
 }
 
 async function createUpgradeCommunityProposal() {
@@ -166,7 +166,7 @@ async function createUpgradeCommunityProposal() {
 			"updateCommunityMiddleProxy(address)",
 			"updateCommunityImplementation(address)",
 			"updateAmbassadors(address)",
-			"updateUbiCommittee(address)",
+			"updateImpactMarketCouncil(address)",
 		],
 		[
 			["address", "address"],
@@ -183,7 +183,7 @@ async function createUpgradeCommunityProposal() {
 			[communityMiddleProxyAddress],
 			[communityNewImplementationAddress],
 			[ambassadorsProxyAddress],
-			[UBICommitteeProxyAddress],
+			[ImpactMarketCouncilProxyAddress],
 		]
 	);
 }

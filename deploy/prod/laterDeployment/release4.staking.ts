@@ -18,7 +18,7 @@ const donationMinerProxyAddress = "0x09Cdc8f50994F63103bc165B139631A6ad18EF49";
 const stakingDonationRatio = 1000000000;
 const communityDonationRatio = 2;
 const stakingCooldown = 241920; // 14 days or 14 reward periods
-let committeeMember: string[] = [];
+let impactMarketCouncilMember: string[] = [];
 
 let donationMinerNewImplementationAddress: string;
 let stakingProxyAddress: string;
@@ -32,7 +32,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	const accounts: SignerWithAddress[] = await ethers.getSigners();
 	deployer = accounts[0];
-	committeeMember = [deployer.address];
+	impactMarketCouncilMember = [deployer.address];
 
 	GovernanceProxy = await ethers.getContractAt(
 		"PACTDelegate",
