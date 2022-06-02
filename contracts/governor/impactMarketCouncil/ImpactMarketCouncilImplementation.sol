@@ -4,13 +4,13 @@ pragma solidity 0.8.4;
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import "./interfaces/UBICommitteeStorageV1.sol";
+import "./interfaces/ImpactMarketCouncilStorageV1.sol";
 
-contract UBICommitteeImplementation is
+contract ImpactMarketCouncilImplementation is
     Initializable,
     OwnableUpgradeable,
     ReentrancyGuardUpgradeable,
-    UBICommitteeStorageV1
+    ImpactMarketCouncilStorageV1
 {
     /// @notice The max setable voting period
     uint256 public constant MAX_VOTING_PERIOD = 518400; // About 30 days
@@ -127,7 +127,7 @@ contract UBICommitteeImplementation is
     }
 
     /**
-     * @notice Function used to add new members to the committee.
+     * @notice Function used to add new members to the impactMarket Council.
      * @param _member Member address.
      */
     function addMember(address _member) external onlyOwner {
@@ -139,7 +139,7 @@ contract UBICommitteeImplementation is
     }
 
     /**
-     * @notice Function used to remove members from the committee.
+     * @notice Function used to remove members from the impactMarket Council.
      * @param _member Member address.
      */
     function removeMember(address _member) external onlyOwner {

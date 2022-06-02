@@ -30,10 +30,10 @@ let ambassador: SignerWithAddress;
 let pactDelegator: ethersTypes.Contract;
 let communityAdmin: ethersTypes.Contract;
 let treasury: ethersTypes.Contract;
-let ubiCommittee: ethersTypes.Contract;
+let impactMarketCouncil: ethersTypes.Contract;
 let cUSD: ethersTypes.Contract;
 
-describe("UBICommittee", function () {
+describe("ImpactMarketCouncil", function () {
 	before(async function () {
 		PACTDelegate = await ethers.getContractFactory("PACTDelegate");
 
@@ -65,12 +65,12 @@ describe("UBICommittee", function () {
 			communityAdminDeployment.address
 		);
 
-		const ubiCommitteeDeployment = await deployments.get(
-			"UBICommitteeProxy"
+		const impactMarketCouncilDeployment = await deployments.get(
+			"ImpactMarketCouncilProxy"
 		);
-		ubiCommittee = await ethers.getContractAt(
-			"UBICommitteeImplementation",
-			ubiCommitteeDeployment.address
+		impactMarketCouncil = await ethers.getContractAt(
+			"ImpactMarketCouncilImplementation",
+			impactMarketCouncilDeployment.address
 		);
 
 		const treasuryDeployment = await deployments.get("TreasuryProxy");
@@ -106,14 +106,18 @@ describe("UBICommittee", function () {
 			Ambassadors.address
 		);
 
-		await communityAdmin.updateUbiCommittee(ubiCommittee.address);
+		await communityAdmin.updateImpactMarketCouncil(
+			impactMarketCouncil.address
+		);
 		await communityAdmin.updateAmbassadors(Ambassadors.address);
 
 		await ambassadors.addEntity(entity.address);
 		await ambassadors.connect(entity).addAmbassador(ambassador.address);
 
 		await communityAdmin.transferOwnership(pactDelegator.address);
-		await expect(ubiCommittee.addMember(alice.address)).to.be.fulfilled;
+		await expect(
+			impactMarketCouncil.addMember(alice.address)
+		).to.be.fulfilled;
 
 		const cUSDDeployment = await deployments.get("TokenMock");
 		cUSD = await ethers.getContractAt("TokenMock", cUSDDeployment.address);
@@ -155,26 +159,28 @@ describe("UBICommittee", function () {
 		const descriptions = "description";
 
 		await expect(
-			ubiCommittee
+			impactMarketCouncil
 				.connect(alice)
 				.propose(signatures, calldatas, descriptions)
 		).to.be.fulfilled;
 	}
 
-	it("should create community if ubi committee", async function () {
+	it("should create community if impactMarket Council", async function () {
 		await createCommunityProposal();
 
-		await expect(ubiCommittee.connect(alice).castVote(1, 1)).to.be
+		await expect(impactMarketCouncil.connect(alice).castVote(1, 1)).to.be
 			.fulfilled;
-		await expect(ubiCommittee.connect(alice).execute(1)).to.be.fulfilled;
+		await expect(impactMarketCouncil.connect(alice).execute(1)).to.be
+			.fulfilled;
 	});
 
-	it("should remove a community if ubi committee", async () => {
+	it("should remove a community if impactMarket Council", async () => {
 		await createCommunityProposal();
 
-		await expect(ubiCommittee.connect(alice).castVote(1, 1)).to.be
+		await expect(impactMarketCouncil.connect(alice).castVote(1, 1)).to.be
 			.fulfilled;
-		await expect(ubiCommittee.connect(alice).execute(1)).to.be.fulfilled;
+		await expect(impactMarketCouncil.connect(alice).execute(1)).to.be
+			.fulfilled;
 
 		const communityAddress = await communityAdmin.communityListAt(0);
 		const signatures = ["removeCommunity(address)"];
@@ -188,33 +194,35 @@ describe("UBICommittee", function () {
 		const descriptions = "description";
 
 		await expect(
-			ubiCommittee
+			impactMarketCouncil
 				.connect(alice)
 				.propose(signatures, calldatas, descriptions)
 		).to.be.fulfilled;
 
-		await expect(ubiCommittee.connect(alice).castVote(2, 1)).to.be
+		await expect(impactMarketCouncil.connect(alice).castVote(2, 1)).to.be
 			.fulfilled;
-		await expect(ubiCommittee.connect(alice).execute(2)).to.be.fulfilled;
+		await expect(impactMarketCouncil.connect(alice).execute(2)).to.be
+			.fulfilled;
 	});
 
-	it("should update params if owner or ubi committee", async function () {
-		await expect(ubiCommittee.setQuorumVotes(2)).to.be.fulfilled;
+	it("should update params if owner or impactMarket Council", async function () {
+		await expect(impactMarketCouncil.setQuorumVotes(2)).to.be.fulfilled;
 	});
 
-	it("should not update params if not owner or ubi committee", async function () {
+	it("should not update params if not owner or impactMarket Council", async function () {
 		await expect(
-			ubiCommittee.connect(bob).setQuorumVotes(0)
+			impactMarketCouncil.connect(bob).setQuorumVotes(0)
 		).to.be.rejectedWith("Ownable: caller is not the owner");
 	});
 
 	it("should add member if owner", async function () {
-		await expect(ubiCommittee.addMember(bob.address)).to.be.fulfilled;
+		await expect(impactMarketCouncil.addMember(bob.address)).to.be
+			.fulfilled;
 	});
 
 	it("should not add member if not owner", async function () {
 		await expect(
-			ubiCommittee.connect(bob).addMember(carol.address)
+			impactMarketCouncil.connect(bob).addMember(carol.address)
 		).to.be.rejectedWith("Ownable: caller is not the owner");
 	});
 
@@ -250,54 +258,64 @@ describe("UBICommittee", function () {
 		const descriptions = "description";
 
 		await expect(
-			ubiCommittee
+			impactMarketCouncil
 				.connect(bob)
 				.propose(signatures, calldatas, descriptions)
 		).to.be.rejectedWith("PACT:: Not a member");
 	});
 
 	it("should not be able to add member if already member", async function () {
-		await expect(ubiCommittee.addMember(bob.address)).to.be.fulfilled;
-		await expect(ubiCommittee.addMember(bob.address)).to.be.rejectedWith(
-			"PACT::addMember: already a member"
-		);
+		await expect(impactMarketCouncil.addMember(bob.address)).to.be
+			.fulfilled;
+		await expect(
+			impactMarketCouncil.addMember(bob.address)
+		).to.be.rejectedWith("PACT::addMember: already a member");
 	});
 
 	it("should not be able to add member if already member", async function () {
-		await expect(ubiCommittee.removeMember(bob.address)).to.be.rejectedWith(
-			"PACT::removeMember: not a member"
-		);
+		await expect(
+			impactMarketCouncil.removeMember(bob.address)
+		).to.be.rejectedWith("PACT::removeMember: not a member");
 	});
 
 	it("should be able to add many members", async function () {
-		await expect(ubiCommittee.addMember(bob.address)).to.be.fulfilled;
-		await expect(ubiCommittee.addMember(carol.address)).to.be.fulfilled;
+		await expect(impactMarketCouncil.addMember(bob.address)).to.be
+			.fulfilled;
+		await expect(impactMarketCouncil.addMember(carol.address)).to.be
+			.fulfilled;
 	});
 
 	it("should be able to change quorum", async function () {
-		await expect(ubiCommittee.addMember(bob.address)).to.be.fulfilled;
-		await expect(ubiCommittee.setQuorumVotes(2)).to.be.fulfilled;
+		await expect(impactMarketCouncil.addMember(bob.address)).to.be
+			.fulfilled;
+		await expect(impactMarketCouncil.setQuorumVotes(2)).to.be.fulfilled;
 	});
 
 	it("should be able to execute after reaching quorum", async function () {
-		await expect(ubiCommittee.addMember(bob.address)).to.be.fulfilled;
-		await expect(ubiCommittee.setQuorumVotes(2)).to.be.fulfilled;
+		await expect(impactMarketCouncil.addMember(bob.address)).to.be
+			.fulfilled;
+		await expect(impactMarketCouncil.setQuorumVotes(2)).to.be.fulfilled;
 
 		await createCommunityProposal();
 
-		await expect(ubiCommittee.connect(alice).castVote(1, 1)).to.be
+		await expect(impactMarketCouncil.connect(alice).castVote(1, 1)).to.be
 			.fulfilled;
-		await expect(ubiCommittee.connect(bob).castVote(1, 1)).to.be.fulfilled;
-		await expect(ubiCommittee.connect(alice).execute(1)).to.be.fulfilled;
+		await expect(impactMarketCouncil.connect(bob).castVote(1, 1)).to.be
+			.fulfilled;
+		await expect(impactMarketCouncil.connect(alice).execute(1)).to.be
+			.fulfilled;
 	});
 
 	it("should not be able to execute without reaching quorum", async function () {
-		await expect(ubiCommittee.addMember(bob.address)).to.be.fulfilled;
-		await expect(ubiCommittee.setQuorumVotes(2)).to.be.fulfilled;
+		await expect(impactMarketCouncil.addMember(bob.address)).to.be
+			.fulfilled;
+		await expect(impactMarketCouncil.setQuorumVotes(2)).to.be.fulfilled;
 
 		await createCommunityProposal();
 
-		await expect(ubiCommittee.connect(alice).execute(1)).to.be.rejectedWith(
+		await expect(
+			impactMarketCouncil.connect(alice).execute(1)
+		).to.be.rejectedWith(
 			"PACT::execute: proposal can only be executed if it is succeeded"
 		);
 	});
@@ -305,49 +323,56 @@ describe("UBICommittee", function () {
 	it("should not be able to execute a canceled proposal", async function () {
 		await createCommunityProposal();
 
-		await expect(ubiCommittee.connect(alice).cancel(1)).to.be.fulfilled;
+		await expect(impactMarketCouncil.connect(alice).cancel(1)).to.be
+			.fulfilled;
 		await expect(
-			ubiCommittee.connect(alice).castVote(1, 1)
+			impactMarketCouncil.connect(alice).castVote(1, 1)
 		).to.be.rejectedWith("PACT::castVoteInternal: voting is closed");
 	});
 
 	it("should not be able to vote once proposal meet quorum already", async function () {
-		await expect(ubiCommittee.addMember(bob.address)).to.be.fulfilled;
+		await expect(impactMarketCouncil.addMember(bob.address)).to.be
+			.fulfilled;
 
 		await createCommunityProposal();
 
-		await expect(ubiCommittee.connect(alice).castVote(1, 1)).to.be
+		await expect(impactMarketCouncil.connect(alice).castVote(1, 1)).to.be
 			.fulfilled;
 		await expect(
-			ubiCommittee.connect(bob).castVote(1, 1)
+			impactMarketCouncil.connect(bob).castVote(1, 1)
 		).to.be.rejectedWith("PACT::castVoteInternal: voting is closed");
 	});
 
 	it("should not be able to vote twice", async function () {
-		await expect(ubiCommittee.addMember(bob.address)).to.be.fulfilled;
-		await expect(ubiCommittee.setQuorumVotes(2)).to.be.fulfilled;
+		await expect(impactMarketCouncil.addMember(bob.address)).to.be
+			.fulfilled;
+		await expect(impactMarketCouncil.setQuorumVotes(2)).to.be.fulfilled;
 
 		await createCommunityProposal();
 
-		await expect(ubiCommittee.connect(alice).castVote(1, 1)).to.be
+		await expect(impactMarketCouncil.connect(alice).castVote(1, 1)).to.be
 			.fulfilled;
 		await expect(
-			ubiCommittee.connect(alice).castVote(1, 1)
+			impactMarketCouncil.connect(alice).castVote(1, 1)
 		).to.be.rejectedWith("PACT::castVoteInternal: voter already voted");
 	});
 
 	it("if quorum is set to a number higher or equal than current votes, should be able to execute", async function () {
-		await expect(ubiCommittee.addMember(bob.address)).to.be.fulfilled;
-		await expect(ubiCommittee.addMember(carol.address)).to.be.fulfilled;
-		await expect(ubiCommittee.setQuorumVotes(3)).to.be.fulfilled;
+		await expect(impactMarketCouncil.addMember(bob.address)).to.be
+			.fulfilled;
+		await expect(impactMarketCouncil.addMember(carol.address)).to.be
+			.fulfilled;
+		await expect(impactMarketCouncil.setQuorumVotes(3)).to.be.fulfilled;
 
 		await createCommunityProposal();
 
-		await expect(ubiCommittee.connect(alice).castVote(1, 1)).to.be
+		await expect(impactMarketCouncil.connect(alice).castVote(1, 1)).to.be
 			.fulfilled;
-		await expect(ubiCommittee.connect(bob).castVote(1, 1)).to.be.fulfilled;
-		await expect(ubiCommittee.setQuorumVotes(2)).to.be.fulfilled;
-		await expect(ubiCommittee.connect(bob).execute(1)).to.be.fulfilled;
+		await expect(impactMarketCouncil.connect(bob).castVote(1, 1)).to.be
+			.fulfilled;
+		await expect(impactMarketCouncil.setQuorumVotes(2)).to.be.fulfilled;
+		await expect(impactMarketCouncil.connect(bob).execute(1)).to.be
+			.fulfilled;
 	});
 
 	xit("should not be able to vote once vote period ends", async function () {
@@ -357,7 +382,7 @@ describe("UBICommittee", function () {
 		await advanceBlockNTimes(VOTING_PERIOD_BLOCKS);
 
 		await expect(
-			ubiCommittee.connect(alice).castVote(1, 1)
+			impactMarketCouncil.connect(alice).castVote(1, 1)
 		).to.be.rejectedWith("PACT::castVoteInternal: voting is closed");
 	});
 });

@@ -103,10 +103,14 @@ async function deploy() {
 		communityAdminProxy.address
 	);
 
-	const UBICommitteeProxy = await deployments.get("UBICommitteeProxy");
+	const ImpactMarketCouncilProxy = await deployments.get(
+		"ImpactMarketCouncilProxy"
+	);
 	const AmbassadorsProxy = await deployments.get("AmbassadorsProxy");
 
-	await communityAdminProxy.updateUbiCommittee(UBICommitteeProxy.address);
+	await communityAdminProxy.updateImpactMarketCouncil(
+		ImpactMarketCouncilProxy.address
+	);
 	await communityAdminProxy.updateAmbassadors(AmbassadorsProxy.address);
 
 	ambassadors = await ethers.getContractAt(

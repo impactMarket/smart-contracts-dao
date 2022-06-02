@@ -50,7 +50,7 @@ describe("Governance", function () {
 	let timelock: ethersTypes.Contract;
 	let proxyAdmin: ethersTypes.Contract;
 	let treasuryProxy: ethersTypes.Contract;
-	let ubiCommittee: ethersTypes.Contract;
+	let impactMarketCouncil: ethersTypes.Contract;
 	let communityMiddleProxy: ethersTypes.Contract;
 	let communityAdminProxy: ethersTypes.Contract;
 
@@ -144,10 +144,10 @@ describe("Governance", function () {
 			).address
 		);
 
-		ubiCommittee = await ethers.getContractAt(
-			"UBICommitteeImplementation",
+		impactMarketCouncil = await ethers.getContractAt(
+			"ImpactMarketCouncilImplementation",
 			(
-				await deployments.get("UBICommitteeProxy")
+				await deployments.get("ImpactMarketCouncilProxy")
 			).address
 		);
 
@@ -182,7 +182,7 @@ describe("Governance", function () {
 
 		await proxyAdmin.transferOwnership(timelock.address);
 		await treasuryProxy.transferOwnership(timelock.address);
-		await ubiCommittee.transferOwnership(timelock.address);
+		await impactMarketCouncil.transferOwnership(timelock.address);
 
 		await USDT.mint(treasuryProxy.address, parseEther("1000000"));
 	}
@@ -760,8 +760,8 @@ describe("Governance", function () {
 			).to.be.equal(governanceDelegate.address);
 		});
 
-		it("should add member to ubi committee", async function () {
-			const targets = [ubiCommittee.address];
+		it("should add member to impactMarket Council", async function () {
+			const targets = [impactMarketCouncil.address];
 			const values = [0];
 			const signatures = ["addMember(address)"];
 
@@ -802,7 +802,9 @@ describe("Governance", function () {
 			await expect(governanceDelegator.connect(user1).execute(1)).to.be
 				.fulfilled;
 
-			expect(await ubiCommittee.members(user8.address)).to.be.equal(true);
+			expect(
+				await impactMarketCouncil.members(user8.address)
+			).to.be.equal(true);
 		});
 
 		it("should update communityAdmin & community to V2", async function () {
