@@ -10,9 +10,10 @@ let deployer: SignerWithAddress;
 
 const governanceDelegatorAddress = "0x5c27e2600a3eDEF53DE0Ec32F01efCF145419eDF";
 const proxyAdminAddress = "0x79f9ca5f1A01e1768b9C24AD37FF63A0199E3Fe5";
-const SPACTTokenAddress = "0x6732B3e5643dEBfaB7d1570f313271dD9E24c58C";
 
-let governanceNewImplementationAddress: string;
+const proxyAddress = "0x2Bdd85857eDd9A4fAA72b663536189e38D8E3C71";
+
+let newImplementationAddress: string;
 
 let GovernanceProxy: ethersTypes.Contract;
 
@@ -28,15 +29,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		governanceDelegatorAddress
 	);
 
-	await deployNewGovernance();
-	await createUpgradeGovernanceProposal();
+	await deployNewImplementation();
+	await createUpgradeImplementation();
 };
 
-async function deployNewGovernance() {
-	console.log("Deploying new contract for governance");
-	await new Promise((resolve) => setTimeout(resolve, 6000));
-	governanceNewImplementationAddress = (
-		await deploy("PACTDelegate", {
+async function deployNewImplementation() {
+	console.log("Deploying new contract for donation miner");
+	newImplementationAddress = (
+		await deploy("StakingImplementation", {
 			from: deployer.address,
 			args: [],
 			log: true,
@@ -45,23 +45,30 @@ async function deployNewGovernance() {
 	).address;
 }
 
-async function createUpgradeGovernanceProposal() {
-	console.log("Creating new proposal for governance");
+async function createUpgradeImplementation() {
+	console.log("Creating new proposal");
 
 	await new Promise((resolve) => setTimeout(resolve, 6000));
 	await createProposal(
 		GovernanceProxy,
 		deployer,
-		[proxyAdminAddress, governanceDelegatorAddress],
+		[
+			proxyAdminAddress,
+			proxyAddress
+		],
 		[0, 0],
-		["upgrade(address,address)", "_setReleaseToken(address)"],
+		[
+			"upgrade(address,address)",
+			"claimAmount(address)"
+		],
 		[["address", "address"], ["address"]],
 		[
-			[governanceDelegatorAddress, governanceNewImplementationAddress],
-			[SPACTTokenAddress],
-		]
+			[proxyAddress, newImplementationAddress],
+			[deployer.address]
+		],
+		'Upgrade implementation'
 	);
 }
 
 export default func;
-func.tags = ["Release4Governance"];
+func.tags = ["UpgradeImplementation"];

@@ -12,13 +12,12 @@ const PACTTokenAddress = "0x73A2De6A8370108D43c3C80430C84c30df323eD2";
 const timelockAddress = "0xcb0C15AdE117C812E4d96165472EbF83Bed231B0";
 const governanceDelegatorAddress = "0x5c27e2600a3eDEF53DE0Ec32F01efCF145419eDF";
 const proxyAdminAddress = "0x79f9ca5f1A01e1768b9C24AD37FF63A0199E3Fe5";
-const communityAdminProxyAddress = "0x1c33D75bcE52132c7a0e220c1C338B9db7cf3f3A";
 const donationMinerProxyAddress = "0x09Cdc8f50994F63103bc165B139631A6ad18EF49";
+
 
 const stakingDonationRatio = 1000000000;
 const communityDonationRatio = 2;
-const stakingCooldown = 241920; // 14 days or 14 reward periods
-let impactMarketCouncilMember: string[] = [];
+const stakingCooldown = 259200; // 14 days or 15 reward periods (as donationMiner.claimDelay)
 
 let donationMinerNewImplementationAddress: string;
 let stakingProxyAddress: string;
@@ -32,7 +31,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	const accounts: SignerWithAddress[] = await ethers.getSigners();
 	deployer = accounts[0];
-	impactMarketCouncilMember = [deployer.address];
 
 	GovernanceProxy = await ethers.getContractAt(
 		"PACTDelegate",
@@ -47,7 +45,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 async function deployStaking() {
 	console.log("Deploying Staking contracts");
 
-	// await new Promise((resolve) => setTimeout(resolve, 6000));
+	await new Promise((resolve) => setTimeout(resolve, 6000));
 	const SPACTTokenResult = await deploy("SPACTToken", {
 		from: deployer.address,
 		args: [],
@@ -59,7 +57,7 @@ async function deployStaking() {
 		SPACTTokenResult.address
 	);
 
-	// await new Promise((resolve) => setTimeout(resolve, 6000));
+	await new Promise((resolve) => setTimeout(resolve, 6000));
 	const stakingImplementationResult = await deploy("StakingImplementation", {
 		from: deployer.address,
 		args: [],
@@ -67,7 +65,7 @@ async function deployStaking() {
 		// gasLimit: 13000000,
 	});
 
-	// await new Promise((resolve) => setTimeout(resolve, 6000));
+	await new Promise((resolve) => setTimeout(resolve, 6000));
 	const stakingProxyResult = await deploy("StakingProxy", {
 		from: deployer.address,
 		args: [stakingImplementationResult.address, proxyAdminAddress],
@@ -137,7 +135,8 @@ async function createUpgradeDonationMinerProposal() {
 			[stakingProxyAddress],
 			[stakingDonationRatio],
 			[communityDonationRatio],
-		]
+		],
+		'Upgrade DonationMiner to allow Staking features'
 	);
 }
 
