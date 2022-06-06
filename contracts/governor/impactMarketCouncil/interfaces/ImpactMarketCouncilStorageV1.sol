@@ -4,9 +4,9 @@ pragma solidity 0.8.4;
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import "../../../community/interfaces/ICommunityAdmin.sol";
-import "./IUBICommittee.sol";
+import "./IImpactMarketCouncil.sol";
 
-abstract contract UBICommitteeStorageV1 is IUBICommittee {
+abstract contract ImpactMarketCouncilStorageV1 is IImpactMarketCouncil {
     ProxyAdmin public communityProxyAdmin;
     ICommunityAdmin public communityAdmin;
 
@@ -16,7 +16,7 @@ abstract contract UBICommitteeStorageV1 is IUBICommittee {
     /// @notice The total number of proposals
     uint256 public proposalCount;
 
-    /// @notice The committee members
+    /// @notice The council members
     mapping(address => bool) public members;
 
     /// @notice The official record of all proposals ever proposed

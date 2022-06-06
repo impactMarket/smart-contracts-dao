@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./ICommunity.sol";
 import "../../treasury/interfaces/ITreasury.sol";
-import "../../governor/ubiCommittee/interfaces/IUBICommittee.sol";
+import "../../governor/impactMarketCouncil/interfaces/IImpactMarketCouncil.sol";
 import "../../ambassadors/interfaces/IAmbassadors.sol";
 
 interface ICommunityAdmin {
@@ -19,7 +19,7 @@ interface ICommunityAdmin {
     function getVersion() external returns(uint256);
     function cUSD() external view returns(IERC20);
     function treasury() external view returns(ITreasury);
-    function ubiCommittee() external view returns(IUBICommittee);
+    function impactMarketCouncil() external view returns(IImpactMarketCouncil);
     function ambassadors() external view returns(IAmbassadors);
     function communityMiddleProxy() external view returns(address);
     function communities(address _community) external view returns(CommunityState);
@@ -30,7 +30,7 @@ interface ICommunityAdmin {
     function isAmbassadorOrEntityOfCommunity(address _community, address _ambassadorOrEntity) external view returns (bool);
 
     function updateTreasury(ITreasury _newTreasury) external;
-    function updateUbiCommittee(IUBICommittee _newUbiCommittee) external;
+    function updateImpactMarketCouncil(IImpactMarketCouncil _newImpactMarketCouncil) external;
     function updateAmbassadors(IAmbassadors _newAmbassadors) external;
     function updateCommunityMiddleProxy(address _communityMiddleProxy) external;
     function updateCommunityImplementation(ICommunity _communityImplementation_) external;
