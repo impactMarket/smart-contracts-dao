@@ -41,7 +41,7 @@
     "@types/chai-as-promised": "^7.1.4",
     "@types/mocha": "^8.2.2",
     "@types/node": "^16.0.0",
-    "@ubeswap/governance": "git+https://github.com/Ubeswap/ubeswap-governance.git",
+    "@ubeswap/governance": "ubeswap/ubeswap-governance",
     "chai-as-promised": "^7.1.1",
     "chai-ethers": "^0.0.1",
     "dotenv": "^10.0.0",

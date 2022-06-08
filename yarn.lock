@@ -1167,6 +1167,11 @@
   version "1.0.0"
   resolved "git+https://github.com/Ubeswap/ubeswap-governance.git#a9ed8e5aef4ced8562876ed254727c5033f6f2ae"
 
+"@ubeswap/governance@ubeswap/ubeswap-governance":
+  version "1.0.0"
+  uid a9ed8e5aef4ced8562876ed254727c5033f6f2ae
+  resolved "https://codeload.github.com/ubeswap/ubeswap-governance/tar.gz/a9ed8e5aef4ced8562876ed254727c5033f6f2ae"
+
 "@vue/component-compiler-utils@^3.1.0":
   version "3.3.0"
   resolved "https://registry.yarnpkg.com/@vue/component-compiler-utils/-/component-compiler-utils-3.3.0.tgz#f9f5fb53464b0c37b2c8d2f3fbfe44df60f61dc9"
