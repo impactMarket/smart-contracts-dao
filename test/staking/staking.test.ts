@@ -298,6 +298,13 @@ describe("Staking", () => {
 			expect(await Staking.stakeholderAmount(user1.address)).to.be.equal(
 				toEther("40")
 			);
+
+			const stakeholder = await Staking.stakeholder(user1.address);
+			expect(stakeholder.amount).to.be.equal(toEther(40));
+			expect(stakeholder.nextUnstakeId).to.be.equal(0);
+			expect(stakeholder.unstakeListLength).to.be.equal(1);
+			expect(stakeholder.unstakedAmount).to.be.equal(toEther(60));
+
 			expect(await Staking.currentTotalAmount()).to.be.equal(
 				toEther("40")
 			);
@@ -310,6 +317,10 @@ describe("Staking", () => {
 			expect(await PACT.balanceOf(user1.address)).to.be.equal(
 				user1InitialPACTBalance.sub(spactBalance)
 			);
+
+			let unstake = await Staking.stakeholderUnstakeAt(user1.address, 0);
+			expect(unstake.amount).to.be.equal(toEther(60));
+			expect(unstake.cooldownBlock).to.be.equal(233);
 		});
 
 		it("should not unstake if not enough funds #2", async function () {
@@ -365,6 +376,12 @@ describe("Staking", () => {
 			await expect(Staking.connect(user1).unstake(toEther("60"))).to.be
 				.fulfilled;
 
+			let stakeholder = await Staking.stakeholder(user1.address);
+			expect(stakeholder.amount).to.be.equal(toEther(40));
+			expect(stakeholder.nextUnstakeId).to.be.equal(0);
+			expect(stakeholder.unstakeListLength).to.be.equal(1);
+			expect(stakeholder.unstakedAmount).to.be.equal(toEther(60));
+
 			await advanceBlockNTimes(COOLDOWN + 1);
 
 			expect(await Staking.claimAmount(user1.address)).to.be.equal(
@@ -372,6 +389,12 @@ describe("Staking", () => {
 			);
 			await expect(Staking.connect(user1).claim()).to.be.fulfilled;
 			expect(await Staking.claimAmount(user1.address)).to.be.equal(0);
+
+			stakeholder = await Staking.stakeholder(user1.address);
+			expect(stakeholder.amount).to.be.equal(toEther(40));
+			expect(stakeholder.nextUnstakeId).to.be.equal(1);
+			expect(stakeholder.unstakeListLength).to.be.equal(1);
+			expect(stakeholder.unstakedAmount).to.be.equal(toEther(0));
 
 			expect(await Staking.stakeholderAmount(user1.address)).to.be.equal(
 				toEther("40")
@@ -417,10 +440,22 @@ describe("Staking", () => {
 			await expect(Staking.connect(user1).unstake(toEther("10"))).to.be
 				.fulfilled;
 
+			let stakeholder = await Staking.stakeholder(user1.address);
+			expect(stakeholder.amount).to.be.equal(toEther(30));
+			expect(stakeholder.nextUnstakeId).to.be.equal(0);
+			expect(stakeholder.unstakeListLength).to.be.equal(2);
+			expect(stakeholder.unstakedAmount).to.be.equal(toEther(70));
+
 			await advanceBlockNTimes(COOLDOWN);
 
 			await expect(Staking.connect(user1).claimPartial(0)).to.be
 				.fulfilled;
+
+			stakeholder = await Staking.stakeholder(user1.address);
+			expect(stakeholder.amount).to.be.equal(toEther(30));
+			expect(stakeholder.nextUnstakeId).to.be.equal(1);
+			expect(stakeholder.unstakeListLength).to.be.equal(2);
+			expect(stakeholder.unstakedAmount).to.be.equal(toEther(10));
 
 			expect(await Staking.stakeholderAmount(user1.address)).to.be.equal(
 				toEther("30")
@@ -474,6 +509,12 @@ describe("Staking", () => {
 		});
 
 		it("should stake, unstake and claim multiple holders", async function () {
+			let stakeholder1 = await Staking.stakeholder(user1.address);
+			expect(stakeholder1.amount).to.be.equal(toEther(0));
+			expect(stakeholder1.nextUnstakeId).to.be.equal(0);
+			expect(stakeholder1.unstakeListLength).to.be.equal(0);
+			expect(stakeholder1.unstakedAmount).to.be.equal(toEther(0));
+
 			let spactBalance: any;
 			const user1StakeAmount1 = toEther("101");
 			const user1StakeAmount2 = toEther("102");
@@ -613,6 +654,24 @@ describe("Staking", () => {
 			await expect(Staking.connect(user2).unstake(toEther("40"))).to.be
 				.fulfilled;
 
+			stakeholder1 = await Staking.stakeholder(user1.address);
+			expect(stakeholder1.amount).to.be.equal(toEther(226));
+			expect(stakeholder1.nextUnstakeId).to.be.equal(0);
+			expect(stakeholder1.unstakeListLength).to.be.equal(1);
+			expect(stakeholder1.unstakedAmount).to.be.equal(toEther(80));
+
+			let stakeholder2 = await Staking.stakeholder(user2.address);
+			expect(stakeholder2.amount).to.be.equal(toEther(253));
+			expect(stakeholder2.nextUnstakeId).to.be.equal(0);
+			expect(stakeholder2.unstakeListLength).to.be.equal(5);
+			expect(stakeholder2.unstakedAmount).to.be.equal(toEther(150));
+
+			let stakeholder3 = await Staking.stakeholder(user3.address);
+			expect(stakeholder3.amount).to.be.equal(toEther(473));
+			expect(stakeholder3.nextUnstakeId).to.be.equal(1);
+			expect(stakeholder3.unstakeListLength).to.be.equal(2);
+			expect(stakeholder3.unstakedAmount).to.be.equal(toEther(70));
+
 			expect(await Staking.claimAmount(user2.address)).to.be.equal(
 				toEther(50)
 			);
@@ -681,6 +740,22 @@ describe("Staking", () => {
 			expect(await PACT.balanceOf(user2.address)).to.be.equal(
 				user2InitialPACTBalance
 			);
+
+			let unstake = await Staking.stakeholderUnstakeAt(user1.address, 0);
+			expect(unstake.amount).to.be.equal(toEther(80));
+			expect(unstake.cooldownBlock).to.be.equal(342);
+
+			unstake = await Staking.stakeholderUnstakeAt(user2.address, 2);
+			expect(unstake.amount).to.be.equal(toEther(20));
+			expect(unstake.cooldownBlock).to.be.equal(347);
+
+			unstake = await Staking.stakeholderUnstakeAt(user2.address, 4);
+			expect(unstake.amount).to.be.equal(toEther(40));
+			expect(unstake.cooldownBlock).to.be.equal(349);
+
+			unstake = await Staking.stakeholderUnstakeAt(user3.address, 1);
+			expect(unstake.amount).to.be.equal(toEther(70));
+			expect(unstake.cooldownBlock).to.be.equal(340);
 		});
 	});
 });

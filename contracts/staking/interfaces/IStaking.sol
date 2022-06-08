@@ -25,6 +25,8 @@ interface IStaking {
     function cooldown() external view returns(uint256);
     function currentTotalAmount() external view returns(uint256);
     function stakeholderAmount(address _holderAddress) external view returns(uint256);
+    function stakeholder(address _holderAddress) external view returns (uint256 amount, uint256 nextUnstakeId, uint256 unstakeListLength, uint256 unstakedAmount);
+    function stakeholderUnstakeAt(address _holderAddress, uint256 _unstakeIndex) external view returns (Unstake memory);
     function stakeholdersListAt(uint256 _index) external view returns (address);
     function stakeholdersListLength() external view returns (uint256);
 
