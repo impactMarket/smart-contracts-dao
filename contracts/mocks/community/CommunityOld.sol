@@ -7,9 +7,10 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "../../community/interfaces/ICommunityLegacy.sol";
-import "./interfaces/ICommunityAdminOld.sol";
-import "./interfaces/CommunityStorageV1Old.sol";
+import "./interfaces/ICommunity.sol";
+import "./interfaces/ICommunityOld.sol";
+import "./interfaces/ICommunityAdmin.sol";
+import "./interfaces/CommunityStorageV1.sol";
 
 /**
  * @notice Welcome to the Community contract. For each community
@@ -19,12 +20,12 @@ import "./interfaces/CommunityStorageV1Old.sol";
  * of having everything in one single contract.
  *Each community has it's own members and and managers.
  */
-contract CommunityImplementationOld is
+contract CommunityOld is
     Initializable,
     AccessControlUpgradeable,
     OwnableUpgradeable,
     ReentrancyGuardUpgradeable,
-    CommunityStorageV1Old
+    CommunityStorageV1
 {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -227,7 +228,7 @@ contract CommunityImplementationOld is
         uint256 _incrementInterval,
         uint256 _minTranche,
         uint256 _maxTranche,
-        ICommunityOld _previousCommunity
+        ICommunity _previousCommunity
     ) external initializer {
         require(
             _baseInterval > _incrementInterval,
@@ -254,7 +255,7 @@ contract CommunityImplementationOld is
         minTranche = _minTranche;
         maxTranche = _maxTranche;
         previousCommunity = _previousCommunity;
-        communityAdmin = ICommunityAdminOld(msg.sender);
+        communityAdmin = ICommunityAdmin(msg.sender);
         decreaseStep = _decreaseStep;
         locked = false;
 
@@ -267,10 +268,8 @@ contract CommunityImplementationOld is
         _setupRole(MANAGER_ROLE, msg.sender);
         emit ManagerAdded(msg.sender, msg.sender);
 
-        uint256 _i;
-        uint256 _numberOfManagers = _managers.length;
-        for (; _i < _numberOfManagers; _i++) {
-            addManager(_managers[_i]);
+        for (uint256 i = 0; i < _managers.length; i++) {
+            addManager(_managers[i]);
         }
     }
 
@@ -336,7 +335,7 @@ contract CommunityImplementationOld is
      *
      * @param _newCommunityAdmin address of the new communityAdmin
      */
-    function updateCommunityAdmin(ICommunityAdminOld _newCommunityAdmin) external override onlyOwner {
+    function updateCommunityAdmin(ICommunityAdmin _newCommunityAdmin) external override onlyOwner {
         address _oldCommunityAdminAddress = address(communityAdmin);
         communityAdmin = _newCommunityAdmin;
 
@@ -349,7 +348,7 @@ contract CommunityImplementationOld is
      *
      * @param _newPreviousCommunity address of the new previousCommunity
      */
-    function updatePreviousCommunity(ICommunityOld _newPreviousCommunity) external override onlyOwner {
+    function updatePreviousCommunity(ICommunity _newPreviousCommunity) external override onlyOwner {
         address _oldPreviousCommunityAddress = address(previousCommunity);
         previousCommunity = _newPreviousCommunity;
 
@@ -412,9 +411,9 @@ contract CommunityImplementationOld is
      * @param _maxTranche maximum amount that the community will receive when requesting funds
      */
     function updateCommunityParams(uint256 _minTranche, uint256 _maxTranche)
-    external
-    override
-    onlyOwner
+        external
+        override
+        onlyOwner
     {
         require(
             _minTranche <= _maxTranche,
@@ -480,10 +479,10 @@ contract CommunityImplementationOld is
      * @param _beneficiaryAddress address of the beneficiary to be added
      */
     function addBeneficiary(address _beneficiaryAddress)
-    external
-    override
-    onlyManagers
-    nonReentrant
+        external
+        override
+        onlyManagers
+        nonReentrant
     {
         Beneficiary storage _beneficiary = beneficiaries[_beneficiaryAddress];
         require(
@@ -544,7 +543,7 @@ contract CommunityImplementationOld is
 
         require(
             _beneficiary.state == BeneficiaryState.Valid ||
-            _beneficiary.state == BeneficiaryState.Locked,
+                _beneficiary.state == BeneficiaryState.Locked,
             "Community::removeBeneficiary: NOT_YET"
         );
         _changeBeneficiaryState(_beneficiary, BeneficiaryState.Removed);
@@ -679,10 +678,10 @@ contract CommunityImplementationOld is
         //if the previousCommunity is deployed with the new type of smart contract
         if (previousCommunity.impactMarketAddress() == address(0)) {
             (
-            BeneficiaryState _oldBeneficiaryState,
-            uint256 _oldBeneficiaryClaims,
-            uint256 _oldBeneficiaryClaimedAmount,
-            uint256 _oldBeneficiaryLastClaim
+                BeneficiaryState _oldBeneficiaryState,
+                uint256 _oldBeneficiaryClaims,
+                uint256 _oldBeneficiaryClaimedAmount,
+                uint256 _oldBeneficiaryLastClaim
             ) = previousCommunity.beneficiaries(msg.sender);
 
             _changeBeneficiaryState(_beneficiary, _oldBeneficiaryState);
@@ -690,7 +689,7 @@ contract CommunityImplementationOld is
             _beneficiary.lastClaim = _oldBeneficiaryLastClaim;
             _beneficiary.claimedAmount = _oldBeneficiaryClaimedAmount;
         } else {
-            ICommunityLegacy _oldCommunity = ICommunityLegacy(address(previousCommunity));
+            ICommunityOld _oldCommunity = ICommunityOld(address(previousCommunity));
             uint256 _oldBeneficiaryLastInterval = _oldCommunity.lastInterval(msg.sender);
             _changeBeneficiaryState(
                 _beneficiary,
@@ -702,10 +701,10 @@ contract CommunityImplementationOld is
             if (_oldBeneficiaryCooldown >= _oldBeneficiaryLastInterval + _firstBlockTimestamp()) {
                 // seconds to blocks conversion
                 _beneficiary.lastClaim =
-                (_oldBeneficiaryCooldown -
-                _oldBeneficiaryLastInterval -
-                _firstBlockTimestamp()) /
-                5;
+                    (_oldBeneficiaryCooldown -
+                        _oldBeneficiaryLastInterval -
+                        _firstBlockTimestamp()) /
+                    5;
             } else {
                 _beneficiary.lastClaim = 0;
             }
@@ -715,9 +714,9 @@ contract CommunityImplementationOld is
             uint256 _previousBaseInterval = _oldCommunity.baseInterval();
             if (_oldBeneficiaryLastInterval >= _previousBaseInterval) {
                 _beneficiary.claims =
-                (_oldBeneficiaryLastInterval - _previousBaseInterval) /
-                _oldCommunity.incrementInterval() +
-                1;
+                    (_oldBeneficiaryLastInterval - _previousBaseInterval) /
+                    _oldCommunity.incrementInterval() +
+                    1;
             } else {
                 _beneficiary.claims = 0;
             }
@@ -742,7 +741,7 @@ contract CommunityImplementationOld is
      * @param _newState new state
      */
     function _changeBeneficiaryState(Beneficiary storage _beneficiary, BeneficiaryState _newState)
-    internal
+        internal
     {
         if (_beneficiary.state == _newState) {
             return;
@@ -751,7 +750,7 @@ contract CommunityImplementationOld is
         if (_newState == BeneficiaryState.Valid) {
             require(
                 maxClaim - decreaseStep >= claimAmount,
-                "Community::_changeBeneficiaryState: This community has reached the maximum number of valid beneficiaries"
+                "Community::_changeBeneficiaryState: Max claim too low"
             );
             validBeneficiaryCount++;
             maxClaim -= decreaseStep;

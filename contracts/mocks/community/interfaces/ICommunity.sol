@@ -20,18 +20,6 @@ interface ICommunity {
         uint256 lastClaim;       //block number of the last claim
     }
 
-    function initialize(
-        address[] memory _managers,
-        uint256 _claimAmount,
-        uint256 _maxClaim,
-        uint256 _decreaseStep,
-        uint256 _baseInterval,
-        uint256 _incrementInterval,
-        uint256 _minTranche,
-        uint256 _maxTranche,
-        uint256 _maxBeneficiaries,
-        ICommunity _previousCommunity
-    ) external;
     function getVersion() external returns(uint256);
     function previousCommunity() external view returns(ICommunity);
     function claimAmount() external view returns(uint256);
@@ -39,12 +27,10 @@ interface ICommunity {
     function incrementInterval() external view returns(uint256);
     function maxClaim() external view returns(uint256);
     function validBeneficiaryCount() external view returns(uint);
-    function maxBeneficiaries() external view returns(uint);
     function treasuryFunds() external view returns(uint);
     function privateFunds() external view returns(uint);
     function communityAdmin() external view returns(ICommunityAdmin);
     function cUSD() external view  returns(IERC20);
-    function token() external view  returns(IERC20);
     function locked() external view returns(bool);
     function beneficiaries(address _beneficiaryAddress) external view returns(
         BeneficiaryState state,
@@ -73,14 +59,12 @@ interface ICommunity {
         uint256 _minTranche,
         uint256 _maxTranche
     ) external;
-    function updateMaxBeneficiaries(uint256 _newMaxBeneficiaries) external;
-    function updateToken(IERC20 _newToken, address[] memory _exchangePath) external;
     function donate(address _sender, uint256 _amount) external;
     function addTreasuryFunds(uint256 _amount) external;
     function transfer(IERC20 _token, address _to, uint256 _amount) external;
     function addManager(address _managerAddress) external;
     function removeManager(address _managerAddress) external;
-    function addBeneficiaries(address[] memory _beneficiaryAddresses) external;
+    function addBeneficiary(address _beneficiaryAddress) external;
     function lockBeneficiary(address _beneficiaryAddress) external;
     function unlockBeneficiary(address _beneficiaryAddress) external;
     function removeBeneficiary(address _beneficiaryAddress) external;
@@ -90,6 +74,6 @@ interface ICommunity {
     function lock() external;
     function unlock() external;
     function requestFunds() external;
-    function beneficiaryJoinFromMigrated(address _beneficiaryAddress) external;
+    function beneficiaryJoinFromMigrated() external;
     function getInitialMaxClaim() external view returns (uint256);
 }

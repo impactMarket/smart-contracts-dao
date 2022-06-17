@@ -28,7 +28,6 @@ interface ICommunityAdmin {
     function communityListAt(uint256 _index) external view returns (address);
     function communityListLength() external view returns (uint256);
     function isAmbassadorOrEntityOfCommunity(address _community, address _ambassadorOrEntity) external view returns (bool);
-
     function updateTreasury(ITreasury _newTreasury) external;
     function updateImpactMarketCouncil(IImpactMarketCouncil _newImpactMarketCouncil) external;
     function updateAmbassadors(IAmbassadors _newAmbassadors) external;
@@ -40,7 +39,8 @@ interface ICommunityAdmin {
         uint256 _maxClaim,
         uint256 _decreaseStep,
         uint256 _baseInterval,
-        uint256 _incrementInterval
+        uint256 _incrementInterval,
+        uint256 _maxBeneficiaries
     ) external;
     function updateCommunityParams(
         ICommunity _community,
@@ -48,6 +48,11 @@ interface ICommunityAdmin {
         uint256 _maxTranche
     ) external;
     function updateProxyImplementation(address _CommunityMiddleProxy, address _newLogic) external;
+    function updateCommunityToken(
+        ICommunity _community,
+        IERC20 _newToken,
+        address[] memory _exchangePath
+    ) external;
     function addCommunity(
         address[] memory _managers,
         address _ambassador,
@@ -57,13 +62,13 @@ interface ICommunityAdmin {
         uint256 _baseInterval,
         uint256 _incrementInterval,
         uint256 _minTranche,
-        uint256 _maxTranche
+        uint256 _maxTranche,
+        uint256 _maxBeneficiaries
     ) external;
     function migrateCommunity(
         address[] memory _managers,
         ICommunity _previousCommunity
     ) external;
-    function addManagerToCommunity(ICommunity _community_, address _account_) external;
     function removeCommunity(ICommunity _community) external;
     function fundCommunity() external;
     function transfer(IERC20 _token, address _to, uint256 _amount) external;
