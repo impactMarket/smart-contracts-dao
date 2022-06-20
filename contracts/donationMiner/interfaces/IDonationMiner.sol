@@ -115,7 +115,9 @@ interface IDonationMiner {
     function calculateClaimableRewardsByPeriodNumber(address _donor, uint256 _lastPeriodNumber) external returns (uint256);
     function estimateClaimableReward(address _donor) external view returns (uint256);
     function estimateClaimableRewardAdvance(address _donor) external view returns (uint256);
+    function estimateClaimableRewardByStaking(address _donor) external view returns (uint256);
     function apr(address _stakeholderAddress) external view returns (uint256);
+    function generalApr() external view returns (uint256);
     function lastPeriodsDonations(address _donor) external view returns (uint256 donorAmount, uint256 totalAmount);
     function transfer(IERC20 _token, address _to, uint256 _amount) external;
     function setStakingAmounts(address _holderAddress, uint256 _holderStakeAmount, uint256 _totalStakesAmount) external;

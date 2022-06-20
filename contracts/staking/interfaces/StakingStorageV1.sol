@@ -18,6 +18,6 @@ abstract contract StakingStorageV1 is IStaking {
 
     uint256 public override currentTotalAmount;
 
-    mapping(address => Holder) internal holders;
+    mapping(address => Holder) internal _holders;
     EnumerableSet.AddressSet internal stakeholdersList;
 }

@@ -105,7 +105,36 @@ contract StakingImplementation is
     }
 
     function stakeholderAmount(address _holderAddress) external view override returns (uint256) {
-        return holders[_holderAddress].amount;
+        return _holders[_holderAddress].amount;
+    }
+
+    function stakeholder(address _holderAddress)
+        external
+        view
+        override
+        returns (
+            uint256 amount,
+            uint256 nextUnstakeId,
+            uint256 unstakeListLength,
+            uint256 unstakedAmount
+        )
+    {
+        Holder storage _holder = _holders[_holderAddress];
+        return (
+            _holder.amount,
+            _holder.nextUnstakeId,
+            _holder.unstakes.length,
+            SPACT.balanceOf(_holderAddress) - _holder.amount
+        );
+    }
+
+    function stakeholderUnstakeAt(address _holderAddress, uint256 _unstakeIndex)
+        external
+        view
+        override
+        returns (Unstake memory)
+    {
+        return _holders[_holderAddress].unstakes[_unstakeIndex];
     }
 
     /**
@@ -143,7 +172,7 @@ contract StakingImplementation is
         //.add method checks if the stakeholdersList already contains this address
         stakeholdersList.add(_holderAddress);
 
-        Holder storage _holder = holders[_holderAddress];
+        Holder storage _holder = _holders[_holderAddress];
 
         _holder.amount += _amount;
         currentTotalAmount += _amount;
@@ -162,7 +191,7 @@ contract StakingImplementation is
         require(_amount > 0, "Stake::unstake: Unstake amount should not be 0");
         require(_amount <= type(uint96).max, "Stake::unstake: Unstake amount too big");
 
-        Holder storage _holder = holders[msg.sender];
+        Holder storage _holder = _holders[msg.sender];
 
         require(_holder.amount >= _amount, "Stake::unstake: Not enough funds");
 
@@ -180,9 +209,9 @@ contract StakingImplementation is
      * @notice Claim all unstakes that are older than cooldown
      */
     function claim() external override nonReentrant {
-        require(holders[msg.sender].unstakes.length > 0, "Stake::claim: No funds to claim");
+        require(_holders[msg.sender].unstakes.length > 0, "Stake::claim: No funds to claim");
 
-        emit Claimed(msg.sender, _claim(holders[msg.sender].unstakes.length - 1));
+        emit Claimed(msg.sender, _claim(_holders[msg.sender].unstakes.length - 1));
     }
 
     /**
@@ -190,7 +219,7 @@ contract StakingImplementation is
      */
     function claimPartial(uint256 _lastUnstakeId) external override nonReentrant {
         require(
-            _lastUnstakeId < holders[msg.sender].unstakes.length,
+            _lastUnstakeId < _holders[msg.sender].unstakes.length,
             "Stake::claimPartial: lastUnstakeId too big"
         );
 
@@ -198,7 +227,7 @@ contract StakingImplementation is
     }
 
     function claimAmount(address _holderAddress) external view override returns (uint256) {
-        Holder storage _holder = holders[_holderAddress];
+        Holder storage _holder = _holders[_holderAddress];
 
         if (_holder.unstakes.length == 0) {
             return 0;
@@ -219,7 +248,7 @@ contract StakingImplementation is
     }
 
     function _claim(uint256 _lastUnstakeId) internal returns (uint256) {
-        Holder storage _holder = holders[msg.sender];
+        Holder storage _holder = _holders[msg.sender];
 
         uint256 _index = _holder.nextUnstakeId;
         uint256 _amount;
