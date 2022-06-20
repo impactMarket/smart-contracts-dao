@@ -3146,7 +3146,9 @@ describe.only("Community", () => {
 			expect(await communityProxy.token()).equal(celo.address);
 			expect(await communityProxy.cUSD()).equal(celo.address);
 
-			expect(await celo.balanceOf(communityProxy.address)).equal(toEther('49.690556565466314747'));
+			expect(await celo.balanceOf(communityProxy.address)).equal(
+				toEther("49.690556565466314747")
+			);
 		});
 	});
 });
