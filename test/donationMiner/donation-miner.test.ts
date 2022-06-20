@@ -19,7 +19,7 @@ import { parseUnits } from "@ethersproject/units/src.ts";
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 
-describe("DonationMiner", () => {
+describe.only("DonationMiner", () => {
 	const START_BLOCK = 130;
 	const REWARD_PERIOD_SIZE = 20;
 	const CLAIM_DELAY = 5;
@@ -3892,7 +3892,7 @@ describe("DonationMiner", () => {
 			).to.be.equal(user3Stake1 - user3Unstake1 - user3Unstake2);
 		});
 
-		it("Should donate and stake reward, one donor #1", async function () {
+		it.only("Should donate and stake reward, one donor #1", async function () {
 			const user1Donation = toEther("100");
 
 			await cUSD
@@ -3907,6 +3907,9 @@ describe("DonationMiner", () => {
 			await advanceToRewardPeriodN(2);
 
 			await DonationMiner.connect(user1).stakeRewards();
+
+			expect(await DonationMiner.estimateClaimableReward(user1.address)).to.be.equal(rewards(2));
+			expect(await DonationMiner.estimateClaimableRewardByStaking(user1.address)).to.be.equal(toEther('178699.278036809815950920'));
 
 			expect(await Staking.stakeholdersListAt(0)).to.be.equal(
 				user1.address
@@ -4346,7 +4349,7 @@ describe("DonationMiner", () => {
 			);
 		});
 
-		it("Should donate, stake and calculate the APR #2", async function () {
+		it.only("Should stake and calculate the APR", async function () {
 			const user2Stake = toEther("1000000");
 
 			await PACT.connect(user2).approve(Staking.address, user2Stake);
@@ -4357,9 +4360,13 @@ describe("DonationMiner", () => {
 			expect(await DonationMiner.apr(user2.address)).to.be.equal(
 				toEther("1575500.199264")
 			);
+
+			expect(await DonationMiner.generalApr()).to.be.equal(
+				toEther("129828.451898518603788467")
+			);
 		});
 
-		it("Should donate, stake and calculate the APR #2", async function () {
+		it("Should donate, stake and calculate the APR", async function () {
 			const user1Donation = toEther("2");
 			const user2Donation = toEther("3");
 			const user2Stake = toEther("1000000"); //  because STAKING_DONATION_RATIO is 1000000 => this staking is counted like 1 cUSD
@@ -4393,6 +4400,9 @@ describe("DonationMiner", () => {
 
 			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE * 4);
 
+			expect(await DonationMiner.generalApr()).to.be.equal(
+				toEther("16157.397972591404848344")
+			);
 			expect(await DonationMiner.apr(user1.address)).to.be.equal(
 				toEther("0")
 			);
@@ -4415,6 +4425,10 @@ describe("DonationMiner", () => {
 			);
 			expect(await DonationMiner.apr(user3.address)).to.be.equal(
 				toEther("260285.678817215435198642")
+			);
+
+			expect(await DonationMiner.generalApr()).to.be.equal(
+				toEther("21448.735295609855193720")
 			);
 		});
 	});

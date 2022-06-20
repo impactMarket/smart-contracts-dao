@@ -597,6 +597,31 @@ contract DonationMinerImplementation is
     }
 
     /**
+     * @notice Calculates the estimate reward of a donor for current reward period based on his staking
+     *
+     * @return uint256 estimated reward by donor stakes
+     */
+    function estimateClaimableRewardByStaking(address _donorAddress)
+        external
+        view
+        override
+        whenStarted
+        whenNotPaused
+        returns (uint256)
+    {
+        uint256 _donorAmount;
+        uint256 _totalAmount;
+
+        (, _totalAmount) = lastPeriodsDonations(address(0));
+
+        uint256 _currentPeriodReward = _calculateCurrentPeriodReward();
+
+        return
+            (_currentPeriodReward * staking.stakeholderAmount(_donorAddress)) /
+            (_totalAmount * stakingDonationRatio + staking.currentTotalAmount());
+    }
+
+    /**
      * @notice Calculates the APR of a user based on his staking
      *
      * @param _stakeholderAddress      address of the stakeHolder
@@ -618,6 +643,31 @@ contract DonationMinerImplementation is
 
         return
             (1e18 * 365100 * _estimateClaimableReward(_stakeholderAddress, 0)) / _stakeholderAmount;
+    }
+
+    /**
+     * @notice Calculates the APR
+     *
+     * @return uint256 APR
+     */
+    function generalApr() public view override whenStarted whenNotPaused returns (uint256) {
+        uint256 _donorAmount;
+        uint256 _totalAmount;
+
+        (, _totalAmount) = lastPeriodsDonations(address(0));
+
+        uint256 _currentPeriodReward = _calculateCurrentPeriodReward();
+        uint256 _totalReward = _currentPeriodReward;
+        uint256 _index;
+        while (_index < 364) {
+            _currentPeriodReward = (_currentPeriodReward * decayNumerator) / decayDenominator;
+            _totalReward += _currentPeriodReward;
+            _index++;
+        }
+
+        return
+            (1e18 * 100 * _totalReward) /
+            (_totalAmount * stakingDonationRatio + staking.currentTotalAmount());
     }
 
     /**
