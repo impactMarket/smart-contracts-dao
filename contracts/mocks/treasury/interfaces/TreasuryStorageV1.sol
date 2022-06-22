@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.4;
 
-import "./ITreasuryOld.sol";
+import "./ITreasury.sol";
 
 /**
  * @title Storage for Treasury
@@ -9,6 +9,6 @@ import "./ITreasuryOld.sol";
  * contract which implements TreasuryStorageV1 and following the naming convention
  * TreasuryStorageVX.
  */
-abstract contract TreasuryStorageV1 is ITreasuryOld {
+abstract contract TreasuryStorageV1 is ITreasury {
     ICommunityAdmin public override communityAdmin;
 }

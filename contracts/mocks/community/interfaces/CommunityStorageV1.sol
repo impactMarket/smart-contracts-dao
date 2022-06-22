@@ -3,8 +3,8 @@ pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "./ICommunityOld.sol";
-import "./ICommunityAdminOld.sol";
+import "./ICommunity.sol";
+import "./ICommunityAdmin.sol";
 
 /**
  * @title Storage for Community
@@ -12,7 +12,7 @@ import "./ICommunityAdminOld.sol";
  * contract which implements CommunityStorageV1 and following the naming convention
  * CommunityStorageVX.
  */
-abstract contract CommunityStorageV1Old is ICommunityOld {
+abstract contract CommunityStorageV1 is ICommunity {
     bool public override locked;
     uint256 public override claimAmount;
     uint256 public override baseInterval;
@@ -26,8 +26,8 @@ abstract contract CommunityStorageV1Old is ICommunityOld {
     uint256 public override maxTranche;
     uint256 public override lastFundRequest;
 
-    ICommunityOld public override previousCommunity;
-    ICommunityAdminOld public override communityAdmin;
+    ICommunity public override previousCommunity;
+    ICommunityAdmin public override communityAdmin;
 
     mapping(address => Beneficiary) public override beneficiaries;
     EnumerableSet.AddressSet internal beneficiaryList;

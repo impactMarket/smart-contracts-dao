@@ -16,6 +16,8 @@ const expect = chai.expect;
 const communityMinTranche = parseEther("100");
 const communityMaxTranche = parseEther("5000");
 
+const maxBeneficiaries = 100;
+
 // Contracts
 let PACTDelegate: ethersTypes.ContractFactory;
 
@@ -127,7 +129,7 @@ describe("ImpactMarketCouncil", function () {
 
 	async function createCommunityProposal() {
 		const signatures = [
-			"addCommunity(address[],address,uint256,uint256,uint256,uint256,uint256,uint256,uint256)",
+			"addCommunity(address[],address,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256)",
 		];
 
 		const calldatas = [
@@ -135,6 +137,7 @@ describe("ImpactMarketCouncil", function () {
 				[
 					"address[]",
 					"address",
+					"uint256",
 					"uint256",
 					"uint256",
 					"uint256",
@@ -153,6 +156,7 @@ describe("ImpactMarketCouncil", function () {
 					111,
 					communityMinTranche,
 					communityMaxTranche,
+					maxBeneficiaries,
 				]
 			),
 		];
@@ -228,13 +232,14 @@ describe("ImpactMarketCouncil", function () {
 
 	it("should not be able to add community if not member", async function () {
 		const signatures = [
-			"addCommunity(address[],uint256,uint256,uint256,uint256,uint256,uint256,uint256)",
+			"addCommunity(address[],uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256)",
 		];
 
 		const calldatas = [
 			ethers.utils.defaultAbiCoder.encode(
 				[
 					"address[]",
+					"uint256",
 					"uint256",
 					"uint256",
 					"uint256",
@@ -252,6 +257,7 @@ describe("ImpactMarketCouncil", function () {
 					111,
 					communityMinTranche,
 					communityMaxTranche,
+					maxBeneficiaries,
 				]
 			),
 		];

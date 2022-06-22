@@ -4,7 +4,7 @@ pragma solidity 0.8.4;
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "./interfaces/TreasuryStorageV1Old.sol";
+import "./interfaces/TreasuryStorageV1.sol";
 
 contract TreasuryImplementationOld is
     OwnableUpgradeable,

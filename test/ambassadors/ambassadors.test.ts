@@ -132,6 +132,7 @@ async function addDefaultCommunity(
 	const oneCent = parseEther("0.01");
 	const communityMinTranche = parseEther("100");
 	const communityMaxTranche = parseEther("5000");
+	const maxBeneficiaries = 100;
 	const tx = await communityAdminProxy.addCommunity(
 		[communityManager1.address],
 		ambassadorAddress,
@@ -141,7 +142,8 @@ async function addDefaultCommunity(
 		threeMinutesInBlocks,
 		oneMinuteInBlocks,
 		communityMinTranche,
-		communityMaxTranche
+		communityMaxTranche,
+		maxBeneficiaries
 	);
 
 	let receipt = await tx.wait();

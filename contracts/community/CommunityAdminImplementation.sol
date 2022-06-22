@@ -261,6 +261,7 @@ contract CommunityAdminImplementation is
      * @param _incrementInterval increment interval used in each claim
      * @param _minTranche minimum amount that the community will receive when requesting funds
      * @param _maxTranche maximum amount that the community will receive when requesting funds
+     * @param _maxBeneficiaries maximum number of valid beneficiaries
      */
     function addCommunity(
         address[] memory _managers,
@@ -271,7 +272,8 @@ contract CommunityAdminImplementation is
         uint256 _baseInterval,
         uint256 _incrementInterval,
         uint256 _minTranche,
-        uint256 _maxTranche
+        uint256 _maxTranche,
+        uint256 _maxBeneficiaries
     ) external override onlyOwnerOrImpactMarketCouncil {
         require(
             _managers.length > 0,
@@ -286,6 +288,7 @@ contract CommunityAdminImplementation is
             _incrementInterval,
             _minTranche,
             _maxTranche,
+            _maxBeneficiaries,
             ICommunity(address(0))
         );
         require(_communityAddress != address(0), "CommunityAdmin::addCommunity: NOT_VALID");
@@ -341,6 +344,7 @@ contract CommunityAdminImplementation is
                 _previousCommunity.incrementInterval(),
                 _previousCommunity.minTranche(),
                 _previousCommunity.maxTranche(),
+                _previousCommunity.getVersion() > 1 ? _previousCommunity.maxBeneficiaries() : 0,
                 _previousCommunity
             );
         } else {
@@ -353,6 +357,7 @@ contract CommunityAdminImplementation is
                 (_previousCommunity.incrementInterval() / 5),
                 1e16,
                 5e18,
+                0,
                 _previousCommunity
             );
         }
@@ -368,20 +373,6 @@ contract CommunityAdminImplementation is
         communityList.add(newCommunityAddress);
 
         emit CommunityMigrated(_managers, newCommunityAddress, address(_previousCommunity));
-    }
-
-    /**
-     * @notice Adds a new manager to a community
-     *
-     * @param _community address of the community
-     * @param _account address to be added as community manager
-     */
-    function addManagerToCommunity(ICommunity _community, address _account)
-        external
-        override
-        onlyOwnerOrImpactMarketCouncil
-    {
-        _community.addManager(_account);
     }
 
     /**
@@ -478,6 +469,7 @@ contract CommunityAdminImplementation is
      * @param _decreaseStep value decreased from maxClaim each time a is beneficiary added
      * @param _baseInterval base interval to start claiming
      * @param _incrementInterval increment interval used in each claim
+     * @param _maxBeneficiaries maximum number of beneficiaries
      */
     function updateBeneficiaryParams(
         ICommunity _community,
@@ -485,7 +477,8 @@ contract CommunityAdminImplementation is
         uint256 _maxClaim,
         uint256 _decreaseStep,
         uint256 _baseInterval,
-        uint256 _incrementInterval
+        uint256 _incrementInterval,
+        uint256 _maxBeneficiaries
     ) external override onlyOwnerOrImpactMarketCouncil {
         _community.updateBeneficiaryParams(
             _claimAmount,
@@ -494,6 +487,8 @@ contract CommunityAdminImplementation is
             _baseInterval,
             _incrementInterval
         );
+
+        _community.updateMaxBeneficiaries(_maxBeneficiaries);
     }
 
     /** @notice Updates params of a community
@@ -508,6 +503,19 @@ contract CommunityAdminImplementation is
         uint256 _maxTranche
     ) external override onlyOwnerOrImpactMarketCouncil {
         _community.updateCommunityParams(_minTranche, _maxTranche);
+    }
+
+    /** @notice Updates token address of a community
+     *
+     * @param _newToken       new token address
+     * @param _exchangePath   path used by uniswap to exchange the current tokens to the new tokens
+     */
+    function updateCommunityToken(
+        ICommunity _community,
+        IERC20 _newToken,
+        address[] memory _exchangePath
+    ) external override onlyOwnerOrImpactMarketCouncil {
+        _community.updateToken(_newToken, _exchangePath);
     }
 
     /**
@@ -591,6 +599,7 @@ contract CommunityAdminImplementation is
      * @param _incrementInterval increment interval used in each claim
      * @param _minTranche minimum amount that the community will receive when requesting funds
      * @param _maxTranche maximum amount that the community will receive when requesting funds
+     * @param _maxBeneficiaries maximum number of valid beneficiaries
      * @param _previousCommunity address of the previous community. Used for migrating communities
      */
     function deployCommunity(
@@ -602,6 +611,7 @@ contract CommunityAdminImplementation is
         uint256 _incrementInterval,
         uint256 _minTranche,
         uint256 _maxTranche,
+        uint256 _maxBeneficiaries,
         ICommunity _previousCommunity
     ) internal returns (address) {
         TransparentUpgradeableProxy _community = new TransparentUpgradeableProxy(
@@ -619,6 +629,7 @@ contract CommunityAdminImplementation is
             _incrementInterval,
             _minTranche,
             _maxTranche,
+            _maxBeneficiaries,
             _previousCommunity
         );
 
