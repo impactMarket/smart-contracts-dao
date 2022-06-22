@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./interfaces/ICommunity.sol";
 import "./interfaces/ICommunityLegacy.sol";
 import "./interfaces/ICommunityAdmin.sol";
-import "./interfaces/CommunityStorageV1.sol";
+import "./interfaces/CommunityStorageV2.sol";
 
 /**
  * @notice Welcome to the Community contract. For each community
@@ -25,7 +25,7 @@ contract CommunityImplementation is
     AccessControlUpgradeable,
     OwnableUpgradeable,
     ReentrancyGuardUpgradeable,
-    CommunityStorageV1
+    CommunityStorageV2
 {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -112,7 +112,7 @@ contract CommunityImplementation is
     event FundsRequested(address indexed manager);
 
     /**
-     * @notice Triggered when someone has donated cUSD
+     * @notice Triggered when someone has donated token
      *
      * @param donor             Address of the donor
      * @param amount            Amount of the donation
@@ -197,6 +197,25 @@ contract CommunityImplementation is
     );
 
     /**
+     * @notice Triggered when maxBeneficiaries has been updated
+     *
+     * @param oldMaxBeneficiaries   Old maxBeneficiaries value
+     * @param newMaxBeneficiaries   New maxBeneficiaries value
+     */
+    event MaxBeneficiariesUpdated(
+        uint256 indexed oldMaxBeneficiaries,
+        uint256 indexed newMaxBeneficiaries
+    );
+
+    /**
+     * @notice Triggered when token address has been updated
+     *
+     * @param oldTokenAddress   Old token address
+     * @param newTokenAddress   New token address
+     */
+    event TokenUpdated(address indexed oldTokenAddress, address indexed newTokenAddress);
+
+    /**
      * @notice Triggered when an amount of an ERC20 has been transferred from this contract to an address
      *
      * @param token               ERC20 token address
@@ -204,83 +223,6 @@ contract CommunityImplementation is
      * @param amount              Amount of the transaction
      */
     event TransferERC20(address indexed token, address indexed to, uint256 amount);
-
-    /**
-     * @notice Used to initialize a new Community contract
-     *
-     * @param _managers            Community's initial managers.
-     *                             Will be able to add others
-     * @param _claimAmount         Base amount to be claim by the beneficiary
-     * @param _maxClaim            Limit that a beneficiary can claim in total
-     * @param _decreaseStep        Value decreased from maxClaim each time a beneficiary is added
-     * @param _baseInterval        Base interval to start claiming
-     * @param _incrementInterval   Increment interval used in each claim
-     * @param _previousCommunity   Previous smart contract address of community
-     * @param _minTranche          Minimum amount that the community will receive when requesting funds
-     * @param _maxTranche          Maximum amount that the community will receive when requesting funds
-     */
-    function initialize(
-        address[] memory _managers,
-        uint256 _claimAmount,
-        uint256 _maxClaim,
-        uint256 _decreaseStep,
-        uint256 _baseInterval,
-        uint256 _incrementInterval,
-        uint256 _minTranche,
-        uint256 _maxTranche,
-        ICommunity _previousCommunity
-    ) external override initializer {
-        require(
-            _baseInterval > _incrementInterval,
-            "Community::initialize: baseInterval must be greater than incrementInterval"
-        );
-        require(
-            _maxClaim > _claimAmount,
-            "Community::initialize: maxClaim must be greater than claimAmount"
-        );
-
-        require(
-            _minTranche <= _maxTranche,
-            "Community::initialize: minTranche should not be greater than maxTranche"
-        );
-
-        __AccessControl_init();
-        __Ownable_init();
-        __ReentrancyGuard_init();
-
-        claimAmount = _claimAmount;
-        baseInterval = _baseInterval;
-        incrementInterval = _incrementInterval;
-        maxClaim = _maxClaim;
-        minTranche = _minTranche;
-        maxTranche = _maxTranche;
-        previousCommunity = _previousCommunity;
-        communityAdmin = ICommunityAdmin(msg.sender);
-        decreaseStep = _decreaseStep;
-        locked = false;
-
-        transferOwnership(msg.sender);
-
-        // MANAGER_ROLE is the admin for the MANAGER_ROLE
-        // so every manager is able to add or remove other managers
-        _setRoleAdmin(MANAGER_ROLE, MANAGER_ROLE);
-
-        _setupRole(MANAGER_ROLE, msg.sender);
-        emit ManagerAdded(msg.sender, msg.sender);
-
-        uint256 _i;
-        uint256 _numberOfManagers = _managers.length;
-        for (; _i < _numberOfManagers; _i++) {
-            addManager(_managers[_i]);
-        }
-    }
-
-    /**
-     * @notice Returns the current implementation version
-     */
-    function getVersion() external pure override returns (uint256) {
-        return 2;
-    }
 
     /**
      * @notice Enforces sender to be a valid beneficiary
@@ -313,10 +255,110 @@ contract CommunityImplementation is
     }
 
     /**
+     * @notice Enforces sender to be the owner or community ambassador or entity ambassador responsible
+     */
+    modifier onlyOwnerOrAmbassadorOrEntity() {
+        require(
+            msg.sender == owner() ||
+                communityAdmin.isAmbassadorOrEntityOfCommunity(address(this), msg.sender),
+            "Community: NOT_OWNER_OR_AMBASSADOR_OR_ENTITY"
+        );
+        _;
+    }
+
+    /**
+     * @notice Used to initialize a new Community contract
+     *
+     * @param _managers            Community's initial managers.
+     *                             Will be able to add others
+     * @param _claimAmount         Base amount to be claim by the beneficiary
+     * @param _maxClaim            Limit that a beneficiary can claim in total
+     * @param _decreaseStep        Value decreased from maxClaim each time a beneficiary is added
+     * @param _baseInterval        Base interval to start claiming
+     * @param _incrementInterval   Increment interval used in each claim
+     * @param _minTranche          Minimum amount that the community will receive when requesting funds
+     * @param _maxTranche          Maximum amount that the community will receive when requesting funds
+     * @param _maxBeneficiaries    Maximum valid beneficiaries number
+     * @param _previousCommunity   Previous smart contract address of community
+     */
+    function initialize(
+        address[] memory _managers,
+        uint256 _claimAmount,
+        uint256 _maxClaim,
+        uint256 _decreaseStep,
+        uint256 _baseInterval,
+        uint256 _incrementInterval,
+        uint256 _minTranche,
+        uint256 _maxTranche,
+        uint256 _maxBeneficiaries,
+        ICommunity _previousCommunity
+    ) external override initializer {
+        require(
+            _baseInterval > _incrementInterval,
+            "Community::initialize: baseInterval must be greater than incrementInterval"
+        );
+        require(
+            _maxClaim > _claimAmount,
+            "Community::initialize: maxClaim must be greater than claimAmount"
+        );
+
+        require(
+            _minTranche <= _maxTranche,
+            "Community::initialize: minTranche should not be greater than maxTranche"
+        );
+
+        __AccessControl_init();
+        __Ownable_init();
+        __ReentrancyGuard_init();
+
+        claimAmount = _claimAmount;
+        baseInterval = _baseInterval;
+        incrementInterval = _incrementInterval;
+        maxClaim = _maxClaim;
+        minTranche = _minTranche;
+        maxTranche = _maxTranche;
+        previousCommunity = _previousCommunity;
+        communityAdmin = ICommunityAdmin(msg.sender);
+        decreaseStep = _decreaseStep;
+        maxBeneficiaries = _maxBeneficiaries;
+        locked = false;
+
+        transferOwnership(msg.sender);
+
+        // MANAGER_ROLE is the admin for the MANAGER_ROLE
+        // so every manager is able to add or remove other managers
+        _setRoleAdmin(MANAGER_ROLE, MANAGER_ROLE);
+
+        _setupRole(MANAGER_ROLE, msg.sender);
+        emit ManagerAdded(msg.sender, msg.sender);
+
+        uint256 _i;
+        uint256 _numberOfManagers = _managers.length;
+        for (; _i < _numberOfManagers; _i++) {
+            addManager(_managers[_i]);
+        }
+    }
+
+    /**
+     * @notice Returns the current implementation version
+     */
+    function getVersion() external pure override returns (uint256) {
+        return 2;
+    }
+
+    /**
      * @notice Returns the cUSD contract address
+     * todo: to be removed, use token() instead
      */
     function cUSD() public view override returns (IERC20) {
-        return communityAdmin.cUSD();
+        return address(_token) != address(0) ? _token : communityAdmin.cUSD();
+    }
+
+    /**
+     * @notice Returns the address of the token used by this community
+     */
+    function token() public view override returns (IERC20) {
+        return address(_token) != address(0) ? _token : communityAdmin.cUSD();
     }
 
     /**
@@ -429,6 +471,59 @@ contract CommunityImplementation is
         maxTranche = _maxTranche;
     }
 
+    /** @notice Updates maxBeneficiaries
+     *
+     * @param _newMaxBeneficiaries new _maxBeneficiaries value
+     */
+    function updateMaxBeneficiaries(uint256 _newMaxBeneficiaries)
+        external
+        override
+        onlyOwnerOrAmbassadorOrEntity
+    {
+        emit MaxBeneficiariesUpdated(maxBeneficiaries, _newMaxBeneficiaries);
+        maxBeneficiaries = _newMaxBeneficiaries;
+    }
+
+    /** @notice Updates token address
+     *
+     * @param _newToken       new token address
+     * @param _exchangePath   path used by uniswap to exchange the current tokens to the new tokens
+     */
+    function updateToken(IERC20 _newToken, address[] memory _exchangePath)
+        external
+        override
+        onlyOwner
+    {
+        require(
+            _newToken == communityAdmin.cUSD() ||
+                communityAdmin.treasury().isToken(address(_newToken)),
+            "Community::updateToken: Invalid token"
+        );
+
+        require(
+            _exchangePath.length > 1 &&
+                _exchangePath[0] == address(token()) &&
+                _exchangePath[_exchangePath.length - 1] == address(_newToken),
+            "Community::updateToken: invalid exchangePath"
+        );
+
+        uint256 _balance = token().balanceOf(address(this));
+        token().approve(address(communityAdmin.treasury().uniswapRouter()), _balance);
+        communityAdmin
+            .treasury()
+            .uniswapRouter()
+            .swapExactTokensForTokensSupportingFeeOnTransferTokens(
+                _balance,
+                0,
+                _exchangePath,
+                address(this),
+                block.timestamp + 3600
+            );
+
+        emit TokenUpdated(address(_token), address(_newToken));
+        _token = _newToken;
+    }
+
     /**
      * @notice Adds a new manager
      *
@@ -502,7 +597,7 @@ contract CommunityImplementation is
             beneficiaryList.add(_beneficiaryAddresses[_index]);
 
             // send default amount when adding a new beneficiary
-            cUSD().safeTransfer(_beneficiaryAddresses[_index], DEFAULT_AMOUNT);
+            token().safeTransfer(_beneficiaryAddresses[_index], DEFAULT_AMOUNT);
 
             emit BeneficiaryAdded(msg.sender, _beneficiaryAddresses[_index]);
         }
@@ -562,7 +657,7 @@ contract CommunityImplementation is
     }
 
     /**
-     * @dev Transfers cUSD to a valid beneficiary
+     * @dev Transfers tokens to a valid beneficiary
      */
     function claim() external override onlyValidBeneficiary nonReentrant {
         Beneficiary storage _beneficiary = beneficiaries[msg.sender];
@@ -582,7 +677,7 @@ contract CommunityImplementation is
         _beneficiary.claims++;
         _beneficiary.lastClaim = block.number;
 
-        cUSD().safeTransfer(msg.sender, _toClaim);
+        token().safeTransfer(msg.sender, _toClaim);
         emit BeneficiaryClaim(msg.sender, _toClaim);
     }
 
@@ -640,14 +735,14 @@ contract CommunityImplementation is
     }
 
     /**
-     * @notice Transfers cUSDs from donor to this community
+     * @notice Transfers tokens from donor to this community
      * Used by donationToCommunity method from DonationMiner contract
      *
      * @param _sender address of the sender
      * @param _amount amount to be donated
      */
     function donate(address _sender, uint256 _amount) external override nonReentrant {
-        cUSD().safeTransferFrom(_sender, address(this), _amount);
+        token().safeTransferFrom(_sender, address(this), _amount);
         privateFunds += _amount;
 
         emit Donate(msg.sender, _amount);
@@ -655,7 +750,7 @@ contract CommunityImplementation is
 
     /**
      * @notice Increases the treasuryFunds value
-     * Used by communityAdmin after an amount of cUSD are sent from the treasury
+     * Used by communityAdmin after an amount of tokens are sent from the treasury
      *
      * @param _amount amount to be added to treasuryFunds
      */
@@ -772,6 +867,10 @@ contract CommunityImplementation is
         if (_newState == BeneficiaryState.Valid) {
             require(
                 maxClaim - decreaseStep >= claimAmount,
+                "Community::_changeBeneficiaryState: Max claim too low"
+            );
+            require(
+                maxBeneficiaries == 0 || validBeneficiaryCount < maxBeneficiaries,
                 "Community::_changeBeneficiaryState: This community has reached the maximum number of valid beneficiaries"
             );
             validBeneficiaryCount++;

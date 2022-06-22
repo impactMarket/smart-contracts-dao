@@ -222,11 +222,11 @@ contract AmbassadorsImplementation is
     }
 
     /**
-     * @notice Returns boolean whether an address is entity reponsible for ambassador of a given community.
+     * @notice Returns boolean whether an address is entity responsible for ambassador of a given community.
      *
      * @param _entity Address of the entity
      * @param _community Address of the community
-     * @return Boolean whether an address is entity reponsible for ambassador of a given community or not
+     * @return Boolean whether an address is entity responsible for ambassador of a given community or not
      */
     function isEntityOf(address _entity, address _community) public view override returns (bool) {
         return entityByAddress[_entity] == ambassadorToEntity[communityToAmbassador[_community]];

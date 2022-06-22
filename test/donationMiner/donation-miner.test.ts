@@ -19,7 +19,7 @@ import { parseUnits } from "@ethersproject/units/src.ts";
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 
-describe.only("DonationMiner", () => {
+describe("DonationMiner", () => {
 	const START_BLOCK = 130;
 	const REWARD_PERIOD_SIZE = 20;
 	const CLAIM_DELAY = 5;
@@ -3358,6 +3358,7 @@ describe.only("DonationMiner", () => {
 		const mintAmount = toEther("500");
 		const communityMinTranche = toEther("100");
 		const communityMaxTranche = toEther("5000");
+		const maxBeneficiaries = 100;
 
 		let Community: ethersTypes.Contract;
 		let CommunityAdmin: ethersTypes.Contract;
@@ -3406,7 +3407,8 @@ describe.only("DonationMiner", () => {
 				threeMinutesInBlocks.toString(),
 				oneMinuteInBlocks.toString(),
 				communityMinTranche,
-				communityMaxTranche
+				communityMaxTranche,
+				maxBeneficiaries
 			);
 
 			let receipt = await tx.wait();
@@ -3892,7 +3894,7 @@ describe.only("DonationMiner", () => {
 			).to.be.equal(user3Stake1 - user3Unstake1 - user3Unstake2);
 		});
 
-		it.only("Should donate and stake reward, one donor #1", async function () {
+		it("Should donate and stake reward, one donor #1", async function () {
 			const user1Donation = toEther("100");
 
 			await cUSD
@@ -3908,8 +3910,14 @@ describe.only("DonationMiner", () => {
 
 			await DonationMiner.connect(user1).stakeRewards();
 
-			expect(await DonationMiner.estimateClaimableReward(user1.address)).to.be.equal(rewards(2));
-			expect(await DonationMiner.estimateClaimableRewardByStaking(user1.address)).to.be.equal(toEther('178699.278036809815950920'));
+			expect(
+				await DonationMiner.estimateClaimableReward(user1.address)
+			).to.be.equal(rewards(2));
+			expect(
+				await DonationMiner.estimateClaimableRewardByStaking(
+					user1.address
+				)
+			).to.be.equal(toEther("178699.278036809815950920"));
 
 			expect(await Staking.stakeholdersListAt(0)).to.be.equal(
 				user1.address
@@ -4349,7 +4357,7 @@ describe.only("DonationMiner", () => {
 			);
 		});
 
-		it.only("Should stake and calculate the APR", async function () {
+		it("Should stake and calculate the APR", async function () {
 			const user2Stake = toEther("1000000");
 
 			await PACT.connect(user2).approve(Staking.address, user2Stake);

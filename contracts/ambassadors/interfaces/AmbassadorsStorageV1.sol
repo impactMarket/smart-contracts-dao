@@ -20,7 +20,7 @@ abstract contract AmbassadorsStorageV1 is IAmbassadors {
     mapping(address => uint256) public ambassadorByAddress;
     // index to address
     mapping(uint256 => address) public ambassadorByIndex;
-    // communities an ambassador is reponsible for
+    // communities an ambassador is responsible for
     mapping(uint256 => EnumerableSet.AddressSet) internal ambassadorCommunities;
     // community address to ambassador index
     mapping(address => uint256) public communityToAmbassador;
@@ -30,6 +30,6 @@ abstract contract AmbassadorsStorageV1 is IAmbassadors {
     mapping(address => uint256) public entityByAddress;
     // entity adding ambassadors
     mapping(uint256 => address) public entityByIndex;
-    // number of ambassadors an entity is resposible for
+    // number of ambassadors an entity is responsible for
     mapping(uint256 => uint256) public entityAmbassadors;
 }
