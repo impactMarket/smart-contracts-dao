@@ -15,7 +15,7 @@ contract CommunityMiddleProxy is TransparentUpgradeableProxy {
      * @dev _fakeLogic, _fakeProxyAdmin are used only
      *     to satisfy the TransparentUpgradeableProxy requirements.
      *     Their values are not important because this is a middle proxy contract
-     *     the real logic ans proxy admin values are stored into the CommunityProxy
+     *     the real logic and proxy admin values are stored into the CommunityProxy
      */
     constructor(address _fakeLogic, address _fakeProxyAdmin)
         TransparentUpgradeableProxy(_fakeLogic, _fakeProxyAdmin, "")
