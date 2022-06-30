@@ -250,6 +250,20 @@ contract CommunityAdminImplementation is
     }
 
     /**
+     * @notice Set an existing ambassador to an existing community
+     *
+     * @param _ambassador address of the ambassador
+     * @param _communityAddress address of the community contract
+     */
+    function setCommunityToAmbassador(address _ambassador, ICommunity _communityAddress)
+        external
+        override
+        onlyOwnerOrImpactMarketCouncil
+    {
+        ambassadors.setCommunityToAmbassador(_ambassador, address(_communityAddress));
+    }
+
+    /**
      * @notice Adds a new community
      *
      * @param _managers addresses of the community managers
