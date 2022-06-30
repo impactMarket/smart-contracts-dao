@@ -33,6 +33,7 @@ interface ICommunityAdmin {
     function updateAmbassadors(IAmbassadors _newAmbassadors) external;
     function updateCommunityMiddleProxy(address _communityMiddleProxy) external;
     function updateCommunityImplementation(ICommunity _communityImplementation_) external;
+    function setCommunityToAmbassador(address _ambassador, ICommunity _communityAddress) external;
     function updateBeneficiaryParams(
         ICommunity _community,
         uint256 _claimAmount,
