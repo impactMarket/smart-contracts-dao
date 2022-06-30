@@ -75,7 +75,7 @@ contract ImpactMarketCouncilImplementation is
     }
 
     /**
-     * @notice Used to initialize the contract during delegator contructor
+     * @notice Used to initialize the contract during delegator constructor
      * @param _quorumVotes The initial quorum votes
      */
     function initialize(
