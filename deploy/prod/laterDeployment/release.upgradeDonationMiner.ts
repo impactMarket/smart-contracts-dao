@@ -8,18 +8,19 @@ import * as ethersTypes from "ethers";
 const { deploy } = deployments;
 let deployer: SignerWithAddress;
 
-// mainnet
-const governanceDelegatorAddress = "0x8f8BB984e652Cb8D0aa7C9D6712Ec2020EB1BAb4";
-const proxyAdminAddress = "0xFC641CE792c242EACcD545B7bee2028f187f61EC";
-const targetAddress = "0xd61c407c3A00dFD8C355973f7a14c55ebaFDf6F9";
+//alfajores
+const governanceDelegatorAddress = "0x5c27e2600a3eDEF53DE0Ec32F01efCF145419eDF";
+const proxyAdminAddress = "0x79f9ca5f1A01e1768b9C24AD37FF63A0199E3Fe5";
+const donationMinerProxyAddress = "0x09Cdc8f50994F63103bc165B139631A6ad18EF49";
 
 
-// //alfajores
-// const governanceDelegatorAddress = "0x5c27e2600a3eDEF53DE0Ec32F01efCF145419eDF";
-// const proxyAdminAddress = "0x79f9ca5f1A01e1768b9C24AD37FF63A0199E3Fe5";
-// const targetAddress = "0x1c33D75bcE52132c7a0e220c1C338B9db7cf3f3A";
+// // mainnet
+// const governanceDelegatorAddress = "0x8f8BB984e652Cb8D0aa7C9D6712Ec2020EB1BAb4";
+// const proxyAdminAddress = "0xFC641CE792c242EACcD545B7bee2028f187f61EC";
+// const donationMinerProxyAddress = "0x1C51657af2ceBA3D5492bA0c5A17E562F7ba6593";
 
-const contractName = 'CommunityAdminImplementation';
+
+const contractName = 'DonationMinerImplementation';
 
 let newImplementationAddress: string;
 
@@ -62,21 +63,21 @@ async function createUpgradeImplementation() {
 		deployer,
 		[
 			proxyAdminAddress,
-			targetAddress
+			donationMinerProxyAddress
 		],
 		[0, 0],
 		[
 			"upgrade(address,address)",
-			"communities(address)"   //this method is called only to check if the new implementation is correct
+			"estimateClaimableReward(address)"   //this method is called only to check if the new implementation is correct
 		],
 		[["address", "address"], ["address"]],
 		[
-			[targetAddress, newImplementationAddress],
+			[donationMinerProxyAddress, newImplementationAddress],
 			[deployer.address]
 		],
-		'Upgrade implementation'
+		'Upgrade DonationMiner implementation'
 	);
 }
 
 export default func;
-func.tags = ["UpgradeImplementation"];
+func.tags = ["UpgradeDonationMiner"];
