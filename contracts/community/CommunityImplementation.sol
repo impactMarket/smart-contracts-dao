@@ -584,23 +584,24 @@ contract CommunityImplementation is
         uint256 _index;
         uint256 _numberOfBeneficiaries = _beneficiaryAddresses.length;
         for (; _index < _numberOfBeneficiaries; _index++) {
-            Beneficiary storage _beneficiary = beneficiaries[_beneficiaryAddresses[_index]];
-
-            if (_beneficiary.state != BeneficiaryState.NONE) {
-                continue;
-            }
-
-            _changeBeneficiaryState(_beneficiary, BeneficiaryState.Valid);
-            // solhint-disable-next-line not-rely-on-time
-            _beneficiary.lastClaim = block.number;
-
-            beneficiaryList.add(_beneficiaryAddresses[_index]);
-
-            // send default amount when adding a new beneficiary
-            token().safeTransfer(_beneficiaryAddresses[_index], DEFAULT_AMOUNT);
-
-            emit BeneficiaryAdded(msg.sender, _beneficiaryAddresses[_index]);
+            _addBeneficiary(_beneficiaryAddresses[_index]);
         }
+    }
+
+    /**
+     * @notice Adds a new beneficiary
+     *
+     * @param _beneficiaryAddress address of the beneficiary to be added
+     */
+    function addBeneficiary(address _beneficiaryAddress)
+        external
+        override
+        onlyManagers
+        nonReentrant
+    {
+        require(!locked, "LOCKED");
+
+       _addBeneficiary(_beneficiaryAddress);
     }
 
     /**
@@ -896,5 +897,28 @@ contract CommunityImplementation is
         } else {
             return block.timestamp - block.number; //local
         }
+    }
+
+    /**
+     * @notice Adds a new beneficiary
+     *
+     * @param _beneficiaryAddress address of the beneficiary to be added
+     */
+    function _addBeneficiary(address _beneficiaryAddress) internal {
+        Beneficiary storage _beneficiary = beneficiaries[_beneficiaryAddress];
+
+        if (_beneficiary.state != BeneficiaryState.NONE) {
+            return;
+        }
+
+        _changeBeneficiaryState(_beneficiary, BeneficiaryState.Valid);
+        _beneficiary.lastClaim = block.number;
+
+        beneficiaryList.add(_beneficiaryAddress);
+
+        // send default amount when adding a new beneficiary
+        token().safeTransfer(_beneficiaryAddress, DEFAULT_AMOUNT);
+
+        emit BeneficiaryAdded(msg.sender, _beneficiaryAddress);
     }
 }

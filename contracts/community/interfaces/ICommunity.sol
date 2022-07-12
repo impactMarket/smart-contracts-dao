@@ -81,6 +81,7 @@ interface ICommunity {
     function addManager(address _managerAddress) external;
     function removeManager(address _managerAddress) external;
     function addBeneficiaries(address[] memory _beneficiaryAddresses) external;
+    function addBeneficiary(address _beneficiaryAddress) external;
     function lockBeneficiary(address _beneficiaryAddress) external;
     function unlockBeneficiary(address _beneficiaryAddress) external;
     function removeBeneficiary(address _beneficiaryAddress) external;
