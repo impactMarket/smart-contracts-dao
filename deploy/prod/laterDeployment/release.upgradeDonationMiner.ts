@@ -8,10 +8,19 @@ import * as ethersTypes from "ethers";
 const { deploy } = deployments;
 let deployer: SignerWithAddress;
 
+//alfajores
 const governanceDelegatorAddress = "0x5c27e2600a3eDEF53DE0Ec32F01efCF145419eDF";
 const proxyAdminAddress = "0x79f9ca5f1A01e1768b9C24AD37FF63A0199E3Fe5";
+const donationMinerProxyAddress = "0x09Cdc8f50994F63103bc165B139631A6ad18EF49";
 
-const proxyAddress = "0x2Bdd85857eDd9A4fAA72b663536189e38D8E3C71";
+
+// // mainnet
+// const governanceDelegatorAddress = "0x8f8BB984e652Cb8D0aa7C9D6712Ec2020EB1BAb4";
+// const proxyAdminAddress = "0xFC641CE792c242EACcD545B7bee2028f187f61EC";
+// const donationMinerProxyAddress = "0x1C51657af2ceBA3D5492bA0c5A17E562F7ba6593";
+
+
+const contractName = 'DonationMinerImplementation';
 
 let newImplementationAddress: string;
 
@@ -36,7 +45,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 async function deployNewImplementation() {
 	console.log("Deploying new contract for donation miner");
 	newImplementationAddress = (
-		await deploy("StakingImplementation", {
+		await deploy(contractName, {
 			from: deployer.address,
 			args: [],
 			log: true,
@@ -54,21 +63,21 @@ async function createUpgradeImplementation() {
 		deployer,
 		[
 			proxyAdminAddress,
-			proxyAddress
+			donationMinerProxyAddress
 		],
 		[0, 0],
 		[
 			"upgrade(address,address)",
-			"claimAmount(address)"
+			"estimateClaimableReward(address)"   //this method is called only to check if the new implementation is correct
 		],
 		[["address", "address"], ["address"]],
 		[
-			[proxyAddress, newImplementationAddress],
+			[donationMinerProxyAddress, newImplementationAddress],
 			[deployer.address]
 		],
-		'Upgrade implementation'
+		'Upgrade DonationMiner implementation'
 	);
 }
 
 export default func;
-func.tags = ["UpgradeImplementation"];
+func.tags = ["UpgradeDonationMiner"];

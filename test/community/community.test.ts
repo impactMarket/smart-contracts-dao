@@ -1052,6 +1052,18 @@ describe.only("Community", () => {
 			).state.should.be.equal(BeneficiaryState.Valid);
 		});
 
+		it("should add beneficiary to community #2", async () => {
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.NONE);
+			await communityProxy
+				.connect(communityManagerA)
+				.addBeneficiary(beneficiaryA.address);
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.Valid);
+		});
+
 		it("should add beneficiaries to community #1", async () => {
 			(
 				await communityProxy.beneficiaries(beneficiaryA.address)
@@ -3125,7 +3137,7 @@ describe.only("Community", () => {
 			);
 		});
 
-		it.only("should change token", async function () {
+		it("should change token", async function () {
 			await treasuryProxy.setToken(mUSD.address, toEther(0.9), [
 				mUSD.address,
 				cUSD.address,
