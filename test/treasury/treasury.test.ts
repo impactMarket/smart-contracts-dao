@@ -11,93 +11,87 @@ import { fromEther, toEther } from "../utils/helpers";
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 
-let owner: SignerWithAddress;
-let user1: SignerWithAddress;
-let user2: SignerWithAddress;
-let user3: SignerWithAddress;
-
-let ImpactProxyAdmin: ethersTypes.Contract;
-let PACT: ethersTypes.Contract;
-let Treasury: ethersTypes.Contract;
-let TreasuryImplementation: ethersTypes.Contract;
-let CommunityAdmin: ethersTypes.Contract;
-let UniswapV2Factory: ethersTypes.Contract;
-let UniswapRouter: ethersTypes.Contract;
-let cUSD: ethersTypes.Contract;
-let mUSD: ethersTypes.Contract;
-let celo: ethersTypes.Contract;
-
-const FAKE_ADDRESS = "0x000000000000000000000000000000000000dEaD";
-const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
-
-const deploy = deployments.createFixture(async () => {
-	await deployments.fixture("Test", { fallbackToGlobal: false });
-
-	[owner, user1, user2, user3] = await ethers.getSigners();
-
-	TreasuryImplementation = await ethers.getContractAt(
-		"TreasuryImplementation",
-		(
-			await deployments.get("TreasuryImplementation")
-		).address
-	);
-
-	Treasury = await ethers.getContractAt(
-		"TreasuryImplementation",
-		(
-			await deployments.get("TreasuryProxy")
-		).address
-	);
-
-	CommunityAdmin = await ethers.getContractAt(
-		"CommunityAdminImplementation",
-		(
-			await deployments.get("CommunityAdminProxy")
-		).address
-	);
-
-	ImpactProxyAdmin = await ethers.getContractAt(
-		"ImpactProxyAdmin",
-		(
-			await deployments.get("ImpactProxyAdmin")
-		).address
-	);
-
-	PACT = await ethers.getContractAt(
-		"PACTToken",
-		(
-			await deployments.get("PACTToken")
-		).address
-	);
-
-	UniswapV2Factory = await ethers.getContractAt(
-		"UniswapV2Factory",
-		(
-			await deployments.get("UniswapV2Factory")
-		).address
-	);
-
-	UniswapRouter = await ethers.getContractAt(
-		"UniswapV2Router02",
-		(
-			await deployments.get("UniswapV2Router02")
-		).address
-	);
-
-	cUSD = await ethers.getContractAt(
-		"TokenMock",
-		(
-			await deployments.get("TokenMock")
-		).address
-	);
-
-	const tokenFactory = await ethers.getContractFactory("TokenMock");
-
-	mUSD = await tokenFactory.deploy("mUSD", "mUSD");
-	celo = await tokenFactory.deploy("celo", "celo");
-});
 
 describe("Treasury", () => {
+
+	let owner: SignerWithAddress;
+	let user1: SignerWithAddress;
+	let user2: SignerWithAddress;
+	let user3: SignerWithAddress;
+
+	let ImpactProxyAdmin: ethersTypes.Contract;
+	let PACT: ethersTypes.Contract;
+	let Treasury: ethersTypes.Contract;
+	let TreasuryImplementation: ethersTypes.Contract;
+	let CommunityAdmin: ethersTypes.Contract;
+	let UniswapRouter: ethersTypes.Contract;
+	let cUSD: ethersTypes.Contract;
+	let mUSD: ethersTypes.Contract;
+	let celo: ethersTypes.Contract;
+
+	const FAKE_ADDRESS = "0x000000000000000000000000000000000000dEaD";
+	const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+
+	const deploy = deployments.createFixture(async () => {
+		await deployments.fixture("Test", { fallbackToGlobal: false });
+
+		[owner, user1, user2, user3] = await ethers.getSigners();
+
+		TreasuryImplementation = await ethers.getContractAt(
+			"TreasuryImplementation",
+			(
+				await deployments.get("TreasuryImplementation")
+			).address
+		);
+
+		Treasury = await ethers.getContractAt(
+			"TreasuryImplementation",
+			(
+				await deployments.get("TreasuryProxy")
+			).address
+		);
+
+		CommunityAdmin = await ethers.getContractAt(
+			"CommunityAdminImplementation",
+			(
+				await deployments.get("CommunityAdminProxy")
+			).address
+		);
+
+		ImpactProxyAdmin = await ethers.getContractAt(
+			"ImpactProxyAdmin",
+			(
+				await deployments.get("ImpactProxyAdmin")
+			).address
+		);
+
+		PACT = await ethers.getContractAt(
+			"PACTToken",
+			(
+				await deployments.get("PACTToken")
+			).address
+		);
+
+		UniswapRouter = await ethers.getContractAt(
+			"UniswapV2Router02",
+			(
+				await deployments.get("UniswapV2Router02")
+			).address
+		);
+
+		cUSD = await ethers.getContractAt(
+			"TokenMock",
+			(
+				await deployments.get("TokenMock")
+			).address
+		);
+
+		const tokenFactory = await ethers.getContractFactory("TokenMock");
+
+		mUSD = await tokenFactory.deploy("mUSD", "mUSD");
+		celo = await tokenFactory.deploy("celo", "celo");
+	});
+
 	before(async function () {});
 
 	beforeEach(async () => {
@@ -107,13 +101,6 @@ describe("Treasury", () => {
 		await mUSD.mint(user1.address, toEther(100000000));
 		await celo.mint(user1.address, toEther(100000000));
 
-		// await UniswapV2Factory.connect(user1).createPair(cUSD.address, mUSD.address);
-		//
-		// Pair =  await ethers.getContractAt(
-		// 	"UniswapV2Pair",
-		// 	await UniswapV2Factory.getPair(cUSD.address, mUSD.address)
-		// );
-
 		// await cUSD.connect(user1).approve(Pair.address, toEther(10));
 		// await mUSD.connect(user1).approve(Pair.address, toEther(10));
 		//
@@ -121,8 +108,6 @@ describe("Treasury", () => {
 		//
 		//
 		// // await Pair.mint(user1.address);
-
-		await Treasury.updateUniswapRouter(UniswapRouter.address);
 
 		await cUSD
 			.connect(user1)
@@ -181,6 +166,8 @@ describe("Treasury", () => {
 		);
 		expect(await Treasury.owner()).to.be.equal(owner.address);
 		expect(await Treasury.getVersion()).to.be.equal(2);
+		expect(await Treasury.tokenListLength()).to.be.equal(1);
+		expect(await Treasury.tokenListAt(0)).to.be.equal(cUSD.address);
 	});
 
 	it("Should transfer founds to address is owner", async function () {
@@ -280,7 +267,7 @@ describe("Treasury", () => {
 		const token = await Treasury.tokens(mUSD.address);
 		expect(token.rate).to.be.equal(0);
 		expect(token.exchangePath.length).to.be.equal(0);
-		expect(await Treasury.tokenListLength()).to.be.equal(0);
+		expect(await Treasury.tokenListLength()).to.be.equal(1);
 	});
 
 	it("Should not set token without rate", async function () {
@@ -291,7 +278,7 @@ describe("Treasury", () => {
 		const token = await Treasury.tokens(mUSD.address);
 		expect(token.rate).to.be.equal(0);
 		expect(token.exchangePath.length).to.be.equal(0);
-		expect(await Treasury.tokenListLength()).to.be.equal(0);
+		expect(await Treasury.tokenListLength()).to.be.equal(1);
 	});
 
 	it("Should not set token with invalid exchangePath #1", async function () {
@@ -302,7 +289,7 @@ describe("Treasury", () => {
 		const token = await Treasury.tokens(mUSD.address);
 		expect(token.rate).to.be.equal(0);
 		expect(token.exchangePath.length).to.be.equal(0);
-		expect(await Treasury.tokenListLength()).to.be.equal(0);
+		expect(await Treasury.tokenListLength()).to.be.equal(1);
 	});
 
 	it("Should not set token with invalid exchangePath #2", async function () {
@@ -313,7 +300,7 @@ describe("Treasury", () => {
 		const token = await Treasury.tokens(mUSD.address);
 		expect(token.rate).to.be.equal(0);
 		expect(token.exchangePath.length).to.be.equal(0);
-		expect(await Treasury.tokenListLength()).to.be.equal(0);
+		expect(await Treasury.tokenListLength()).to.be.equal(1);
 	});
 
 	it("Should not set token with invalid exchangePath #3", async function () {
@@ -326,7 +313,7 @@ describe("Treasury", () => {
 		const token = await Treasury.tokens(mUSD.address);
 		expect(token.rate).to.be.equal(0);
 		expect(token.exchangePath.length).to.be.equal(0);
-		expect(await Treasury.tokenListLength()).to.be.equal(0);
+		expect(await Treasury.tokenListLength()).to.be.equal(1);
 	});
 
 	it("Should set token if owner", async function () {
@@ -341,8 +328,9 @@ describe("Treasury", () => {
 		expect(token.exchangePath.length).to.be.equal(2);
 		expect(token.exchangePath[0]).to.be.equal(mUSD.address);
 		expect(token.exchangePath[1]).to.be.equal(cUSD.address);
-		expect(await Treasury.tokenListLength()).to.be.equal(1);
-		expect(await Treasury.tokenListAt(0)).to.be.equal(mUSD.address);
+		expect(await Treasury.tokenListLength()).to.be.equal(2);
+		expect(await Treasury.tokenListAt(0)).to.be.equal(cUSD.address);
+		expect(await Treasury.tokenListAt(1)).to.be.equal(mUSD.address);
 	});
 
 	it("Should set token with empty exchangePath", async function () {
@@ -353,8 +341,9 @@ describe("Treasury", () => {
 		const token = await Treasury.tokens(mUSD.address);
 		expect(token.rate).to.be.equal(500);
 		expect(token.exchangePath.length).to.be.equal(0);
-		expect(await Treasury.tokenListLength()).to.be.equal(1);
-		expect(await Treasury.tokenListAt(0)).to.be.equal(mUSD.address);
+		expect(await Treasury.tokenListLength()).to.be.equal(2);
+		expect(await Treasury.tokenListAt(0)).to.be.equal(cUSD.address);
+		expect(await Treasury.tokenListAt(1)).to.be.equal(mUSD.address);
 	});
 
 	it("Should not remove token if not owner", async function () {
@@ -372,8 +361,9 @@ describe("Treasury", () => {
 		expect(token.exchangePath.length).to.be.equal(2);
 		expect(token.exchangePath[0]).to.be.equal(mUSD.address);
 		expect(token.exchangePath[1]).to.be.equal(cUSD.address);
-		expect(await Treasury.tokenListLength()).to.be.equal(1);
-		expect(await Treasury.tokenListAt(0)).to.be.equal(mUSD.address);
+		expect(await Treasury.tokenListLength()).to.be.equal(2);
+		expect(await Treasury.tokenListAt(0)).to.be.equal(cUSD.address);
+		expect(await Treasury.tokenListAt(1)).to.be.equal(mUSD.address);
 	});
 
 	it("Should revert when removing an invalid token", async function () {
@@ -395,7 +385,7 @@ describe("Treasury", () => {
 		const token = await Treasury.tokens(mUSD.address);
 		expect(token.rate).to.be.equal(0);
 		expect(token.exchangePath.length).to.be.equal(0);
-		expect(await Treasury.tokenListLength()).to.be.equal(0);
+		expect(await Treasury.tokenListLength()).to.be.equal(1);
 	});
 
 	it("Should getConvertedAmount, rate = 1 #1", async function () {
