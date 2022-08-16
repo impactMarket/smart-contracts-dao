@@ -40,7 +40,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	await treasuryContract.initialize(ZERO_ADDRESS);
 
-
 	const UniswapRouter = await ethers.getContractAt(
 		"UniswapV2Router02",
 		(

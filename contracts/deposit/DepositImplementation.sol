@@ -25,9 +25,7 @@ contract DepositImplementation is
      *
      * @param tokenAddress        Address of the token
      */
-    event TokenAdded(
-        address indexed tokenAddress
-    );
+    event TokenAdded(address indexed tokenAddress);
 
     /**
      * @notice Triggered when a token has been removed
@@ -45,6 +43,14 @@ contract DepositImplementation is
     event TreasuryUpdated(address indexed oldTreasury, address indexed newTreasury);
 
     /**
+     * @notice Triggered when the donationMiner address has been updated
+     *
+     * @param oldDonationMiner             Old donationMiner address
+     * @param newDonationMiner             New donationMiner address
+     */
+    event DonationMinerUpdated(address indexed oldDonationMiner, address indexed newDonationMiner);
+
+    /**
      * @notice Triggered when LendingPool has been updated
      *
      * @param oldLendingPool   Old lendingPool address
@@ -55,12 +61,41 @@ contract DepositImplementation is
     /**
      * @notice Triggered when an amount of an ERC20 has been deposited
      *
-     * @param onBehalfOf          The address that will receive the deposit and reward, same as msg.sender if the user
-     *                            wants to receive them on his own wallet
+     * @param depositorAddress    The address of the depositor that makes the deposit
      * @param token               ERC20 token address
-     * @param amount              Amount of the transaction
+     * @param amount              Amount of the deposit
      */
-    event DepositAdded(address indexed onBehalfOf, address indexed token, uint256 amount);
+    event DepositAdded(address indexed depositorAddress, address indexed token, uint256 amount);
+
+    /**
+     * @notice Triggered when an amount of an ERC20 has been withdrawn
+     *
+     * @param depositorAddress    The address of the depositor that makes the withdrawal
+     * @param token               ERC20 token address
+     * @param amount              Amount of the withdrawal
+     * @param interest            Interest earned (and donated to DonationMiner)
+     */
+    event Withdraw(
+        address indexed depositorAddress,
+        address indexed token,
+        uint256 amount,
+        uint256 interest
+    );
+
+    /**
+     * @notice Triggered when the interest of an amount of an ERC20 has been donated
+     *
+     * @param depositorAddress    The address of the depositor
+     * @param token               ERC20 token address
+     * @param amount              Amount of the withdrawal
+     * @param interest            Interest earned (and donated to DonationMiner)
+     */
+    event DonateInterest(
+        address indexed depositorAddress,
+        address indexed token,
+        uint256 amount,
+        uint256 interest
+    );
 
     /**
      * @notice Used to initialize a new DonationMiner contract
@@ -70,17 +105,22 @@ contract DepositImplementation is
      */
     function initialize(
         ITreasury _treasury,
+        IDonationMiner _donationMiner,
         ILendingPool _lendingPool,
         address[] memory _tokenList
     ) public initializer {
         require(address(_treasury) != address(0), "Deposit::initialize: invalid _treasury address");
-        require(address(_lendingPool) != address(0), "Deposit::initialize: invalid _lendingPool address");
+        require(
+            address(_lendingPool) != address(0),
+            "Deposit::initialize: invalid _lendingPool address"
+        );
 
         __Ownable_init();
         __Pausable_init();
         __ReentrancyGuard_init();
 
         treasury = _treasury;
+        donationMiner = _donationMiner;
         lendingPool = _lendingPool;
 
         uint256 _index;
@@ -97,14 +137,24 @@ contract DepositImplementation is
         return 1;
     }
 
-    /**
-     * @notice Returns the address of a token from tokenList
-     *
-     * @param _index index of the token
-     * @return address of the token
-     */
-    function tokenListAt(uint256 _index) external view override returns (address) {
-        return _tokenList.at(_index);
+    function token(address _tokenAddress)
+        external
+        view
+        override
+        returns (uint256 totalAmount, uint256 depositorListLength)
+    {
+        Token storage _token = _tokens[_tokenAddress];
+
+        return (_token.totalAmount, _token.depositorList.length());
+    }
+
+    function tokenDepositorListAt(address _tokenAddress, uint256 _index)
+        external
+        view
+        override
+        returns (address)
+    {
+        return _tokens[_tokenAddress].depositorList.at(_index);
     }
 
     /**
@@ -117,6 +167,16 @@ contract DepositImplementation is
     }
 
     /**
+     * @notice Returns the address of a token from tokenList
+     *
+     * @param _index index of the token
+     * @return address of the token
+     */
+    function tokenListAt(uint256 _index) external view override returns (address) {
+        return _tokenList.at(_index);
+    }
+
+    /**
      * @notice Returns if an address is an accepted token
      *
      * @param _tokenAddress token address to be checked
@@ -126,11 +186,15 @@ contract DepositImplementation is
         return _tokenList.contains(_tokenAddress);
     }
 
-    function tokenDeposit(address _tokenAddress, address _depositor)
-        external view override returns (uint256 amount, uint256 scaledBalance) {
-        Deposit memory _deposit = _tokens[_tokenAddress].deposits[_depositor];
+    function tokenDepositor(address _tokenAddress, address _depositorAddress)
+        external
+        view
+        override
+        returns (uint256 amount, uint256 scaledBalance)
+    {
+        Depositor memory _depositor = _tokens[_tokenAddress].depositors[_depositorAddress];
 
-        return (_deposit.amount, _deposit.scaledBalance);
+        return (_depositor.amount, _depositor.scaledBalance);
     }
 
     /**
@@ -144,6 +208,16 @@ contract DepositImplementation is
     }
 
     /**
+     * @notice Updates DonationMiner address
+     *
+     * @param _newDonationMiner address of new donationMiner contract
+     */
+    function updateDonationMiner(IDonationMiner _newDonationMiner) external override onlyOwner {
+        emit DonationMinerUpdated(address(donationMiner), address(_newDonationMiner));
+        donationMiner = _newDonationMiner;
+    }
+
+    /**
      * @notice Updates the LendingPool contract address
      *
      * @param _newLendingPool address of the new LendingPool contract
@@ -153,20 +227,22 @@ contract DepositImplementation is
         lendingPool = _newLendingPool;
     }
 
-    function addToken(
-        address _tokenAddress
-    ) public override onlyOwner {
+    function addToken(address _tokenAddress) public override onlyOwner {
         require(!isToken(_tokenAddress), "Deposit::addToken: token already added");
-        require(treasury.isToken(_tokenAddress), "Deposit::addToken: it must be a valid treasury token");
+        require(
+            treasury.isToken(_tokenAddress),
+            "Deposit::addToken: it must be a valid treasury token"
+        );
 
         require(
             lendingPool.getReserveData(_tokenAddress).aTokenAddress != address(0),
-                "Deposit::addToken: it must be a valid lendingPool token"
+            "Deposit::addToken: it must be a valid lendingPool token"
         );
 
         _tokenList.add(_tokenAddress);
 
         IERC20(_tokenAddress).approve(address(lendingPool), type(uint256).max);
+        IERC20(_tokenAddress).approve(address(donationMiner), type(uint256).max);
 
         emit TokenAdded(_tokenAddress);
     }
@@ -178,26 +254,134 @@ contract DepositImplementation is
         emit TokenRemoved(_tokenAddress);
     }
 
-    function deposit(address _tokenAddress, uint256 _amount) external override whenNotPaused {
-        require(isToken(_tokenAddress), 'Deposit::deposit: this is not a token');
-        require(_amount > 0, 'Deposit::deposit: invalid amount');
+    function deposit(address _tokenAddress, uint256 _amount)
+        external
+        override
+        whenNotPaused
+        nonReentrant
+    {
+        require(isToken(_tokenAddress), "Deposit::deposit: this is not a token");
+        require(_amount > 0, "Deposit::deposit: invalid amount");
 
         IERC20(_tokenAddress).safeTransferFrom(msg.sender, address(this), _amount);
 
         IAToken aToken = IAToken(lendingPool.getReserveData(_tokenAddress).aTokenAddress);
 
-        uint256 beforeScaledBalance = aToken.scaledBalanceOf(address(this));
+        uint256 _beforeScaledBalance = aToken.scaledBalanceOf(address(this));
         lendingPool.deposit(_tokenAddress, _amount, address(this), 0);
 
-        uint256 afterScaledBalance = aToken.scaledBalanceOf(address(this));
+        uint256 _afterScaledBalance = aToken.scaledBalanceOf(address(this));
 
         Token storage _token = _tokens[_tokenAddress];
-        _token.depositors.add(msg.sender);
+        _token.depositorList.add(msg.sender);
+        _token.totalAmount += _amount;
 
-        Deposit storage _deposit = _token.deposits[msg.sender];
-        _deposit.amount += _amount;
-        _deposit.scaledBalance += afterScaledBalance - beforeScaledBalance;
+        Depositor storage _depositor = _token.depositors[msg.sender];
+        _depositor.amount += _amount;
+        _depositor.scaledBalance += _afterScaledBalance - _beforeScaledBalance;
 
         emit DepositAdded(msg.sender, _tokenAddress, _amount);
+    }
+
+    function withdraw(address _tokenAddress, uint256 _amount)
+        external
+        override
+        whenNotPaused
+        nonReentrant
+    {
+        Token storage _token = _tokens[_tokenAddress];
+        Depositor storage _depositor = _token.depositors[msg.sender];
+
+        require(_amount <= _depositor.amount, "Deposit::withdraw: invalid amount");
+
+        if (_amount == _depositor.amount) {
+            _token.depositorList.remove(msg.sender);
+        }
+
+        IAToken aToken = IAToken(lendingPool.getReserveData(_tokenAddress).aTokenAddress);
+
+        uint256 _beforeScaledBalance = aToken.scaledBalanceOf(address(this));
+        uint256 _withdrawScaledBalanceShare = (_amount * _depositor.scaledBalance) /
+            _depositor.amount;
+        uint256 _withdrawBalanceShare = (_withdrawScaledBalanceShare *
+            aToken.balanceOf(address(this))) / _beforeScaledBalance;
+
+        uint256 _interest = _withdrawBalanceShare - _amount;
+
+        lendingPool.withdraw(_tokenAddress, _amount, msg.sender);
+        lendingPool.withdraw(_tokenAddress, _interest, address(this));
+        donationMiner.donate(IERC20(_tokenAddress), _interest, msg.sender);
+
+        _token.totalAmount -= _amount;
+        _depositor.amount -= _amount;
+        _depositor.scaledBalance -= _withdrawScaledBalanceShare;
+
+        //        uint256 _afterScaledBalance = aToken.scaledBalanceOf(address(this));
+        //        uint256 _diffScaledBalance = _beforeScaledBalance - _afterScaledBalance;
+        //        uint256 _interest = _diffScaledBalance * aToken.balanceOf(address(this)) / _afterScaledBalance;
+        //
+        //        console.log('_beforeScaledBalance: ', _beforeScaledBalance);
+        //        console.log('_afterScaledBalance: ', _afterScaledBalance);
+        //        console.log('_diffScaledBalance1: ', _diffScaledBalance);
+        //        console.log('_diffScaledBalance2: ', _withdrawScaledBalanceShare);
+        //        console.log('balance: ', aToken.balanceOf(address(this)));
+        //        console.log('_interest1: ', _interest);
+        //        console.log('_interest2: ', (_diffScaledBalance *  lendingPool.getReserveNormalizedIncome(_tokenAddress) + 1e27/2) / 1e27);
+        //        console.log('lendingPool.getReserveNormalizedIncome(address(aToken): ', lendingPool.getReserveNormalizedIncome(_tokenAddress));
+        //        console.log('_withdrawBalanceShare: ', _withdrawBalanceShare);
+
+        emit Withdraw(msg.sender, _tokenAddress, _amount, _interest);
+    }
+
+    function donateInterest(
+        address _depositorAddress,
+        address _tokenAddress,
+        uint256 _amount
+    ) external override whenNotPaused nonReentrant {
+        Token storage _token = _tokens[_tokenAddress];
+        Depositor storage _depositor = _token.depositors[_depositorAddress];
+
+        require(_amount <= _depositor.amount, "Deposit::donateInterest: invalid amount");
+
+        IAToken aToken = IAToken(lendingPool.getReserveData(_tokenAddress).aTokenAddress);
+
+        uint256 _beforeScaledBalance = aToken.scaledBalanceOf(address(this));
+        uint256 _withdrawScaledBalanceShare = (_amount * _depositor.scaledBalance) /
+            _depositor.amount;
+        uint256 _withdrawBalanceShare = (_withdrawScaledBalanceShare *
+            aToken.balanceOf(address(this))) / _beforeScaledBalance;
+
+        uint256 _interest = _withdrawBalanceShare - _amount;
+
+        lendingPool.withdraw(_tokenAddress, _interest, address(this));
+
+        uint256 _afterScaledBalance = aToken.scaledBalanceOf(address(this));
+
+        donationMiner.donate(IERC20(_tokenAddress), _interest, _depositorAddress);
+
+        _depositor.scaledBalance -= _beforeScaledBalance - _afterScaledBalance;
+
+        emit DonateInterest(_depositorAddress, _tokenAddress, _amount, _interest);
+    }
+
+    function interest(
+        address _depositorAddress,
+        address _tokenAddress,
+        uint256 _amount
+    ) external view override returns (uint256) {
+        Token storage _token = _tokens[_tokenAddress];
+        Depositor storage _depositor = _token.depositors[_depositorAddress];
+
+        require(_amount <= _depositor.amount, "Deposit::donateInterest: invalid amount");
+
+        IAToken aToken = IAToken(lendingPool.getReserveData(_tokenAddress).aTokenAddress);
+
+        uint256 _beforeScaledBalance = aToken.scaledBalanceOf(address(this));
+        uint256 _withdrawScaledBalanceShare = (_amount * _depositor.scaledBalance) /
+            _depositor.amount;
+        uint256 _withdrawBalanceShare = (_withdrawScaledBalanceShare *
+            aToken.balanceOf(address(this))) / _beforeScaledBalance;
+
+        return _withdrawBalanceShare - _amount;
     }
 }

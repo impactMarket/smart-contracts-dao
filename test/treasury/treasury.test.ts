@@ -11,9 +11,7 @@ import { fromEther, toEther } from "../utils/helpers";
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 
-
 describe("Treasury", () => {
-
 	let owner: SignerWithAddress;
 	let user1: SignerWithAddress;
 	let user2: SignerWithAddress;

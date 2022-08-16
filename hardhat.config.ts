@@ -29,8 +29,6 @@ export default {
     hardhat: {
       forking: {
         url: "https://forno.celo.org",
-        // url: "https://127.0.0.1:8545",
-        // blockNumber: 14389665
       },
     },
     alfajores: {

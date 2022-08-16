@@ -17,16 +17,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	const ImpactProxyAdmin = await deployments.get("ImpactProxyAdmin");
 	const Treasury = await deployments.get("TreasuryProxy");
+	const DonationMiner = await deployments.get("DonationMinerProxy");
 
-	const depositImplementationResult = await deploy(
-		"DepositImplementation",
-		{
-			from: deployer.address,
-			args: [],
-			log: true,
-			// gasLimit: 13000000,
-		}
-	);
+	const depositImplementationResult = await deploy("DepositImplementation", {
+		from: deployer.address,
+		args: [],
+		log: true,
+		// gasLimit: 13000000,
+	});
 
 	const depositProxyResult = await deploy("DepositProxy", {
 		from: deployer.address,
@@ -42,6 +40,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	await depositContract.initialize(
 		Treasury.address,
+		DonationMiner.address,
 		LENDING_POOL_ADDRESS,
 		[]
 	);
@@ -50,5 +49,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 };
 
 export default func;
-func.dependencies = ["ImpactProxyAdminTest", "TreasuryTest"];
+func.dependencies = [
+	"ImpactProxyAdminTest",
+	"TreasuryTest",
+	"DonationMinerTest",
+];
 func.tags = ["DonationTest", "Test"];

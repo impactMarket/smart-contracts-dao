@@ -11,6 +11,7 @@ import "./IDeposit.sol";
  */
 abstract contract DepositStorageV1 is IDeposit {
     ITreasury public override treasury;
+    IDonationMiner public override donationMiner;
     ILendingPool public override lendingPool;
     EnumerableSet.AddressSet internal _tokenList;
     mapping(address => Token) internal _tokens;

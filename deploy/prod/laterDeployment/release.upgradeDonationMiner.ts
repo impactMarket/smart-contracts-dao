@@ -8,16 +8,16 @@ import * as ethersTypes from "ethers";
 const { deploy } = deployments;
 let deployer: SignerWithAddress;
 
-// //alfajores
-// const governanceDelegatorAddress = "0x5c27e2600a3eDEF53DE0Ec32F01efCF145419eDF";
-// const proxyAdminAddress = "0x79f9ca5f1A01e1768b9C24AD37FF63A0199E3Fe5";
-// const donationMinerProxyAddress = "0x09Cdc8f50994F63103bc165B139631A6ad18EF49";
+//alfajores
+const governanceDelegatorAddress = "0x5c27e2600a3eDEF53DE0Ec32F01efCF145419eDF";
+const proxyAdminAddress = "0x79f9ca5f1A01e1768b9C24AD37FF63A0199E3Fe5";
+const donationMinerProxyAddress = "0x09Cdc8f50994F63103bc165B139631A6ad18EF49";
 
 
-// mainnet
-const governanceDelegatorAddress = "0x8f8BB984e652Cb8D0aa7C9D6712Ec2020EB1BAb4";
-const proxyAdminAddress = "0xFC641CE792c242EACcD545B7bee2028f187f61EC";
-const donationMinerProxyAddress = "0x1C51657af2ceBA3D5492bA0c5A17E562F7ba6593";
+// // mainnet
+// const governanceDelegatorAddress = "0x8f8BB984e652Cb8D0aa7C9D6712Ec2020EB1BAb4";
+// const proxyAdminAddress = "0xFC641CE792c242EACcD545B7bee2028f187f61EC";
+// const donationMinerProxyAddress = "0x1C51657af2ceBA3D5492bA0c5A17E562F7ba6593";
 
 const contractName = 'DonationMinerImplementation';
 
