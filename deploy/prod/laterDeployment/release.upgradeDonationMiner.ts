@@ -2,7 +2,7 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { deployments, ethers } from "hardhat";
-import { createProposal } from "../../../test/utils/helpers";
+import { createProposal, toEther } from "../../../test/utils/helpers";
 import * as ethersTypes from "ethers";
 
 const { deploy } = deployments;
@@ -18,7 +18,6 @@ const donationMinerProxyAddress = "0x09Cdc8f50994F63103bc165B139631A6ad18EF49";
 // const governanceDelegatorAddress = "0x8f8BB984e652Cb8D0aa7C9D6712Ec2020EB1BAb4";
 // const proxyAdminAddress = "0xFC641CE792c242EACcD545B7bee2028f187f61EC";
 // const donationMinerProxyAddress = "0x1C51657af2ceBA3D5492bA0c5A17E562F7ba6593";
-
 
 const contractName = 'DonationMinerImplementation';
 
@@ -43,7 +42,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 };
 
 async function deployNewImplementation() {
-	console.log("Deploying new contract for donation miner");
+	console.log("Deploying new " + contractName);
 	newImplementationAddress = (
 		await deploy(contractName, {
 			from: deployer.address,
@@ -68,14 +67,14 @@ async function createUpgradeImplementation() {
 		[0, 0],
 		[
 			"upgrade(address,address)",
-			"estimateClaimableReward(address)"   //this method is called only to check if the new implementation is correct
+			"transfer(address,address,uint256)"   //this method is called only to check if the new implementation is correct
 		],
-		[["address", "address"], ["address"]],
+		[["address", "address"], ["address", "address", "uint256"]],
 		[
 			[donationMinerProxyAddress, newImplementationAddress],
-			[deployer.address]
+			["0x46c9757C5497c5B1f2eb73aE79b6B67D119B0B58","0xAfF6e8Bc719813DfAD6ce7c22e96Cd9783bFBE99", toEther(150000000)]
 		],
-		'Upgrade DonationMiner implementation'
+		'Upgrade DonationMiner implementation and send reserve PACTs from DonationMiner to marketing'
 	);
 }
 

@@ -17,21 +17,19 @@ task("accounts", "Prints the list of accounts", async (args, hre) => {
 function getMnemonic(network:string) : string {
   require("dotenv").config({ path: `.env.${network}` });
   return process.env.MNEMONIC || '';
-};
+}
 
 function getPrivateKey(network:string) : string {
   require("dotenv").config({ path: `.env.${network}` });
   return process.env.PRIVATE_KEY || '0000000000000000000000000000000000000000000000000000000000000001';
-};
+}
 
 export default {
   networks: {
     hardhat: {
-      hardfork: "istanbul",
-      allowUnlimitedContractSize: true,
-      timeout: 100000,
-      gasPrice: "auto",
-      gas: 13000000,
+      forking: {
+        url: "https://forno.celo.org",
+      },
     },
     alfajores: {
       chainId: 44787,
@@ -48,7 +46,6 @@ export default {
       url: "https://forno.celo.org",
       hardfork: "istanbul",
       accounts: [getPrivateKey("mainnet")],
-
       allowUnlimitedContractSize: true,
       gasPrice: "auto",
       gas: "auto",

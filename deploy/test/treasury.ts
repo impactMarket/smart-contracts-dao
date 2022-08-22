@@ -1,6 +1,8 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { deployments, ethers } from "hardhat";
+import { getCUSDAddress } from "./cUSD";
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
@@ -37,8 +39,20 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	);
 
 	await treasuryContract.initialize(ZERO_ADDRESS);
+
+	const UniswapRouter = await ethers.getContractAt(
+		"UniswapV2Router02",
+		(
+			await deployments.get("UniswapV2Router02")
+		).address
+	);
+
+	await treasuryContract.updateUniswapRouter(UniswapRouter.address);
+
+	const cUSDAddress = getCUSDAddress();
+	await treasuryContract.setToken(cUSDAddress, 1000, []);
 };
 
 export default func;
-func.dependencies = ["ImpactProxyAdminTest", "cUSDTest"];
+func.dependencies = ["ImpactProxyAdminTest", "cUSDTest", "UbeswapTest"];
 func.tags = ["TreasuryTest", "Test"];

@@ -726,7 +726,6 @@ contract DonationMinerImplementation is
         address _to,
         uint256 _amount
     ) external override onlyOwner nonReentrant {
-        require(_token != PACT, "DonationMiner::transfer you are not allow to transfer PACTs");
         _token.safeTransfer(_to, _amount);
 
         emit TransferERC20(address(_token), _to, _amount);

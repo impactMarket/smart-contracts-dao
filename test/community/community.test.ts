@@ -28,7 +28,7 @@ chai.use(chaiAsPromised);
 const expect = chai.expect;
 const provider = waffle.provider;
 
-describe.only("Community", () => {
+describe("Community", () => {
 	enum BeneficiaryState {
 		NONE = 0,
 		Valid = 1,
