@@ -27,9 +27,9 @@ function getPrivateKey(network:string) : string {
 export default {
   networks: {
     hardhat: {
-      forking: {
-        url: "https://forno.celo.org",
-      },
+      // forking: {
+      //   url: "https://forno.celo.org",
+      // },
     },
     alfajores: {
       chainId: 44787,
