@@ -3,7 +3,7 @@ pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../donationMiner/interfaces/IDonationMiner.sol";
-import "../../interfaces/IMintableERC20.sol";
+import "../../externalInterfaces/openzeppelin/IMintableERC20.sol";
 
 interface IStaking {
     struct Unstake {

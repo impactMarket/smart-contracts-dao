@@ -27,6 +27,11 @@ function getPrivateKey(network:string) : string {
 export default {
   networks: {
     hardhat: {
+      hardfork: "istanbul",
+      allowUnlimitedContractSize: true,
+      timeout: 100000,
+      gasPrice: "auto",
+      gas: 13000000,
       // forking: {
       //   url: "https://forno.celo.org",
       // },
