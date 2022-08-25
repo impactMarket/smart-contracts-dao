@@ -601,7 +601,7 @@ contract CommunityImplementation is
     {
         require(!locked, "LOCKED");
 
-       _addBeneficiary(_beneficiaryAddress);
+        _addBeneficiary(_beneficiaryAddress);
     }
 
     /**

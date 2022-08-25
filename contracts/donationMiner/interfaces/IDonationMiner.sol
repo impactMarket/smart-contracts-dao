@@ -90,7 +90,7 @@ interface IDonationMiner {
         uint256 blockNumber,
         uint256 amount,
         IERC20 token,
-        uint256 tokenPrice
+        uint256 initialAmount
     );
     function claimDelay() external view returns (uint256);
     function againstPeriods() external view returns (uint256);
