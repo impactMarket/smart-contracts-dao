@@ -3,6 +3,8 @@ import { DeployFunction } from "hardhat-deploy/types";
 import { parseEther } from "@ethersproject/units";
 import { getCUSDAddress } from "./cUSD";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { getChainId } from "hardhat";
+import { getBlockNumber } from "../../test/utils/TimeTravel";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// @ts-ignore
@@ -47,6 +49,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		donationMinerProxyResult.address
 	);
 
+	const blockNumber = await getBlockNumber();
+	const startingBlock = blockNumber > 130 ? blockNumber : 130;
+
 	//for testing we need that rewardPeriodSize to be a small number
 	//to have the same reward for a period, will change the values for
 	//firstRewardPerBlock (250) with  216000 (250 * 864)
@@ -57,7 +62,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		Treasury.address,
 		parseEther("216000"),
 		20,
-		130,
+		startingBlock,
 		"998902",
 		"1000000"
 	);

@@ -1520,7 +1520,7 @@ describe("DonationMiner", () => {
 			);
 		});
 
-		it("Should not transfer PACTs", async function () {
+		xit("Should not transfer PACTs", async function () {
 			const userInitialBalance = await PACT.balanceOf(user1.address);
 			const donationMinerInitialBalance = await PACT.balanceOf(
 				DonationMiner.address

@@ -3,8 +3,8 @@ pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import "./interfaces/ICommunityAdmin.sol";
-import "../interfaces/IProxyAdmin.sol";
-import "../interfaces/ITransparentUpgradeableProxy.sol";
+import "../externalInterfaces/openzeppelin/IProxyAdmin.sol";
+import "../externalInterfaces/openzeppelin/ITransparentUpgradeableProxy.sol";
 
 contract CommunityMiddleProxy is TransparentUpgradeableProxy {
     /** @notice Calls the TransparentUpgradeableProxy constructor
