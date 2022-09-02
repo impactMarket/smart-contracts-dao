@@ -16,11 +16,20 @@ interface ICommunity {
     struct Beneficiary {
         BeneficiaryState state;  //beneficiary state
         uint256 claims;          //total number of claims
-        uint256 claimedAmount;   //total amount of cUSD received
+        uint256 claimedAmount;   //total amount of tokens received
+                                 //(based on token ratios when there are more than one token)
         uint256 lastClaim;       //block number of the last claim
+        mapping(address => uint256) claimedAmounts;
+    }
+
+    struct Token {
+        address tokenAddress;    //address of the token
+        uint256 ratio;           //ratio between maxClaim and previous token maxClaim
+        uint256 startBlock;      //the number of the block from which the this token was "active"
     }
 
     function initialize(
+        address _tokenAddress,
         address[] memory _managers,
         uint256 _claimAmount,
         uint256 _maxClaim,
@@ -32,7 +41,7 @@ interface ICommunity {
         uint256 _maxBeneficiaries,
         ICommunity _previousCommunity
     ) external;
-    function getVersion() external returns(uint256);
+    function getVersion() external pure returns(uint256);
     function previousCommunity() external view returns(ICommunity);
     function claimAmount() external view returns(uint256);
     function baseInterval() external view returns(uint256);
@@ -45,6 +54,7 @@ interface ICommunity {
     function communityAdmin() external view returns(ICommunityAdmin);
     function cUSD() external view  returns(IERC20);
     function token() external view  returns(IERC20);
+    function tokenList() external view returns(address[] memory);
     function locked() external view returns(bool);
     function beneficiaries(address _beneficiaryAddress) external view returns(
         BeneficiaryState state,
@@ -52,14 +62,20 @@ interface ICommunity {
         uint256 claimedAmount,
         uint256 lastClaim
     );
+    function beneficiaryClaimedAmounts(address _beneficiaryAddress) external view
+        returns (uint256[] memory claimedAmounts);
     function decreaseStep() external view returns(uint);
     function beneficiaryListAt(uint256 _index) external view returns (address);
     function beneficiaryListLength() external view returns (uint256);
-    function impactMarketAddress() external pure returns (address);
     function minTranche() external view returns(uint256);
     function maxTranche() external view returns(uint256);
     function lastFundRequest() external view returns(uint256);
-
+    function tokens(uint256 _index) external view returns (
+        address tokenAddress,
+        uint256 ratio,
+        uint256 startBlock
+    );
+    function tokensLength() external view returns (uint256);
     function updateCommunityAdmin(ICommunityAdmin _communityAdmin) external;
     function updatePreviousCommunity(ICommunity _newPreviousCommunity) external;
     function updateBeneficiaryParams(
@@ -74,7 +90,15 @@ interface ICommunity {
         uint256 _maxTranche
     ) external;
     function updateMaxBeneficiaries(uint256 _newMaxBeneficiaries) external;
-    function updateToken(IERC20 _newToken, address[] memory _exchangePath) external;
+    function updateToken(
+        IERC20 _newToken,
+        address[] calldata _exchangePath,
+        uint256 _claimAmount,
+        uint256 _maxClaim,
+        uint256 _decreaseStep,
+        uint256 _baseInterval,
+        uint256 _incrementInterval
+    ) external;
     function donate(address _sender, uint256 _amount) external;
     function addTreasuryFunds(uint256 _amount) external;
     function transfer(IERC20 _token, address _to, uint256 _amount) external;

@@ -18,7 +18,7 @@ interface IDeposit {
         mapping(address => Depositor) depositors;
     }
 
-    function getVersion() external returns(uint256);
+    function getVersion() external pure returns(uint256);
     function lendingPool() external view returns(ILendingPool);
     function treasury() external view returns (ITreasury);
     function donationMiner() external view returns (IDonationMiner);
