@@ -20,7 +20,7 @@ interface ICommunity {
         uint256 lastClaim;       //block number of the last claim
     }
 
-    function getVersion() external returns(uint256);
+    function getVersion() external pure returns(uint256);
     function previousCommunity() external view returns(ICommunity);
     function claimAmount() external view returns(uint256);
     function baseInterval() external view returns(uint256);

@@ -134,6 +134,7 @@ async function addDefaultCommunity(
 	const communityMaxTranche = parseEther("5000");
 	const maxBeneficiaries = 100;
 	const tx = await communityAdminProxy.addCommunity(
+		cUSDInstance.address,
 		[communityManager1.address],
 		ambassadorAddress,
 		claimAmountTwo,
