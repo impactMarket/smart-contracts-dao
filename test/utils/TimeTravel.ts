@@ -68,3 +68,21 @@ export async function advanceNSeconds(n: number) {
 export async function getBlockNumber() {
 	return Number(await network.provider.send("eth_blockNumber", []));
 }
+
+export async function getCurrentBlockTimestamp(): Promise<number> {
+	return getBlockTimestamp((await getBlockNumber()).toString(16));
+}
+
+export async function getBlockTimestamp(
+	blockNumber: number | string
+): Promise<number> {
+	return parseInt(
+		(
+			await network.provider.send("eth_getBlockByNumber", [
+				"0x" + blockNumber,
+				true,
+			])
+		).timestamp,
+		16
+	);
+}

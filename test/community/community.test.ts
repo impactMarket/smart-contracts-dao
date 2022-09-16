@@ -16,8 +16,10 @@ import type * as ethersTypes from "ethers";
 import { parseEther, formatEther } from "@ethersproject/units";
 import {
 	advanceBlockNTimes,
+	advanceNSeconds,
 	advanceTimeAndBlockNTimes,
 	getBlockNumber,
+	getCurrentBlockTimestamp,
 } from "../utils/TimeTravel";
 import { Bytes, keccak256 } from "ethers/lib/utils";
 import { toEther } from "../utils/helpers";
@@ -28,7 +30,7 @@ chai.use(chaiAsPromised);
 const expect = chai.expect;
 const provider = waffle.provider;
 
-describe("Community", () => {
+describe.only("Community", () => {
 	enum BeneficiaryState {
 		NONE = 0,
 		Valid = 1,
@@ -228,6 +230,20 @@ describe("Community", () => {
 			"CommunityImplementation",
 			await createCommunity(communityAdminProxy)
 		);
+	}
+
+	async function signParams(
+		signer: SignerWithAddress,
+		empoweredAddress: string,
+		communityAddress: string,
+		expirationTimestamp: number
+	): Promise<string> {
+		const message = ethers.utils.solidityKeccak256(
+			["address", "address", "uint256"],
+			[empoweredAddress, communityAddress, expirationTimestamp]
+		);
+		const arrayifyMessage = ethers.utils.arrayify(message);
+		return signer.signMessage(arrayifyMessage);
 	}
 
 	describe("CommunityAdmin", () => {
@@ -1044,9 +1060,13 @@ describe("Community", () => {
 			(
 				await communityProxy.beneficiaries(beneficiaryA.address)
 			).state.should.be.equal(BeneficiaryState.NONE);
-			await communityProxy
-				.connect(communityManagerA)
-				.addBeneficiaries([beneficiaryA.address]);
+			await expect(
+				communityProxy
+					.connect(communityManagerA)
+					.addBeneficiaries([beneficiaryA.address])
+			)
+				.to.emit(communityProxy, "BeneficiaryAdded")
+				.withArgs(communityManagerA.address, beneficiaryA.address);
 			(
 				await communityProxy.beneficiaries(beneficiaryA.address)
 			).state.should.be.equal(BeneficiaryState.Valid);
@@ -1119,6 +1139,263 @@ describe("Community", () => {
 			);
 		});
 
+		it("should add beneficiary to community using a manager signature", async () => {
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.NONE);
+			(await communityProxy.validBeneficiaryCount()).should.be.equal(0);
+
+			await expect(
+				communityProxy
+					.connect(communityManagerB)
+					.addBeneficiary(beneficiaryA.address)
+			).to.be.rejectedWith("Community: NOT_MANAGER");
+
+			const expirationTimestamp =
+				(await getCurrentBlockTimestamp()) + 100;
+			const signature = await signParams(
+				communityManagerA,
+				communityManagerB.address,
+				communityProxy.address,
+				expirationTimestamp
+			);
+
+			await expect(
+				communityProxy
+					.connect(communityManagerB)
+					.addBeneficiariesUsingSignature(
+						[beneficiaryA.address],
+						expirationTimestamp,
+						signature
+					)
+			)
+				.to.emit(communityProxy, "BeneficiaryAdded")
+				.withArgs(communityManagerB.address, beneficiaryA.address);
+
+			await expect(
+				communityProxy
+					.connect(communityManagerB)
+					.addBeneficiariesUsingSignature(
+						[beneficiaryA.address],
+						expirationTimestamp,
+						signature
+					)
+			).to.be.fulfilled;
+
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.Valid);
+		});
+
+		it("should not add beneficiary to community using a manager signature if community is locked", async () => {
+			const expirationTimestamp =
+				(await getCurrentBlockTimestamp()) + 100;
+			const signature = await signParams(
+				communityManagerA,
+				communityManagerB.address,
+				communityProxy.address,
+				expirationTimestamp
+			);
+
+			await expect(communityProxy.connect(ambassadorA).lock());
+
+			await expect(
+				communityProxy
+					.connect(communityManagerB)
+					.addBeneficiariesUsingSignature(
+						[beneficiaryA.address],
+						expirationTimestamp,
+						signature
+					)
+			).to.be.rejectedWith("Community: locked");
+		});
+
+		it("should add beneficiary to community using a manager signature multiple times", async () => {
+			const expirationTimestamp =
+				(await getCurrentBlockTimestamp()) + 100;
+			const signature = await signParams(
+				communityManagerA,
+				communityManagerB.address,
+				communityProxy.address,
+				expirationTimestamp
+			);
+
+			await expect(
+				communityProxy
+					.connect(communityManagerB)
+					.addBeneficiariesUsingSignature(
+						[beneficiaryA.address],
+						expirationTimestamp,
+						signature
+					)
+			).to.be.fulfilled;
+
+			await expect(
+				communityProxy
+					.connect(communityManagerB)
+					.addBeneficiariesUsingSignature(
+						[beneficiaryB.address],
+						expirationTimestamp,
+						signature
+					)
+			).to.be.fulfilled;
+
+			(await communityProxy.validBeneficiaryCount()).should.be.equal(2);
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.Valid);
+			(
+				await communityProxy.beneficiaries(beneficiaryB.address)
+			).state.should.be.equal(BeneficiaryState.Valid);
+		});
+
+		it("should not use manager signature for wrong community", async () => {
+			const expirationTimestamp =
+				(await getCurrentBlockTimestamp()) + 100;
+			const signature = await signParams(
+				communityManagerA,
+				communityManagerB.address,
+				communityProxy.address,
+				expirationTimestamp
+			);
+
+			await expect(
+				communityProxy
+					.connect(communityManagerB)
+					.addBeneficiariesUsingSignature(
+						[beneficiaryA.address],
+						expirationTimestamp,
+						signature
+					)
+			).to.be.fulfilled;
+
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.Valid);
+
+			const communityProxy2 = await ethers.getContractAt(
+				"CommunityImplementation",
+				await createCommunity(communityAdminProxy)
+			);
+
+			await expect(
+				communityProxy2
+					.connect(communityManagerB)
+					.addBeneficiariesUsingSignature(
+						[beneficiaryA.address],
+						expirationTimestamp,
+						signature
+					)
+			).to.be.rejectedWith("Community: Invalid signature");
+		});
+
+		it("should not use manager signature by another person", async () => {
+			const expirationTimestamp =
+				(await getCurrentBlockTimestamp()) + 100;
+			const signature = await signParams(
+				communityManagerA,
+				communityManagerB.address,
+				communityProxy.address,
+				expirationTimestamp
+			);
+
+			await expect(
+				communityProxy
+					.connect(communityManagerB)
+					.addBeneficiariesUsingSignature(
+						[beneficiaryA.address],
+						expirationTimestamp,
+						signature
+					)
+			).to.be.fulfilled;
+
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.Valid);
+
+			await expect(
+				communityProxy
+					.connect(communityManagerC)
+					.addBeneficiariesUsingSignature(
+						[beneficiaryA.address],
+						expirationTimestamp,
+						signature
+					)
+			).to.be.rejectedWith("Community: Invalid signature");
+		});
+
+		it("should not use manager signature with wrong expiration timestamp", async () => {
+			const expirationTimestamp =
+				(await getCurrentBlockTimestamp()) + 100;
+			const signature = await signParams(
+				communityManagerA,
+				communityManagerB.address,
+				communityProxy.address,
+				expirationTimestamp
+			);
+
+			await expect(
+				communityProxy
+					.connect(communityManagerB)
+					.addBeneficiariesUsingSignature(
+						[beneficiaryA.address],
+						expirationTimestamp,
+						signature
+					)
+			).to.be.fulfilled;
+
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.Valid);
+
+			await expect(
+				communityProxy
+					.connect(communityManagerB)
+					.addBeneficiariesUsingSignature(
+						[beneficiaryA.address],
+						expirationTimestamp + 1,
+						signature
+					)
+			).to.be.rejectedWith("Community: Invalid signature");
+		});
+
+		it("should not use manager signature after expiration", async () => {
+			const expirationTimestamp =
+				(await getCurrentBlockTimestamp()) + 100;
+			const signature = await signParams(
+				communityManagerA,
+				communityManagerB.address,
+				communityProxy.address,
+				expirationTimestamp
+			);
+
+			await expect(
+				communityProxy
+					.connect(communityManagerB)
+					.addBeneficiariesUsingSignature(
+						[beneficiaryA.address],
+						expirationTimestamp,
+						signature
+					)
+			).to.be.fulfilled;
+
+			await advanceNSeconds(100);
+
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.Valid);
+
+			await expect(
+				communityProxy
+					.connect(communityManagerB)
+					.addBeneficiariesUsingSignature(
+						[beneficiaryA.address],
+						expirationTimestamp,
+						signature
+					)
+			).to.be.rejectedWith("Community: Signature too old");
+		});
+
 		it("should give beneficiary 5 cents when adding to community", async () => {
 			(await cUSD.balanceOf(beneficiaryA.address))
 				.toString()
@@ -1141,9 +1418,13 @@ describe("Community", () => {
 			(
 				await communityProxy.beneficiaries(beneficiaryA.address)
 			).state.should.be.equal(BeneficiaryState.Valid);
-			await communityProxy
-				.connect(communityManagerA)
-				.lockBeneficiary(beneficiaryA.address);
+			await expect(
+				communityProxy
+					.connect(communityManagerA)
+					.lockBeneficiary(beneficiaryA.address)
+			)
+				.to.emit(communityProxy, "BeneficiaryLocked")
+				.withArgs(communityManagerA.address, beneficiaryA.address);
 			(
 				await communityProxy.beneficiaries(beneficiaryA.address)
 			).state.should.be.equal(BeneficiaryState.Locked);
@@ -1153,11 +1434,39 @@ describe("Community", () => {
 			(
 				await communityProxy.beneficiaries(beneficiaryA.address)
 			).state.should.be.equal(BeneficiaryState.NONE);
+
 			await expect(
 				communityProxy
 					.connect(communityManagerA)
 					.lockBeneficiary(beneficiaryA.address)
-			).to.be.rejectedWith("NOT_YET");
+			).to.be.fulfilled;
+
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.NONE);
+		});
+
+		it("should not lock an removed beneficiary from community", async () => {
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.NONE);
+
+			await communityProxy
+				.connect(communityManagerA)
+				.addBeneficiary(beneficiaryA.address);
+			await communityProxy
+				.connect(communityManagerA)
+				.removeBeneficiary(beneficiaryA.address);
+
+			await expect(
+				communityProxy
+					.connect(communityManagerA)
+					.lockBeneficiary(beneficiaryA.address)
+			).to.be.fulfilled;
+
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.Removed);
 		});
 
 		it("should unlock locked beneficiary from community", async () => {
@@ -1176,9 +1485,13 @@ describe("Community", () => {
 			(
 				await communityProxy.beneficiaries(beneficiaryA.address)
 			).state.should.be.equal(BeneficiaryState.Locked);
-			await communityProxy
-				.connect(communityManagerA)
-				.unlockBeneficiary(beneficiaryA.address);
+			await expect(
+				communityProxy
+					.connect(communityManagerA)
+					.unlockBeneficiary(beneficiaryA.address)
+			)
+				.to.emit(communityProxy, "BeneficiaryUnlocked")
+				.withArgs(communityManagerA.address, beneficiaryA.address);
 			(
 				await communityProxy.beneficiaries(beneficiaryA.address)
 			).state.should.be.equal(BeneficiaryState.Valid);
@@ -1198,7 +1511,593 @@ describe("Community", () => {
 				communityProxy
 					.connect(communityManagerA)
 					.unlockBeneficiary(beneficiaryA.address)
-			).to.be.rejectedWith("NOT_YET");
+			).to.be.fulfilled;
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.Valid);
+		});
+
+		it("should not unlock a removed beneficiary from community", async () => {
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.NONE);
+			await communityProxy
+				.connect(communityManagerA)
+				.addBeneficiaries([beneficiaryA.address]);
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.Valid);
+			await communityProxy
+				.connect(communityManagerA)
+				.removeBeneficiaries([beneficiaryA.address]);
+			await expect(
+				communityProxy
+					.connect(communityManagerA)
+					.unlockBeneficiary(beneficiaryA.address)
+			).to.be.fulfilled;
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.Removed);
+		});
+
+		it("should lock beneficiaries from community", async () => {
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.NONE);
+			await communityProxy
+				.connect(communityManagerA)
+				.addBeneficiaries([beneficiaryA.address]);
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.Valid);
+			await expect(
+				communityProxy
+					.connect(communityManagerA)
+					.lockBeneficiaries([beneficiaryA.address])
+			)
+				.to.emit(communityProxy, "BeneficiaryLocked")
+				.withArgs(communityManagerA.address, beneficiaryA.address);
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.Locked);
+		});
+
+		it("should not lock invalid beneficiaries from community", async () => {
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.NONE);
+
+			await expect(
+				communityProxy
+					.connect(communityManagerA)
+					.lockBeneficiaries([beneficiaryA.address])
+			).to.be.fulfilled;
+
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.NONE);
+		});
+
+		it("should not lock removed beneficiaries from community", async () => {
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.NONE);
+
+			await communityProxy
+				.connect(communityManagerA)
+				.addBeneficiary(beneficiaryA.address);
+			await communityProxy
+				.connect(communityManagerA)
+				.removeBeneficiary(beneficiaryA.address);
+
+			await expect(
+				communityProxy
+					.connect(communityManagerA)
+					.lockBeneficiaries([beneficiaryA.address])
+			).to.be.fulfilled;
+
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.Removed);
+		});
+
+		it("should unlock locked beneficiaries from community", async () => {
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.NONE);
+			await communityProxy
+				.connect(communityManagerA)
+				.addBeneficiaries([beneficiaryA.address, beneficiaryB.address]);
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.Valid);
+			await communityProxy
+				.connect(communityManagerA)
+				.lockBeneficiaries([
+					beneficiaryA.address,
+					beneficiaryB.address,
+				]);
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.Locked);
+			(
+				await communityProxy.beneficiaries(beneficiaryB.address)
+			).state.should.be.equal(BeneficiaryState.Locked);
+			await expect(
+				communityProxy
+					.connect(communityManagerA)
+					.unlockBeneficiaries([
+						beneficiaryA.address,
+						beneficiaryB.address,
+					])
+			)
+				.to.emit(communityProxy, "BeneficiaryUnlocked")
+				.withArgs(communityManagerA.address, beneficiaryA.address)
+				.to.emit(communityProxy, "BeneficiaryUnlocked")
+				.withArgs(communityManagerA.address, beneficiaryB.address);
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.Valid);
+			(
+				await communityProxy.beneficiaries(beneficiaryB.address)
+			).state.should.be.equal(BeneficiaryState.Valid);
+		});
+
+		it("should not unlock valid beneficiaries from community", async () => {
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.NONE);
+			await communityProxy
+				.connect(communityManagerA)
+				.addBeneficiaries([beneficiaryA.address]);
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.Valid);
+			await expect(
+				communityProxy
+					.connect(communityManagerA)
+					.unlockBeneficiaries([beneficiaryA.address])
+			).to.be.fulfilled;
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.Valid);
+		});
+
+		it("should not unlock removed beneficiaries from community", async () => {
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.NONE);
+			await communityProxy
+				.connect(communityManagerA)
+				.addBeneficiaries([beneficiaryA.address]);
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.Valid);
+			await communityProxy
+				.connect(communityManagerA)
+				.removeBeneficiaries([beneficiaryA.address]);
+			await expect(
+				communityProxy
+					.connect(communityManagerA)
+					.unlockBeneficiaries([beneficiaryA.address])
+			).to.be.fulfilled;
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.Removed);
+		});
+
+		it("should lock beneficiaries using a manager signature", async () => {
+			const expirationTimestamp =
+				(await getCurrentBlockTimestamp()) + 100;
+			const signature = await signParams(
+				communityManagerA,
+				communityManagerB.address,
+				communityProxy.address,
+				expirationTimestamp
+			);
+
+			await communityProxy
+				.connect(communityManagerB)
+				.addBeneficiariesUsingSignature(
+					[beneficiaryA.address, beneficiaryB.address],
+					expirationTimestamp,
+					signature
+				);
+
+			await expect(
+				communityProxy
+					.connect(communityManagerB)
+					.lockBeneficiaries([
+						beneficiaryA.address,
+						beneficiaryB.address,
+					])
+			).to.be.rejectedWith("Community: NOT_MANAGER");
+
+			await expect(
+				communityProxy
+					.connect(communityManagerB)
+					.lockBeneficiariesUsingSignature(
+						[beneficiaryA.address, beneficiaryB.address],
+						expirationTimestamp,
+						signature
+					)
+			)
+				.to.emit(communityProxy, "BeneficiaryLocked")
+				.withArgs(communityManagerB.address, beneficiaryA.address)
+				.to.emit(communityProxy, "BeneficiaryLocked")
+				.withArgs(communityManagerB.address, beneficiaryB.address);
+
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.Locked);
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.Locked);
+		});
+
+		it("should not lock beneficiaries using a manager signature if community is locked", async () => {
+			const expirationTimestamp =
+				(await getCurrentBlockTimestamp()) + 100;
+			const signature = await signParams(
+				communityManagerA,
+				communityManagerB.address,
+				communityProxy.address,
+				expirationTimestamp
+			);
+
+			await communityProxy
+				.connect(communityManagerB)
+				.addBeneficiariesUsingSignature(
+					[beneficiaryA.address, beneficiaryB.address],
+					expirationTimestamp,
+					signature
+				);
+
+			await expect(communityProxy.connect(ambassadorA).lock());
+
+			await expect(
+				communityProxy
+					.connect(communityManagerB)
+					.lockBeneficiariesUsingSignature(
+						[beneficiaryA.address],
+						expirationTimestamp,
+						signature
+					)
+			).to.be.rejectedWith("Community: locked");
+		});
+
+		it("should lock beneficiaries using a manager signature multiple times", async () => {
+			const expirationTimestamp =
+				(await getCurrentBlockTimestamp()) + 100;
+			const signature = await signParams(
+				communityManagerA,
+				communityManagerB.address,
+				communityProxy.address,
+				expirationTimestamp
+			);
+
+			await communityProxy
+				.connect(communityManagerB)
+				.addBeneficiariesUsingSignature(
+					[beneficiaryA.address, beneficiaryB.address],
+					expirationTimestamp,
+					signature
+				);
+
+			await expect(
+				communityProxy
+					.connect(communityManagerB)
+					.lockBeneficiariesUsingSignature(
+						[beneficiaryA.address],
+						expirationTimestamp,
+						signature
+					)
+			).to.be.fulfilled;
+
+			await expect(
+				communityProxy
+					.connect(communityManagerB)
+					.lockBeneficiariesUsingSignature(
+						[beneficiaryB.address],
+						expirationTimestamp,
+						signature
+					)
+			).to.be.fulfilled;
+
+			(await communityProxy.validBeneficiaryCount()).should.be.equal(0);
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.Locked);
+			(
+				await communityProxy.beneficiaries(beneficiaryB.address)
+			).state.should.be.equal(BeneficiaryState.Locked);
+		});
+
+		it("should not use manager signature for wrong community #lock", async () => {
+			const expirationTimestamp =
+				(await getCurrentBlockTimestamp()) + 100;
+			const signature = await signParams(
+				communityManagerA,
+				communityManagerB.address,
+				communityProxy.address,
+				expirationTimestamp
+			);
+
+			await communityProxy
+				.connect(communityManagerB)
+				.addBeneficiariesUsingSignature(
+					[beneficiaryA.address, beneficiaryB.address],
+					expirationTimestamp,
+					signature
+				);
+
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.Valid);
+
+			const communityProxy2 = await ethers.getContractAt(
+				"CommunityImplementation",
+				await createCommunity(communityAdminProxy)
+			);
+
+			await expect(
+				communityProxy2
+					.connect(communityManagerB)
+					.lockBeneficiariesUsingSignature(
+						[beneficiaryA.address],
+						expirationTimestamp,
+						signature
+					)
+			).to.be.rejectedWith("Community: Invalid signature");
+		});
+
+		it("should not use manager signature by another person #lock", async () => {
+			const expirationTimestamp =
+				(await getCurrentBlockTimestamp()) + 100;
+			const signature = await signParams(
+				communityManagerA,
+				communityManagerB.address,
+				communityProxy.address,
+				expirationTimestamp
+			);
+
+			await communityProxy
+				.connect(communityManagerB)
+				.addBeneficiariesUsingSignature(
+					[beneficiaryA.address, beneficiaryB.address],
+					expirationTimestamp,
+					signature
+				);
+
+			await expect(
+				communityProxy
+					.connect(communityManagerC)
+					.lockBeneficiariesUsingSignature(
+						[beneficiaryA.address],
+						expirationTimestamp,
+						signature
+					)
+			).to.be.rejectedWith("Community: Invalid signature");
+		});
+
+		it("should not use manager signature with wrong expiration timestamp #lock", async () => {
+			const expirationTimestamp =
+				(await getCurrentBlockTimestamp()) + 100;
+			const signature = await signParams(
+				communityManagerA,
+				communityManagerB.address,
+				communityProxy.address,
+				expirationTimestamp
+			);
+
+			await communityProxy
+				.connect(communityManagerB)
+				.addBeneficiariesUsingSignature(
+					[beneficiaryA.address, beneficiaryB.address],
+					expirationTimestamp,
+					signature
+				);
+
+			await expect(
+				communityProxy
+					.connect(communityManagerB)
+					.lockBeneficiariesUsingSignature(
+						[beneficiaryA.address],
+						expirationTimestamp + 1,
+						signature
+					)
+			).to.be.rejectedWith("Community: Invalid signature");
+		});
+
+		it("should not use manager signature after expiration #lock", async () => {
+			const expirationTimestamp =
+				(await getCurrentBlockTimestamp()) + 100;
+			const signature = await signParams(
+				communityManagerA,
+				communityManagerB.address,
+				communityProxy.address,
+				expirationTimestamp
+			);
+
+			await communityProxy
+				.connect(communityManagerB)
+				.addBeneficiariesUsingSignature(
+					[beneficiaryA.address, beneficiaryB.address],
+					expirationTimestamp,
+					signature
+				);
+
+			await expect(
+				communityProxy
+					.connect(communityManagerB)
+					.lockBeneficiariesUsingSignature(
+						[beneficiaryA.address],
+						expirationTimestamp,
+						signature
+					)
+			).to.be.fulfilled;
+
+			await advanceNSeconds(100);
+
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.Locked);
+
+			await expect(
+				communityProxy
+					.connect(communityManagerB)
+					.lockBeneficiariesUsingSignature(
+						[beneficiaryB.address],
+						expirationTimestamp,
+						signature
+					)
+			).to.be.rejectedWith("Community: Signature too old");
+		});
+
+		it("should unlock beneficiaries using a manager signature", async () => {
+			const expirationTimestamp =
+				(await getCurrentBlockTimestamp()) + 100;
+			const signature = await signParams(
+				communityManagerA,
+				communityManagerB.address,
+				communityProxy.address,
+				expirationTimestamp
+			);
+
+			await communityProxy
+				.connect(communityManagerB)
+				.addBeneficiariesUsingSignature(
+					[beneficiaryA.address, beneficiaryB.address],
+					expirationTimestamp,
+					signature
+				);
+
+			await expect(
+				communityProxy
+					.connect(communityManagerB)
+					.lockBeneficiaries([
+						beneficiaryA.address,
+						beneficiaryB.address,
+					])
+			).to.be.rejectedWith("Community: NOT_MANAGER");
+
+			await communityProxy
+				.connect(communityManagerB)
+				.lockBeneficiariesUsingSignature(
+					[beneficiaryA.address, beneficiaryB.address],
+					expirationTimestamp,
+					signature
+				);
+
+			await expect(
+				communityProxy
+					.connect(communityManagerB)
+					.unlockBeneficiariesUsingSignature(
+						[beneficiaryA.address, beneficiaryB.address],
+						expirationTimestamp,
+						signature
+					)
+			)
+				.to.emit(communityProxy, "BeneficiaryUnlocked")
+				.withArgs(communityManagerB.address, beneficiaryA.address)
+				.to.emit(communityProxy, "BeneficiaryUnlocked")
+				.withArgs(communityManagerB.address, beneficiaryB.address);
+
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.Valid);
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.Valid);
+		});
+
+		it("should not use manager signature with wrong expiration timestamp #unlock", async () => {
+			const expirationTimestamp =
+				(await getCurrentBlockTimestamp()) + 100;
+			const signature = await signParams(
+				communityManagerA,
+				communityManagerB.address,
+				communityProxy.address,
+				expirationTimestamp
+			);
+
+			await communityProxy
+				.connect(communityManagerB)
+				.addBeneficiariesUsingSignature(
+					[beneficiaryA.address, beneficiaryB.address],
+					expirationTimestamp,
+					signature
+				);
+			await communityProxy
+				.connect(communityManagerB)
+				.lockBeneficiariesUsingSignature(
+					[beneficiaryA.address, beneficiaryB.address],
+					expirationTimestamp,
+					signature
+				);
+
+			await expect(
+				communityProxy
+					.connect(communityManagerB)
+					.unlockBeneficiariesUsingSignature(
+						[beneficiaryA.address],
+						expirationTimestamp + 1,
+						signature
+					)
+			).to.be.rejectedWith("Community: Invalid signature");
+		});
+
+		it("should not use manager signature after expiration #unlock", async () => {
+			const expirationTimestamp =
+				(await getCurrentBlockTimestamp()) + 100;
+			const signature = await signParams(
+				communityManagerA,
+				communityManagerB.address,
+				communityProxy.address,
+				expirationTimestamp
+			);
+
+			await communityProxy
+				.connect(communityManagerB)
+				.addBeneficiariesUsingSignature(
+					[beneficiaryA.address, beneficiaryB.address],
+					expirationTimestamp,
+					signature
+				);
+
+			await communityProxy
+				.connect(communityManagerB)
+				.lockBeneficiariesUsingSignature(
+					[beneficiaryA.address, beneficiaryB.address],
+					expirationTimestamp,
+					signature
+				);
+
+			await expect(
+				communityProxy
+					.connect(communityManagerB)
+					.unlockBeneficiariesUsingSignature(
+						[beneficiaryA.address],
+						expirationTimestamp,
+						signature
+					)
+			).to.be.fulfilled;
+
+			await advanceNSeconds(100);
+
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.Valid);
+
+			await expect(
+				communityProxy
+					.connect(communityManagerB)
+					.unlockBeneficiariesUsingSignature(
+						[beneficiaryB.address],
+						expirationTimestamp,
+						signature
+					)
+			).to.be.rejectedWith("Community: Signature too old");
 		});
 
 		it("should remove beneficiary from community", async () => {
@@ -1211,12 +2110,317 @@ describe("Community", () => {
 			(
 				await communityProxy.beneficiaries(beneficiaryA.address)
 			).state.should.be.equal(BeneficiaryState.Valid);
-			await communityProxy
-				.connect(communityManagerA)
-				.removeBeneficiary(beneficiaryA.address);
+			await expect(
+				communityProxy
+					.connect(communityManagerA)
+					.removeBeneficiary(beneficiaryA.address)
+			)
+				.to.emit(communityProxy, "BeneficiaryRemoved")
+				.withArgs(communityManagerA.address, beneficiaryA.address);
 			(
 				await communityProxy.beneficiaries(beneficiaryA.address)
 			).state.should.be.equal(BeneficiaryState.Removed);
+		});
+
+		it("should remove beneficiaries from community", async () => {
+			await communityProxy
+				.connect(communityManagerA)
+				.addBeneficiaries([beneficiaryA.address]);
+			await communityProxy
+				.connect(communityManagerA)
+				.addBeneficiaries([beneficiaryB.address]);
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.Valid);
+			(
+				await communityProxy.beneficiaries(beneficiaryB.address)
+			).state.should.be.equal(BeneficiaryState.Valid);
+			await expect(
+				communityProxy
+					.connect(communityManagerA)
+					.removeBeneficiaries([
+						beneficiaryA.address,
+						beneficiaryB.address,
+					])
+			)
+				.to.emit(communityProxy, "BeneficiaryRemoved")
+				.withArgs(communityManagerA.address, beneficiaryA.address)
+				.to.emit(communityProxy, "BeneficiaryRemoved")
+				.withArgs(communityManagerA.address, beneficiaryB.address);
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.Removed);
+			(
+				await communityProxy.beneficiaries(beneficiaryB.address)
+			).state.should.be.equal(BeneficiaryState.Removed);
+		});
+
+		it("should remove beneficiaries using a manager signature", async () => {
+			const expirationTimestamp =
+				(await getCurrentBlockTimestamp()) + 100;
+			const signature = await signParams(
+				communityManagerA,
+				communityManagerB.address,
+				communityProxy.address,
+				expirationTimestamp
+			);
+
+			await communityProxy
+				.connect(communityManagerB)
+				.addBeneficiariesUsingSignature(
+					[beneficiaryA.address, beneficiaryB.address],
+					expirationTimestamp,
+					signature
+				);
+
+			await expect(
+				communityProxy
+					.connect(communityManagerB)
+					.removeBeneficiaries([
+						beneficiaryA.address,
+						beneficiaryB.address,
+					])
+			).to.be.rejectedWith("Community: NOT_MANAGER");
+
+			await expect(
+				communityProxy
+					.connect(communityManagerB)
+					.removeBeneficiariesUsingSignature(
+						[beneficiaryA.address, beneficiaryB.address],
+						expirationTimestamp,
+						signature
+					)
+			)
+				.to.emit(communityProxy, "BeneficiaryRemoved")
+				.withArgs(communityManagerB.address, beneficiaryA.address)
+				.to.emit(communityProxy, "BeneficiaryRemoved")
+				.withArgs(communityManagerB.address, beneficiaryB.address);
+
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.Removed);
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.Removed);
+		});
+
+		it("should not remove beneficiaries using a manager signature if community is locked", async () => {
+			const expirationTimestamp =
+				(await getCurrentBlockTimestamp()) + 100;
+			const signature = await signParams(
+				communityManagerA,
+				communityManagerB.address,
+				communityProxy.address,
+				expirationTimestamp
+			);
+
+			await communityProxy
+				.connect(communityManagerB)
+				.addBeneficiariesUsingSignature(
+					[beneficiaryA.address, beneficiaryB.address],
+					expirationTimestamp,
+					signature
+				);
+
+			await expect(communityProxy.connect(ambassadorA).lock());
+
+			await expect(
+				communityProxy
+					.connect(communityManagerB)
+					.removeBeneficiariesUsingSignature(
+						[beneficiaryA.address],
+						expirationTimestamp,
+						signature
+					)
+			).to.be.rejectedWith("Community: locked");
+		});
+
+		it("should remove beneficiaries using a manager signature multiple times", async () => {
+			const expirationTimestamp =
+				(await getCurrentBlockTimestamp()) + 100;
+			const signature = await signParams(
+				communityManagerA,
+				communityManagerB.address,
+				communityProxy.address,
+				expirationTimestamp
+			);
+
+			await communityProxy
+				.connect(communityManagerB)
+				.addBeneficiariesUsingSignature(
+					[beneficiaryA.address, beneficiaryB.address],
+					expirationTimestamp,
+					signature
+				);
+
+			await expect(
+				communityProxy
+					.connect(communityManagerB)
+					.removeBeneficiariesUsingSignature(
+						[beneficiaryA.address],
+						expirationTimestamp,
+						signature
+					)
+			).to.be.fulfilled;
+
+			await expect(
+				communityProxy
+					.connect(communityManagerB)
+					.removeBeneficiariesUsingSignature(
+						[beneficiaryB.address],
+						expirationTimestamp,
+						signature
+					)
+			).to.be.fulfilled;
+
+			(await communityProxy.validBeneficiaryCount()).should.be.equal(0);
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.Removed);
+			(
+				await communityProxy.beneficiaries(beneficiaryB.address)
+			).state.should.be.equal(BeneficiaryState.Removed);
+		});
+
+		it("should not use manager signature for wrong community #remove", async () => {
+			const expirationTimestamp =
+				(await getCurrentBlockTimestamp()) + 100;
+			const signature = await signParams(
+				communityManagerA,
+				communityManagerB.address,
+				communityProxy.address,
+				expirationTimestamp
+			);
+
+			await communityProxy
+				.connect(communityManagerB)
+				.addBeneficiariesUsingSignature(
+					[beneficiaryA.address, beneficiaryB.address],
+					expirationTimestamp,
+					signature
+				);
+
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.Valid);
+
+			const communityProxy2 = await ethers.getContractAt(
+				"CommunityImplementation",
+				await createCommunity(communityAdminProxy)
+			);
+
+			await expect(
+				communityProxy2
+					.connect(communityManagerB)
+					.removeBeneficiariesUsingSignature(
+						[beneficiaryA.address],
+						expirationTimestamp,
+						signature
+					)
+			).to.be.rejectedWith("Community: Invalid signature");
+		});
+
+		it("should not use manager signature by another person #remove", async () => {
+			const expirationTimestamp =
+				(await getCurrentBlockTimestamp()) + 100;
+			const signature = await signParams(
+				communityManagerA,
+				communityManagerB.address,
+				communityProxy.address,
+				expirationTimestamp
+			);
+
+			await communityProxy
+				.connect(communityManagerB)
+				.addBeneficiariesUsingSignature(
+					[beneficiaryA.address, beneficiaryB.address],
+					expirationTimestamp,
+					signature
+				);
+
+			await expect(
+				communityProxy
+					.connect(communityManagerC)
+					.removeBeneficiariesUsingSignature(
+						[beneficiaryA.address],
+						expirationTimestamp,
+						signature
+					)
+			).to.be.rejectedWith("Community: Invalid signature");
+		});
+
+		it("should not use manager signature with wrong expiration timestamp #remove", async () => {
+			const expirationTimestamp =
+				(await getCurrentBlockTimestamp()) + 100;
+			const signature = await signParams(
+				communityManagerA,
+				communityManagerB.address,
+				communityProxy.address,
+				expirationTimestamp
+			);
+
+			await communityProxy
+				.connect(communityManagerB)
+				.addBeneficiariesUsingSignature(
+					[beneficiaryA.address, beneficiaryB.address],
+					expirationTimestamp,
+					signature
+				);
+
+			await expect(
+				communityProxy
+					.connect(communityManagerB)
+					.removeBeneficiariesUsingSignature(
+						[beneficiaryA.address],
+						expirationTimestamp + 1,
+						signature
+					)
+			).to.be.rejectedWith("Community: Invalid signature");
+		});
+
+		it("should not use manager signature after expiration #remove", async () => {
+			const expirationTimestamp =
+				(await getCurrentBlockTimestamp()) + 100;
+			const signature = await signParams(
+				communityManagerA,
+				communityManagerB.address,
+				communityProxy.address,
+				expirationTimestamp
+			);
+
+			await communityProxy
+				.connect(communityManagerB)
+				.addBeneficiariesUsingSignature(
+					[beneficiaryA.address, beneficiaryB.address],
+					expirationTimestamp,
+					signature
+				);
+
+			await expect(
+				communityProxy
+					.connect(communityManagerB)
+					.removeBeneficiariesUsingSignature(
+						[beneficiaryA.address],
+						expirationTimestamp,
+						signature
+					)
+			).to.be.fulfilled;
+
+			await advanceNSeconds(100);
+
+			(
+				await communityProxy.beneficiaries(beneficiaryA.address)
+			).state.should.be.equal(BeneficiaryState.Removed);
+
+			await expect(
+				communityProxy
+					.connect(communityManagerB)
+					.removeBeneficiariesUsingSignature(
+						[beneficiaryB.address],
+						expirationTimestamp,
+						signature
+					)
+			).to.be.rejectedWith("Community: Signature too old");
 		});
 
 		it("should not add more then maxBeneficiaries #1", async () => {
@@ -1380,7 +2584,7 @@ describe("Community", () => {
 				.withArgs(ambassadorA.address);
 			await expect(
 				communityProxy.connect(beneficiaryA).claim()
-			).to.be.rejectedWith("LOCKED");
+			).to.be.rejectedWith("Community: locked");
 		});
 
 		it("should not claim without waiting enough", async () => {
