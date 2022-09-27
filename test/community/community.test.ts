@@ -2799,9 +2799,100 @@ describe("Community", () => {
 			(await oldCommunityProxy2.getVersion()).should.be.equal(1);
 			(await communityProxy3.getVersion()).should.be.equal(3);
 		});
+
+		it("Should have same storage after upgrading community implementation #1", async function () {
+			const oldCommunityProxy1 = await ethers.getContractAt(
+				"CommunityOld",
+				await createOldCommunity(oldCommunityAdminProxy)
+			);
+
+			await oldCommunityProxy1
+				.connect(communityManagerA)
+				.addBeneficiary(beneficiaryA.address);
+			await oldCommunityProxy1
+				.connect(communityManagerA)
+				.addBeneficiary(beneficiaryB.address);
+
+			await oldCommunityProxy1.connect(beneficiaryA).claim();
+
+			(await oldCommunityProxy1.getVersion()).should.be.equal(1);
+
+			await expect(
+				impactProxyAdmin.upgrade(
+					oldCommunityAdminProxy.address,
+					communityAdminImplementation.address
+				)
+			).to.be.fulfilled;
+
+			oldCommunityAdminProxy = await ethers.getContractAt(
+				"CommunityAdminImplementation",
+				oldCommunityAdminProxy.address
+			);
+
+			await oldCommunityAdminProxy.updateCommunityMiddleProxy(
+				communityMiddleProxy.address
+			);
+
+			await oldCommunityAdminProxy.updateCommunityImplementation(
+				communityImplementation.address
+			);
+
+			await oldCommunityAdminProxy.updateAmbassadors(
+				(
+					await deployments.get("AmbassadorsProxy")
+				).address
+			);
+			ambassadorsProxy.updateCommunityAdmin(
+				oldCommunityAdminProxy.address
+			);
+
+			(await oldCommunityProxy1.getVersion()).should.be.equal(1);
+
+			const beneficiaryABefore = await oldCommunityProxy1.beneficiaries(
+				beneficiaryA.address
+			);
+			const beneficiaryBBefore = await oldCommunityProxy1.beneficiaries(
+				beneficiaryB.address
+			);
+
+			await oldCommunityAdminProxy.updateProxyImplementation(
+				oldCommunityProxy1.address,
+				communityMiddleProxy.address
+			);
+
+			(await oldCommunityProxy1.getVersion()).should.be.equal(3);
+
+			const beneficiaryAAfter = await oldCommunityProxy1.beneficiaries(
+				beneficiaryA.address
+			);
+			(await beneficiaryAAfter.state).should.eq(beneficiaryABefore.state);
+			(await beneficiaryAAfter.claims).should.eq(
+				beneficiaryABefore.claims
+			);
+			(await beneficiaryAAfter.claimedAmount).should.eq(
+				beneficiaryABefore.claimedAmount
+			);
+			(await beneficiaryAAfter.lastClaim).should.eq(
+				beneficiaryABefore.lastClaim
+			);
+
+			const beneficiaryBAfter = await oldCommunityProxy1.beneficiaries(
+				beneficiaryB.address
+			);
+			(await beneficiaryBAfter.state).should.eq(beneficiaryBBefore.state);
+			(await beneficiaryBAfter.claims).should.eq(
+				beneficiaryBBefore.claims
+			);
+			(await beneficiaryBAfter.claimedAmount).should.eq(
+				beneficiaryBBefore.claimedAmount
+			);
+			(await beneficiaryBAfter.lastClaim).should.eq(
+				beneficiaryBBefore.lastClaim
+			);
+		});
 	});
 
-	describe.only("Community - Token", () => {
+	describe("Community - Token", () => {
 		let UniswapV2Factory: ethersTypes.Contract;
 		let UniswapRouter: ethersTypes.Contract;
 		let cUSD: ethersTypes.Contract;

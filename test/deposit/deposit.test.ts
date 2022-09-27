@@ -22,7 +22,6 @@ const MTokenABI = require("../../integrations/moola/abi/MToken.json");
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 
-//these tests work only on a celo mainnet fork network
 describe("Deposit", () => {
 	const LENDING_POOL_ADDRESS = "0x970b12522CA9b4054807a2c5B736149a5BE6f670"; //mainnet
 	const CELO_ADDRESS = "0x471EcE3750Da237f93B8E339c536989b8978a438"; //mainnet
@@ -32,8 +31,6 @@ describe("Deposit", () => {
 	const MCEUR_ADDRESS = "0xE273Ad7ee11dCfAA87383aD5977EE1504aC07568"; //mainnet
 
 	const FAKE_ADDRESS = "0x000000000000000000000000000000000000dEaD";
-
-	const START_BLOCK = 130;
 
 	let owner: SignerWithAddress;
 	let user1: SignerWithAddress;
@@ -224,17 +221,6 @@ describe("Deposit", () => {
 			expect(await Deposit.tokenListLength()).to.be.equal(0);
 		});
 
-		// it("should emit event when staking", async function () {
-		// 	const stakeAmount = toEther("100");
-		//
-		// 	await PACT.connect(user1).approve(Staking.address, stakeAmount);
-		// 	await expect(
-		// 		Staking.connect(user1).stake(user1.address, stakeAmount)
-		// 	)
-		// 		.to.emit(Staking, "Staked")
-		// 		.withArgs(user1.address, stakeAmount);
-		// });
-
 		it("Should update treasury if admin", async function () {
 			expect(await Deposit.treasury()).to.be.equal(Treasury.address);
 			await Deposit.updateTreasury(FAKE_ADDRESS);
@@ -299,6 +285,15 @@ describe("Deposit", () => {
 
 			expect(await Deposit.tokenListLength()).to.be.equal(0);
 			expect(await Deposit.isToken(cUSD.address)).to.be.equal(false);
+		});
+	});
+
+	//these tests work only on a celo mainnet fork network
+	xdescribe("Deposit - basic - forking", () => {
+		before(async function () {});
+
+		beforeEach(async () => {
+			await deploy();
 		});
 
 		it("Should not add an invalid lendingPool token", async function () {
@@ -383,7 +378,8 @@ describe("Deposit", () => {
 		});
 	});
 
-	describe("Deposit - deposit", () => {
+	//these tests work only on a celo mainnet fork network
+	xdescribe("Deposit - deposit - forking", () => {
 		before(async function () {});
 
 		beforeEach(async () => {
