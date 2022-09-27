@@ -99,14 +99,6 @@ describe("Treasury", () => {
 		await mUSD.mint(user1.address, toEther(100000000));
 		await celo.mint(user1.address, toEther(100000000));
 
-		// await cUSD.connect(user1).approve(Pair.address, toEther(10));
-		// await mUSD.connect(user1).approve(Pair.address, toEther(10));
-		//
-		// console.log(await UniswapRouter.getAmountsOut(toEther(1), [cUSD.address, mUSD.address]));
-		//
-		//
-		// // await Pair.mint(user1.address);
-
 		await cUSD
 			.connect(user1)
 			.approve(UniswapRouter.address, toEther(1000000));

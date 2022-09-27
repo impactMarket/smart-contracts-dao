@@ -29,6 +29,7 @@ contract CommunityAdminImplementation is
 
     uint256 private constant DEFAULT_AMOUNT = 5e16;
     uint256 private constant TREASURY_SAFETY_FACTOR = 10;
+    uint256 private constant TREASURY_SAFETY_LIMIT = 100e18;
 
     /**
      * @notice Triggered when a community has been added
@@ -266,18 +267,20 @@ contract CommunityAdminImplementation is
     /**
      * @notice Adds a new community
      *
-     * @param _managers addresses of the community managers
-     * @param _ambassador address of the ambassador
-     * @param _claimAmount base amount to be claim by the beneficiary
-     * @param _maxClaim limit that a beneficiary can claim at in total
-     * @param _decreaseStep value decreased from maxClaim for every beneficiary added
-     * @param _baseInterval base interval to start claiming
-     * @param _incrementInterval increment interval used in each claim
-     * @param _minTranche minimum amount that the community will receive when requesting funds
-     * @param _maxTranche maximum amount that the community will receive when requesting funds
-     * @param _maxBeneficiaries maximum number of valid beneficiaries
+     * @param _tokenAddress        address of the token used by the community
+     * @param _managers            addresses of the community managers
+     * @param _ambassador          address of the ambassador
+     * @param _claimAmount         base amount to be claim by the beneficiary
+     * @param _maxClaim            limit that a beneficiary can claim at in total
+     * @param _decreaseStep        value decreased from maxClaim for every beneficiary added
+     * @param _baseInterval        base interval to start claiming
+     * @param _incrementInterval   increment interval used in each claim
+     * @param _minTranche          minimum amount that the community will receive when requesting funds
+     * @param _maxTranche          maximum amount that the community will receive when requesting funds
+     * @param _maxBeneficiaries    maximum number of valid beneficiaries
      */
     function addCommunity(
+        address _tokenAddress,
         address[] memory _managers,
         address _ambassador,
         uint256 _claimAmount,
@@ -294,6 +297,7 @@ contract CommunityAdminImplementation is
             "CommunityAdmin::addCommunity: Community should have at least one manager"
         );
         address _communityAddress = deployCommunity(
+            _tokenAddress,
             _managers,
             _claimAmount,
             _maxClaim,
@@ -323,7 +327,10 @@ contract CommunityAdminImplementation is
         );
 
         transferToCommunity(ICommunity(_communityAddress), _minTranche);
-        treasury.transfer(cUSD, address(_managers[0]), DEFAULT_AMOUNT);
+
+        if (cUSD.balanceOf(address(treasury)) >= DEFAULT_AMOUNT) {
+            treasury.transfer(cUSD, address(_managers[0]), DEFAULT_AMOUNT);
+        }
     }
 
     /**
@@ -345,43 +352,28 @@ contract CommunityAdminImplementation is
 
         communities[address(_previousCommunity)] = CommunityState.Migrated;
 
-        bool _isCommunityNew = isCommunityNewType(_previousCommunity);
+        IERC20 _previousCommunityToken = (_previousCommunity.getVersion() == 1)
+            ? _previousCommunity.cUSD()
+            : _previousCommunity.token();
 
-        address newCommunityAddress;
-        if (_isCommunityNew) {
-            newCommunityAddress = deployCommunity(
-                _managers,
-                _previousCommunity.claimAmount(),
-                _previousCommunity.getInitialMaxClaim(),
-                _previousCommunity.decreaseStep(),
-                _previousCommunity.baseInterval(),
-                _previousCommunity.incrementInterval(),
-                _previousCommunity.minTranche(),
-                _previousCommunity.maxTranche(),
-                _previousCommunity.getVersion() > 1 ? _previousCommunity.maxBeneficiaries() : 0,
-                _previousCommunity
-            );
-        } else {
-            newCommunityAddress = deployCommunity(
-                _managers,
-                _previousCommunity.claimAmount(),
-                _previousCommunity.maxClaim(),
-                1e16,
-                (_previousCommunity.baseInterval() / 5),
-                (_previousCommunity.incrementInterval() / 5),
-                1e16,
-                5e18,
-                0,
-                _previousCommunity
-            );
-        }
+        address newCommunityAddress = deployCommunity(
+            address(_previousCommunityToken),
+            _managers,
+            _previousCommunity.claimAmount(),
+            _previousCommunity.getInitialMaxClaim(),
+            _previousCommunity.decreaseStep(),
+            _previousCommunity.baseInterval(),
+            _previousCommunity.incrementInterval(),
+            _previousCommunity.minTranche(),
+            _previousCommunity.maxTranche(),
+            _previousCommunity.getVersion() > 1 ? _previousCommunity.maxBeneficiaries() : 0,
+            _previousCommunity
+        );
 
         require(newCommunityAddress != address(0), "CommunityAdmin::migrateCommunity: NOT_VALID");
 
-        if (_isCommunityNew) {
-            uint256 balance = cUSD.balanceOf(address(_previousCommunity));
-            _previousCommunity.transfer(cUSD, newCommunityAddress, balance);
-        }
+        uint256 balance = _previousCommunityToken.balanceOf(address(_previousCommunity));
+        _previousCommunity.transfer(_previousCommunityToken, newCommunityAddress, balance);
 
         communities[newCommunityAddress] = CommunityState.Valid;
         communityList.add(newCommunityAddress);
@@ -407,7 +399,10 @@ contract CommunityAdminImplementation is
         communities[address(_community)] = CommunityState.Removed;
 
         ambassadors.removeCommunity(address(_community));
-        _community.transfer(cUSD, address(treasury), cUSD.balanceOf(address(_community)));
+
+        IERC20 _token = (_community.getVersion() == 1) ? _community.cUSD() : _community.token();
+
+        _community.transfer(_token, address(treasury), _token.balanceOf(address(_community)));
         emit CommunityRemoved(address(_community));
     }
 
@@ -416,27 +411,14 @@ contract CommunityAdminImplementation is
      */
     function fundCommunity() external override onlyCommunities {
         ICommunity _community = ICommunity(msg.sender);
-        uint256 _balance = cUSD.balanceOf(msg.sender);
-        require(
-            _balance < _community.minTranche(),
-            "CommunityAdmin::fundCommunity: this community has enough funds"
-        );
-        require(
-            block.number > _community.lastFundRequest() + _community.baseInterval(),
-            "CommunityAdmin::fundCommunity: this community is not allowed to request yet"
-        );
+        IERC20 _token = (_community.getVersion() == 1) ? _community.cUSD() : _community.token();
+        uint256 _balance = _token.balanceOf(msg.sender);
 
-        uint256 _trancheAmount = calculateCommunityTrancheAmount(ICommunity(msg.sender));
+        uint256 _amount = calculateCommunityTrancheAmount(ICommunity(msg.sender));
 
-        if (_trancheAmount > _balance) {
-            uint256 _amount = _trancheAmount - _balance;
-            uint256 _treasurySafetyBalance = cUSD.balanceOf(address(treasury)) /
-                TREASURY_SAFETY_FACTOR;
+        require(_amount > 0, "CommunityAdmin::fundCommunity: this community cannot request now");
 
-            if (_amount > _treasurySafetyBalance) {
-                _amount = _treasurySafetyBalance;
-            }
-
+        if (_amount > 0) {
             transferToCommunity(_community, _amount);
         }
     }
@@ -521,15 +503,29 @@ contract CommunityAdminImplementation is
 
     /** @notice Updates token address of a community
      *
+     * @param _community      address of the community
      * @param _newToken       new token address
      * @param _exchangePath   path used by uniswap to exchange the current tokens to the new tokens
      */
     function updateCommunityToken(
         ICommunity _community,
         IERC20 _newToken,
-        address[] memory _exchangePath
+        address[] memory _exchangePath,
+        uint256 _claimAmount,
+        uint256 _maxClaim,
+        uint256 _decreaseStep,
+        uint256 _baseInterval,
+        uint256 _incrementInterval
     ) external override onlyOwnerOrImpactMarketCouncil {
-        _community.updateToken(_newToken, _exchangePath);
+        _community.updateToken(
+            _newToken,
+            _exchangePath,
+            _claimAmount,
+            _maxClaim,
+            _decreaseStep,
+            _baseInterval,
+            _incrementInterval
+        );
     }
 
     /**
@@ -590,21 +586,26 @@ contract CommunityAdminImplementation is
     }
 
     /**
-     * @dev Transfers cUSDs from the treasury to a community
+     * @dev Transfers community tokens from the treasury to a community
      *
      * @param _community address of the community
      * @param _amount amount of the transaction
      */
     function transferToCommunity(ICommunity _community, uint256 _amount) internal nonReentrant {
-        treasury.transfer(cUSD, address(_community), _amount);
-        _community.addTreasuryFunds(_amount);
+        IERC20 _token = (_community.getVersion() == 1) ? _community.cUSD() : _community.token();
 
-        emit CommunityFunded(address(_community), _amount);
+        if (_token.balanceOf(address(treasury)) >= _amount) {
+            treasury.transfer(_token, address(_community), _amount);
+            _community.addTreasuryFunds(_amount);
+
+            emit CommunityFunded(address(_community), _amount);
+        }
     }
 
     /**
      * @dev Internal implementation of deploying a new community
      *
+     * @param _tokenAddress        Address of the token used by the community
      * @param _managers addresses of the community managers
      * @param _claimAmount base amount to be claim by the beneficiary
      * @param _maxClaim limit that a beneficiary can claim at in total
@@ -617,6 +618,7 @@ contract CommunityAdminImplementation is
      * @param _previousCommunity address of the previous community. Used for migrating communities
      */
     function deployCommunity(
+        address _tokenAddress,
         address[] memory _managers,
         uint256 _claimAmount,
         uint256 _maxClaim,
@@ -635,6 +637,7 @@ contract CommunityAdminImplementation is
         );
 
         ICommunity(address(_community)).initialize(
+            _tokenAddress,
             _managers,
             _claimAmount,
             _maxClaim,
@@ -651,15 +654,27 @@ contract CommunityAdminImplementation is
     }
 
     /** @dev Calculates the tranche amount of a community.
-     *        Enforces the tranche amount to be between community minTranche and maxTranche
-     * @param _community address of the community
-     * @return uint256 the value of the tranche amount
+     *
+     * @param _community      address of the community
+     * @return uint256        the value of the tranche amount
      */
     function calculateCommunityTrancheAmount(ICommunity _community)
-        internal
+        public
         view
+        override
         returns (uint256)
     {
+        IERC20 _token = (_community.getVersion() == 1) ? _community.cUSD() : _community.token();
+        uint256 _balance = _token.balanceOf(address(_community));
+
+        if (
+            _balance >= _community.minTranche() ||
+            block.number <= _community.lastFundRequest() + _community.baseInterval() ||
+            _token.balanceOf(address(treasury)) < TREASURY_SAFETY_LIMIT
+        ) {
+            return 0;
+        }
+
         uint256 _validBeneficiaries = _community.validBeneficiaryCount();
         uint256 _claimAmount = _community.claimAmount();
         uint256 _minTranche = _community.minTranche();
@@ -673,16 +688,18 @@ contract CommunityAdminImplementation is
             _trancheAmount = _maxTranche;
         }
 
-        return _trancheAmount;
-    }
+        uint256 _amount;
+        if (_trancheAmount > _balance) {
+            _amount = _trancheAmount - _balance;
 
-    /**
-     * @notice Checks if a community is deployed with the new type of smart contract
-     *
-     * @param _community address of the community
-     * @return bool true if the community is deployed with the new type of smart contract
-     */
-    function isCommunityNewType(ICommunity _community) internal pure returns (bool) {
-        return _community.impactMarketAddress() == address(0);
+            uint256 _treasurySafetyBalance = _token.balanceOf(address(treasury)) /
+                TREASURY_SAFETY_FACTOR;
+
+            if (_amount > _treasurySafetyBalance) {
+                _amount = _treasurySafetyBalance;
+            }
+        }
+
+        return _amount;
     }
 }

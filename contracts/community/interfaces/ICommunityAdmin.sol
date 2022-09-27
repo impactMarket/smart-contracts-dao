@@ -16,7 +16,7 @@ interface ICommunityAdmin {
         Migrated
     }
 
-    function getVersion() external returns(uint256);
+    function getVersion() external pure returns(uint256);
     function cUSD() external view returns(IERC20);
     function treasury() external view returns(ITreasury);
     function impactMarketCouncil() external view returns(IImpactMarketCouncil);
@@ -48,13 +48,19 @@ interface ICommunityAdmin {
         uint256 _minTranche,
         uint256 _maxTranche
     ) external;
-    function updateProxyImplementation(address _CommunityMiddleProxy, address _newLogic) external;
+    function updateProxyImplementation(address _communityMiddleProxy, address _newLogic) external;
     function updateCommunityToken(
         ICommunity _community,
         IERC20 _newToken,
-        address[] memory _exchangePath
+        address[] memory _exchangePath,
+        uint256 _claimAmount,
+        uint256 _maxClaim,
+        uint256 _decreaseStep,
+        uint256 _baseInterval,
+        uint256 _incrementInterval
     ) external;
     function addCommunity(
+        address _tokenAddress,
         address[] memory _managers,
         address _ambassador,
         uint256 _claimAmount,
@@ -72,6 +78,7 @@ interface ICommunityAdmin {
     ) external;
     function removeCommunity(ICommunity _community) external;
     function fundCommunity() external;
+    function calculateCommunityTrancheAmount(ICommunity _community) external view returns (uint256);
     function transfer(IERC20 _token, address _to, uint256 _amount) external;
     function transferFromCommunity(
         ICommunity _community,
