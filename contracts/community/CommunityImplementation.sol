@@ -1190,6 +1190,10 @@ contract CommunityImplementation is
     function _checkManagerSignature(uint256 _expirationTimestamp, bytes calldata _signature)
         internal
     {
+        require(
+            msg.sender == communityAdmin.backendWalletAddress(),
+            "Community: Sender must be the backend wallet"
+        );
         require(_expirationTimestamp >= block.timestamp, "Community: Signature too old");
 
         bytes32 _messageHash = keccak256(

@@ -23,6 +23,7 @@ import {
 } from "../utils/TimeTravel";
 import { keccak256 } from "ethers/lib/utils";
 import { toEther } from "../utils/helpers";
+import { sign } from "crypto";
 
 should();
 
@@ -48,7 +49,11 @@ describe.only("Community", () => {
 	const FAKE_ADDRESS = "0x000000000000000000000000000000000000dEaD";
 	const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
-	//users
+	//deployer
+	let deployer: SignerWithAddress;
+	//signer
+	let backendWallet: SignerWithAddress;
+	//admins
 	let adminAccount1: SignerWithAddress;
 	let adminAccount2: SignerWithAddress;
 	let adminAccount3: SignerWithAddress;
@@ -97,25 +102,24 @@ describe.only("Community", () => {
 	const TREASURY_SAFETY_LIMIT = toEther(100);
 
 	async function init() {
-		const accounts: SignerWithAddress[] = await ethers.getSigners();
-
-		adminAccount1 = accounts[0];
-		adminAccount2 = accounts[1];
-		adminAccount3 = accounts[2];
-		// community managers
-		communityManagerA = accounts[3];
-		communityManagerB = accounts[4];
-		communityManagerC = accounts[5];
-		// beneficiaries
-		beneficiaryA = accounts[6];
-		beneficiaryB = accounts[7];
-		beneficiaryC = accounts[8];
-		beneficiaryD = accounts[9];
-		// ambassadors
-		ambassadorA = accounts[10];
-		ambassadorB = accounts[11];
-		// ambassadors entity
-		ambassadorsEntityA = accounts[12];
+		[
+			deployer,
+			backendWallet,
+			adminAccount2,
+			adminAccount1,
+			adminAccount2,
+			adminAccount3,
+			communityManagerA,
+			communityManagerB,
+			communityManagerC,
+			beneficiaryA,
+			beneficiaryB,
+			beneficiaryC,
+			beneficiaryD,
+			ambassadorA,
+			ambassadorB,
+			ambassadorsEntityA,
+		] = await ethers.getSigners();
 	}
 
 	async function deploy() {
@@ -190,6 +194,10 @@ describe.only("Community", () => {
 			).address
 		);
 
+		await communityAdminProxy.updateBackendWalletAddress(
+			backendWallet.address
+		);
+
 		ambassadorsProxy = await ethers.getContractAt(
 			"AmbassadorsImplementation",
 			(
@@ -233,7 +241,7 @@ describe.only("Community", () => {
 	}
 
 	async function signParams(
-		signer: SignerWithAddress,
+		signerManager: SignerWithAddress,
 		empoweredAddress: string,
 		communityAddress: string,
 		expirationTimestamp: number
@@ -243,7 +251,7 @@ describe.only("Community", () => {
 			[empoweredAddress, communityAddress, expirationTimestamp]
 		);
 		const arrayifyMessage = ethers.utils.arrayify(message);
-		return signer.signMessage(arrayifyMessage);
+		return signerManager.signMessage(arrayifyMessage);
 	}
 
 	describe("CommunityAdmin", () => {
@@ -1162,14 +1170,14 @@ describe.only("Community", () => {
 				(await getCurrentBlockTimestamp()) + 100;
 			const signature = await signParams(
 				communityManagerA,
-				communityManagerB.address,
+				backendWallet.address,
 				communityProxy.address,
 				expirationTimestamp
 			);
 
 			await expect(
 				communityProxy
-					.connect(communityManagerB)
+					.connect(backendWallet)
 					.addBeneficiariesUsingSignature(
 						[beneficiaryA.address],
 						expirationTimestamp,
@@ -1177,11 +1185,11 @@ describe.only("Community", () => {
 					)
 			)
 				.to.emit(communityProxy, "BeneficiaryAdded")
-				.withArgs(communityManagerB.address, beneficiaryA.address);
+				.withArgs(backendWallet.address, beneficiaryA.address);
 
 			await expect(
 				communityProxy
-					.connect(communityManagerB)
+					.connect(backendWallet)
 					.addBeneficiariesUsingSignature(
 						[beneficiaryA.address],
 						expirationTimestamp,
@@ -1199,7 +1207,7 @@ describe.only("Community", () => {
 				(await getCurrentBlockTimestamp()) + 100;
 			const signature = await signParams(
 				communityManagerA,
-				communityManagerB.address,
+				backendWallet.address,
 				communityProxy.address,
 				expirationTimestamp
 			);
@@ -1208,7 +1216,7 @@ describe.only("Community", () => {
 
 			await expect(
 				communityProxy
-					.connect(communityManagerB)
+					.connect(backendWallet)
 					.addBeneficiariesUsingSignature(
 						[beneficiaryA.address],
 						expirationTimestamp,
@@ -1222,14 +1230,14 @@ describe.only("Community", () => {
 				(await getCurrentBlockTimestamp()) + 100;
 			const signature = await signParams(
 				communityManagerA,
-				communityManagerB.address,
+				backendWallet.address,
 				communityProxy.address,
 				expirationTimestamp
 			);
 
 			await expect(
 				communityProxy
-					.connect(communityManagerB)
+					.connect(backendWallet)
 					.addBeneficiariesUsingSignature(
 						[beneficiaryA.address],
 						expirationTimestamp,
@@ -1239,7 +1247,7 @@ describe.only("Community", () => {
 
 			await expect(
 				communityProxy
-					.connect(communityManagerB)
+					.connect(backendWallet)
 					.addBeneficiariesUsingSignature(
 						[beneficiaryB.address],
 						expirationTimestamp,
@@ -1261,14 +1269,14 @@ describe.only("Community", () => {
 				(await getCurrentBlockTimestamp()) + 100;
 			const signature = await signParams(
 				communityManagerA,
-				communityManagerB.address,
+				backendWallet.address,
 				communityProxy.address,
 				expirationTimestamp
 			);
 
 			await expect(
 				communityProxy
-					.connect(communityManagerB)
+					.connect(backendWallet)
 					.addBeneficiariesUsingSignature(
 						[beneficiaryA.address],
 						expirationTimestamp,
@@ -1287,7 +1295,7 @@ describe.only("Community", () => {
 
 			await expect(
 				communityProxy2
-					.connect(communityManagerB)
+					.connect(backendWallet)
 					.addBeneficiariesUsingSignature(
 						[beneficiaryA.address],
 						expirationTimestamp,
@@ -1296,7 +1304,7 @@ describe.only("Community", () => {
 			).to.be.rejectedWith("Community: Invalid signature");
 		});
 
-		it("should not use manager signature by another person", async () => {
+		it("should not use manager signature if not backendWallet", async () => {
 			const expirationTimestamp =
 				(await getCurrentBlockTimestamp()) + 100;
 			const signature = await signParams(
@@ -1314,15 +1322,24 @@ describe.only("Community", () => {
 						expirationTimestamp,
 						signature
 					)
-			).to.be.fulfilled;
+			).to.be.rejectedWith(
+				"Community: Sender must be the backend wallet"
+			);
+		});
 
-			(
-				await communityProxy.beneficiaries(beneficiaryA.address)
-			).state.should.be.equal(BeneficiaryState.Valid);
+		it("should not use manager signature for other address than backend wallet", async () => {
+			const expirationTimestamp =
+				(await getCurrentBlockTimestamp()) + 100;
+			const signature = await signParams(
+				communityManagerA,
+				communityManagerB.address,
+				communityProxy.address,
+				expirationTimestamp
+			);
 
 			await expect(
 				communityProxy
-					.connect(communityManagerC)
+					.connect(backendWallet)
 					.addBeneficiariesUsingSignature(
 						[beneficiaryA.address],
 						expirationTimestamp,
@@ -1336,14 +1353,14 @@ describe.only("Community", () => {
 				(await getCurrentBlockTimestamp()) + 100;
 			const signature = await signParams(
 				communityManagerA,
-				communityManagerB.address,
+				backendWallet.address,
 				communityProxy.address,
 				expirationTimestamp
 			);
 
 			await expect(
 				communityProxy
-					.connect(communityManagerB)
+					.connect(backendWallet)
 					.addBeneficiariesUsingSignature(
 						[beneficiaryA.address],
 						expirationTimestamp,
@@ -1357,7 +1374,7 @@ describe.only("Community", () => {
 
 			await expect(
 				communityProxy
-					.connect(communityManagerB)
+					.connect(backendWallet)
 					.addBeneficiariesUsingSignature(
 						[beneficiaryA.address],
 						expirationTimestamp + 1,
@@ -1371,14 +1388,14 @@ describe.only("Community", () => {
 				(await getCurrentBlockTimestamp()) + 100;
 			const signature = await signParams(
 				communityManagerA,
-				communityManagerB.address,
+				backendWallet.address,
 				communityProxy.address,
 				expirationTimestamp
 			);
 
 			await expect(
 				communityProxy
-					.connect(communityManagerB)
+					.connect(backendWallet)
 					.addBeneficiariesUsingSignature(
 						[beneficiaryA.address],
 						expirationTimestamp,
@@ -1394,7 +1411,7 @@ describe.only("Community", () => {
 
 			await expect(
 				communityProxy
-					.connect(communityManagerB)
+					.connect(backendWallet)
 					.addBeneficiariesUsingSignature(
 						[beneficiaryA.address],
 						expirationTimestamp,
@@ -1698,13 +1715,13 @@ describe.only("Community", () => {
 				(await getCurrentBlockTimestamp()) + 100;
 			const signature = await signParams(
 				communityManagerA,
-				communityManagerB.address,
+				backendWallet.address,
 				communityProxy.address,
 				expirationTimestamp
 			);
 
 			await communityProxy
-				.connect(communityManagerB)
+				.connect(backendWallet)
 				.addBeneficiariesUsingSignature(
 					[beneficiaryA.address, beneficiaryB.address],
 					expirationTimestamp,
@@ -1713,7 +1730,7 @@ describe.only("Community", () => {
 
 			await expect(
 				communityProxy
-					.connect(communityManagerB)
+					.connect(backendWallet)
 					.lockBeneficiaries([
 						beneficiaryA.address,
 						beneficiaryB.address,
@@ -1722,7 +1739,7 @@ describe.only("Community", () => {
 
 			await expect(
 				communityProxy
-					.connect(communityManagerB)
+					.connect(backendWallet)
 					.lockBeneficiariesUsingSignature(
 						[beneficiaryA.address, beneficiaryB.address],
 						expirationTimestamp,
@@ -1730,9 +1747,9 @@ describe.only("Community", () => {
 					)
 			)
 				.to.emit(communityProxy, "BeneficiaryLocked")
-				.withArgs(communityManagerB.address, beneficiaryA.address)
+				.withArgs(backendWallet.address, beneficiaryA.address)
 				.to.emit(communityProxy, "BeneficiaryLocked")
-				.withArgs(communityManagerB.address, beneficiaryB.address);
+				.withArgs(backendWallet.address, beneficiaryB.address);
 
 			(
 				await communityProxy.beneficiaries(beneficiaryA.address)
@@ -1747,13 +1764,13 @@ describe.only("Community", () => {
 				(await getCurrentBlockTimestamp()) + 100;
 			const signature = await signParams(
 				communityManagerA,
-				communityManagerB.address,
+				backendWallet.address,
 				communityProxy.address,
 				expirationTimestamp
 			);
 
 			await communityProxy
-				.connect(communityManagerB)
+				.connect(backendWallet)
 				.addBeneficiariesUsingSignature(
 					[beneficiaryA.address, beneficiaryB.address],
 					expirationTimestamp,
@@ -1764,7 +1781,7 @@ describe.only("Community", () => {
 
 			await expect(
 				communityProxy
-					.connect(communityManagerB)
+					.connect(backendWallet)
 					.lockBeneficiariesUsingSignature(
 						[beneficiaryA.address],
 						expirationTimestamp,
@@ -1778,13 +1795,13 @@ describe.only("Community", () => {
 				(await getCurrentBlockTimestamp()) + 100;
 			const signature = await signParams(
 				communityManagerA,
-				communityManagerB.address,
+				backendWallet.address,
 				communityProxy.address,
 				expirationTimestamp
 			);
 
 			await communityProxy
-				.connect(communityManagerB)
+				.connect(backendWallet)
 				.addBeneficiariesUsingSignature(
 					[beneficiaryA.address, beneficiaryB.address],
 					expirationTimestamp,
@@ -1793,7 +1810,7 @@ describe.only("Community", () => {
 
 			await expect(
 				communityProxy
-					.connect(communityManagerB)
+					.connect(backendWallet)
 					.lockBeneficiariesUsingSignature(
 						[beneficiaryA.address],
 						expirationTimestamp,
@@ -1803,7 +1820,7 @@ describe.only("Community", () => {
 
 			await expect(
 				communityProxy
-					.connect(communityManagerB)
+					.connect(backendWallet)
 					.lockBeneficiariesUsingSignature(
 						[beneficiaryB.address],
 						expirationTimestamp,
@@ -1825,13 +1842,13 @@ describe.only("Community", () => {
 				(await getCurrentBlockTimestamp()) + 100;
 			const signature = await signParams(
 				communityManagerA,
-				communityManagerB.address,
+				backendWallet.address,
 				communityProxy.address,
 				expirationTimestamp
 			);
 
 			await communityProxy
-				.connect(communityManagerB)
+				.connect(backendWallet)
 				.addBeneficiariesUsingSignature(
 					[beneficiaryA.address, beneficiaryB.address],
 					expirationTimestamp,
@@ -1849,7 +1866,7 @@ describe.only("Community", () => {
 
 			await expect(
 				communityProxy2
-					.connect(communityManagerB)
+					.connect(backendWallet)
 					.lockBeneficiariesUsingSignature(
 						[beneficiaryA.address],
 						expirationTimestamp,
@@ -1863,13 +1880,13 @@ describe.only("Community", () => {
 				(await getCurrentBlockTimestamp()) + 100;
 			const signature = await signParams(
 				communityManagerA,
-				communityManagerB.address,
+				backendWallet.address,
 				communityProxy.address,
 				expirationTimestamp
 			);
 
 			await communityProxy
-				.connect(communityManagerB)
+				.connect(backendWallet)
 				.addBeneficiariesUsingSignature(
 					[beneficiaryA.address, beneficiaryB.address],
 					expirationTimestamp,
@@ -1884,7 +1901,9 @@ describe.only("Community", () => {
 						expirationTimestamp,
 						signature
 					)
-			).to.be.rejectedWith("Community: Invalid signature");
+			).to.be.rejectedWith(
+				"Community: Sender must be the backend wallet"
+			);
 		});
 
 		it("should not use manager signature with wrong expiration timestamp #lock", async () => {
@@ -1892,13 +1911,13 @@ describe.only("Community", () => {
 				(await getCurrentBlockTimestamp()) + 100;
 			const signature = await signParams(
 				communityManagerA,
-				communityManagerB.address,
+				backendWallet.address,
 				communityProxy.address,
 				expirationTimestamp
 			);
 
 			await communityProxy
-				.connect(communityManagerB)
+				.connect(backendWallet)
 				.addBeneficiariesUsingSignature(
 					[beneficiaryA.address, beneficiaryB.address],
 					expirationTimestamp,
@@ -1907,7 +1926,7 @@ describe.only("Community", () => {
 
 			await expect(
 				communityProxy
-					.connect(communityManagerB)
+					.connect(backendWallet)
 					.lockBeneficiariesUsingSignature(
 						[beneficiaryA.address],
 						expirationTimestamp + 1,
@@ -1921,13 +1940,13 @@ describe.only("Community", () => {
 				(await getCurrentBlockTimestamp()) + 100;
 			const signature = await signParams(
 				communityManagerA,
-				communityManagerB.address,
+				backendWallet.address,
 				communityProxy.address,
 				expirationTimestamp
 			);
 
 			await communityProxy
-				.connect(communityManagerB)
+				.connect(backendWallet)
 				.addBeneficiariesUsingSignature(
 					[beneficiaryA.address, beneficiaryB.address],
 					expirationTimestamp,
@@ -1936,7 +1955,7 @@ describe.only("Community", () => {
 
 			await expect(
 				communityProxy
-					.connect(communityManagerB)
+					.connect(backendWallet)
 					.lockBeneficiariesUsingSignature(
 						[beneficiaryA.address],
 						expirationTimestamp,
@@ -1952,7 +1971,7 @@ describe.only("Community", () => {
 
 			await expect(
 				communityProxy
-					.connect(communityManagerB)
+					.connect(backendWallet)
 					.lockBeneficiariesUsingSignature(
 						[beneficiaryB.address],
 						expirationTimestamp,
@@ -1966,13 +1985,13 @@ describe.only("Community", () => {
 				(await getCurrentBlockTimestamp()) + 100;
 			const signature = await signParams(
 				communityManagerA,
-				communityManagerB.address,
+				backendWallet.address,
 				communityProxy.address,
 				expirationTimestamp
 			);
 
 			await communityProxy
-				.connect(communityManagerB)
+				.connect(backendWallet)
 				.addBeneficiariesUsingSignature(
 					[beneficiaryA.address, beneficiaryB.address],
 					expirationTimestamp,
@@ -1981,7 +2000,7 @@ describe.only("Community", () => {
 
 			await expect(
 				communityProxy
-					.connect(communityManagerB)
+					.connect(backendWallet)
 					.lockBeneficiaries([
 						beneficiaryA.address,
 						beneficiaryB.address,
@@ -1989,7 +2008,7 @@ describe.only("Community", () => {
 			).to.be.rejectedWith("Community: NOT_MANAGER");
 
 			await communityProxy
-				.connect(communityManagerB)
+				.connect(backendWallet)
 				.lockBeneficiariesUsingSignature(
 					[beneficiaryA.address, beneficiaryB.address],
 					expirationTimestamp,
@@ -1998,7 +2017,7 @@ describe.only("Community", () => {
 
 			await expect(
 				communityProxy
-					.connect(communityManagerB)
+					.connect(backendWallet)
 					.unlockBeneficiariesUsingSignature(
 						[beneficiaryA.address, beneficiaryB.address],
 						expirationTimestamp,
@@ -2006,9 +2025,9 @@ describe.only("Community", () => {
 					)
 			)
 				.to.emit(communityProxy, "BeneficiaryUnlocked")
-				.withArgs(communityManagerB.address, beneficiaryA.address)
+				.withArgs(backendWallet.address, beneficiaryA.address)
 				.to.emit(communityProxy, "BeneficiaryUnlocked")
-				.withArgs(communityManagerB.address, beneficiaryB.address);
+				.withArgs(backendWallet.address, beneficiaryB.address);
 
 			(
 				await communityProxy.beneficiaries(beneficiaryA.address)
@@ -2023,20 +2042,20 @@ describe.only("Community", () => {
 				(await getCurrentBlockTimestamp()) + 100;
 			const signature = await signParams(
 				communityManagerA,
-				communityManagerB.address,
+				backendWallet.address,
 				communityProxy.address,
 				expirationTimestamp
 			);
 
 			await communityProxy
-				.connect(communityManagerB)
+				.connect(backendWallet)
 				.addBeneficiariesUsingSignature(
 					[beneficiaryA.address, beneficiaryB.address],
 					expirationTimestamp,
 					signature
 				);
 			await communityProxy
-				.connect(communityManagerB)
+				.connect(backendWallet)
 				.lockBeneficiariesUsingSignature(
 					[beneficiaryA.address, beneficiaryB.address],
 					expirationTimestamp,
@@ -2045,7 +2064,7 @@ describe.only("Community", () => {
 
 			await expect(
 				communityProxy
-					.connect(communityManagerB)
+					.connect(backendWallet)
 					.unlockBeneficiariesUsingSignature(
 						[beneficiaryA.address],
 						expirationTimestamp + 1,
@@ -2059,13 +2078,13 @@ describe.only("Community", () => {
 				(await getCurrentBlockTimestamp()) + 100;
 			const signature = await signParams(
 				communityManagerA,
-				communityManagerB.address,
+				backendWallet.address,
 				communityProxy.address,
 				expirationTimestamp
 			);
 
 			await communityProxy
-				.connect(communityManagerB)
+				.connect(backendWallet)
 				.addBeneficiariesUsingSignature(
 					[beneficiaryA.address, beneficiaryB.address],
 					expirationTimestamp,
@@ -2073,7 +2092,7 @@ describe.only("Community", () => {
 				);
 
 			await communityProxy
-				.connect(communityManagerB)
+				.connect(backendWallet)
 				.lockBeneficiariesUsingSignature(
 					[beneficiaryA.address, beneficiaryB.address],
 					expirationTimestamp,
@@ -2082,7 +2101,7 @@ describe.only("Community", () => {
 
 			await expect(
 				communityProxy
-					.connect(communityManagerB)
+					.connect(backendWallet)
 					.unlockBeneficiariesUsingSignature(
 						[beneficiaryA.address],
 						expirationTimestamp,
@@ -2098,7 +2117,7 @@ describe.only("Community", () => {
 
 			await expect(
 				communityProxy
-					.connect(communityManagerB)
+					.connect(backendWallet)
 					.unlockBeneficiariesUsingSignature(
 						[beneficiaryB.address],
 						expirationTimestamp,
@@ -2167,13 +2186,13 @@ describe.only("Community", () => {
 				(await getCurrentBlockTimestamp()) + 100;
 			const signature = await signParams(
 				communityManagerA,
-				communityManagerB.address,
+				backendWallet.address,
 				communityProxy.address,
 				expirationTimestamp
 			);
 
 			await communityProxy
-				.connect(communityManagerB)
+				.connect(backendWallet)
 				.addBeneficiariesUsingSignature(
 					[beneficiaryA.address, beneficiaryB.address],
 					expirationTimestamp,
@@ -2182,7 +2201,7 @@ describe.only("Community", () => {
 
 			await expect(
 				communityProxy
-					.connect(communityManagerB)
+					.connect(backendWallet)
 					.removeBeneficiaries([
 						beneficiaryA.address,
 						beneficiaryB.address,
@@ -2191,7 +2210,7 @@ describe.only("Community", () => {
 
 			await expect(
 				communityProxy
-					.connect(communityManagerB)
+					.connect(backendWallet)
 					.removeBeneficiariesUsingSignature(
 						[beneficiaryA.address, beneficiaryB.address],
 						expirationTimestamp,
@@ -2199,9 +2218,9 @@ describe.only("Community", () => {
 					)
 			)
 				.to.emit(communityProxy, "BeneficiaryRemoved")
-				.withArgs(communityManagerB.address, beneficiaryA.address)
+				.withArgs(backendWallet.address, beneficiaryA.address)
 				.to.emit(communityProxy, "BeneficiaryRemoved")
-				.withArgs(communityManagerB.address, beneficiaryB.address);
+				.withArgs(backendWallet.address, beneficiaryB.address);
 
 			(
 				await communityProxy.beneficiaries(beneficiaryA.address)
@@ -2216,13 +2235,13 @@ describe.only("Community", () => {
 				(await getCurrentBlockTimestamp()) + 100;
 			const signature = await signParams(
 				communityManagerA,
-				communityManagerB.address,
+				backendWallet.address,
 				communityProxy.address,
 				expirationTimestamp
 			);
 
 			await communityProxy
-				.connect(communityManagerB)
+				.connect(backendWallet)
 				.addBeneficiariesUsingSignature(
 					[beneficiaryA.address, beneficiaryB.address],
 					expirationTimestamp,
@@ -2233,7 +2252,7 @@ describe.only("Community", () => {
 
 			await expect(
 				communityProxy
-					.connect(communityManagerB)
+					.connect(backendWallet)
 					.removeBeneficiariesUsingSignature(
 						[beneficiaryA.address],
 						expirationTimestamp,
@@ -2247,13 +2266,13 @@ describe.only("Community", () => {
 				(await getCurrentBlockTimestamp()) + 100;
 			const signature = await signParams(
 				communityManagerA,
-				communityManagerB.address,
+				backendWallet.address,
 				communityProxy.address,
 				expirationTimestamp
 			);
 
 			await communityProxy
-				.connect(communityManagerB)
+				.connect(backendWallet)
 				.addBeneficiariesUsingSignature(
 					[beneficiaryA.address, beneficiaryB.address],
 					expirationTimestamp,
@@ -2262,7 +2281,7 @@ describe.only("Community", () => {
 
 			await expect(
 				communityProxy
-					.connect(communityManagerB)
+					.connect(backendWallet)
 					.removeBeneficiariesUsingSignature(
 						[beneficiaryA.address],
 						expirationTimestamp,
@@ -2272,7 +2291,7 @@ describe.only("Community", () => {
 
 			await expect(
 				communityProxy
-					.connect(communityManagerB)
+					.connect(backendWallet)
 					.removeBeneficiariesUsingSignature(
 						[beneficiaryB.address],
 						expirationTimestamp,
@@ -2294,13 +2313,13 @@ describe.only("Community", () => {
 				(await getCurrentBlockTimestamp()) + 100;
 			const signature = await signParams(
 				communityManagerA,
-				communityManagerB.address,
+				backendWallet.address,
 				communityProxy.address,
 				expirationTimestamp
 			);
 
 			await communityProxy
-				.connect(communityManagerB)
+				.connect(backendWallet)
 				.addBeneficiariesUsingSignature(
 					[beneficiaryA.address, beneficiaryB.address],
 					expirationTimestamp,
@@ -2318,7 +2337,7 @@ describe.only("Community", () => {
 
 			await expect(
 				communityProxy2
-					.connect(communityManagerB)
+					.connect(backendWallet)
 					.removeBeneficiariesUsingSignature(
 						[beneficiaryA.address],
 						expirationTimestamp,
@@ -2332,13 +2351,13 @@ describe.only("Community", () => {
 				(await getCurrentBlockTimestamp()) + 100;
 			const signature = await signParams(
 				communityManagerA,
-				communityManagerB.address,
+				backendWallet.address,
 				communityProxy.address,
 				expirationTimestamp
 			);
 
 			await communityProxy
-				.connect(communityManagerB)
+				.connect(backendWallet)
 				.addBeneficiariesUsingSignature(
 					[beneficiaryA.address, beneficiaryB.address],
 					expirationTimestamp,
@@ -2353,7 +2372,9 @@ describe.only("Community", () => {
 						expirationTimestamp,
 						signature
 					)
-			).to.be.rejectedWith("Community: Invalid signature");
+			).to.be.rejectedWith(
+				"Community: Sender must be the backend wallet"
+			);
 		});
 
 		it("should not use manager signature with wrong expiration timestamp #remove", async () => {
@@ -2361,13 +2382,13 @@ describe.only("Community", () => {
 				(await getCurrentBlockTimestamp()) + 100;
 			const signature = await signParams(
 				communityManagerA,
-				communityManagerB.address,
+				backendWallet.address,
 				communityProxy.address,
 				expirationTimestamp
 			);
 
 			await communityProxy
-				.connect(communityManagerB)
+				.connect(backendWallet)
 				.addBeneficiariesUsingSignature(
 					[beneficiaryA.address, beneficiaryB.address],
 					expirationTimestamp,
@@ -2376,7 +2397,7 @@ describe.only("Community", () => {
 
 			await expect(
 				communityProxy
-					.connect(communityManagerB)
+					.connect(backendWallet)
 					.removeBeneficiariesUsingSignature(
 						[beneficiaryA.address],
 						expirationTimestamp + 1,
@@ -2390,13 +2411,13 @@ describe.only("Community", () => {
 				(await getCurrentBlockTimestamp()) + 100;
 			const signature = await signParams(
 				communityManagerA,
-				communityManagerB.address,
+				backendWallet.address,
 				communityProxy.address,
 				expirationTimestamp
 			);
 
 			await communityProxy
-				.connect(communityManagerB)
+				.connect(backendWallet)
 				.addBeneficiariesUsingSignature(
 					[beneficiaryA.address, beneficiaryB.address],
 					expirationTimestamp,
@@ -2405,7 +2426,7 @@ describe.only("Community", () => {
 
 			await expect(
 				communityProxy
-					.connect(communityManagerB)
+					.connect(backendWallet)
 					.removeBeneficiariesUsingSignature(
 						[beneficiaryA.address],
 						expirationTimestamp,
@@ -2421,7 +2442,7 @@ describe.only("Community", () => {
 
 			await expect(
 				communityProxy
-					.connect(communityManagerB)
+					.connect(backendWallet)
 					.removeBeneficiariesUsingSignature(
 						[beneficiaryB.address],
 						expirationTimestamp,
@@ -3370,7 +3391,7 @@ describe.only("Community", () => {
 		it("should change community tranche limits if admin", async () => {
 			await expect(
 				communityAdminProxy
-					.connect(adminAccount1)
+					.connect(deployer)
 					.updateCommunityParams(
 						communityProxy.address,
 						parseEther("50"),
@@ -3403,7 +3424,7 @@ describe.only("Community", () => {
 		it("should change communityMaxTranche if admin", async () => {
 			await expect(
 				communityAdminProxy
-					.connect(adminAccount1)
+					.connect(deployer)
 					.updateCommunityParams(
 						communityProxy.address,
 						parseEther("100"),
@@ -3419,7 +3440,7 @@ describe.only("Community", () => {
 		it("should not set communityMinTranche greater than communityMaxTranche", async () => {
 			await expect(
 				communityAdminProxy
-					.connect(adminAccount1)
+					.connect(deployer)
 					.updateCommunityParams(
 						communityProxy.address,
 						parseEther("50"),
@@ -3428,7 +3449,7 @@ describe.only("Community", () => {
 			).to.be.fulfilled;
 			await expect(
 				communityAdminProxy
-					.connect(adminAccount1)
+					.connect(deployer)
 					.updateCommunityParams(
 						communityProxy.address,
 						parseEther("100"),
@@ -3706,8 +3727,12 @@ describe.only("Community", () => {
 				communityMinTrancheDefault
 			);
 
-			await cUSD.approve(communityProxy.address, user1Donation);
-			await communityProxy.donate(adminAccount1.address, user1Donation);
+			await cUSD
+				.connect(adminAccount1)
+				.approve(communityProxy.address, user1Donation);
+			await communityProxy
+				.connect(adminAccount1)
+				.donate(adminAccount1.address, user1Donation);
 
 			expect(await cUSD.balanceOf(communityProxy.address)).to.be.equal(
 				communityMinTrancheDefault.add(user1Donation)
@@ -3728,7 +3753,9 @@ describe.only("Community", () => {
 				communityMinTrancheDefault
 			);
 
-			await cUSD.approve(communityProxy.address, user1Donation);
+			await cUSD
+				.connect(adminAccount1)
+				.approve(communityProxy.address, user1Donation);
 			await communityProxy.donate(adminAccount1.address, user1Donation);
 
 			expect(await cUSD.balanceOf(communityProxy.address)).to.be.equal(
@@ -3783,7 +3810,9 @@ describe.only("Community", () => {
 				.addBeneficiaries([beneficiaryA.address]);
 
 			await cUSD.mint(adminAccount1.address, user1Donation);
-			await cUSD.approve(communityProxy.address, user1Donation);
+			await cUSD
+				.connect(adminAccount1)
+				.approve(communityProxy.address, user1Donation);
 			await communityProxy.donate(adminAccount1.address, user1Donation);
 
 			await communityAdminProxy.transferFromCommunity(

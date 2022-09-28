@@ -250,6 +250,18 @@ contract CommunityAdminImplementation is
         communityImplementation = _newCommunityImplementation;
     }
 
+    /** Updates the address of the backend wallet
+     *
+     * @param _newBackendWalletAddress address of the new backend wallet
+     */
+    function updateBackendWalletAddress(address _newBackendWalletAddress)
+        external
+        override
+        onlyOwner
+    {
+        backendWalletAddress = _newBackendWalletAddress;
+    }
+
     /**
      * @notice Set an existing ambassador to an existing community
      *
