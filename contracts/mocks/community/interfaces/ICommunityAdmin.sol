@@ -14,7 +14,7 @@ interface ICommunityAdmin {
         Migrated
     }
 
-    function getVersion() external returns(uint256);
+    function getVersion() external pure returns(uint256);
     function cUSD() external view returns(IERC20);
     function treasury() external view returns(ITreasury);
     function communities(address _community) external view returns(CommunityState);

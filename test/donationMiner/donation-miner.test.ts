@@ -49,6 +49,8 @@ describe("DonationMiner", () => {
 	let cUSD: ethersTypes.Contract;
 	let Treasury: ethersTypes.Contract;
 	let Staking: ethersTypes.Contract;
+	let mUSD: ethersTypes.Contract;
+	let celo: ethersTypes.Contract;
 
 	const periodRewards: { [key: number]: BigNumber } = {
 		1: toEther("4320000"),
@@ -197,6 +199,66 @@ describe("DonationMiner", () => {
 				await deployments.get("TreasuryProxy")
 			).address
 		);
+
+		const tokenFactory = await ethers.getContractFactory("TokenMock");
+
+		mUSD = await tokenFactory.deploy("mUSD", "mUSD");
+		celo = await tokenFactory.deploy("celo", "celo");
+
+		await cUSD.mint(user9.address, toEther(1000000));
+		await mUSD.mint(user9.address, toEther(2000000));
+		await celo.mint(user9.address, toEther(500000));
+
+		let UniswapRouter = await ethers.getContractAt(
+			"UniswapV2Router02",
+			(
+				await deployments.get("UniswapV2Router02")
+			).address
+		);
+
+		await Treasury.updateUniswapRouter(UniswapRouter.address);
+
+		await cUSD
+			.connect(user9)
+			.approve(UniswapRouter.address, toEther(1000000));
+		await mUSD
+			.connect(user9)
+			.approve(UniswapRouter.address, toEther(2000000));
+		await celo
+			.connect(user9)
+			.approve(UniswapRouter.address, toEther(500000));
+
+		await UniswapRouter.connect(user9).addLiquidity(
+			cUSD.address,
+			mUSD.address,
+			toEther(1000000),
+			toEther(1000000),
+			0,
+			0,
+			user9.address,
+			Math.floor(new Date().getTime() / 1000) + 30 * 60
+		);
+
+		await UniswapRouter.connect(user9).addLiquidity(
+			mUSD.address,
+			celo.address,
+			toEther(1000000),
+			toEther(500000),
+			0,
+			0,
+			user9.address,
+			Math.floor(new Date().getTime() / 1000) + 30 * 60
+		);
+
+		await Treasury.setToken(mUSD.address, toEther(0.9), [
+			mUSD.address,
+			cUSD.address,
+		]);
+		await Treasury.setToken(celo.address, toEther(0.5), [
+			celo.address,
+			mUSD.address,
+			cUSD.address,
+		]);
 	});
 
 	async function showRewardPeriods(DonationMiner: any) {
@@ -3397,8 +3459,10 @@ describe("DonationMiner", () => {
 			await ambassadors.connect(entity).addAmbassador(ambassador.address);
 
 			await cUSD.mint(Treasury.address, mintAmount.toString());
+			await mUSD.mint(Treasury.address, mintAmount.toString());
 
 			const tx = await CommunityAdmin.addCommunity(
+				cUSD.address,
 				[owner.address],
 				ambassador.address,
 				claimAmountTwo.toString(),
@@ -3534,6 +3598,57 @@ describe("DonationMiner", () => {
 			).to.be.rejectedWith(
 				"DonationMiner::donateToCommunity: Invalid token"
 			);
+		});
+
+		it("Should donate to a community that uses a custom token", async function () {
+			await CommunityAdmin.updateCommunityToken(
+				Community.address,
+				mUSD.address,
+				[cUSD.address, mUSD.address],
+				claimAmountTwo.toString(),
+				maxClaimTen.toString(),
+				oneCent.toString(),
+				threeMinutesInBlocks.toString(),
+				oneMinuteInBlocks.toString()
+			);
+			const user1Donation = toEther("100");
+
+			await mUSD.mint(user1.address, toEther("1000000"));
+
+			const communityInitialBalance = await mUSD.balanceOf(
+				Community.address
+			);
+
+			await advanceToBlockN(START_BLOCK);
+
+			// Approve
+			await mUSD.connect(user1).approve(Community.address, user1Donation);
+
+			await DonationMiner.connect(user1).donateToCommunity(
+				Community.address,
+				mUSD.address,
+				user1Donation,
+				user1.address
+			);
+
+			await advanceTimeAndBlockNTimes(REWARD_PERIOD_SIZE);
+
+			expect(await mUSD.balanceOf(Community.address)).to.equal(
+				communityInitialBalance.add(user1Donation)
+			);
+
+			const donation1 = await DonationMiner.donations(1);
+			expect(donation1.donor).to.equal(user1.address);
+			expect(donation1.target).to.equal(Community.address);
+			expect(donation1.rewardPeriod).to.equal(1);
+			expect(donation1.blockNumber.toNumber())
+				.to.be.greaterThanOrEqual(START_BLOCK)
+				.lessThanOrEqual(149);
+			expect(donation1.amount).to.equal(
+				user1Donation.div(COMMUNITY_DONATION_RATIO)
+			);
+			expect(donation1.token).to.equal(mUSD.address);
+			expect(donation1.initialAmount).to.equal(user1Donation);
 		});
 	});
 
@@ -4442,73 +4557,10 @@ describe("DonationMiner", () => {
 	});
 
 	describe("Donation Miner + Treasury", () => {
-		let mUSD: ethersTypes.Contract;
-		let celo: ethersTypes.Contract;
-
 		before(async function () {});
 
 		beforeEach(async () => {
 			await deploy();
-
-			const tokenFactory = await ethers.getContractFactory("TokenMock");
-
-			mUSD = await tokenFactory.deploy("mUSD", "mUSD");
-			celo = await tokenFactory.deploy("celo", "celo");
-
-			await cUSD.mint(user9.address, toEther(1000000));
-			await mUSD.mint(user9.address, toEther(2000000));
-			await celo.mint(user9.address, toEther(500000));
-
-			let UniswapRouter = await ethers.getContractAt(
-				"UniswapV2Router02",
-				(
-					await deployments.get("UniswapV2Router02")
-				).address
-			);
-
-			await Treasury.updateUniswapRouter(UniswapRouter.address);
-
-			await cUSD
-				.connect(user9)
-				.approve(UniswapRouter.address, toEther(1000000));
-			await mUSD
-				.connect(user9)
-				.approve(UniswapRouter.address, toEther(2000000));
-			await celo
-				.connect(user9)
-				.approve(UniswapRouter.address, toEther(500000));
-
-			await UniswapRouter.connect(user9).addLiquidity(
-				cUSD.address,
-				mUSD.address,
-				toEther(1000000),
-				toEther(1000000),
-				0,
-				0,
-				user9.address,
-				Math.floor(new Date().getTime() / 1000) + 30 * 60
-			);
-
-			await UniswapRouter.connect(user9).addLiquidity(
-				mUSD.address,
-				celo.address,
-				toEther(1000000),
-				toEther(500000),
-				0,
-				0,
-				user9.address,
-				Math.floor(new Date().getTime() / 1000) + 30 * 60
-			);
-
-			await Treasury.setToken(mUSD.address, toEther(0.9), [
-				mUSD.address,
-				cUSD.address,
-			]);
-			await Treasury.setToken(celo.address, toEther(0.5), [
-				celo.address,
-				mUSD.address,
-				cUSD.address,
-			]);
 
 			await advanceToRewardPeriodN(1);
 		});
@@ -4678,6 +4730,51 @@ describe("DonationMiner", () => {
 			);
 			expect(await PACT.balanceOf(user2.address)).to.equal(
 				user2ExpectedReward
+			);
+		});
+
+		it("Should donate to a community that uses other token", async function () {
+			const user1Donation = toEther("100");
+			const user1ExpectedReward = toEther("4320000");
+
+			await mUSD.mint(user1.address, user1Donation);
+
+			await mUSD
+				.connect(user1)
+				.approve(DonationMiner.address, user1Donation);
+
+			await DonationMiner.connect(user1).donate(
+				mUSD.address,
+				user1Donation,
+				user1.address
+			);
+
+			const user1ConvertedDonation = await Treasury.getConvertedAmount(
+				mUSD.address,
+				user1Donation
+			);
+			expect(user1ConvertedDonation).to.be.equal(
+				toEther("89.721054810835359714")
+			);
+
+			expect(
+				(await DonationMiner.rewardPeriods(1)).donationsAmount
+			).to.be.equal(user1ConvertedDonation);
+
+			const donation1 = await DonationMiner.donations(1);
+			expect(donation1.donor).to.equal(user1.address);
+			expect(donation1.target).to.equal(Treasury.address);
+			expect(donation1.rewardPeriod).to.equal(1);
+			expect(donation1.amount).to.equal(user1ConvertedDonation);
+			expect(donation1.token).to.equal(mUSD.address);
+			expect(donation1.initialAmount).to.equal(user1Donation);
+
+			await advanceToRewardPeriodN(2);
+
+			await DonationMiner.connect(user1).claimRewards();
+
+			expect(await PACT.balanceOf(user1.address)).to.equal(
+				user1ExpectedReward
 			);
 		});
 	});

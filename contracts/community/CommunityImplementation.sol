@@ -8,9 +8,8 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./interfaces/ICommunity.sol";
-import "./interfaces/ICommunityLegacy.sol";
 import "./interfaces/ICommunityAdmin.sol";
-import "./interfaces/CommunityStorageV2.sol";
+import "./interfaces/CommunityStorageV3.sol";
 
 /**
  * @notice Welcome to the Community contract. For each community
@@ -25,13 +24,14 @@ contract CommunityImplementation is
     AccessControlUpgradeable,
     OwnableUpgradeable,
     ReentrancyGuardUpgradeable,
-    CommunityStorageV2
+    CommunityStorageV3
 {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
     bytes32 private constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
     uint256 private constant DEFAULT_AMOUNT = 5e16;
+    uint256 private constant MAX_TOKEN_LIST_LENGTH = 10;
 
     /**
      * @notice Triggered when a manager has been added
@@ -202,10 +202,7 @@ contract CommunityImplementation is
      * @param oldMaxBeneficiaries   Old maxBeneficiaries value
      * @param newMaxBeneficiaries   New maxBeneficiaries value
      */
-    event MaxBeneficiariesUpdated(
-        uint256 indexed oldMaxBeneficiaries,
-        uint256 indexed newMaxBeneficiaries
-    );
+    event MaxBeneficiariesUpdated(uint256 oldMaxBeneficiaries, uint256 newMaxBeneficiaries);
 
     /**
      * @notice Triggered when token address has been updated
@@ -229,7 +226,7 @@ contract CommunityImplementation is
      */
     modifier onlyValidBeneficiary() {
         require(
-            beneficiaries[msg.sender].state == BeneficiaryState.Valid,
+            _beneficiaries[msg.sender].state == BeneficiaryState.Valid,
             "Community: NOT_VALID_BENEFICIARY"
         );
         _;
@@ -269,7 +266,8 @@ contract CommunityImplementation is
     /**
      * @notice Used to initialize a new Community contract
      *
-     * @param _managers            Community's initial managers.
+     * @param _tokenAddress        Address of the token used by the community
+     * @param _managers            Community's initial managers
      *                             Will be able to add others
      * @param _claimAmount         Base amount to be claim by the beneficiary
      * @param _maxClaim            Limit that a beneficiary can claim in total
@@ -282,6 +280,7 @@ contract CommunityImplementation is
      * @param _previousCommunity   Previous smart contract address of community
      */
     function initialize(
+        address _tokenAddress,
         address[] memory _managers,
         uint256 _claimAmount,
         uint256 _maxClaim,
@@ -311,6 +310,7 @@ contract CommunityImplementation is
         __Ownable_init();
         __ReentrancyGuard_init();
 
+        _token = IERC20(_tokenAddress);
         claimAmount = _claimAmount;
         baseInterval = _baseInterval;
         incrementInterval = _incrementInterval;
@@ -343,7 +343,7 @@ contract CommunityImplementation is
      * @notice Returns the current implementation version
      */
     function getVersion() external pure override returns (uint256) {
-        return 2;
+        return 3;
     }
 
     /**
@@ -379,11 +379,85 @@ contract CommunityImplementation is
     }
 
     /**
-     * @notice Returns the 0 address
-     * only used for backwards compatibility
+     * @notice Returns the data of a beneficiary
+     *
+     * @param _beneficiaryAddress    address of the beneficiary
+     * @return state                 the status of the beneficiary
+     * @return claims                how many times the beneficiary has claimed
+     * @return claimedAmount         the amount he has claimed
+     * @return lastClaim             block number of the last claim
      */
-    function impactMarketAddress() public pure override returns (address) {
-        return address(0);
+    function beneficiaries(address _beneficiaryAddress)
+        external
+        view
+        override
+        returns (
+            BeneficiaryState state,
+            uint256 claims,
+            uint256 claimedAmount,
+            uint256 lastClaim
+        )
+    {
+        Beneficiary storage _beneficiary = _beneficiaries[_beneficiaryAddress];
+
+        return (
+            _beneficiary.state,
+            _beneficiary.claims,
+            _beneficiaryClaimedAmount(_beneficiary),
+            _beneficiary.lastClaim
+        );
+    }
+
+    /**
+     * @notice Returns the beneficiary's claimed amounts for each token
+     *
+     * @param _beneficiaryAddress    address of the beneficiary
+     * @return claimedAmounts        a uint256 array with all claimed amounts in the same order as tokenList array
+     */
+    function beneficiaryClaimedAmounts(address _beneficiaryAddress)
+        external
+        view
+        override
+        returns (uint256[] memory claimedAmounts)
+    {
+        Beneficiary storage _beneficiary = _beneficiaries[_beneficiaryAddress];
+
+        uint256[] memory _claimedAmounts = new uint256[](_tokenList.length());
+        uint256 _length = _tokenList.length();
+
+        for (uint256 _index = 0; _index < _length; _index++) {
+            _claimedAmounts[_index] = _beneficiary.claimedAmounts[_tokenList.at(_index)];
+        }
+
+        if (_claimedAmounts.length == 0) {
+            _claimedAmounts = new uint256[](1);
+            _claimedAmounts[0] = _beneficiary.claimedAmount;
+        }
+
+        return _claimedAmounts;
+    }
+
+    /**
+     * @notice Returns the length of the tokenList
+     */
+    function tokensLength() external view override returns (uint256) {
+        return tokens.length;
+    }
+
+    function tokenList() public view override returns (address[] memory) {
+        address[] memory _tokenListArray = new address[](_tokenList.length());
+        uint256 _length = _tokenList.length();
+
+        for (uint256 _index = 0; _index < _length; _index++) {
+            _tokenListArray[_index] = _tokenList.at(_index);
+        }
+
+        if (_tokenListArray.length == 0) {
+            _tokenListArray = new address[](1);
+            _tokenListArray[0] = address(token());
+        }
+
+        return _tokenListArray;
     }
 
     /** Updates the address of the communityAdmin
@@ -413,6 +487,9 @@ contract CommunityImplementation is
      * @param _decreaseStep value decreased from maxClaim each time a is beneficiary added
      * @param _baseInterval base interval to start claiming
      * @param _incrementInterval increment interval used in each claim
+     *
+     * @notice be aware that max claim will not be the same with the value you've provided
+     *             maxClaim = _maxClaim - validBeneficiaryCount * _decreaseStep
      */
     function updateBeneficiaryParams(
         uint256 _claimAmount,
@@ -420,14 +497,14 @@ contract CommunityImplementation is
         uint256 _decreaseStep,
         uint256 _baseInterval,
         uint256 _incrementInterval
-    ) external override onlyOwner {
+    ) public override onlyOwner {
         require(
             _baseInterval > _incrementInterval,
-            "Community::constructor: baseInterval must be greater than incrementInterval"
+            "Community::updateBeneficiaryParams: baseInterval must be greater than incrementInterval"
         );
         require(
             _maxClaim > _claimAmount + validBeneficiaryCount * _decreaseStep,
-            "Community::constructor: maxClaim must be greater than claimAmount"
+            "Community::updateBeneficiaryParams: maxClaim must be greater than claimAmount"
         );
 
         emit BeneficiaryParamsUpdated(
@@ -485,18 +562,31 @@ contract CommunityImplementation is
     }
 
     /** @notice Updates token address
-     *
-     * @param _newToken       new token address
-     * @param _exchangePath   path used by uniswap to exchange the current tokens to the new tokens
+     *   !!!!!! you must be careful about _maxClaim value. Tis value determines all beneficiaries claimedAmounts
      */
-    function updateToken(IERC20 _newToken, address[] memory _exchangePath)
-        external
-        override
-        onlyOwner
-    {
+    function updateToken(
+        IERC20 _newToken,
+        address[] calldata _exchangePath,
+        uint256 _claimAmount,
+        uint256 _maxClaim,
+        uint256 _decreaseStep,
+        uint256 _baseInterval,
+        uint256 _incrementInterval
+    ) external override onlyOwner {
+        ITreasury _treasury = communityAdmin.treasury();
+
         require(
-            _newToken == communityAdmin.cUSD() ||
-                communityAdmin.treasury().isToken(address(_newToken)),
+            tokens.length < MAX_TOKEN_LIST_LENGTH,
+            "Community::updateToken: Token list length too big"
+        );
+
+        require(
+            _newToken != token(),
+            "Community::updateToken: New token cannot be the same as the current token"
+        );
+
+        require(
+            _newToken == communityAdmin.cUSD() || _treasury.isToken(address(_newToken)),
             "Community::updateToken: Invalid token"
         );
 
@@ -507,21 +597,39 @@ contract CommunityImplementation is
             "Community::updateToken: invalid exchangePath"
         );
 
+        //for communities already deployed, we need to add the current token before changing
+        if (tokens.length == 0) {
+            tokens.push(Token(address(token()), 1e18, 0));
+            _tokenList.add(address(token()));
+        }
+
+        uint256 _conversionRatio = (1e18 * _maxClaim) / getInitialMaxClaim();
+
+        tokens.push(Token(address(_newToken), _conversionRatio, block.number));
+        _tokenList.add(address(_newToken));
+
+        IUniswapV2Router _uniswap = _treasury.uniswapRouter();
+
         uint256 _balance = token().balanceOf(address(this));
-        token().approve(address(communityAdmin.treasury().uniswapRouter()), _balance);
-        communityAdmin
-            .treasury()
-            .uniswapRouter()
-            .swapExactTokensForTokensSupportingFeeOnTransferTokens(
-                _balance,
-                0,
-                _exchangePath,
-                address(this),
-                block.timestamp + 3600
-            );
+        token().approve(address(_uniswap), _balance);
+        _uniswap.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+            _balance,
+            0,
+            _exchangePath,
+            address(this),
+            block.timestamp + 3600
+        );
 
         emit TokenUpdated(address(_token), address(_newToken));
         _token = _newToken;
+
+        updateBeneficiaryParams(
+            _claimAmount,
+            _maxClaim,
+            _decreaseStep,
+            _baseInterval,
+            _incrementInterval
+        );
     }
 
     /**
@@ -612,7 +720,7 @@ contract CommunityImplementation is
     function lockBeneficiary(address _beneficiaryAddress) external override onlyManagers {
         require(!locked, "LOCKED");
 
-        Beneficiary storage _beneficiary = beneficiaries[_beneficiaryAddress];
+        Beneficiary storage _beneficiary = _beneficiaries[_beneficiaryAddress];
 
         require(
             _beneficiary.state == BeneficiaryState.Valid,
@@ -630,7 +738,7 @@ contract CommunityImplementation is
     function unlockBeneficiary(address _beneficiaryAddress) external override onlyManagers {
         require(!locked, "LOCKED");
 
-        Beneficiary storage _beneficiary = beneficiaries[_beneficiaryAddress];
+        Beneficiary storage _beneficiary = _beneficiaries[_beneficiaryAddress];
 
         require(
             _beneficiary.state == BeneficiaryState.Locked,
@@ -646,7 +754,7 @@ contract CommunityImplementation is
      * @param _beneficiaryAddress address of the beneficiary to be removed
      */
     function removeBeneficiary(address _beneficiaryAddress) external override onlyManagers {
-        Beneficiary storage _beneficiary = beneficiaries[_beneficiaryAddress];
+        Beneficiary storage _beneficiary = _beneficiaries[_beneficiaryAddress];
 
         require(
             _beneficiary.state == BeneficiaryState.Valid ||
@@ -661,22 +769,31 @@ contract CommunityImplementation is
      * @dev Transfers tokens to a valid beneficiary
      */
     function claim() external override onlyValidBeneficiary nonReentrant {
-        Beneficiary storage _beneficiary = beneficiaries[msg.sender];
+        Beneficiary storage _beneficiary = _beneficiaries[msg.sender];
+
+        uint256 _claimedAmount = _beneficiaryClaimedAmount(_beneficiary);
 
         require(!locked, "LOCKED");
         require(claimCooldown(msg.sender) <= block.number, "Community::claim: NOT_YET");
-        require(
-            _beneficiary.claimedAmount < maxClaim,
-            "Community::claim: Already claimed everything"
-        );
+        require(_claimedAmount < maxClaim, "Community::claim: Already claimed everything");
 
-        uint256 _toClaim = claimAmount <= maxClaim - _beneficiary.claimedAmount
+        uint256 _toClaim = claimAmount <= maxClaim - _claimedAmount
             ? claimAmount
-            : maxClaim - _beneficiary.claimedAmount;
+            : maxClaim - _claimedAmount;
 
-        _beneficiary.claimedAmount += _toClaim;
+        //this is necessary for communities with version < 3
+        //and for beneficiaries that haven't claimed after updating to v3
+        if (tokens.length > 1 && _beneficiary.lastClaim < tokens[1].startBlock) {
+            _beneficiary.claimedAmounts[tokens[0].tokenAddress] = _beneficiary.claimedAmount;
+        }
+
+        _beneficiary.claimedAmount = _claimedAmount + _toClaim;
         _beneficiary.claims++;
         _beneficiary.lastClaim = block.number;
+
+        if (tokens.length > 1) {
+            _beneficiary.claimedAmounts[address(token())] += _toClaim;
+        }
 
         token().safeTransfer(msg.sender, _toClaim);
         emit BeneficiaryClaim(msg.sender, _toClaim);
@@ -689,7 +806,7 @@ contract CommunityImplementation is
      * @return uint256 number of blocks for the lastInterval
      */
     function lastInterval(address _beneficiaryAddress) public view override returns (uint256) {
-        Beneficiary storage _beneficiary = beneficiaries[_beneficiaryAddress];
+        Beneficiary storage _beneficiary = _beneficiaries[_beneficiaryAddress];
         if (_beneficiary.claims == 0) {
             return 0;
         }
@@ -703,7 +820,7 @@ contract CommunityImplementation is
      * @return uint256 number of block when the beneficiary can claim
      */
     function claimCooldown(address _beneficiaryAddress) public view override returns (uint256) {
-        return beneficiaries[_beneficiaryAddress].lastClaim + lastInterval(_beneficiaryAddress);
+        return _beneficiaries[_beneficiaryAddress].lastClaim + lastInterval(_beneficiaryAddress);
     }
 
     /**
@@ -781,64 +898,24 @@ contract CommunityImplementation is
      */
     function beneficiaryJoinFromMigrated(address _beneficiaryAddress) external override {
         // no need to check if it's a beneficiary, as the state is copied
-        Beneficiary storage _beneficiary = beneficiaries[_beneficiaryAddress];
+        Beneficiary storage _beneficiary = _beneficiaries[_beneficiaryAddress];
 
         require(
             _beneficiary.state == BeneficiaryState.NONE,
             "Community::beneficiaryJoinFromMigrated: Beneficiary exists"
         );
 
-        //if the previousCommunity is deployed with the new type of smart contract
-        if (previousCommunity.impactMarketAddress() == address(0)) {
-            (
-                BeneficiaryState _oldBeneficiaryState,
-                uint256 _oldBeneficiaryClaims,
-                uint256 _oldBeneficiaryClaimedAmount,
-                uint256 _oldBeneficiaryLastClaim
-            ) = previousCommunity.beneficiaries(_beneficiaryAddress);
+        (
+            BeneficiaryState _oldBeneficiaryState,
+            uint256 _oldBeneficiaryClaims,
+            uint256 _oldBeneficiaryClaimedAmount,
+            uint256 _oldBeneficiaryLastClaim
+        ) = previousCommunity.beneficiaries(_beneficiaryAddress);
 
-            _changeBeneficiaryState(_beneficiary, _oldBeneficiaryState);
-            _beneficiary.claims = _oldBeneficiaryClaims;
-            _beneficiary.lastClaim = _oldBeneficiaryLastClaim;
-            _beneficiary.claimedAmount = _oldBeneficiaryClaimedAmount;
-        } else {
-            ICommunityLegacy _legacyCommunity = ICommunityLegacy(address(previousCommunity));
-            uint256 _legacyBeneficiaryLastInterval = _legacyCommunity.lastInterval(
-                _beneficiaryAddress
-            );
-            _changeBeneficiaryState(
-                _beneficiary,
-                BeneficiaryState(_legacyCommunity.beneficiaries(_beneficiaryAddress))
-            );
-
-            uint256 _legacyBeneficiaryCooldown = _legacyCommunity.cooldown(_beneficiaryAddress);
-
-            if (
-                _legacyBeneficiaryCooldown >=
-                _legacyBeneficiaryLastInterval + _firstBlockTimestamp()
-            ) {
-                // seconds to blocks conversion
-                _beneficiary.lastClaim =
-                    (_legacyBeneficiaryCooldown -
-                        _legacyBeneficiaryLastInterval -
-                        _firstBlockTimestamp()) /
-                    5;
-            } else {
-                _beneficiary.lastClaim = 0;
-            }
-
-            _beneficiary.claimedAmount = _legacyCommunity.claimed(_beneficiaryAddress);
-
-            uint256 _previousBaseInterval = _legacyCommunity.baseInterval();
-            if (_legacyBeneficiaryLastInterval >= _previousBaseInterval) {
-                _beneficiary.claims =
-                    (_legacyBeneficiaryLastInterval - _previousBaseInterval) /
-                    _legacyCommunity.incrementInterval() +
-                    1;
-            } else {
-                _beneficiary.claims = 0;
-            }
-        }
+        _changeBeneficiaryState(_beneficiary, _oldBeneficiaryState);
+        _beneficiary.claims = _oldBeneficiaryClaims;
+        _beneficiary.lastClaim = _oldBeneficiaryLastClaim;
+        _beneficiary.claimedAmount = _oldBeneficiaryClaimedAmount;
 
         beneficiaryList.add(_beneficiaryAddress);
 
@@ -848,7 +925,7 @@ contract CommunityImplementation is
     /**
      * @notice Returns the initial maxClaim
      */
-    function getInitialMaxClaim() external view override returns (uint256) {
+    function getInitialMaxClaim() public view override returns (uint256) {
         return maxClaim + validBeneficiaryCount * decreaseStep;
     }
 
@@ -884,28 +961,13 @@ contract CommunityImplementation is
         _beneficiary.state = _newState;
     }
 
-    function _firstBlockTimestamp() public view returns (uint256) {
-        if (block.chainid == 42220) {
-            //celo mainnet
-            return 1587571205;
-        } else if (block.chainid == 44787) {
-            //alfajores testnet
-            return 1594921556;
-        } else if (block.chainid == 44787) {
-            //baklava testnet
-            return 1593012289;
-        } else {
-            return block.timestamp - block.number; //local
-        }
-    }
-
     /**
      * @notice Adds a new beneficiary
      *
      * @param _beneficiaryAddress address of the beneficiary to be added
      */
     function _addBeneficiary(address _beneficiaryAddress) internal {
-        Beneficiary storage _beneficiary = beneficiaries[_beneficiaryAddress];
+        Beneficiary storage _beneficiary = _beneficiaries[_beneficiaryAddress];
 
         if (_beneficiary.state != BeneficiaryState.NONE) {
             return;
@@ -920,5 +982,30 @@ contract CommunityImplementation is
         token().safeTransfer(_beneficiaryAddress, DEFAULT_AMOUNT);
 
         emit BeneficiaryAdded(msg.sender, _beneficiaryAddress);
+    }
+
+    function _beneficiaryClaimedAmount(Beneficiary storage _beneficiary)
+        internal
+        view
+        returns (uint256)
+    {
+        uint256 _tokensLength = tokens.length;
+        if (_tokensLength < 2) {
+            return _beneficiary.claimedAmount;
+        }
+
+        uint256 _computedClaimAmount = _beneficiary.claimedAmount;
+
+        //if beneficiary didn't claim for a long time and the token has been changed,
+        //we multiply the claimed amount with all token ratios that user haven't claimed
+        for (
+            uint256 _index = _tokensLength - 1;
+            tokens[_index].startBlock > _beneficiary.lastClaim;
+            _index--
+        ) {
+            _computedClaimAmount = (_computedClaimAmount * tokens[_index].ratio) / 1e18;
+        }
+
+        return _computedClaimAmount;
     }
 }

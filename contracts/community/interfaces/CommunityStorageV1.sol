@@ -29,6 +29,6 @@ abstract contract CommunityStorageV1 is ICommunity {
     ICommunity public override previousCommunity;
     ICommunityAdmin public override communityAdmin;
 
-    mapping(address => Beneficiary) public override beneficiaries;
+    mapping(address => Beneficiary) internal _beneficiaries;
     EnumerableSet.AddressSet internal beneficiaryList;
 }

@@ -11,7 +11,7 @@ import { fromEther, toEther } from "../utils/helpers";
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 
-describe.only("Treasury", () => {
+describe("Treasury", () => {
 	let owner: SignerWithAddress;
 	let user1: SignerWithAddress;
 	let user2: SignerWithAddress;
@@ -98,14 +98,6 @@ describe.only("Treasury", () => {
 		await cUSD.mint(user1.address, toEther(100000000));
 		await mUSD.mint(user1.address, toEther(100000000));
 		await celo.mint(user1.address, toEther(100000000));
-
-		// await cUSD.connect(user1).approve(Pair.address, toEther(10));
-		// await mUSD.connect(user1).approve(Pair.address, toEther(10));
-		//
-		// console.log(await UniswapRouter.getAmountsOut(toEther(1), [cUSD.address, mUSD.address]));
-		//
-		//
-		// // await Pair.mint(user1.address);
 
 		await cUSD
 			.connect(user1)

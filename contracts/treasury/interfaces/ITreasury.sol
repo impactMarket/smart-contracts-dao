@@ -11,7 +11,7 @@ interface ITreasury {
         address[] exchangePath;
     }
 
-    function getVersion() external returns(uint256);
+    function getVersion() external pure returns(uint256);
     function communityAdmin() external view returns(ICommunityAdmin);
     function uniswapRouter() external view returns(IUniswapV2Router);
     function updateCommunityAdmin(ICommunityAdmin _communityAdmin) external;

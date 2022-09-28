@@ -17,7 +17,7 @@ interface IStaking {
         Unstake[] unstakes;      //list of all unstakes amount
     }
 
-    function getVersion() external view returns(uint256);
+    function getVersion() external pure returns(uint256);
     function updateCooldown(uint256 _newCooldown) external;
     function PACT() external view returns (IERC20);
     function SPACT() external view returns (IMintableERC20);
