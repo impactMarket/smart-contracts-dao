@@ -257,7 +257,7 @@ contract CommunityAdminImplementation is
     function updateBackendWalletAddress(address _newBackendWalletAddress)
         external
         override
-        onlyOwner
+        onlyOwnerOrImpactMarketCouncil
     {
         backendWalletAddress = _newBackendWalletAddress;
     }

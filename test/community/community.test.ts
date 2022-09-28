@@ -523,6 +523,32 @@ describe.only("Community", () => {
 					.upgrade(communityAdminProxy.address, FAKE_ADDRESS)
 			).to.be.rejectedWith("Ownable: caller is not the owner");
 		});
+
+		it("should updateBackendWalletAddress if owner or impactMarketCouncil", async () => {
+			await expect(
+				communityAdminProxy.updateBackendWalletAddress(FAKE_ADDRESS)
+			).to.be.fulfilled;
+
+			expect(
+				await communityAdminProxy.backendWalletAddress()
+			).to.be.equal(FAKE_ADDRESS);
+		});
+
+		it("should updateBackendWalletAddress if owner", async () => {
+			await expect(
+				communityAdminProxy.updateBackendWalletAddress(FAKE_ADDRESS)
+			).to.be.fulfilled;
+
+			expect(
+				await communityAdminProxy.backendWalletAddress()
+			).to.be.equal(FAKE_ADDRESS);
+		});
+
+		it("should not updateBackendWalletAddress if not owner", async () => {
+			await expect(
+				communityAdminProxy.connect(adminAccount1).updateBackendWalletAddress(FAKE_ADDRESS)
+			).to.be.rejectedWith('CommunityAdmin: Not Owner Or ImpactMarketCouncil');
+		});
 	});
 
 	describe("Community", () => {
