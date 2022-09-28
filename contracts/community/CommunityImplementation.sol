@@ -844,7 +844,6 @@ contract CommunityImplementation is
     function removeBeneficiaries(address[] memory _beneficiaryAddresses)
         external
         override
-        whenNotLocked
         onlyManagers
     {
         _removeBeneficiaries(_beneficiaryAddresses);
@@ -861,7 +860,7 @@ contract CommunityImplementation is
         address[] memory _beneficiaryAddresses,
         uint256 _expirationTimestamp,
         bytes calldata _signature
-    ) external override whenNotLocked {
+    ) external override {
         _checkManagerSignature(_expirationTimestamp, _signature);
         _removeBeneficiaries(_beneficiaryAddresses);
     }

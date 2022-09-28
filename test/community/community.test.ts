@@ -2256,37 +2256,6 @@ describe.only("Community", () => {
 			).state.should.be.equal(BeneficiaryState.Removed);
 		});
 
-		it("should not remove beneficiaries using a manager signature if community is locked", async () => {
-			const expirationTimestamp =
-				(await getCurrentBlockTimestamp()) + 100;
-			const signature = await signParams(
-				communityManagerA,
-				backendWallet.address,
-				communityProxy.address,
-				expirationTimestamp
-			);
-
-			await communityProxy
-				.connect(backendWallet)
-				.addBeneficiariesUsingSignature(
-					[beneficiaryA.address, beneficiaryB.address],
-					expirationTimestamp,
-					signature
-				);
-
-			await expect(communityProxy.connect(ambassadorA).lock());
-
-			await expect(
-				communityProxy
-					.connect(backendWallet)
-					.removeBeneficiariesUsingSignature(
-						[beneficiaryA.address],
-						expirationTimestamp,
-						signature
-					)
-			).to.be.rejectedWith("Community: locked");
-		});
-
 		it("should remove beneficiaries using a manager signature multiple times", async () => {
 			const expirationTimestamp =
 				(await getCurrentBlockTimestamp()) + 100;
