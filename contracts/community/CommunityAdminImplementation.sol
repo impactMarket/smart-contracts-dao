@@ -252,14 +252,14 @@ contract CommunityAdminImplementation is
 
     /** Updates the address of the backend wallet
      *
-     * @param _newBackendWalletAddress address of the new backend wallet
+     * @param _newAuthorizedWalletAddress address of the new backend wallet
      */
-    function updateBackendWalletAddress(address _newBackendWalletAddress)
+    function updateAuthorizedWalletAddress(address _newAuthorizedWalletAddress)
         external
         override
         onlyOwnerOrImpactMarketCouncil
     {
-        backendWalletAddress = _newBackendWalletAddress;
+        authorizedWalletAddress = _newAuthorizedWalletAddress;
     }
 
     /**

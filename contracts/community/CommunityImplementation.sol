@@ -1190,7 +1190,7 @@ contract CommunityImplementation is
         internal
     {
         require(
-            msg.sender == communityAdmin.backendWalletAddress(),
+            msg.sender == communityAdmin.authorizedWalletAddress(),
             "Community: Sender must be the backend wallet"
         );
         require(_expirationTimestamp >= block.timestamp, "Community: Signature too old");
