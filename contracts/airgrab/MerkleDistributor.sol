@@ -1,13 +1,14 @@
 //SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.4;
 
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IMerkleDistributor.sol";
 
 contract MerkleDistributor is IMerkleDistributor, Ownable {
-    using SafeERC20 for IERC20;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     address public immutable override token;
     bytes32 public immutable override merkleRoot;
@@ -77,14 +78,14 @@ contract MerkleDistributor is IMerkleDistributor, Ownable {
         );
 
         // Send the token
-        IERC20(token).safeTransfer(_account, _amount);
+        IERC20Upgradeable(token).safeTransfer(_account, _amount);
 
         emit Claimed(_index, _account, _amount);
     }
 
     function withdrawUnclaimed() external override onlyOwner claimPeriodEnded {
         uint256 _unclaimedBalance = IERC20(token).balanceOf(address(this));
-        IERC20(token).safeTransfer(msg.sender, _unclaimedBalance);
+        IERC20Upgradeable(token).safeTransfer(msg.sender, _unclaimedBalance);
         emit Withdrawn(msg.sender, _unclaimedBalance);
     }
 
@@ -100,6 +101,6 @@ contract MerkleDistributor is IMerkleDistributor, Ownable {
         address _to,
         uint256 _amount
     ) external override onlyOwner {
-        _token.safeTransfer(_to, _amount);
+        IERC20Upgradeable(address(_token)).safeTransfer(_to, _amount);
     }
 }

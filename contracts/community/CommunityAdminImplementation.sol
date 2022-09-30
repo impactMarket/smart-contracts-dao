@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.4;
 
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./interfaces/ICommunity.sol";
 import "./interfaces/CommunityAdminStorageV1.sol";
@@ -24,7 +24,7 @@ contract CommunityAdminImplementation is
     ReentrancyGuardUpgradeable,
     CommunityAdminStorageV2
 {
-    using SafeERC20 for IERC20;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
     using EnumerableSet for EnumerableSet.AddressSet;
 
     uint256 private constant DEFAULT_AMOUNT = 5e16;
@@ -250,6 +250,18 @@ contract CommunityAdminImplementation is
         communityImplementation = _newCommunityImplementation;
     }
 
+    /** Updates the address of the backend wallet
+     *
+     * @param _newAuthorizedWalletAddress address of the new backend wallet
+     */
+    function updateAuthorizedWalletAddress(address _newAuthorizedWalletAddress)
+        external
+        override
+        onlyOwnerOrImpactMarketCouncil
+    {
+        authorizedWalletAddress = _newAuthorizedWalletAddress;
+    }
+
     /**
      * @notice Set an existing ambassador to an existing community
      *
@@ -435,7 +447,7 @@ contract CommunityAdminImplementation is
         address _to,
         uint256 _amount
     ) external override onlyOwner nonReentrant {
-        _token.safeTransfer(_to, _amount);
+        IERC20Upgradeable(address(_token)).safeTransfer(_to, _amount);
 
         emit TransferERC20(address(_token), _to, _amount);
     }

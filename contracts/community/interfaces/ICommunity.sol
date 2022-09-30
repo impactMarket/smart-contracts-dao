@@ -104,11 +104,34 @@ interface ICommunity {
     function transfer(IERC20 _token, address _to, uint256 _amount) external;
     function addManager(address _managerAddress) external;
     function removeManager(address _managerAddress) external;
-    function addBeneficiaries(address[] memory _beneficiaryAddresses) external;
     function addBeneficiary(address _beneficiaryAddress) external;
+    function addBeneficiaries(address[] memory _beneficiaryAddresses) external;
+    function addBeneficiariesUsingSignature(
+        address[] memory _beneficiaryAddresses,
+        uint256 _expirationTimestamp,
+        bytes calldata _signature
+    ) external;
     function lockBeneficiary(address _beneficiaryAddress) external;
+    function lockBeneficiaries(address[] memory _beneficiaryAddresses) external;
+    function lockBeneficiariesUsingSignature(
+        address[] memory _beneficiaryAddresses,
+        uint256 _expirationTimestamp,
+        bytes calldata _signature
+    ) external;
     function unlockBeneficiary(address _beneficiaryAddress) external;
+    function unlockBeneficiaries(address[] memory _beneficiaryAddresses) external;
+    function unlockBeneficiariesUsingSignature(
+        address[] memory _beneficiaryAddresses,
+        uint256 _expirationTimestamp,
+        bytes calldata _signature
+    ) external;
     function removeBeneficiary(address _beneficiaryAddress) external;
+    function removeBeneficiaries(address[] memory _beneficiaryAddresses) external;
+    function removeBeneficiariesUsingSignature(
+        address[] memory _beneficiaryAddresses,
+        uint256 _expirationTimestamp,
+        bytes calldata _signature
+    ) external;
     function claim() external;
     function lastInterval(address _beneficiaryAddress) external view returns (uint256);
     function claimCooldown(address _beneficiaryAddress) external view returns (uint256);

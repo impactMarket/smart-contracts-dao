@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.4;
 
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./interfaces/ICommunity.sol";
 import "./interfaces/ICommunityAdmin.sol";
@@ -26,8 +27,9 @@ contract CommunityImplementation is
     ReentrancyGuardUpgradeable,
     CommunityStorageV3
 {
-    using SafeERC20 for IERC20;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
     using EnumerableSet for EnumerableSet.AddressSet;
+    using ECDSA for bytes32;
 
     bytes32 private constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
     uint256 private constant DEFAULT_AMOUNT = 5e16;
@@ -260,6 +262,18 @@ contract CommunityImplementation is
                 communityAdmin.isAmbassadorOrEntityOfCommunity(address(this), msg.sender),
             "Community: NOT_OWNER_OR_AMBASSADOR_OR_ENTITY"
         );
+        _;
+    }
+
+    /**
+     * @dev Modifier to make a function callable only when the contract is not locked
+     *
+     * Requirements:
+     *
+     * - The contract must not be locked.
+     */
+    modifier whenNotLocked() {
+        require(!locked, "Community: locked");
         _;
     }
 
@@ -677,26 +691,6 @@ contract CommunityImplementation is
     }
 
     /**
-     * @notice Adds new beneficiaries
-     *
-     * @param _beneficiaryAddresses addresses of the beneficiaries to be added
-     */
-    function addBeneficiaries(address[] memory _beneficiaryAddresses)
-        external
-        override
-        onlyManagers
-        nonReentrant
-    {
-        require(!locked, "LOCKED");
-
-        uint256 _index;
-        uint256 _numberOfBeneficiaries = _beneficiaryAddresses.length;
-        for (; _index < _numberOfBeneficiaries; _index++) {
-            _addBeneficiary(_beneficiaryAddresses[_index]);
-        }
-    }
-
-    /**
      * @notice Adds a new beneficiary
      *
      * @param _beneficiaryAddress address of the beneficiary to be added
@@ -704,12 +698,45 @@ contract CommunityImplementation is
     function addBeneficiary(address _beneficiaryAddress)
         external
         override
+        whenNotLocked
         onlyManagers
         nonReentrant
     {
-        require(!locked, "LOCKED");
-
         _addBeneficiary(_beneficiaryAddress);
+
+        emit BeneficiaryAdded(msg.sender, _beneficiaryAddress);
+    }
+
+    /**
+     * @notice Adds new beneficiaries
+     *
+     * @param _beneficiaryAddresses addresses of the beneficiaries to be added
+     */
+    function addBeneficiaries(address[] memory _beneficiaryAddresses)
+        external
+        override
+        whenNotLocked
+        onlyManagers
+        nonReentrant
+    {
+        _addBeneficiaries(_beneficiaryAddresses);
+    }
+
+    /**
+     * @notice Adds new beneficiaries using a manager signature
+     *
+     * @param _beneficiaryAddresses addresses of the beneficiaries to be added
+     * @param _expirationTimestamp  timestamp when the signature will expire/expired
+     * @param _signature            the signature of a manager
+     */
+    function addBeneficiariesUsingSignature(
+        address[] memory _beneficiaryAddresses,
+        uint256 _expirationTimestamp,
+        bytes calldata _signature
+    ) external override whenNotLocked nonReentrant {
+        _checkManagerSignature(_expirationTimestamp, _signature);
+
+        _addBeneficiaries(_beneficiaryAddresses);
     }
 
     /**
@@ -717,17 +744,43 @@ contract CommunityImplementation is
      *
      * @param _beneficiaryAddress address of the beneficiary to be locked
      */
-    function lockBeneficiary(address _beneficiaryAddress) external override onlyManagers {
-        require(!locked, "LOCKED");
+    function lockBeneficiary(address _beneficiaryAddress)
+        external
+        override
+        whenNotLocked
+        onlyManagers
+    {
+        _lockBeneficiary(_beneficiaryAddress);
+    }
 
-        Beneficiary storage _beneficiary = _beneficiaries[_beneficiaryAddress];
+    /**
+     * @notice Locks a list of beneficiaries
+     *
+     * @param _beneficiaryAddresses       addresses of the beneficiaries to be locked
+     */
+    function lockBeneficiaries(address[] memory _beneficiaryAddresses)
+        external
+        override
+        whenNotLocked
+        onlyManagers
+    {
+        _lockBeneficiaries(_beneficiaryAddresses);
+    }
 
-        require(
-            _beneficiary.state == BeneficiaryState.Valid,
-            "Community::lockBeneficiary: NOT_YET"
-        );
-        _changeBeneficiaryState(_beneficiary, BeneficiaryState.Locked);
-        emit BeneficiaryLocked(msg.sender, _beneficiaryAddress);
+    /**
+     * @notice Locks a list of beneficiaries using a manager signature
+     *
+     * @param _beneficiaryAddresses addresses of the beneficiaries to be locked
+     * @param _expirationTimestamp  timestamp when the signature will expire/expired
+     * @param _signature            the signature of a manager
+     */
+    function lockBeneficiariesUsingSignature(
+        address[] memory _beneficiaryAddresses,
+        uint256 _expirationTimestamp,
+        bytes calldata _signature
+    ) external override whenNotLocked {
+        _checkManagerSignature(_expirationTimestamp, _signature);
+        _lockBeneficiaries(_beneficiaryAddresses);
     }
 
     /**
@@ -735,17 +788,43 @@ contract CommunityImplementation is
      *
      * @param _beneficiaryAddress address of the beneficiary to be unlocked
      */
-    function unlockBeneficiary(address _beneficiaryAddress) external override onlyManagers {
-        require(!locked, "LOCKED");
+    function unlockBeneficiary(address _beneficiaryAddress)
+        external
+        override
+        whenNotLocked
+        onlyManagers
+    {
+        _unlockBeneficiary(_beneficiaryAddress);
+    }
 
-        Beneficiary storage _beneficiary = _beneficiaries[_beneficiaryAddress];
+    /**
+     * @notice Unlocks a list of beneficiaries
+     *
+     * @param _beneficiaryAddresses       addresses of the beneficiaries to be unlocked
+     */
+    function unlockBeneficiaries(address[] memory _beneficiaryAddresses)
+        external
+        override
+        whenNotLocked
+        onlyManagers
+    {
+        _unlockBeneficiaries(_beneficiaryAddresses);
+    }
 
-        require(
-            _beneficiary.state == BeneficiaryState.Locked,
-            "Community::unlockBeneficiary: NOT_YET"
-        );
-        _changeBeneficiaryState(_beneficiary, BeneficiaryState.Valid);
-        emit BeneficiaryUnlocked(msg.sender, _beneficiaryAddress);
+    /**
+     * @notice Unlocks a list of beneficiaries using a manager signature
+     *
+     * @param _beneficiaryAddresses addresses of the beneficiaries to be unlocked
+     * @param _expirationTimestamp  timestamp when the signature will expire/expired
+     * @param _signature            the signature of a manager
+     */
+    function unlockBeneficiariesUsingSignature(
+        address[] memory _beneficiaryAddresses,
+        uint256 _expirationTimestamp,
+        bytes calldata _signature
+    ) external override whenNotLocked {
+        _checkManagerSignature(_expirationTimestamp, _signature);
+        _unlockBeneficiaries(_beneficiaryAddresses);
     }
 
     /**
@@ -754,26 +833,46 @@ contract CommunityImplementation is
      * @param _beneficiaryAddress address of the beneficiary to be removed
      */
     function removeBeneficiary(address _beneficiaryAddress) external override onlyManagers {
-        Beneficiary storage _beneficiary = _beneficiaries[_beneficiaryAddress];
+        _removeBeneficiary(_beneficiaryAddress);
+    }
 
-        require(
-            _beneficiary.state == BeneficiaryState.Valid ||
-                _beneficiary.state == BeneficiaryState.Locked,
-            "Community::removeBeneficiary: NOT_YET"
-        );
-        _changeBeneficiaryState(_beneficiary, BeneficiaryState.Removed);
-        emit BeneficiaryRemoved(msg.sender, _beneficiaryAddress);
+    /**
+     * @notice Removes a list of beneficiaries
+     *
+     * @param _beneficiaryAddresses       addresses of the beneficiaries to be removed
+     */
+    function removeBeneficiaries(address[] memory _beneficiaryAddresses)
+        external
+        override
+        onlyManagers
+    {
+        _removeBeneficiaries(_beneficiaryAddresses);
+    }
+
+    /**
+     * @notice Removes a list of beneficiaries using a manager signature
+     *
+     * @param _beneficiaryAddresses addresses of the beneficiaries to be removed
+     * @param _expirationTimestamp  timestamp when the signature will expire/expired
+     * @param _signature            the signature of a manager
+     */
+    function removeBeneficiariesUsingSignature(
+        address[] memory _beneficiaryAddresses,
+        uint256 _expirationTimestamp,
+        bytes calldata _signature
+    ) external override {
+        _checkManagerSignature(_expirationTimestamp, _signature);
+        _removeBeneficiaries(_beneficiaryAddresses);
     }
 
     /**
      * @dev Transfers tokens to a valid beneficiary
      */
-    function claim() external override onlyValidBeneficiary nonReentrant {
+    function claim() external override whenNotLocked onlyValidBeneficiary nonReentrant {
         Beneficiary storage _beneficiary = _beneficiaries[msg.sender];
 
         uint256 _claimedAmount = _beneficiaryClaimedAmount(_beneficiary);
 
-        require(!locked, "LOCKED");
         require(claimCooldown(msg.sender) <= block.number, "Community::claim: NOT_YET");
         require(_claimedAmount < maxClaim, "Community::claim: Already claimed everything");
 
@@ -795,7 +894,7 @@ contract CommunityImplementation is
             _beneficiary.claimedAmounts[address(token())] += _toClaim;
         }
 
-        token().safeTransfer(msg.sender, _toClaim);
+        IERC20Upgradeable(address(token())).safeTransfer(msg.sender, _toClaim);
         emit BeneficiaryClaim(msg.sender, _toClaim);
     }
 
@@ -842,9 +941,7 @@ contract CommunityImplementation is
     /**
      * @notice Requests treasury funds from the communityAdmin
      */
-    function requestFunds() external override onlyManagers {
-        require(!locked, "LOCKED");
-
+    function requestFunds() external override whenNotLocked onlyManagers {
         communityAdmin.fundCommunity();
 
         lastFundRequest = block.number;
@@ -860,7 +957,7 @@ contract CommunityImplementation is
      * @param _amount amount to be donated
      */
     function donate(address _sender, uint256 _amount) external override nonReentrant {
-        token().safeTransferFrom(_sender, address(this), _amount);
+        IERC20Upgradeable(address(token())).safeTransferFrom(_sender, address(this), _amount);
         privateFunds += _amount;
 
         emit Donate(msg.sender, _amount);
@@ -888,7 +985,7 @@ contract CommunityImplementation is
         address _to,
         uint256 _amount
     ) external override onlyOwner nonReentrant {
-        _token.safeTransfer(_to, _amount);
+        IERC20Upgradeable(address(_token)).safeTransfer(_to, _amount);
 
         emit TransferERC20(address(_token), _to, _amount);
     }
@@ -979,9 +1076,131 @@ contract CommunityImplementation is
         beneficiaryList.add(_beneficiaryAddress);
 
         // send default amount when adding a new beneficiary
-        token().safeTransfer(_beneficiaryAddress, DEFAULT_AMOUNT);
+        IERC20Upgradeable(address(token())).safeTransfer(_beneficiaryAddress, DEFAULT_AMOUNT);
+    }
 
-        emit BeneficiaryAdded(msg.sender, _beneficiaryAddress);
+    /**
+     * @notice Adds new beneficiaries
+     *
+     * @param _beneficiaryAddresses addresses of beneficiaries to be added
+     */
+    function _addBeneficiaries(address[] memory _beneficiaryAddresses) internal {
+        uint256 _index;
+        uint256 _numberOfBeneficiaries = _beneficiaryAddresses.length;
+        for (; _index < _numberOfBeneficiaries; _index++) {
+            _addBeneficiary(_beneficiaryAddresses[_index]);
+            emit BeneficiaryAdded(msg.sender, _beneficiaryAddresses[_index]);
+        }
+    }
+
+    /**
+     * @notice Locks beneficiary
+     *
+     * @param _beneficiaryAddress address of beneficiary to be locked
+     */
+    function _lockBeneficiary(address _beneficiaryAddress) internal {
+        Beneficiary storage _beneficiary = _beneficiaries[_beneficiaryAddress];
+
+        if (_beneficiary.state == BeneficiaryState.Valid) {
+            _changeBeneficiaryState(_beneficiary, BeneficiaryState.Locked);
+            emit BeneficiaryLocked(msg.sender, _beneficiaryAddress);
+        }
+    }
+
+    /**
+     * @notice Locks beneficiaries
+     *
+     * @param _beneficiaryAddresses addresses of beneficiaries to be locked
+     */
+    function _lockBeneficiaries(address[] memory _beneficiaryAddresses) internal {
+        uint256 _index;
+        uint256 _numberOfBeneficiaries = _beneficiaryAddresses.length;
+
+        for (; _index < _numberOfBeneficiaries; _index++) {
+            _lockBeneficiary(_beneficiaryAddresses[_index]);
+        }
+    }
+
+    /**
+     * @notice Unlocks beneficiary
+     *
+     * @param _beneficiaryAddress address of beneficiary to be unlocked
+     */
+    function _unlockBeneficiary(address _beneficiaryAddress) internal {
+        Beneficiary storage _beneficiary = _beneficiaries[_beneficiaryAddress];
+
+        if (_beneficiary.state == BeneficiaryState.Locked) {
+            _changeBeneficiaryState(_beneficiary, BeneficiaryState.Valid);
+            emit BeneficiaryUnlocked(msg.sender, _beneficiaryAddress);
+        }
+    }
+
+    /**
+     * @notice Unlocks beneficiaries
+     *
+     * @param _beneficiaryAddresses addresses of beneficiaries to be unlocked
+     */
+    function _unlockBeneficiaries(address[] memory _beneficiaryAddresses) internal {
+        uint256 _index;
+        uint256 _numberOfBeneficiaries = _beneficiaryAddresses.length;
+
+        for (; _index < _numberOfBeneficiaries; _index++) {
+            _unlockBeneficiary(_beneficiaryAddresses[_index]);
+        }
+    }
+
+    /**
+     * @notice Removes beneficiary
+     *
+     * @param _beneficiaryAddress address of beneficiary to be removed
+     */
+    function _removeBeneficiary(address _beneficiaryAddress) internal {
+        Beneficiary storage _beneficiary = _beneficiaries[_beneficiaryAddress];
+
+        if (
+            _beneficiary.state == BeneficiaryState.Valid ||
+            _beneficiary.state == BeneficiaryState.Locked
+        ) {
+            _changeBeneficiaryState(_beneficiary, BeneficiaryState.Removed);
+            emit BeneficiaryRemoved(msg.sender, _beneficiaryAddress);
+        }
+    }
+
+    /**
+     * @notice Removes beneficiaries
+     *
+     * @param _beneficiaryAddresses addresses of beneficiaries to be removed
+     */
+    function _removeBeneficiaries(address[] memory _beneficiaryAddresses) internal {
+        uint256 _index;
+        uint256 _numberOfBeneficiaries = _beneficiaryAddresses.length;
+
+        for (; _index < _numberOfBeneficiaries; _index++) {
+            _removeBeneficiary(_beneficiaryAddresses[_index]);
+        }
+    }
+
+    /**
+     * @notice Checks a manager signature
+     *
+     * @param _expirationTimestamp  timestamp when the signature will expire/expired
+     * @param _signature            the signature of a manager
+     */
+    function _checkManagerSignature(uint256 _expirationTimestamp, bytes calldata _signature)
+        internal
+    {
+        require(
+            msg.sender == communityAdmin.authorizedWalletAddress(),
+            "Community: Sender must be the backend wallet"
+        );
+        require(_expirationTimestamp >= block.timestamp, "Community: Signature too old");
+
+        bytes32 _messageHash = keccak256(
+            abi.encodePacked(msg.sender, address(this), _expirationTimestamp)
+        );
+
+        address _signerAddress = _messageHash.toEthSignedMessageHash().recover(_signature);
+        require(hasRole(MANAGER_ROLE, _signerAddress), "Community: Invalid signature");
     }
 
     function _beneficiaryClaimedAmount(Beneficiary storage _beneficiary)

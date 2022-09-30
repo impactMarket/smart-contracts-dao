@@ -1,10 +1,11 @@
 //SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.4;
 
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "./interfaces/ImpactLabsVestingStorageV1.sol";
 
 contract ImpactLabsVestingImplementation is
@@ -14,7 +15,7 @@ contract ImpactLabsVestingImplementation is
     ReentrancyGuardUpgradeable,
     ImpactLabsVestingStorageV1
 {
-    using SafeERC20 for IERC20;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /**
      * @notice Triggered when ImpactLabs has claimed
@@ -149,7 +150,7 @@ contract ImpactLabsVestingImplementation is
         address _to,
         uint256 _amount
     ) external override onlyOwner nonReentrant {
-        _token.safeTransfer(_to, _amount);
+        IERC20Upgradeable(address(_token)).safeTransfer(_to, _amount);
 
         emit TransferERC20(address(_token), _to, _amount);
     }
@@ -165,7 +166,7 @@ contract ImpactLabsVestingImplementation is
                 PACT.balanceOf(address(this)) >= _amount,
                 "ImpactLabsVesting::transferToImpactLabs: ERR_REWARD_TOKEN_BALANCE"
             );
-            PACT.safeTransfer(impactLabs, _amount);
+            IERC20Upgradeable(address(PACT)).safeTransfer(impactLabs, _amount);
         }
 
         emit Claimed(_amount);
