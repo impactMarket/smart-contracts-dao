@@ -335,7 +335,7 @@ contract CommunityImplementation is
         uint256 _i;
         uint256 _numberOfManagers = _managers.length;
         for (; _i < _numberOfManagers; _i++) {
-            addManager(_managers[_i]);
+            _addManager(_managers[_i]);
         }
     }
 
@@ -394,7 +394,7 @@ contract CommunityImplementation is
         emit CommunityAdminUpdated(address(communityAdmin), address(_newCommunityAdmin));
         communityAdmin = _newCommunityAdmin;
 
-        addManager(address(communityAdmin));
+        _addManager(address(communityAdmin));
     }
 
     /** Updates the address of the previousCommunity
@@ -530,10 +530,7 @@ contract CommunityImplementation is
      * @param _account address of the manager to be added
      */
     function addManager(address _account) public override onlyAmbassadorOrEntity {
-        if (!hasRole(MANAGER_ROLE, _account)) {
-            super._grantRole(MANAGER_ROLE, _account);
-            emit ManagerAdded(msg.sender, _account);
-        }
+        _addManager(_account);
     }
 
     /**
@@ -920,5 +917,17 @@ contract CommunityImplementation is
         token().safeTransfer(_beneficiaryAddress, DEFAULT_AMOUNT);
 
         emit BeneficiaryAdded(msg.sender, _beneficiaryAddress);
+    }
+
+    /**
+     * @notice Adds a new manager
+     *
+     * @param _account address of the manager to be added
+     */
+    function _addManager(address _account) internal {
+        if (!hasRole(MANAGER_ROLE, _account)) {
+            super._grantRole(MANAGER_ROLE, _account);
+            emit ManagerAdded(msg.sender, _account);
+        }
     }
 }
