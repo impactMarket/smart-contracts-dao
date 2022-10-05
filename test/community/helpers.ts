@@ -58,7 +58,15 @@ export async function createDefaultCommunity(
 	communityManager: SignerWithAddress,
 	ambassador: SignerWithAddress
 ): Promise<ethersTypes.Contract> {
+	const cUSD = await ethers.getContractAt(
+		"TokenMock",
+		(
+			await deployments.get("TokenMock")
+		).address
+	);
+
 	const tx = await communityAdminProxy.addCommunity(
+		cUSD.address,
 		[communityManager.address],
 		ambassador.address,
 		claimAmountTwo,

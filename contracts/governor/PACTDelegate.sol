@@ -1,9 +1,11 @@
 //SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.4;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "./interfaces/PACTDelegateStorageV1.sol";
 import "./interfaces/PACTEvents.sol";
 
@@ -14,7 +16,7 @@ contract PACTDelegate is
     ReentrancyGuardUpgradeable,
     PACTDelegateStorageV1
 {
-    using SafeERC20 for IERC20;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /// @notice The name of this contract
     string public constant NAME = "PACT";
@@ -578,7 +580,7 @@ contract PACTDelegate is
         address _to,
         uint256 _amount
     ) external onlyOwner nonReentrant {
-        _token.safeTransfer(_to, _amount);
+        IERC20Upgradeable(address(_token)).safeTransfer(_to, _amount);
 
         emit TransferERC20(address(_token), _to, _amount);
     }

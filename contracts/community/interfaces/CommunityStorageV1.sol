@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.4;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./ICommunity.sol";
 import "./ICommunityAdmin.sol";
@@ -29,6 +28,6 @@ abstract contract CommunityStorageV1 is ICommunity {
     ICommunity public override previousCommunity;
     ICommunityAdmin public override communityAdmin;
 
-    mapping(address => Beneficiary) public override beneficiaries;
+    mapping(address => Beneficiary) internal _beneficiaries;
     EnumerableSet.AddressSet internal beneficiaryList;
 }

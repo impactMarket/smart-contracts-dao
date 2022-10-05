@@ -1,10 +1,11 @@
 //SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.4;
 
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "./interfaces/DepositStorageV1.sol";
 import "../externalInterfaces/aave/IAToken.sol";
 
@@ -17,7 +18,7 @@ contract DepositImplementation is
     ReentrancyGuardUpgradeable,
     DepositStorageV1
 {
-    using SafeERC20 for IERC20;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
     using EnumerableSet for EnumerableSet.AddressSet;
 
     /**
@@ -263,7 +264,7 @@ contract DepositImplementation is
         require(isToken(_tokenAddress), "Deposit::deposit: this is not a token");
         require(_amount > 0, "Deposit::deposit: invalid amount");
 
-        IERC20(_tokenAddress).safeTransferFrom(msg.sender, address(this), _amount);
+        IERC20Upgradeable(_tokenAddress).safeTransferFrom(msg.sender, address(this), _amount);
 
         IAToken aToken = IAToken(lendingPool.getReserveData(_tokenAddress).aTokenAddress);
 

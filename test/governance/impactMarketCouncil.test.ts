@@ -129,12 +129,13 @@ describe("ImpactMarketCouncil", function () {
 
 	async function createCommunityProposal() {
 		const signatures = [
-			"addCommunity(address[],address,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256)",
+			"addCommunity(address,address[],address,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256)",
 		];
 
 		const calldatas = [
 			ethers.utils.defaultAbiCoder.encode(
 				[
+					"address",
 					"address[]",
 					"address",
 					"uint256",
@@ -147,6 +148,7 @@ describe("ImpactMarketCouncil", function () {
 					"uint256",
 				],
 				[
+					cUSD.address,
 					[carol.address],
 					ambassador.address,
 					parseEther("100"),

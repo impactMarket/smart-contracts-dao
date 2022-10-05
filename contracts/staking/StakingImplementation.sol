@@ -1,9 +1,10 @@
 //SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.4;
 
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "./interfaces/StakingStorageV1.sol";
 
 contract StakingImplementation is
@@ -12,7 +13,7 @@ contract StakingImplementation is
     ReentrancyGuardUpgradeable,
     StakingStorageV1
 {
-    using SafeERC20 for IERC20;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
     using EnumerableSet for EnumerableSet.AddressSet;
 
     /**
@@ -166,7 +167,7 @@ contract StakingImplementation is
         require(_amount > 0, "Stake::stake: Amount can't be 0");
         require(_amount <= type(uint96).max, "Stake::stake: Stake amount too big");
 
-        PACT.safeTransferFrom(msg.sender, address(this), _amount);
+        IERC20Upgradeable(address(PACT)).safeTransferFrom(msg.sender, address(this), _amount);
         SPACT.mint(_holderAddress, uint96(_amount));
 
         //.add method checks if the stakeholdersList already contains this address
@@ -263,7 +264,7 @@ contract StakingImplementation is
         _holder.nextUnstakeId = _index;
 
         SPACT.burn(msg.sender, uint96(_amount));
-        PACT.safeTransfer(msg.sender, _amount);
+        IERC20Upgradeable(address(PACT)).safeTransfer(msg.sender, _amount);
 
         return _amount;
     }

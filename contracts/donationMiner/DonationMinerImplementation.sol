@@ -1,10 +1,11 @@
 //SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.4;
 
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "./interfaces/DonationMinerStorageV4.sol";
 
@@ -15,7 +16,7 @@ contract DonationMinerImplementation is
     ReentrancyGuardUpgradeable,
     DonationMinerStorageV4
 {
-    using SafeERC20 for IERC20;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /**
      * @notice Triggered when a donation has been added
@@ -404,7 +405,7 @@ contract DonationMinerImplementation is
             "DonationMiner::donate: Invalid token"
         );
 
-        _token.safeTransferFrom(msg.sender, address(treasury), _amount);
+        IERC20Upgradeable(address(_token)).safeTransferFrom(msg.sender, address(treasury), _amount);
 
         _addDonation(_delegateAddress, _token, _amount, address(treasury));
     }
@@ -445,7 +446,7 @@ contract DonationMinerImplementation is
     function claimRewards() external override whenNotPaused whenStarted nonReentrant {
         uint256 _claimAmount = _computeRewardsByPeriodNumber(msg.sender, _getLastClaimablePeriod());
 
-        PACT.safeTransfer(msg.sender, _claimAmount);
+        IERC20Upgradeable(address(PACT)).safeTransfer(msg.sender, _claimAmount);
         emit RewardClaimed(msg.sender, _claimAmount);
     }
 
@@ -466,7 +467,7 @@ contract DonationMinerImplementation is
 
         uint256 _claimAmount = _computeRewardsByPeriodNumber(msg.sender, _lastPeriodNumber);
 
-        PACT.safeTransfer(msg.sender, _claimAmount);
+        IERC20Upgradeable(address(PACT)).safeTransfer(msg.sender, _claimAmount);
 
         emit RewardClaimedPartial(msg.sender, _claimAmount, _lastPeriodNumber);
     }
@@ -726,7 +727,7 @@ contract DonationMinerImplementation is
         address _to,
         uint256 _amount
     ) external override onlyOwner nonReentrant {
-        _token.safeTransfer(_to, _amount);
+        IERC20Upgradeable(address(_token)).safeTransfer(_to, _amount);
 
         emit TransferERC20(address(_token), _to, _amount);
     }

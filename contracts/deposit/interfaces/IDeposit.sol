@@ -1,7 +1,6 @@
 //SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.4;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "../../externalInterfaces/aave/ILendingPool.sol";
 import "../../donationMiner/interfaces/IDonationMiner.sol";
@@ -18,7 +17,7 @@ interface IDeposit {
         mapping(address => Depositor) depositors;
     }
 
-    function getVersion() external returns(uint256);
+    function getVersion() external pure returns(uint256);
     function lendingPool() external view returns(ILendingPool);
     function treasury() external view returns (ITreasury);
     function donationMiner() external view returns (IDonationMiner);
