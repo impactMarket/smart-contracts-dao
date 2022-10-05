@@ -1,6 +1,7 @@
 //SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.4;
 
+import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "../../externalInterfaces/aave/ILendingPool.sol";
 import "../../donationMiner/interfaces/IDonationMiner.sol";

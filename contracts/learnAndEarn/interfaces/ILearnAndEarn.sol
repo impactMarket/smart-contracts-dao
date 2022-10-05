@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.4;
 
-import {IERC20Upgradeable as IERC202} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 
 import "../../community/interfaces/ICommunityAdmin.sol";
 
@@ -18,7 +18,7 @@ interface ILearnAndEarn {
      *  A beneficiary can claim rewards after each course
      */
     struct Program {
-        IERC202 token;
+        IERC20 token;
         uint256 balance;
         ProgramState state;
         mapping(uint256 => mapping(address => uint256)) courseClaims;    // the reward amount claimed by beneficiaries for each course
@@ -28,7 +28,7 @@ interface ILearnAndEarn {
     function signerWalletAddress() external view returns(address);
     function communityAdmin() external view returns(ICommunityAdmin);
     function programs(uint256 _id) external view returns(
-        IERC202 token,
+        IERC20 token,
         uint256 balance,
         ProgramState state
     );
@@ -41,7 +41,7 @@ interface ILearnAndEarn {
     ) external view returns (uint256);
     function updateSignerWalletAddress(address _newSignerAddress) external;
     function updateCommunityAdmin(ICommunityAdmin _communityAdmin) external;
-    function addProgram(uint256 _id, IERC202 _token) external;
+    function addProgram(uint256 _id, IERC20 _token) external;
     function fundProgram(uint256 _programId, uint256 _amount) external;
     function pauseProgram(uint256 _id) external;
     function unpauseProgram(uint256 _id) external;

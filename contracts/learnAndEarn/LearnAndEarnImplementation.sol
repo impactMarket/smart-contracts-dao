@@ -16,7 +16,7 @@ contract LearnAndEarnImplementation is
     ReentrancyGuardUpgradeable,
     LearnAndEarnStorageV1
 {
-    using SafeERC20Upgradeable for IERC202;
+    using SafeERC20Upgradeable for IERC20;
     using EnumerableSet for EnumerableSet.UintSet;
     using ECDSA for bytes32;
 
@@ -90,7 +90,7 @@ contract LearnAndEarnImplementation is
         view
         override
         returns (
-            IERC202 token,
+            IERC20 token,
             uint256 balance,
             ProgramState state
         )
@@ -175,7 +175,7 @@ contract LearnAndEarnImplementation is
      * @param _id the id of the program
      * @param _token the token used for reward
      */
-    function addProgram(uint256 _id, IERC202 _token)
+    function addProgram(uint256 _id, IERC20 _token)
         external
         override
         onlyOwnerOrImpactMarketCouncil
