@@ -3,6 +3,7 @@ import { DeployFunction } from "hardhat-deploy/types";
 import { getCUSDAddress } from "./cUSD";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { ethers } from "hardhat";
+import { toEther } from "../../test/utils/helpers";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const { deployments, ethers } = hre;
@@ -85,6 +86,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	);
 
 	await CommunityAdminContract.updateTreasury(Treasury.address);
+	await CommunityAdminContract.updateDefaultMinClaimAmount(toEther(0.02));
 
 	await TreasuryContract.updateCommunityAdmin(
 		communityAdminProxyResult.address

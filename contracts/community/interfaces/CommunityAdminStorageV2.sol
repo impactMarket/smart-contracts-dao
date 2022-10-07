@@ -15,5 +15,4 @@ abstract contract CommunityAdminStorageV2 is CommunityAdminStorageV1 {
     IImpactMarketCouncil public override impactMarketCouncil;
     IAmbassadors public override ambassadors;
     address public override communityMiddleProxy;
-    address public override authorizedWalletAddress;
 }

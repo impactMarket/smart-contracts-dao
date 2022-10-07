@@ -23,6 +23,7 @@ interface ICommunityAdmin {
     function ambassadors() external view returns(IAmbassadors);
     function communityMiddleProxy() external view returns(address);
     function authorizedWalletAddress() external view returns(address);
+    function defaultMinClaimAmount() external view returns(uint256);
     function communities(address _community) external view returns(CommunityState);
     function communityImplementation() external view returns(ICommunity);
     function communityProxyAdmin() external view returns(ProxyAdmin);
@@ -35,6 +36,7 @@ interface ICommunityAdmin {
     function updateCommunityMiddleProxy(address _communityMiddleProxy) external;
     function updateCommunityImplementation(ICommunity _communityImplementation_) external;
     function updateAuthorizedWalletAddress(address _newSignerAddress) external;
+    function updateDefaultMinClaimAmount(uint256 _newDefaultMinClaimAmount) external;
     function setCommunityToAmbassador(address _ambassador, ICommunity _communityAddress) external;
     function updateBeneficiaryParams(
         ICommunity _community,

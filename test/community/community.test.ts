@@ -87,19 +87,19 @@ describe.only("Community", () => {
 	let firstBlock: number;
 	const incrementIntervalDefault = 12;
 	const baseIntervalDefault = 36;
-	const claimAmountDefault = parseEther("2");
+	const maxClaimAmountDefault = parseEther("2");
 	const maxClaimDefault = parseEther("10");
 	const decreaseStepDefault = parseEther("0.01");
 	const communityMinTrancheDefault = parseEther("100");
 	const communityMaxTrancheDefault = parseEther("5000");
 	const maxBeneficiariesDefault = 100;
-	const weekInBlocks = 120960;
 	const initialAmountDefault = parseEther("0.05");
 	const zeroAddress = "0x0000000000000000000000000000000000000000";
 	const mintAmount = parseEther("10000");
 	const managerRole = keccak256(ethers.utils.toUtf8Bytes("MANAGER_ROLE"));
 	const TREASURY_SAFETY_FACTOR = 10;
 	const TREASURY_SAFETY_LIMIT = toEther(100);
+	const DEFAULT_MIN_CLAIM_AMOUNT = toEther(0.02);
 
 	async function init() {
 		[
@@ -216,7 +216,7 @@ describe.only("Community", () => {
 			cUSD.address,
 			[communityManagerA.address],
 			ambassadorA.address,
-			claimAmountDefault,
+			maxClaimAmountDefault,
 			maxClaimDefault,
 			decreaseStepDefault,
 			baseIntervalDefault,
@@ -262,7 +262,7 @@ describe.only("Community", () => {
 		beforeEach(async () => {
 			await deploy();
 
-			await cUSD.mint(treasuryProxy.address, mintAmount.toString());
+			await cUSD.mint(treasuryProxy.address, mintAmount);
 
 			await addDefaultCommunity();
 		});
@@ -271,18 +271,22 @@ describe.only("Community", () => {
 			(await communityProxy.previousCommunity()).should.be.equal(
 				zeroAddress
 			);
+			(await communityProxy.maxClaimAmount()).should.be.equal(
+				maxClaimAmountDefault
+			);
 			(await communityProxy.claimAmount()).should.be.equal(
-				claimAmountDefault.toString()
+				maxClaimAmountDefault
 			);
 			(await communityProxy.baseInterval()).should.be.equal(
-				baseIntervalDefault.toString()
+				baseIntervalDefault
 			);
 			(await communityProxy.incrementInterval()).should.be.equal(
-				incrementIntervalDefault.toString()
+				incrementIntervalDefault
 			);
-			(await communityProxy.maxClaim()).should.be.equal(
-				maxClaimDefault.toString()
+			(await communityProxy.maxTotalClaim()).should.be.equal(
+				maxClaimDefault
 			);
+			(await communityProxy.maxClaim()).should.be.equal(maxClaimDefault);
 			(await communityProxy.validBeneficiaryCount()).should.be.equal(0);
 			(await communityProxy.treasuryFunds()).should.be.equal(
 				parseEther("100")
@@ -297,7 +301,10 @@ describe.only("Community", () => {
 				decreaseStepDefault
 			);
 			(await communityProxy.getVersion()).should.be.equal(3);
-			(await communityAdminProxy.getVersion()).should.be.equal(2);
+			(await communityAdminProxy.getVersion()).should.be.equal(3);
+			(await communityAdminProxy.defaultMinClaimAmount()).should.be.equal(
+				DEFAULT_MIN_CLAIM_AMOUNT
+			);
 		});
 
 		it("should not updateCommunityImplementation if not owner", async () => {
@@ -349,17 +356,17 @@ describe.only("Community", () => {
 		});
 
 		it("should add a community if admin", async () => {
-			await cUSD.mint(treasuryProxy.address, mintAmount.toString());
+			await cUSD.mint(treasuryProxy.address, mintAmount);
 
 			const tx = await communityAdminProxy.addCommunity(
 				cUSD.address,
 				[communityManagerA.address],
 				ambassadorA.address,
-				claimAmountDefault.toString(),
-				maxClaimDefault.toString(),
-				decreaseStepDefault.toString(),
-				baseIntervalDefault.toString(),
-				incrementIntervalDefault.toString(),
+				maxClaimAmountDefault,
+				maxClaimDefault,
+				decreaseStepDefault,
+				baseIntervalDefault,
+				incrementIntervalDefault,
 				communityMinTrancheDefault,
 				communityMaxTrancheDefault,
 				maxBeneficiariesDefault
@@ -375,13 +382,15 @@ describe.only("Community", () => {
 				communityAddress
 			);
 
-			(await communityProxy.baseInterval())
-				.toString()
-				.should.be.equal(baseIntervalDefault.toString());
-			(await communityProxy.incrementInterval())
-				.toString()
-				.should.be.equal(incrementIntervalDefault.toString());
-			(await communityProxy.maxClaim()).should.be.equal(maxClaimDefault);
+			(await communityProxy.baseInterval()).should.be.equal(
+				baseIntervalDefault
+			);
+			(await communityProxy.incrementInterval()).should.be.equal(
+				incrementIntervalDefault
+			);
+			(await communityProxy.maxTotalClaim()).should.be.equal(
+				maxClaimDefault
+			);
 		});
 
 		it("should not add a community without managers", async () => {
@@ -390,11 +399,11 @@ describe.only("Community", () => {
 					cUSD.address,
 					[],
 					ambassadorA.address,
-					claimAmountDefault.toString(),
-					maxClaimDefault.toString(),
-					decreaseStepDefault.toString(),
-					baseIntervalDefault.toString(),
-					incrementIntervalDefault.toString(),
+					maxClaimAmountDefault,
+					maxClaimDefault,
+					decreaseStepDefault,
+					baseIntervalDefault,
+					incrementIntervalDefault,
 					communityMinTrancheDefault,
 					communityMaxTrancheDefault,
 					maxBeneficiariesDefault
@@ -405,17 +414,17 @@ describe.only("Community", () => {
 		});
 
 		it("should remove a community if admin", async () => {
-			await cUSD.mint(treasuryProxy.address, mintAmount.toString());
+			await cUSD.mint(treasuryProxy.address, mintAmount);
 
 			const tx = await communityAdminProxy.addCommunity(
 				cUSD.address,
 				[communityManagerA.address],
 				ambassadorA.address,
-				claimAmountDefault.toString(),
-				maxClaimDefault.toString(),
-				decreaseStepDefault.toString(),
-				baseIntervalDefault.toString(),
-				incrementIntervalDefault.toString(),
+				maxClaimAmountDefault,
+				maxClaimDefault,
+				decreaseStepDefault,
+				baseIntervalDefault,
+				incrementIntervalDefault,
 				communityMinTrancheDefault,
 				communityMaxTrancheDefault,
 				maxBeneficiariesDefault
@@ -440,11 +449,11 @@ describe.only("Community", () => {
 					cUSD.address,
 					[communityManagerA.address],
 					ambassadorA.address,
-					claimAmountDefault.toString(),
-					maxClaimDefault.toString(),
-					decreaseStepDefault.toString(),
-					incrementIntervalDefault.toString(),
-					baseIntervalDefault.toString(),
+					maxClaimAmountDefault,
+					maxClaimDefault,
+					decreaseStepDefault,
+					incrementIntervalDefault,
+					baseIntervalDefault,
 					communityMinTrancheDefault,
 					communityMaxTrancheDefault,
 					maxBeneficiariesDefault
@@ -455,11 +464,11 @@ describe.only("Community", () => {
 					cUSD.address,
 					[communityManagerA.address],
 					ambassadorA.address,
-					maxClaimDefault.toString(), // it's supposed to be wrong!
-					claimAmountDefault.toString(),
-					decreaseStepDefault.toString(),
-					baseIntervalDefault.toString(),
-					incrementIntervalDefault.toString(),
+					maxClaimDefault, // it's supposed to be wrong!
+					maxClaimAmountDefault,
+					decreaseStepDefault,
+					baseIntervalDefault,
+					incrementIntervalDefault,
 					communityMinTrancheDefault,
 					communityMaxTrancheDefault,
 					maxBeneficiariesDefault
@@ -553,6 +562,40 @@ describe.only("Community", () => {
 				"CommunityAdmin: Not Owner Or ImpactMarketCouncil"
 			);
 		});
+
+		it("should updateDefaultMinClaimAmount if owner or impactMarketCouncil", async () => {
+			await expect(
+				communityAdminProxy.updateDefaultMinClaimAmount(toEther(123))
+			).to.be.fulfilled;
+
+			expect(
+				await communityAdminProxy.defaultMinClaimAmount()
+			).to.be.equal(toEther(123));
+		});
+
+		it("should updateDefaultMinClaimAmount if owner", async () => {
+			await expect(
+				communityAdminProxy.updateDefaultMinClaimAmount(toEther(123))
+			).to.be.fulfilled;
+
+			expect(
+				await communityAdminProxy.defaultMinClaimAmount()
+			).to.be.equal(toEther(123));
+		});
+
+		it("should not updateDefaultMinClaimAmount if not owner", async () => {
+			await expect(
+				communityAdminProxy
+					.connect(adminAccount1)
+					.updateDefaultMinClaimAmount(toEther(123))
+			).to.be.rejectedWith(
+				"CommunityAdmin: Not Owner Or ImpactMarketCouncil"
+			);
+
+			expect(
+				await communityAdminProxy.defaultMinClaimAmount()
+			).to.be.equal(DEFAULT_MIN_CLAIM_AMOUNT);
+		});
 	});
 
 	describe("Community", () => {
@@ -563,7 +606,7 @@ describe.only("Community", () => {
 		beforeEach(async () => {
 			await deploy();
 
-			await cUSD.mint(treasuryProxy.address, mintAmount.toString());
+			await cUSD.mint(treasuryProxy.address, mintAmount);
 
 			await addDefaultCommunity();
 		});
@@ -691,8 +734,8 @@ describe.only("Community", () => {
 		// 		communityAdminProxy.address
 		// 	);
 		// 	expect(await communityProxy.locked()).to.be.equal(false);
-		// 	expect(await communityProxy.claimAmount()).to.be.equal(
-		// 		claimAmountTwo
+		// 	expect(await communityProxy.maxClaimAmount()).to.be.equal(
+		// 		maxClaimAmountTwo
 		// 	);
 		// 	expect(await communityProxy.baseInterval()).to.be.equal(
 		// 		threeMinutesInBlocks
@@ -700,7 +743,7 @@ describe.only("Community", () => {
 		// 	expect(await communityProxy.incrementInterval()).to.be.equal(
 		// 		oneMinuteInBlocks
 		// 	);
-		// 	expect(await communityProxy.maxClaim()).to.be.equal(
+		// 	expect(await communityProxy.maxTotalClaim()).to.be.equal(
 		// 		maxClaimTen.sub(oneCent.mul(2))
 		// 	);
 		// 	expect(await communityProxy.validBeneficiaryCount()).to.be.equal(2);
@@ -803,8 +846,8 @@ describe.only("Community", () => {
 		// 		communityAdminProxy.address
 		// 	);
 		// 	expect(await communityProxy.locked()).to.be.equal(false);
-		// 	expect(await communityProxy.claimAmount()).to.be.equal(
-		// 		claimAmountTwo
+		// 	expect(await communityProxy.maxClaimAmount()).to.be.equal(
+		// 		maxClaimAmountTwo
 		// 	);
 		// 	expect(await communityProxy.baseInterval()).to.be.equal(
 		// 		threeMinutesInBlocks
@@ -812,7 +855,7 @@ describe.only("Community", () => {
 		// 	expect(await communityProxy.incrementInterval()).to.be.equal(
 		// 		oneMinuteInBlocks
 		// 	);
-		// 	expect(await communityProxy.maxClaim()).to.be.equal(
+		// 	expect(await communityProxy.maxTotalClaim()).to.be.equal(
 		// 		maxClaimTen.sub(oneCent.mul(2))
 		// 	);
 		// 	expect(await communityProxy.validBeneficiaryCount()).to.be.equal(2);
@@ -1096,7 +1139,7 @@ describe.only("Community", () => {
 		beforeEach(async () => {
 			await deploy();
 
-			await cUSD.mint(treasuryProxy.address, mintAmount.toString());
+			await cUSD.mint(treasuryProxy.address, mintAmount);
 
 			await addDefaultCommunity();
 		});
@@ -1451,15 +1494,13 @@ describe.only("Community", () => {
 		});
 
 		it("should give beneficiary 5 cents when adding to community", async () => {
-			(await cUSD.balanceOf(beneficiaryA.address))
-				.toString()
-				.should.be.equal("0");
+			(await cUSD.balanceOf(beneficiaryA.address)).should.be.equal("0");
 			await communityProxy
 				.connect(communityManagerA)
 				.addBeneficiaries([beneficiaryA.address]);
-			(await cUSD.balanceOf(beneficiaryA.address))
-				.toString()
-				.should.be.equal(initialAmountDefault.toString());
+			(await cUSD.balanceOf(beneficiaryA.address)).should.be.equal(
+				initialAmountDefault
+			);
 		});
 
 		it("should lock beneficiary from community", async () => {
@@ -2522,7 +2563,7 @@ describe.only("Community", () => {
 		beforeEach(async () => {
 			await deploy();
 
-			await cUSD.mint(treasuryProxy.address, mintAmount.toString());
+			await cUSD.mint(treasuryProxy.address, mintAmount);
 
 			await addDefaultCommunity();
 
@@ -2655,10 +2696,10 @@ describe.only("Community", () => {
 			expect(
 				(await communityProxy.beneficiaries(beneficiaryA.address))
 					.claimedAmount
-			).to.be.equal(claimAmountDefault);
+			).to.be.equal(maxClaimAmountDefault);
 
 			(await cUSD.balanceOf(beneficiaryA.address)).should.be.equal(
-				claimAmountDefault.add(initialAmountDefault)
+				maxClaimAmountDefault.add(initialAmountDefault)
 			);
 		});
 
@@ -2669,10 +2710,10 @@ describe.only("Community", () => {
 			const incrementInterval = (
 				await communityProxy.incrementInterval()
 			).toNumber();
-			const claimAmount = await communityProxy.claimAmount();
-			const maxClaimAmount = await communityProxy.maxClaim();
-			let maxClaimsPerUser = maxClaimAmount.div(claimAmount).toNumber();
-			if (claimAmount.mul(maxClaimsPerUser) < maxClaimAmount) {
+			const maxClaimAmount = await communityProxy.maxClaimAmount();
+			const maxClaim = await communityProxy.maxTotalClaim();
+			let maxClaimsPerUser = maxClaim.div(maxClaimAmount).toNumber();
+			if (maxClaimAmount.mul(maxClaimsPerUser) < maxClaim) {
 				maxClaimsPerUser++;
 			}
 			for (let index = 0; index < maxClaimsPerUser; index++) {
@@ -2686,9 +2727,7 @@ describe.only("Community", () => {
 				beneficiaryA.address
 			);
 			expect(beneficiaryADetails.claims).to.be.equal(maxClaimsPerUser);
-			expect(beneficiaryADetails.claimedAmount).to.be.equal(
-				maxClaimAmount
-			);
+			expect(beneficiaryADetails.claimedAmount).to.be.equal(maxClaim);
 		});
 
 		it("should not claim after max claim", async () => {
@@ -2698,10 +2737,10 @@ describe.only("Community", () => {
 			const incrementInterval = (
 				await communityProxy.incrementInterval()
 			).toNumber();
-			const claimAmount = await communityProxy.claimAmount();
-			const maxClaimAmount = await communityProxy.maxClaim();
-			let maxClaimsPerUser = maxClaimAmount.div(claimAmount).toNumber();
-			if (claimAmount.mul(maxClaimsPerUser) < maxClaimAmount) {
+			const maxClaimAmount = await communityProxy.maxClaimAmount();
+			const maxClaim = await communityProxy.maxTotalClaim();
+			let maxClaimsPerUser = maxClaim.div(maxClaimAmount).toNumber();
+			if (maxClaimAmount.mul(maxClaimsPerUser) < maxClaim) {
 				maxClaimsPerUser++;
 			}
 			for (let index = 0; index < maxClaimsPerUser; index++) {
@@ -2729,7 +2768,7 @@ describe.only("Community", () => {
 		beforeEach(async () => {
 			await deploy();
 
-			await cUSD.mint(treasuryProxy.address, mintAmount.toString());
+			await cUSD.mint(treasuryProxy.address, mintAmount);
 
 			await addDefaultCommunity();
 		});
@@ -2846,7 +2885,7 @@ describe.only("Community", () => {
 
 		it("should edit community if manager", async () => {
 			(await communityProxy.incrementInterval()).should.be.equal(
-				incrementIntervalDefault.toString()
+				incrementIntervalDefault
 			);
 
 			(await communityProxy.maxBeneficiaries()).should.be.equal(
@@ -2855,24 +2894,40 @@ describe.only("Community", () => {
 
 			await communityAdminProxy.updateBeneficiaryParams(
 				communityProxy.address,
-				claimAmountDefault.toString(),
-				maxClaimDefault.toString(),
-				decreaseStepDefault.toString(),
-				weekInBlocks.toString(),
-				baseIntervalDefault.toString(),
-				maxBeneficiariesDefault + 1
+				maxClaimAmountDefault.mul(2),
+				maxClaimDefault.mul(3),
+				decreaseStepDefault.mul(4),
+				baseIntervalDefault * 5,
+				incrementIntervalDefault * 6,
+				maxBeneficiariesDefault + 7
+			);
+
+			(await communityProxy.maxClaimAmount()).should.be.equal(
+				maxClaimAmountDefault.mul(2)
+			);
+
+			(await communityProxy.maxClaimAmount()).should.be.equal(
+				maxClaimAmountDefault.mul(2)
+			);
+
+			(await communityProxy.maxTotalClaim()).should.be.equal(
+				maxClaimDefault.mul(3)
+			);
+
+			(await communityProxy.decreaseStep()).should.be.equal(
+				decreaseStepDefault.mul(4)
+			);
+
+			(await communityProxy.baseInterval()).should.be.equal(
+				baseIntervalDefault * 5
 			);
 
 			(await communityProxy.incrementInterval()).should.be.equal(
-				baseIntervalDefault.toString()
-			);
-
-			(await communityProxy.maxClaim()).should.be.equal(
-				maxClaimDefault.toString()
+				incrementIntervalDefault * 6
 			);
 
 			(await communityProxy.maxBeneficiaries()).should.be.equal(
-				maxBeneficiariesDefault + 1
+				maxBeneficiariesDefault + 7
 			);
 		});
 
@@ -2881,11 +2936,11 @@ describe.only("Community", () => {
 				communityProxy
 					.connect(adminAccount1)
 					.updateBeneficiaryParams(
-						claimAmountDefault.toString(),
-						maxClaimDefault.toString(),
-						decreaseStepDefault.toString(),
-						baseIntervalDefault.toString(),
-						baseIntervalDefault.toString()
+						maxClaimAmountDefault,
+						maxClaimDefault,
+						decreaseStepDefault,
+						baseIntervalDefault,
+						baseIntervalDefault
 					)
 			).to.be.rejectedWith("Ownable: caller is not the owner");
 		});
@@ -2894,26 +2949,30 @@ describe.only("Community", () => {
 			await expect(
 				communityAdminProxy.updateBeneficiaryParams(
 					communityProxy.address,
-					claimAmountDefault.toString(),
-					maxClaimDefault.toString(),
-					decreaseStepDefault.toString(),
-					baseIntervalDefault.toString(),
-					weekInBlocks.toString(),
+					maxClaimAmountDefault,
+					maxClaimDefault,
+					decreaseStepDefault,
+					baseIntervalDefault,
+					baseIntervalDefault + 1,
 					maxBeneficiariesDefault
 				)
-			).to.be.rejected;
+			).to.be.rejectedWith(
+				"Community::updateBeneficiaryParams: baseInterval must be greater than incrementInterval"
+			);
 
 			await expect(
 				communityAdminProxy.updateBeneficiaryParams(
 					communityProxy.address,
-					maxClaimDefault.toString(),
-					claimAmountDefault.toString(),
-					decreaseStepDefault.toString(),
-					baseIntervalDefault.toString(),
-					weekInBlocks.toString(),
+					maxClaimDefault,
+					maxClaimAmountDefault,
+					decreaseStepDefault,
+					baseIntervalDefault,
+					incrementIntervalDefault,
 					maxBeneficiariesDefault
 				)
-			).to.be.rejected;
+			).to.be.rejectedWith(
+				"Community::updateBeneficiaryParams: maxClaimAmount too big"
+			);
 		});
 
 		it("should not add manager to community if manager", async () => {
@@ -3030,11 +3089,11 @@ describe.only("Community", () => {
 				cUSD.address,
 				[communityManager.address],
 				ambassadorA.address,
-				claimAmountDefault.toString(),
-				maxClaimDefault.toString(),
-				decreaseStepDefault.toString(),
-				baseIntervalDefault.toString(),
-				incrementIntervalDefault.toString(),
+				maxClaimAmountDefault,
+				maxClaimDefault,
+				decreaseStepDefault,
+				baseIntervalDefault,
+				incrementIntervalDefault,
 				communityMinTrancheDefault,
 				communityMaxTrancheDefault,
 				maxBeneficiariesDefault
@@ -3049,7 +3108,7 @@ describe.only("Community", () => {
 				"CommunityImplementation",
 				communityAddress
 			);
-			await cUSD.mint(communityAddress, mintAmount.toString());
+			await cUSD.mint(communityAddress, mintAmount);
 
 			return communityProxy;
 		};
@@ -3103,7 +3162,7 @@ describe.only("Community", () => {
 		});
 
 		it("one beneficiary to one community", async () => {
-			await cUSD.mint(treasuryProxy.address, mintAmount.toString());
+			await cUSD.mint(treasuryProxy.address, mintAmount);
 			const communityProxyA = await addCommunity(communityManagerA);
 			await addBeneficiary(
 				communityProxyA,
@@ -3120,7 +3179,7 @@ describe.only("Community", () => {
 		});
 
 		it("many beneficiaries to one community", async () => {
-			await cUSD.mint(treasuryProxy.address, mintAmount.toString());
+			await cUSD.mint(treasuryProxy.address, mintAmount);
 			const communityProxyA = await addCommunity(communityManagerA);
 			const previousCommunityBalance = await cUSD.balanceOf(
 				communityProxyA.address
@@ -3155,9 +3214,9 @@ describe.only("Community", () => {
 			await beneficiaryClaim(communityProxyA, beneficiaryB);
 			// beneficiary C claims it all
 			const claimAmount = await communityProxyA.claimAmount();
-			const maxClaimAmount = await communityProxyA.maxClaim();
-			let maxClaimsPerUser = maxClaimAmount.div(claimAmount).toNumber();
-			if (claimAmount.mul(maxClaimsPerUser) < maxClaimAmount) {
+			const maxClaim = await communityProxyA.maxTotalClaim();
+			let maxClaimsPerUser = maxClaim.div(claimAmount).toNumber();
+			if (claimAmount.mul(maxClaimsPerUser) < maxClaim) {
 				maxClaimsPerUser++;
 			}
 			for (let index = 1; index < maxClaimsPerUser; index++) {
@@ -3193,13 +3252,13 @@ describe.only("Community", () => {
 				.should.be.equal(
 					claimAmount
 						.mul(6)
-						.add(maxClaimAmount)
+						.add(maxClaim)
 						.add(initialAmountDefault.mul(4))
 				);
 		});
 
 		it("many beneficiaries to many communities", async () => {
-			await cUSD.mint(treasuryProxy.address, mintAmount.toString());
+			await cUSD.mint(treasuryProxy.address, mintAmount);
 			// community A
 			const communityProxyA = await addCommunity(communityManagerA);
 			const communityProxyB = await addCommunity(communityManagerB);
@@ -3238,11 +3297,9 @@ describe.only("Community", () => {
 			await beneficiaryClaim(communityProxyA, beneficiaryA);
 			// beneficiary B claims it all
 			const claimAmountA = await communityProxyA.claimAmount();
-			const maxClaimAmountA = await communityProxyA.maxClaim();
-			let maxClaimsPerUserA = maxClaimAmountA
-				.div(claimAmountA)
-				.toNumber();
-			if (claimAmountA.mul(maxClaimsPerUserA) < maxClaimAmountA) {
+			const maxClaimA = await communityProxyA.maxTotalClaim();
+			let maxClaimsPerUserA = maxClaimA.div(claimAmountA).toNumber();
+			if (claimAmountA.mul(maxClaimsPerUserA) < maxClaimA) {
 				maxClaimsPerUserA++;
 			}
 			for (let index = 1; index < maxClaimsPerUserA; index++) {
@@ -3254,11 +3311,9 @@ describe.only("Community", () => {
 				.fulfilled;
 			// beneficiary C claims it all
 			const claimAmountB = await communityProxyB.claimAmount();
-			const maxClaimAmountB = await communityProxyB.maxClaim();
-			let maxClaimsPerUserB = maxClaimAmountB
-				.div(claimAmountB)
-				.toNumber();
-			if (claimAmountB.mul(maxClaimsPerUserB) < maxClaimAmountB) {
+			const maxClaimB = await communityProxyB.maxTotalClaim();
+			let maxClaimsPerUserB = maxClaimB.div(claimAmountB).toNumber();
+			if (claimAmountB.mul(maxClaimsPerUserB) < maxClaimB) {
 				maxClaimsPerUserB++;
 			}
 			for (let index = 1; index < maxClaimsPerUserB; index++) {
@@ -3304,7 +3359,7 @@ describe.only("Community", () => {
 				.should.be.equal(
 					claimAmountA
 						.mul(3)
-						.add(maxClaimAmountA)
+						.add(maxClaimA)
 						.add(initialAmountDefault.mul(2))
 				);
 			const currentCommunityBalanceB = await cUSD.balanceOf(
@@ -3315,7 +3370,7 @@ describe.only("Community", () => {
 				.should.be.equal(
 					claimAmountB
 						.mul(4)
-						.add(maxClaimAmountB)
+						.add(maxClaimB)
 						.add(initialAmountDefault.mul(2))
 				);
 		});
@@ -3328,7 +3383,7 @@ describe.only("Community", () => {
 
 		beforeEach(async () => {
 			await deploy();
-			await cUSD.mint(treasuryProxy.address, mintAmount.toString());
+			await cUSD.mint(treasuryProxy.address, mintAmount);
 
 			await addDefaultCommunity();
 
@@ -3346,7 +3401,7 @@ describe.only("Community", () => {
 				await communityAdminProxy.calculateCommunityTrancheAmount(
 					communityProxy.address
 				)
-			).to.eq(claimAmountDefault.add(initialAmountDefault));
+			).to.eq(maxClaimAmountDefault.add(initialAmountDefault));
 			await expect(
 				communityProxy.connect(communityManagerA).requestFunds()
 			).to.be.fulfilled;
@@ -3466,7 +3521,7 @@ describe.only("Community", () => {
 			);
 		});
 
-		it("should transfer funds to community", async () => {
+		it("should requestFunds if manager", async () => {
 			expect(await cUSD.balanceOf(communityProxy.address)).to.be.equal(
 				communityMinTrancheDefault
 			);
@@ -3481,7 +3536,7 @@ describe.only("Community", () => {
 				await communityAdminProxy.calculateCommunityTrancheAmount(
 					communityProxy.address
 				)
-			).to.eq(claimAmountDefault.add(initialAmountDefault));
+			).to.eq(maxClaimAmountDefault.add(initialAmountDefault));
 			await expect(
 				communityProxy.connect(communityManagerA).requestFunds()
 			).to.be.fulfilled;
@@ -3500,7 +3555,7 @@ describe.only("Community", () => {
 			);
 		});
 
-		it("should not transfer funds to community too often", async () => {
+		it("should not requestFunds too often", async () => {
 			expect(await cUSD.balanceOf(communityProxy.address)).to.be.equal(
 				communityMinTrancheDefault
 			);
@@ -3515,7 +3570,7 @@ describe.only("Community", () => {
 				await communityAdminProxy.calculateCommunityTrancheAmount(
 					communityProxy.address
 				)
-			).to.eq(claimAmountDefault.add(initialAmountDefault));
+			).to.eq(maxClaimAmountDefault.add(initialAmountDefault));
 			await expect(
 				communityProxy.connect(communityManagerA).requestFunds()
 			).to.be.fulfilled;
@@ -3573,7 +3628,7 @@ describe.only("Community", () => {
 				await communityAdminProxy.calculateCommunityTrancheAmount(
 					communityProxy.address
 				)
-			).to.eq(claimAmountDefault.add(initialAmountDefault));
+			).to.eq(maxClaimAmountDefault.add(initialAmountDefault));
 			await expect(
 				communityProxy.connect(communityManagerA).requestFunds()
 			).to.be.fulfilled;
@@ -3843,6 +3898,249 @@ describe.only("Community", () => {
 				communityMinTrancheDefault
 			);
 		});
+
+		it("should recalculate claimAmount after transfer #1", async () => {
+			await communityProxy
+				.connect(communityManagerA)
+				.addBeneficiaries([
+					beneficiaryA.address,
+					beneficiaryB.address,
+					beneficiaryC.address,
+					beneficiaryD.address,
+				]);
+
+			(await communityProxy.validBeneficiaryCount()).should.eq(4);
+
+			const communityInitialBalance = await cUSD.balanceOf(
+				communityProxy.address
+			);
+
+			communityAdminProxy.transferFromCommunity(
+				communityProxy.address,
+				cUSD.address,
+				adminAccount1.address,
+				communityInitialBalance.sub(toEther(0.01))
+			);
+
+			(await cUSD.balanceOf(communityProxy.address)).should.eq(
+				toEther(0.01)
+			);
+
+			(await communityProxy.maxClaimAmount()).should.eq(
+				maxClaimAmountDefault
+			);
+			(await communityProxy.claimAmount()).should.eq(
+				DEFAULT_MIN_CLAIM_AMOUNT
+			);
+		});
+
+		it("should recalculate claimAmount after transfer #2", async () => {
+			await communityProxy
+				.connect(communityManagerA)
+				.addBeneficiaries([
+					beneficiaryA.address,
+					beneficiaryB.address,
+					beneficiaryC.address,
+					beneficiaryD.address,
+				]);
+
+			(await communityProxy.validBeneficiaryCount()).should.eq(4);
+
+			const communityInitialBalance = await cUSD.balanceOf(
+				communityProxy.address
+			);
+
+			communityAdminProxy.transferFromCommunity(
+				communityProxy.address,
+				cUSD.address,
+				adminAccount1.address,
+				communityInitialBalance.sub(toEther(2))
+			);
+
+			(await cUSD.balanceOf(communityProxy.address)).should.eq(
+				toEther(2)
+			);
+
+			(await communityProxy.maxClaimAmount()).should.eq(
+				maxClaimAmountDefault
+			);
+			(await communityProxy.claimAmount()).should.eq(toEther(2).div(4));
+		});
+
+		it("should recalculate claimAmount after transfer #3", async () => {
+			await communityProxy
+				.connect(communityManagerA)
+				.addBeneficiaries([
+					beneficiaryA.address,
+					beneficiaryB.address,
+					beneficiaryC.address,
+					beneficiaryD.address,
+				]);
+
+			(await communityProxy.validBeneficiaryCount()).should.eq(4);
+
+			const communityInitialBalance = await cUSD.balanceOf(
+				communityProxy.address
+			);
+
+			communityAdminProxy.transferFromCommunity(
+				communityProxy.address,
+				cUSD.address,
+				adminAccount1.address,
+				communityInitialBalance.sub(toEther(10))
+			);
+
+			(await cUSD.balanceOf(communityProxy.address)).should.eq(
+				toEther(10)
+			);
+
+			(await communityProxy.maxClaimAmount()).should.eq(
+				maxClaimAmountDefault
+			);
+			(await communityProxy.claimAmount()).should.eq(
+				maxClaimAmountDefault
+			);
+		});
+
+		it("should recalculate claimAmount after requestFunds #1", async () => {
+			const newBeneficiariesNumber = 20;
+			const newBeneficiaries = [];
+
+			for (let i = 1; i <= newBeneficiariesNumber; i++) {
+				newBeneficiaries.push(ethers.Wallet.createRandom().address);
+			}
+			(await communityProxy.validBeneficiaryCount()).should.be.equal(0);
+			await communityProxy
+				.connect(communityManagerA)
+				.addBeneficiaries(newBeneficiaries);
+
+			(await communityProxy.validBeneficiaryCount()).should.eq(20);
+
+			const communityInitialBalance = await cUSD.balanceOf(
+				communityProxy.address
+			);
+
+			await communityAdminProxy.transferFromCommunity(
+				communityProxy.address,
+				cUSD.address,
+				adminAccount1.address,
+				communityInitialBalance
+			);
+
+			await treasuryProxy.transfer(
+				cUSD.address,
+				adminAccount1.address,
+				(await cUSD.balanceOf(treasuryProxy.address)).sub(toEther(100))
+			);
+
+			await communityProxy.connect(communityManagerA).requestFunds();
+
+			(await cUSD.balanceOf(communityProxy.address)).should.eq(
+				toEther(10)
+			);
+
+			(await communityProxy.maxClaimAmount()).should.eq(
+				maxClaimAmountDefault
+			);
+			(await communityProxy.claimAmount()).should.eq(toEther(10).div(20));
+		});
+
+		it("should recalculate claimAmount after requestFunds #2", async () => {
+			const newBeneficiariesNumber = 2;
+			const newBeneficiaries = [];
+
+			for (let i = 1; i <= newBeneficiariesNumber; i++) {
+				newBeneficiaries.push(ethers.Wallet.createRandom().address);
+			}
+			(await communityProxy.validBeneficiaryCount()).should.be.equal(0);
+			await communityProxy
+				.connect(communityManagerA)
+				.addBeneficiaries(newBeneficiaries);
+
+			(await communityProxy.validBeneficiaryCount()).should.eq(2);
+
+			const communityInitialBalance = await cUSD.balanceOf(
+				communityProxy.address
+			);
+
+			await communityAdminProxy.transferFromCommunity(
+				communityProxy.address,
+				cUSD.address,
+				adminAccount1.address,
+				communityInitialBalance
+			);
+
+			await treasuryProxy.transfer(
+				cUSD.address,
+				adminAccount1.address,
+				(await cUSD.balanceOf(treasuryProxy.address)).sub(toEther(100))
+			);
+
+			await communityProxy.connect(communityManagerA).requestFunds();
+
+			(await cUSD.balanceOf(communityProxy.address)).should.eq(
+				toEther(10)
+			);
+
+			(await communityProxy.maxClaimAmount()).should.eq(
+				maxClaimAmountDefault
+			);
+			(await communityProxy.claimAmount()).should.eq(
+				maxClaimAmountDefault
+			);
+		});
+
+		it("should claim less after claimAmount has been recalculated", async () => {
+			await communityProxy
+				.connect(communityManagerA)
+				.addBeneficiaries([
+					beneficiaryA.address,
+					beneficiaryB.address,
+					beneficiaryC.address,
+					beneficiaryD.address,
+				]);
+
+			(await communityProxy.validBeneficiaryCount()).should.eq(4);
+
+			await communityProxy.connect(beneficiaryA).claim();
+
+			(await cUSD.balanceOf(beneficiaryA.address)).should.eq(
+				initialAmountDefault.add(maxClaimAmountDefault)
+			);
+
+			const communityInitialBalance = await cUSD.balanceOf(
+				communityProxy.address
+			);
+
+			communityAdminProxy.transferFromCommunity(
+				communityProxy.address,
+				cUSD.address,
+				adminAccount1.address,
+				communityInitialBalance.sub(toEther(2))
+			);
+
+			(await cUSD.balanceOf(communityProxy.address)).should.eq(
+				toEther(2)
+			);
+
+			const newClaimAmount = toEther(2).div(4);
+			(await communityProxy.maxClaimAmount()).should.eq(
+				maxClaimAmountDefault
+			);
+			(await communityProxy.claimAmount()).should.eq(toEther(2).div(4));
+
+			await communityProxy.connect(beneficiaryB).claim();
+
+			(await cUSD.balanceOf(beneficiaryB.address)).should.eq(
+				initialAmountDefault.add(newClaimAmount)
+			);
+
+			const beneficiaryBData = await communityProxy.beneficiaries(
+				beneficiaryB.address
+			);
+			beneficiaryBData.claims.should.eq(1);
+			beneficiaryBData.claimedAmount.should.eq(newClaimAmount);
+		});
 	});
 
 	describe("Community Implementation - upgrade", () => {
@@ -3857,7 +4155,7 @@ describe.only("Community", () => {
 		beforeEach(async () => {
 			await deploy();
 
-			await cUSD.mint(treasuryProxy.address, mintAmount.toString());
+			await cUSD.mint(treasuryProxy.address, mintAmount);
 
 			oldCommunityAdminImplementation = await ethers.getContractAt(
 				"CommunityAdminImplementationOld",
@@ -3908,7 +4206,7 @@ describe.only("Community", () => {
 		) {
 			const tx = await communityAdminProxy.addCommunity(
 				[communityManagerA.address],
-				claimAmountDefault,
+				maxClaimAmountDefault,
 				maxClaimDefault,
 				decreaseStepDefault,
 				baseIntervalDefault,
@@ -4164,7 +4462,7 @@ describe.only("Community", () => {
 			mUSD = await tokenFactory.deploy("mUSD", "mUSD");
 			celo = await tokenFactory.deploy("celo", "celo");
 
-			await cUSD.mint(treasuryProxy.address, mintAmount.toString());
+			await cUSD.mint(treasuryProxy.address, mintAmount);
 
 			await addDefaultCommunity();
 
@@ -4237,7 +4535,7 @@ describe.only("Community", () => {
 				communityProxy.updateToken(
 					FAKE_ADDRESS,
 					[],
-					claimAmountDefault,
+					maxClaimAmountDefault,
 					maxClaimDefault,
 					decreaseStepDefault,
 					baseIntervalDefault,
@@ -4266,7 +4564,7 @@ describe.only("Community", () => {
 						communityProxy.address,
 						FAKE_ADDRESS,
 						[],
-						claimAmountDefault,
+						maxClaimAmountDefault,
 						maxClaimDefault,
 						decreaseStepDefault,
 						baseIntervalDefault,
@@ -4295,7 +4593,7 @@ describe.only("Community", () => {
 					communityProxy.address,
 					FAKE_ADDRESS,
 					[],
-					claimAmountDefault,
+					maxClaimAmountDefault,
 					maxClaimDefault,
 					decreaseStepDefault,
 					baseIntervalDefault,
@@ -4322,7 +4620,7 @@ describe.only("Community", () => {
 					communityProxy.address,
 					cUSD.address,
 					[],
-					claimAmountDefault,
+					maxClaimAmountDefault,
 					maxClaimDefault,
 					decreaseStepDefault,
 					baseIntervalDefault,
@@ -4355,7 +4653,7 @@ describe.only("Community", () => {
 					communityProxy.address,
 					celo.address,
 					[mUSD.address, celo.address],
-					claimAmountDefault,
+					maxClaimAmountDefault,
 					maxClaimDefault,
 					decreaseStepDefault,
 					baseIntervalDefault,
@@ -4376,12 +4674,16 @@ describe.only("Community", () => {
 			expect(await communityProxy.token()).equal(cUSD.address);
 			expect(await communityProxy.cUSD()).equal(cUSD.address);
 
+			expect(await communityProxy.claimAmount()).equal(
+				maxClaimAmountDefault
+			);
+
 			await expect(
 				communityAdminProxy.updateCommunityToken(
 					communityProxy.address,
 					celo.address,
 					[cUSD.address, mUSD.address, celo.address],
-					claimAmountDefault.mul(2),
+					maxClaimAmountDefault.mul(2),
 					maxClaimDefault.mul(3),
 					decreaseStepDefault.mul(4),
 					baseIntervalDefault * 5,
@@ -4391,10 +4693,16 @@ describe.only("Community", () => {
 
 			expect(await communityProxy.token()).equal(celo.address);
 			expect(await communityProxy.cUSD()).equal(celo.address);
-			expect(await communityProxy.claimAmount()).equal(
-				claimAmountDefault.mul(2)
+			expect(await communityProxy.maxClaimAmount()).equal(
+				maxClaimAmountDefault.mul(2)
 			);
-			expect(await communityProxy.maxClaim()).equal(
+			expect(await communityProxy.claimAmount()).equal(
+				maxClaimAmountDefault.mul(2)
+			);
+			expect(await communityProxy.maxTotalClaim()).equal(
+				maxClaimDefault.mul(3)
+			);
+			expect(await communityProxy.getInitialMaxTotalClaim()).equal(
 				maxClaimDefault.mul(3)
 			);
 			expect(await communityProxy.getInitialMaxClaim()).equal(
@@ -4447,14 +4755,14 @@ describe.only("Community", () => {
 					beneficiaryA.address
 				);
 			expect(claimedAmounts.length).to.be.eq(1);
-			expect(claimedAmounts[0]).to.be.eq(claimAmountDefault);
+			expect(claimedAmounts[0]).to.be.eq(maxClaimAmountDefault);
 
 			await expect(
 				communityAdminProxy.updateCommunityToken(
 					communityProxy.address,
 					celo.address,
 					[cUSD.address, mUSD.address, celo.address],
-					claimAmountDefault.mul(2),
+					maxClaimAmountDefault.mul(2),
 					maxClaimDefault.mul(3),
 					decreaseStepDefault.mul(4),
 					baseIntervalDefault * 2,
@@ -4464,13 +4772,16 @@ describe.only("Community", () => {
 
 			expect(await communityProxy.token()).equal(celo.address);
 			expect(await communityProxy.cUSD()).equal(celo.address);
-			expect(await communityProxy.claimAmount()).equal(
-				claimAmountDefault.mul(2)
+			expect(await communityProxy.maxClaimAmount()).equal(
+				maxClaimAmountDefault.mul(2)
 			);
-			expect(await communityProxy.maxClaim()).equal(
+			expect(await communityProxy.claimAmount()).equal(
+				maxClaimAmountDefault.mul(2)
+			);
+			expect(await communityProxy.maxTotalClaim()).equal(
 				maxClaimDefault.mul(3).sub(decreaseStepDefault.mul(4))
 			);
-			expect(await communityProxy.getInitialMaxClaim()).equal(
+			expect(await communityProxy.getInitialMaxTotalClaim()).equal(
 				maxClaimDefault.mul(3)
 			);
 			expect(await communityProxy.decreaseStep()).equal(
@@ -4506,10 +4817,10 @@ describe.only("Community", () => {
 				.fulfilled;
 
 			expect(await cUSD.balanceOf(beneficiaryA.address)).to.be.equal(
-				claimAmountDefault.add(initialAmountDefault)
+				maxClaimAmountDefault.add(initialAmountDefault)
 			);
 			expect(await celo.balanceOf(beneficiaryA.address)).to.be.equal(
-				claimAmountDefault.mul(2)
+				maxClaimAmountDefault.mul(2)
 			);
 
 			let tokenList2 = await communityProxy.tokenList();
@@ -4521,14 +4832,14 @@ describe.only("Community", () => {
 					beneficiaryA.address
 				);
 			expect(claimedAmounts2.length).to.be.eq(2);
-			expect(claimedAmounts2[0]).to.be.eq(claimAmountDefault);
-			expect(claimedAmounts2[1]).to.be.eq(claimAmountDefault.mul(2));
+			expect(claimedAmounts2[0]).to.be.eq(maxClaimAmountDefault);
+			expect(claimedAmounts2[1]).to.be.eq(maxClaimAmountDefault.mul(2));
 
 			let beneficiary = await communityProxy.beneficiaries(
 				beneficiaryA.address
 			);
 			expect(beneficiary.claimedAmount).to.eq(
-				claimAmountDefault.mul(3).add(claimAmountDefault.mul(2))
+				maxClaimAmountDefault.mul(3).add(maxClaimAmountDefault.mul(2))
 			);
 
 			//third claim - after token update
@@ -4550,10 +4861,10 @@ describe.only("Community", () => {
 				.fulfilled;
 
 			expect(await cUSD.balanceOf(beneficiaryA.address)).to.be.equal(
-				claimAmountDefault.add(initialAmountDefault)
+				maxClaimAmountDefault.add(initialAmountDefault)
 			);
 			expect(await celo.balanceOf(beneficiaryA.address)).to.be.equal(
-				claimAmountDefault.mul(2).mul(2)
+				maxClaimAmountDefault.mul(2).mul(2)
 			);
 
 			tokenList2 = await communityProxy.tokenList();
@@ -4564,19 +4875,19 @@ describe.only("Community", () => {
 				beneficiaryA.address
 			);
 			expect(claimedAmounts2.length).to.be.eq(2);
-			expect(claimedAmounts2[0]).to.be.eq(claimAmountDefault);
+			expect(claimedAmounts2[0]).to.be.eq(maxClaimAmountDefault);
 			expect(claimedAmounts2[1]).to.be.eq(
-				claimAmountDefault.mul(2).mul(2)
+				maxClaimAmountDefault.mul(2).mul(2)
 			);
 
 			beneficiary = await communityProxy.beneficiaries(
 				beneficiaryA.address
 			);
 			expect(beneficiary.claimedAmount).to.eq(
-				claimAmountDefault
+				maxClaimAmountDefault
 					.mul(3)
-					.add(claimAmountDefault.mul(2))
-					.add(claimAmountDefault.mul(2))
+					.add(maxClaimAmountDefault.mul(2))
+					.add(maxClaimAmountDefault.mul(2))
 			);
 		});
 
@@ -4597,14 +4908,14 @@ describe.only("Community", () => {
 					beneficiaryA.address
 				);
 			expect(claimedAmounts.length).to.be.eq(1);
-			expect(claimedAmounts[0]).to.be.eq(claimAmountDefault);
+			expect(claimedAmounts[0]).to.be.eq(maxClaimAmountDefault);
 
 			await expect(
 				communityAdminProxy.updateCommunityToken(
 					communityProxy.address,
 					celo.address,
 					[cUSD.address, mUSD.address, celo.address],
-					claimAmountDefault.mul(2),
+					maxClaimAmountDefault.mul(2),
 					maxClaimDefault.mul(3),
 					decreaseStepDefault.mul(4),
 					baseIntervalDefault * 2,
@@ -4614,13 +4925,16 @@ describe.only("Community", () => {
 
 			expect(await communityProxy.token()).equal(celo.address);
 			expect(await communityProxy.cUSD()).equal(celo.address);
-			expect(await communityProxy.claimAmount()).equal(
-				claimAmountDefault.mul(2)
+			expect(await communityProxy.maxClaimAmount()).equal(
+				maxClaimAmountDefault.mul(2)
 			);
-			expect(await communityProxy.maxClaim()).equal(
+			expect(await communityProxy.claimAmount()).equal(
+				maxClaimAmountDefault.mul(2)
+			);
+			expect(await communityProxy.maxTotalClaim()).equal(
 				maxClaimDefault.mul(3).sub(decreaseStepDefault.mul(4))
 			);
-			expect(await communityProxy.getInitialMaxClaim()).equal(
+			expect(await communityProxy.getInitialMaxTotalClaim()).equal(
 				maxClaimDefault.mul(3)
 			);
 			expect(await communityProxy.decreaseStep()).equal(
@@ -4656,10 +4970,10 @@ describe.only("Community", () => {
 				.fulfilled;
 
 			expect(await cUSD.balanceOf(beneficiaryA.address)).to.be.equal(
-				claimAmountDefault.add(initialAmountDefault)
+				maxClaimAmountDefault.add(initialAmountDefault)
 			);
 			expect(await celo.balanceOf(beneficiaryA.address)).to.be.equal(
-				claimAmountDefault.mul(2)
+				maxClaimAmountDefault.mul(2)
 			);
 
 			let tokenList2 = await communityProxy.tokenList();
@@ -4671,14 +4985,14 @@ describe.only("Community", () => {
 					beneficiaryA.address
 				);
 			expect(claimedAmounts2.length).to.be.eq(2);
-			expect(claimedAmounts2[0]).to.be.eq(claimAmountDefault);
-			expect(claimedAmounts2[1]).to.be.eq(claimAmountDefault.mul(2));
+			expect(claimedAmounts2[0]).to.be.eq(maxClaimAmountDefault);
+			expect(claimedAmounts2[1]).to.be.eq(maxClaimAmountDefault.mul(2));
 
 			let beneficiary = await communityProxy.beneficiaries(
 				beneficiaryA.address
 			);
 			expect(beneficiary.claimedAmount).to.eq(
-				claimAmountDefault.mul(3).add(claimAmountDefault.mul(2))
+				maxClaimAmountDefault.mul(3).add(maxClaimAmountDefault.mul(2))
 			);
 
 			await expect(
@@ -4686,7 +5000,7 @@ describe.only("Community", () => {
 					communityProxy.address,
 					mUSD.address,
 					[celo.address, mUSD.address],
-					claimAmountDefault,
+					maxClaimAmountDefault,
 					maxClaimDefault,
 					decreaseStepDefault,
 					baseIntervalDefault,
@@ -4696,13 +5010,16 @@ describe.only("Community", () => {
 
 			expect(await communityProxy.token()).equal(mUSD.address);
 			expect(await communityProxy.cUSD()).equal(mUSD.address);
-			expect(await communityProxy.claimAmount()).equal(
-				claimAmountDefault
+			expect(await communityProxy.maxClaimAmount()).equal(
+				maxClaimAmountDefault
 			);
-			expect(await communityProxy.maxClaim()).equal(
+			expect(await communityProxy.claimAmount()).equal(
+				maxClaimAmountDefault
+			);
+			expect(await communityProxy.maxTotalClaim()).equal(
 				maxClaimDefault.sub(decreaseStepDefault)
 			);
-			expect(await communityProxy.getInitialMaxClaim()).equal(
+			expect(await communityProxy.getInitialMaxTotalClaim()).equal(
 				maxClaimDefault
 			);
 			expect(await communityProxy.decreaseStep()).equal(
@@ -4731,13 +5048,13 @@ describe.only("Community", () => {
 				.fulfilled;
 
 			expect(await cUSD.balanceOf(beneficiaryA.address)).to.be.equal(
-				claimAmountDefault.add(initialAmountDefault)
+				maxClaimAmountDefault.add(initialAmountDefault)
 			);
 			expect(await celo.balanceOf(beneficiaryA.address)).to.be.equal(
-				claimAmountDefault.mul(2)
+				maxClaimAmountDefault.mul(2)
 			);
 			expect(await mUSD.balanceOf(beneficiaryA.address)).to.be.equal(
-				claimAmountDefault
+				maxClaimAmountDefault
 			);
 
 			tokenList2 = await communityProxy.tokenList();
@@ -4749,20 +5066,20 @@ describe.only("Community", () => {
 				beneficiaryA.address
 			);
 			expect(claimedAmounts2.length).to.be.eq(3);
-			expect(claimedAmounts2[0]).to.be.eq(claimAmountDefault);
-			expect(claimedAmounts2[1]).to.be.eq(claimAmountDefault.mul(2));
-			expect(claimedAmounts2[2]).to.be.eq(claimAmountDefault);
+			expect(claimedAmounts2[0]).to.be.eq(maxClaimAmountDefault);
+			expect(claimedAmounts2[1]).to.be.eq(maxClaimAmountDefault.mul(2));
+			expect(claimedAmounts2[2]).to.be.eq(maxClaimAmountDefault);
 
 			beneficiary = await communityProxy.beneficiaries(
 				beneficiaryA.address
 			);
 			expect(beneficiary.claimedAmount.div(10)).to.eq(
 				//div(10) to skip the last decimal
-				claimAmountDefault
+				maxClaimAmountDefault
 					.mul(3)
-					.add(claimAmountDefault.mul(2))
+					.add(maxClaimAmountDefault.mul(2))
 					.div(3)
-					.add(claimAmountDefault)
+					.add(maxClaimAmountDefault)
 					.div(10) //div(10) to skip the last decimal
 			);
 
@@ -4771,7 +5088,7 @@ describe.only("Community", () => {
 					communityProxy.address,
 					cUSD.address,
 					[mUSD.address, cUSD.address],
-					claimAmountDefault.div(2),
+					maxClaimAmountDefault.div(2),
 					maxClaimDefault.div(2),
 					decreaseStepDefault,
 					baseIntervalDefault,
@@ -4781,13 +5098,16 @@ describe.only("Community", () => {
 
 			expect(await communityProxy.token()).equal(cUSD.address);
 			expect(await communityProxy.cUSD()).equal(cUSD.address);
-			expect(await communityProxy.claimAmount()).equal(
-				claimAmountDefault.div(2)
+			expect(await communityProxy.maxClaimAmount()).equal(
+				maxClaimAmountDefault.div(2)
 			);
-			expect(await communityProxy.maxClaim()).equal(
+			expect(await communityProxy.claimAmount()).equal(
+				maxClaimAmountDefault.div(2)
+			);
+			expect(await communityProxy.maxTotalClaim()).equal(
 				maxClaimDefault.div(2).sub(decreaseStepDefault)
 			);
-			expect(await communityProxy.getInitialMaxClaim()).equal(
+			expect(await communityProxy.getInitialMaxTotalClaim()).equal(
 				maxClaimDefault.div(2)
 			);
 			expect(await communityProxy.decreaseStep()).equal(
@@ -4813,15 +5133,15 @@ describe.only("Community", () => {
 				.fulfilled;
 
 			expect(await cUSD.balanceOf(beneficiaryA.address)).to.be.equal(
-				claimAmountDefault
+				maxClaimAmountDefault
 					.add(initialAmountDefault)
-					.add(claimAmountDefault.div(2))
+					.add(maxClaimAmountDefault.div(2))
 			);
 			expect(await celo.balanceOf(beneficiaryA.address)).to.be.equal(
-				claimAmountDefault.mul(2)
+				maxClaimAmountDefault.mul(2)
 			);
 			expect(await mUSD.balanceOf(beneficiaryA.address)).to.be.equal(
-				claimAmountDefault
+				maxClaimAmountDefault
 			);
 
 			tokenList2 = await communityProxy.tokenList();
@@ -4834,10 +5154,10 @@ describe.only("Community", () => {
 			);
 			expect(claimedAmounts2.length).to.be.eq(3);
 			expect(claimedAmounts2[0]).to.be.eq(
-				claimAmountDefault.add(claimAmountDefault.div(2))
+				maxClaimAmountDefault.add(maxClaimAmountDefault.div(2))
 			);
-			expect(claimedAmounts2[1]).to.be.eq(claimAmountDefault.mul(2));
-			expect(claimedAmounts2[2]).to.be.eq(claimAmountDefault);
+			expect(claimedAmounts2[1]).to.be.eq(maxClaimAmountDefault.mul(2));
+			expect(claimedAmounts2[2]).to.be.eq(maxClaimAmountDefault);
 
 			beneficiary = await communityProxy.beneficiaries(
 				beneficiaryA.address
@@ -4845,13 +5165,13 @@ describe.only("Community", () => {
 
 			expect(beneficiary.claimedAmount.div(10)).to.eq(
 				//div(10) to skip the last decimal
-				claimAmountDefault
+				maxClaimAmountDefault
 					.mul(3)
-					.add(claimAmountDefault.mul(2))
+					.add(maxClaimAmountDefault.mul(2))
 					.div(3)
-					.add(claimAmountDefault)
+					.add(maxClaimAmountDefault)
 					.div(2)
-					.add(claimAmountDefault.div(2))
+					.add(maxClaimAmountDefault.div(2))
 					.div(10) //div(10) to skip the last decimal
 			);
 		});
@@ -4874,14 +5194,14 @@ describe.only("Community", () => {
 					beneficiaryA.address
 				);
 			expect(claimedAmounts.length).to.be.eq(1);
-			expect(claimedAmounts[0]).to.be.eq(claimAmountDefault);
+			expect(claimedAmounts[0]).to.be.eq(maxClaimAmountDefault);
 
 			await expect(
 				communityAdminProxy.updateCommunityToken(
 					communityProxy.address,
 					celo.address,
 					[cUSD.address, mUSD.address, celo.address],
-					claimAmountDefault.mul(2),
+					maxClaimAmountDefault.mul(2),
 					maxClaimDefault.mul(4),
 					decreaseStepDefault.mul(4),
 					baseIntervalDefault * 2,
@@ -4892,14 +5212,14 @@ describe.only("Community", () => {
 			expect(
 				(await communityProxy.beneficiaries(beneficiaryA.address))
 					.claimedAmount
-			).to.eq(claimAmountDefault.mul(4));
+			).to.eq(maxClaimAmountDefault.mul(4));
 
 			await expect(
 				communityAdminProxy.updateCommunityToken(
 					communityProxy.address,
 					mUSD.address,
 					[celo.address, mUSD.address],
-					claimAmountDefault,
+					maxClaimAmountDefault,
 					maxClaimDefault,
 					decreaseStepDefault,
 					baseIntervalDefault,
@@ -4910,14 +5230,14 @@ describe.only("Community", () => {
 			expect(
 				(await communityProxy.beneficiaries(beneficiaryA.address))
 					.claimedAmount
-			).to.eq(claimAmountDefault);
+			).to.eq(maxClaimAmountDefault);
 
 			await expect(
 				communityAdminProxy.updateCommunityToken(
 					communityProxy.address,
 					cUSD.address,
 					[mUSD.address, cUSD.address],
-					claimAmountDefault.div(2),
+					maxClaimAmountDefault.div(2),
 					maxClaimDefault.div(2),
 					decreaseStepDefault,
 					baseIntervalDefault,
@@ -4928,17 +5248,20 @@ describe.only("Community", () => {
 			expect(
 				(await communityProxy.beneficiaries(beneficiaryA.address))
 					.claimedAmount
-			).to.eq(claimAmountDefault.div(2));
+			).to.eq(maxClaimAmountDefault.div(2));
 
 			expect(await communityProxy.token()).equal(cUSD.address);
 			expect(await communityProxy.cUSD()).equal(cUSD.address);
-			expect(await communityProxy.claimAmount()).equal(
-				claimAmountDefault.div(2)
+			expect(await communityProxy.maxClaimAmount()).equal(
+				maxClaimAmountDefault.div(2)
 			);
-			expect(await communityProxy.maxClaim()).equal(
+			expect(await communityProxy.claimAmount()).equal(
+				maxClaimAmountDefault.div(2)
+			);
+			expect(await communityProxy.maxTotalClaim()).equal(
 				maxClaimDefault.div(2).sub(decreaseStepDefault)
 			);
-			expect(await communityProxy.getInitialMaxClaim()).equal(
+			expect(await communityProxy.getInitialMaxTotalClaim()).equal(
 				maxClaimDefault.div(2)
 			);
 			expect(await communityProxy.decreaseStep()).equal(
@@ -4964,9 +5287,9 @@ describe.only("Community", () => {
 				.fulfilled;
 
 			expect(await cUSD.balanceOf(beneficiaryA.address)).to.be.equal(
-				claimAmountDefault
+				maxClaimAmountDefault
 					.add(initialAmountDefault)
-					.add(claimAmountDefault.div(2))
+					.add(maxClaimAmountDefault.div(2))
 			);
 			expect(await celo.balanceOf(beneficiaryA.address)).to.be.equal(0);
 			expect(await mUSD.balanceOf(beneficiaryA.address)).to.be.equal(0);
@@ -4982,7 +5305,7 @@ describe.only("Community", () => {
 				);
 			expect(claimedAmounts2.length).to.be.eq(3);
 			expect(claimedAmounts2[0]).to.be.eq(
-				claimAmountDefault.add(claimAmountDefault.div(2))
+				maxClaimAmountDefault.add(maxClaimAmountDefault.div(2))
 			);
 			expect(claimedAmounts2[1]).to.be.eq(0);
 			expect(claimedAmounts2[2]).to.be.eq(0);
@@ -4990,7 +5313,9 @@ describe.only("Community", () => {
 			expect(
 				(await communityProxy.beneficiaries(beneficiaryA.address))
 					.claimedAmount
-			).to.eq(claimAmountDefault.div(2).add(claimAmountDefault.div(2)));
+			).to.eq(
+				maxClaimAmountDefault.div(2).add(maxClaimAmountDefault.div(2))
+			);
 		});
 
 		it("should update token multiple times, new beneficiary", async function () {
@@ -5010,7 +5335,7 @@ describe.only("Community", () => {
 					communityProxy.address,
 					celo.address,
 					[cUSD.address, mUSD.address, celo.address],
-					claimAmountDefault.mul(2),
+					maxClaimAmountDefault.mul(2),
 					maxClaimDefault.mul(4),
 					decreaseStepDefault.mul(4),
 					baseIntervalDefault * 2,
@@ -5028,7 +5353,7 @@ describe.only("Community", () => {
 					communityProxy.address,
 					mUSD.address,
 					[celo.address, mUSD.address],
-					claimAmountDefault,
+					maxClaimAmountDefault,
 					maxClaimDefault,
 					decreaseStepDefault,
 					baseIntervalDefault,
@@ -5046,7 +5371,7 @@ describe.only("Community", () => {
 					communityProxy.address,
 					cUSD.address,
 					[mUSD.address, cUSD.address],
-					claimAmountDefault.div(2),
+					maxClaimAmountDefault.div(2),
 					maxClaimDefault.div(2),
 					decreaseStepDefault,
 					baseIntervalDefault,
@@ -5071,7 +5396,7 @@ describe.only("Community", () => {
 				.fulfilled;
 
 			expect(await cUSD.balanceOf(beneficiaryA.address)).to.be.equal(
-				initialAmountDefault.add(claimAmountDefault.div(2))
+				initialAmountDefault.add(maxClaimAmountDefault.div(2))
 			);
 			expect(await celo.balanceOf(beneficiaryA.address)).to.be.equal(0);
 			expect(await mUSD.balanceOf(beneficiaryA.address)).to.be.equal(0);
@@ -5086,14 +5411,14 @@ describe.only("Community", () => {
 					beneficiaryA.address
 				);
 			expect(claimedAmounts2.length).to.be.eq(3);
-			expect(claimedAmounts2[0]).to.be.eq(claimAmountDefault.div(2));
+			expect(claimedAmounts2[0]).to.be.eq(maxClaimAmountDefault.div(2));
 			expect(claimedAmounts2[1]).to.be.eq(0);
 			expect(claimedAmounts2[2]).to.be.eq(0);
 
 			expect(
 				(await communityProxy.beneficiaries(beneficiaryA.address))
 					.claimedAmount
-			).to.eq(claimAmountDefault.div(2));
+			).to.eq(maxClaimAmountDefault.div(2));
 		});
 	});
 });
