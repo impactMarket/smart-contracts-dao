@@ -133,27 +133,27 @@ contract CommunityImplementation is
     /**
      * @notice Triggered when beneficiary params has been updated
      *
-     * @param oldMaxClaimAmount    Old maxClaimAmount value
-     * @param oldMaxTotalClaim     Old maxTotalClaim value
-     * @param oldDecreaseStep      Old decreaseStep value
-     * @param oldBaseInterval      Old baseInterval value
-     * @param oldIncrementInterval Old incrementInterval value
-     * @param newMaxClaimAmount    New maxClaimAmount value
-     * @param newMaxTotalClaim     New maxTotalClaim value
-     * @param newDecreaseStep      New decreaseStep value
-     * @param newBaseInterval      New baseInterval value
-     * @param newIncrementInterval New incrementInterval value
+     * @param oldOriginalClaimAmount    Old originalClaimAmount value
+     * @param oldMaxTotalClaim          Old maxTotalClaim value
+     * @param oldDecreaseStep           Old decreaseStep value
+     * @param oldBaseInterval           Old baseInterval value
+     * @param oldIncrementInterval      Old incrementInterval value
+     * @param newOriginalClaimAmount    New originalClaimAmount value
+     * @param newMaxTotalClaim          New maxTotalClaim value
+     * @param newDecreaseStep           New decreaseStep value
+     * @param newBaseInterval           New baseInterval value
+     * @param newIncrementInterval      New incrementInterval value
      *
      * For further information regarding each parameter, see
      * *Community* smart contract initialize method.
      */
     event BeneficiaryParamsUpdated(
-        uint256 oldMaxClaimAmount,
+        uint256 oldOriginalClaimAmount,
         uint256 oldMaxTotalClaim,
         uint256 oldDecreaseStep,
         uint256 oldBaseInterval,
         uint256 oldIncrementInterval,
-        uint256 newMaxClaimAmount,
+        uint256 newOriginalClaimAmount,
         uint256 newMaxTotalClaim,
         uint256 newDecreaseStep,
         uint256 newBaseInterval,
@@ -226,6 +226,14 @@ contract CommunityImplementation is
     event TransferERC20(address indexed token, address indexed to, uint256 amount);
 
     /**
+     * @notice Triggered when claimAmount has been changed
+     *
+     * @param oldClaimAmount   Old claimAmount value
+     * @param newClaimAmount   New claimAmount value
+     */
+    event ClaimAmountUpdated(uint256 oldClaimAmount, uint256 newClaimAmount);
+
+    /**
      * @notice Enforces sender to be a valid beneficiary
      */
     modifier onlyValidBeneficiary() {
@@ -285,7 +293,7 @@ contract CommunityImplementation is
      * @param _tokenAddress        Address of the token used by the community
      * @param _managers            Community's initial managers
      *                             Will be able to add others
-     * @param _maxClaimAmount      Maximum base amount to be claim by the beneficiary
+     * @param _originalClaimAmount      Maximum base amount to be claim by the beneficiary
      * @param _maxTotalClaim       Limit that a beneficiary can claim in total
      * @param _decreaseStep        Value decreased from maxTotalClaim each time a beneficiary is added
      * @param _baseInterval        Base interval to start claiming
@@ -298,7 +306,7 @@ contract CommunityImplementation is
     function initialize(
         address _tokenAddress,
         address[] memory _managers,
-        uint256 _maxClaimAmount,
+        uint256 _originalClaimAmount,
         uint256 _maxTotalClaim,
         uint256 _decreaseStep,
         uint256 _baseInterval,
@@ -313,7 +321,10 @@ contract CommunityImplementation is
             "Community::initialize: baseInterval must be greater than incrementInterval"
         );
 
-        require(_maxTotalClaim >= _maxClaimAmount, "Community::initialize: maxClaimAmount to big");
+        require(
+            _maxTotalClaim >= _originalClaimAmount,
+            "Community::initialize: originalClaimAmount to big"
+        );
 
         require(
             _minTranche <= _maxTranche,
@@ -327,8 +338,8 @@ contract CommunityImplementation is
         __ReentrancyGuard_init();
 
         _token = IERC20(_tokenAddress);
-        maxClaimAmount = _maxClaimAmount;
-        _claimAmount = _maxClaimAmount;
+        originalClaimAmount = _originalClaimAmount;
+        claimAmount = _originalClaimAmount;
         baseInterval = _baseInterval;
         incrementInterval = _incrementInterval;
         maxTotalClaim = _maxTotalClaim;
@@ -477,13 +488,6 @@ contract CommunityImplementation is
     }
 
     /**
-     * @notice Returns the amount that can be claimed by a beneficiary once
-     */
-    function claimAmount() public view override returns (uint256) {
-        return _claimAmount > 0 ? _claimAmount : maxClaimAmount;
-    }
-
-    /**
      * @notice Returns the amount that can be claimed by a beneficiary in total
      * todo: remove it after the frontend is updated to the new function: maxTotalClaim()
      */
@@ -517,7 +521,7 @@ contract CommunityImplementation is
 
     /** Updates beneficiary params
      *
-     * @param _maxClaimAmount maximum base amount to be claim by the beneficiary
+     * @param _originalClaimAmount maximum base amount to be claim by the beneficiary
      * @param _maxTotalClaim limit that a beneficiary can claim  in total
      * @param _decreaseStep value decreased from maxTotalClaim each time a is beneficiary added
      * @param _baseInterval base interval to start claiming
@@ -527,7 +531,7 @@ contract CommunityImplementation is
      *             maxTotalClaim = _maxTotalClaim - validBeneficiaryCount * _decreaseStep
      */
     function updateBeneficiaryParams(
-        uint256 _maxClaimAmount,
+        uint256 _originalClaimAmount,
         uint256 _maxTotalClaim,
         uint256 _decreaseStep,
         uint256 _baseInterval,
@@ -538,30 +542,30 @@ contract CommunityImplementation is
             "Community::updateBeneficiaryParams: baseInterval must be greater than incrementInterval"
         );
         require(
-            _maxTotalClaim >= _maxClaimAmount + validBeneficiaryCount * _decreaseStep,
-            "Community::updateBeneficiaryParams: maxClaimAmount too big"
+            _maxTotalClaim >= _originalClaimAmount + validBeneficiaryCount * _decreaseStep,
+            "Community::updateBeneficiaryParams: originalClaimAmount too big"
         );
 
         emit BeneficiaryParamsUpdated(
-            maxClaimAmount,
+            originalClaimAmount,
             maxTotalClaim,
             decreaseStep,
             baseInterval,
             incrementInterval,
-            _maxClaimAmount,
+            _originalClaimAmount,
             _maxTotalClaim,
             _decreaseStep,
             _baseInterval,
             _incrementInterval
         );
 
-        maxClaimAmount = _maxClaimAmount;
+        originalClaimAmount = _originalClaimAmount;
         maxTotalClaim = _maxTotalClaim - validBeneficiaryCount * _decreaseStep;
         decreaseStep = _decreaseStep;
         baseInterval = _baseInterval;
         incrementInterval = _incrementInterval;
 
-        _calculateClaimAmount();
+        _updateClaimAmount();
     }
 
     /** @notice Updates params of a community
@@ -604,7 +608,7 @@ contract CommunityImplementation is
     function updateToken(
         IERC20 _newToken,
         address[] calldata _exchangePath,
-        uint256 _maxClaimAmount,
+        uint256 _originalClaimAmount,
         uint256 _maxTotalClaim,
         uint256 _decreaseStep,
         uint256 _baseInterval,
@@ -661,7 +665,7 @@ contract CommunityImplementation is
         _token = _newToken;
 
         updateBeneficiaryParams(
-            _maxClaimAmount,
+            _originalClaimAmount,
             _maxTotalClaim,
             _decreaseStep,
             _baseInterval,
@@ -902,9 +906,10 @@ contract CommunityImplementation is
             "Community::claim: Already claimed everything"
         );
 
-        uint256 _claimAmountValue = claimAmount();
-        uint256 _toClaim = _claimAmountValue <= maxTotalClaim - _totalClaimedAmount
-            ? _claimAmountValue
+        uint256 _claimAmount = claimAmount > 0 ? claimAmount : originalClaimAmount;
+
+        uint256 _toClaim = _claimAmount <= maxTotalClaim - _totalClaimedAmount
+            ? _claimAmount
             : maxTotalClaim - _totalClaimedAmount;
 
         //this is necessary for communities with version < 3
@@ -975,7 +980,7 @@ contract CommunityImplementation is
 
         lastFundRequest = block.number;
 
-        _calculateClaimAmount();
+        _updateClaimAmount();
 
         emit FundsRequested(msg.sender);
     }
@@ -991,7 +996,7 @@ contract CommunityImplementation is
         IERC20Upgradeable(address(token())).safeTransferFrom(_sender, address(this), _amount);
         privateFunds += _amount;
 
-        _calculateClaimAmount();
+        _updateClaimAmount();
 
         emit Donate(msg.sender, _amount);
     }
@@ -1021,7 +1026,7 @@ contract CommunityImplementation is
         IERC20Upgradeable(address(_token)).safeTransfer(_to, _amount);
 
         if (address(_token) == address(token())) {
-            _calculateClaimAmount();
+            _updateClaimAmount();
         }
 
         emit TransferERC20(address(_token), _to, _amount);
@@ -1086,7 +1091,7 @@ contract CommunityImplementation is
 
         if (_newState == BeneficiaryState.Valid) {
             require(
-                maxTotalClaim - decreaseStep >= maxClaimAmount,
+                maxTotalClaim - decreaseStep >= originalClaimAmount,
                 "Community::_changeBeneficiaryState: Max claim too low"
             );
             require(
@@ -1273,20 +1278,25 @@ contract CommunityImplementation is
         return _computedClaimAmount;
     }
 
-    function _calculateClaimAmount() internal {
+    function _updateClaimAmount() internal {
+        uint256 _newClaimAmount;
         if (validBeneficiaryCount == 0 || isSelfFunding()) {
-            _claimAmount = maxClaimAmount;
-            return;
+            _newClaimAmount = originalClaimAmount;
+        } else {
+            _newClaimAmount = token().balanceOf(address(this)) / validBeneficiaryCount;
+
+            if (_newClaimAmount < communityAdmin.defaultMinClaimAmount()) {
+                _newClaimAmount = communityAdmin.defaultMinClaimAmount();
+            }
+
+            if (_newClaimAmount > originalClaimAmount) {
+                _newClaimAmount = originalClaimAmount;
+            }
         }
 
-        _claimAmount = token().balanceOf(address(this)) / validBeneficiaryCount;
-
-        if (_claimAmount < communityAdmin.defaultMinClaimAmount()) {
-            _claimAmount = communityAdmin.defaultMinClaimAmount();
-        }
-
-        if (_claimAmount > maxClaimAmount) {
-            _claimAmount = maxClaimAmount;
+        if (_newClaimAmount != claimAmount) {
+            emit ClaimAmountUpdated(claimAmount, _newClaimAmount);
+            claimAmount = _newClaimAmount;
         }
     }
 }

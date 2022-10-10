@@ -35,15 +35,15 @@ contract CommunityAdminImplementation is
     /**
      * @notice Triggered when a community has been added
      *
-     * @param communityAddress  Address of the community that has been added
-     * @param managers          Addresses of the initial managers
-     * @param maxClaimAmount    Value of the maxClaimAmount
-     * @param maxTotalClaim     Value of the maxTotalClaim
-     * @param decreaseStep      Value of the decreaseStep
-     * @param baseInterval      Value of the baseInterval
-     * @param incrementInterval Value of the incrementInterval
-     * @param minTranche        Value of the minTranche
-     * @param maxTranche        Value of the maxTranche
+     * @param communityAddress       Address of the community that has been added
+     * @param managers               Addresses of the initial managers
+     * @param originalClaimAmount    Value of the originalClaimAmount
+     * @param maxTotalClaim          Value of the maxTotalClaim
+     * @param decreaseStep           Value of the decreaseStep
+     * @param baseInterval           Value of the baseInterval
+     * @param incrementInterval      Value of the incrementInterval
+     * @param minTranche             Value of the minTranche
+     * @param maxTranche             Value of the maxTranche
      *
      * For further information regarding each parameter, see
      * *Community* smart contract initialize method.
@@ -51,7 +51,7 @@ contract CommunityAdminImplementation is
     event CommunityAdded(
         address indexed communityAddress,
         address[] managers,
-        uint256 maxClaimAmount,
+        uint256 originalClaimAmount,
         uint256 maxTotalClaim,
         uint256 decreaseStep,
         uint256 baseInterval,
@@ -292,23 +292,23 @@ contract CommunityAdminImplementation is
     /**
      * @notice Adds a new community
      *
-     * @param _tokenAddress        address of the token used by the community
-     * @param _managers            addresses of the community managers
-     * @param _ambassador          address of the ambassador
-     * @param _maxClaimAmount      maximum base amount to be claim by the beneficiary
-     * @param _maxTotalClaim       limit that a beneficiary can claim at in total
-     * @param _decreaseStep        value decreased from maxTotalClaim for every beneficiary added
-     * @param _baseInterval        base interval to start claiming
-     * @param _incrementInterval   increment interval used in each claim
-     * @param _minTranche          minimum amount that the community will receive when requesting funds
-     * @param _maxTranche          maximum amount that the community will receive when requesting funds
-     * @param _maxBeneficiaries    maximum number of valid beneficiaries
+     * @param _tokenAddress         address of the token used by the community
+     * @param _managers             addresses of the community managers
+     * @param _ambassador           address of the ambassador
+     * @param _originalClaimAmount  maximum base amount to be claim by the beneficiary
+     * @param _maxTotalClaim        limit that a beneficiary can claim at in total
+     * @param _decreaseStep         value decreased from maxTotalClaim for every beneficiary added
+     * @param _baseInterval         base interval to start claiming
+     * @param _incrementInterval    increment interval used in each claim
+     * @param _minTranche           minimum amount that the community will receive when requesting funds
+     * @param _maxTranche           maximum amount that the community will receive when requesting funds
+     * @param _maxBeneficiaries     maximum number of valid beneficiaries
      */
     function addCommunity(
         address _tokenAddress,
         address[] memory _managers,
         address _ambassador,
-        uint256 _maxClaimAmount,
+        uint256 _originalClaimAmount,
         uint256 _maxTotalClaim,
         uint256 _decreaseStep,
         uint256 _baseInterval,
@@ -325,7 +325,7 @@ contract CommunityAdminImplementation is
         address _communityAddress = deployCommunity(
             _tokenAddress,
             _managers,
-            _maxClaimAmount,
+            _originalClaimAmount,
             _maxTotalClaim,
             _decreaseStep,
             _baseInterval,
@@ -343,7 +343,7 @@ contract CommunityAdminImplementation is
         emit CommunityAdded(
             _communityAddress,
             _managers,
-            _maxClaimAmount,
+            _originalClaimAmount,
             _maxTotalClaim,
             _decreaseStep,
             _baseInterval,
@@ -382,14 +382,14 @@ contract CommunityAdminImplementation is
             ? _previousCommunity.cUSD()
             : _previousCommunity.token();
 
-        uint256 _previousMaxClaimAmount = (_previousCommunity.getVersion() >= 3)
-            ? _previousCommunity.maxClaimAmount()
+        uint256 _previousOriginalClaimAmount = (_previousCommunity.getVersion() >= 3)
+            ? _previousCommunity.originalClaimAmount()
             : IPreviousCommunity(address(_previousCommunity)).claimAmount();
 
         address newCommunityAddress = deployCommunity(
             address(_previousCommunityToken),
             _managers,
-            _previousMaxClaimAmount,
+            _previousOriginalClaimAmount,
             _previousCommunity.getInitialMaxClaim(),
             _previousCommunity.decreaseStep(),
             _previousCommunity.baseInterval(),
@@ -488,7 +488,7 @@ contract CommunityAdminImplementation is
     /** @notice Updates the beneficiary params of a community
      *
      * @param _community address of the community
-     * @param _maxClaimAmount  maximum base amount to be claim by the beneficiary
+     * @param _originalClaimAmount  maximum base amount to be claim by the beneficiary
      * @param _maxTotalClaim limit that a beneficiary can claim  in total
      * @param _decreaseStep value decreased from maxTotalClaim each time a is beneficiary added
      * @param _baseInterval base interval to start claiming
@@ -497,7 +497,7 @@ contract CommunityAdminImplementation is
      */
     function updateBeneficiaryParams(
         ICommunity _community,
-        uint256 _maxClaimAmount,
+        uint256 _originalClaimAmount,
         uint256 _maxTotalClaim,
         uint256 _decreaseStep,
         uint256 _baseInterval,
@@ -505,7 +505,7 @@ contract CommunityAdminImplementation is
         uint256 _maxBeneficiaries
     ) external override onlyOwnerOrImpactMarketCouncil {
         _community.updateBeneficiaryParams(
-            _maxClaimAmount,
+            _originalClaimAmount,
             _maxTotalClaim,
             _decreaseStep,
             _baseInterval,
@@ -539,7 +539,7 @@ contract CommunityAdminImplementation is
         ICommunity _community,
         IERC20 _newToken,
         address[] memory _exchangePath,
-        uint256 _maxClaimAmount,
+        uint256 _originalClaimAmount,
         uint256 _maxTotalClaim,
         uint256 _decreaseStep,
         uint256 _baseInterval,
@@ -548,7 +548,7 @@ contract CommunityAdminImplementation is
         _community.updateToken(
             _newToken,
             _exchangePath,
-            _maxClaimAmount,
+            _originalClaimAmount,
             _maxTotalClaim,
             _decreaseStep,
             _baseInterval,
@@ -635,7 +635,7 @@ contract CommunityAdminImplementation is
      *
      * @param _tokenAddress        Address of the token used by the community
      * @param _managers addresses of the community managers
-     * @param _maxClaimAmount base amount to be claim by the beneficiary
+     * @param _originalClaimAmount base amount to be claim by the beneficiary
      * @param _maxTotalClaim limit that a beneficiary can claim at in total
      * @param _decreaseStep value decreased from maxTotalClaim for every beneficiary added
      * @param _baseInterval base interval to start claiming
@@ -648,7 +648,7 @@ contract CommunityAdminImplementation is
     function deployCommunity(
         address _tokenAddress,
         address[] memory _managers,
-        uint256 _maxClaimAmount,
+        uint256 _originalClaimAmount,
         uint256 _maxTotalClaim,
         uint256 _decreaseStep,
         uint256 _baseInterval,
@@ -667,7 +667,7 @@ contract CommunityAdminImplementation is
         ICommunity(address(_community)).initialize(
             _tokenAddress,
             _managers,
-            _maxClaimAmount,
+            _originalClaimAmount,
             _maxTotalClaim,
             _decreaseStep,
             _baseInterval,
@@ -707,11 +707,11 @@ contract CommunityAdminImplementation is
         }
 
         uint256 _validBeneficiaries = _community.validBeneficiaryCount();
-        uint256 _maxClaimAmount = (_community.getVersion() >= 3)
-            ? _community.maxClaimAmount()
+        uint256 _originalClaimAmount = (_community.getVersion() >= 3)
+            ? _community.originalClaimAmount()
             : IPreviousCommunity(address(_community)).claimAmount();
 
-        uint256 _trancheAmount = _validBeneficiaries * _maxClaimAmount;
+        uint256 _trancheAmount = _validBeneficiaries * _originalClaimAmount;
 
         if (_trancheAmount < _minTranche) {
             _trancheAmount = _minTranche;

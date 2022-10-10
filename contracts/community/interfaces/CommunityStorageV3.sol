@@ -12,5 +12,5 @@ import "./CommunityStorageV2.sol";
 abstract contract CommunityStorageV3 is CommunityStorageV2 {
     Token[] public override tokens;
     EnumerableSet.AddressSet internal _tokenList;
-    uint256 internal _claimAmount;
+    uint256 public override claimAmount;
 }

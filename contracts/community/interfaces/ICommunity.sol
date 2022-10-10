@@ -43,7 +43,7 @@ interface ICommunity {
     ) external;
     function getVersion() external pure returns(uint256);
     function previousCommunity() external view returns(ICommunity);
-    function maxClaimAmount() external view returns(uint256);
+    function originalClaimAmount() external view returns(uint256);
     function claimAmount() external view returns(uint256);
     function baseInterval() external view returns(uint256);
     function incrementInterval() external view returns(uint256);
