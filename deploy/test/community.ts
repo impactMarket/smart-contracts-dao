@@ -73,11 +73,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		CommunityMiddleProxyResult.address
 	);
 
-	// console.log('communityAdminProxy address: ', CommunityAdminContract.address);
-	// console.log('communityAdminImplementation address: ', communityAdminImplementationResult.address);
-	// console.log('CommunityMiddleProxy address: ', CommunityMiddleProxyResult.address);
-	// console.log('communityImplementation address: ', communityResult.address);
-
 	const Treasury = await deployments.get("TreasuryProxy");
 
 	const TreasuryContract = await ethers.getContractAt(
@@ -86,7 +81,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	);
 
 	await CommunityAdminContract.updateTreasury(Treasury.address);
-	await CommunityAdminContract.updateDefaultMinClaimAmount(toEther(0.02));
+	await CommunityAdminContract.updateMinClaimAmountRatio(100);
 
 	await TreasuryContract.updateCommunityAdmin(
 		communityAdminProxyResult.address

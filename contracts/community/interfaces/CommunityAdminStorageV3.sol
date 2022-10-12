@@ -11,5 +11,8 @@ import "./CommunityAdminStorageV2.sol";
  */
 abstract contract CommunityAdminStorageV3 is CommunityAdminStorageV2 {
     address public override authorizedWalletAddress;
-    uint256 public override defaultMinClaimAmount;
+    // when there aren't enough funds into treasury, we want to limit the beneficiary claimAmount
+    // the claim amount will be calculated based on the community funds and the number of beneficiary
+    // originalClaimAmount / minClaimAmountRatio <=  claimAmount <= originalClaimAmount
+    uint256 public override minClaimAmountRatio;
 }

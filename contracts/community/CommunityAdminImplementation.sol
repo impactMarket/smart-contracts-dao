@@ -263,16 +263,16 @@ contract CommunityAdminImplementation is
         authorizedWalletAddress = _newAuthorizedWalletAddress;
     }
 
-    /** Updates the value of the defaultMinClaimAmount
+    /** Updates the value of the minClaimAmountRatio
      *
-     * @param _newDefaultMinClaimAmount value of the defaultMinClaimAmount
+     * @param _newMinClaimAmountRatio value of the minClaimAmountRatio
      */
-    function updateDefaultMinClaimAmount(uint256 _newDefaultMinClaimAmount)
+    function updateMinClaimAmountRatio(uint256 _newMinClaimAmountRatio)
         external
         override
         onlyOwnerOrImpactMarketCouncil
     {
-        defaultMinClaimAmount = _newDefaultMinClaimAmount;
+        minClaimAmountRatio = _newMinClaimAmountRatio;
     }
 
     /**

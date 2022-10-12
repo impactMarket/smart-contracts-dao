@@ -1280,16 +1280,18 @@ contract CommunityImplementation is
 
     function _updateClaimAmount() internal {
         uint256 _newClaimAmount;
-        if (validBeneficiaryCount == 0 || isSelfFunding()) {
+        uint256 _minClaimAmountRatio = communityAdmin.minClaimAmountRatio();
+
+        if (validBeneficiaryCount == 0 || isSelfFunding() || _minClaimAmountRatio < 2) {
             _newClaimAmount = originalClaimAmount;
         } else {
             _newClaimAmount = token().balanceOf(address(this)) / validBeneficiaryCount;
 
-            if (_newClaimAmount < communityAdmin.defaultMinClaimAmount()) {
-                _newClaimAmount = communityAdmin.defaultMinClaimAmount();
-            }
+            uint256 _minimumClaimAmount = originalClaimAmount / _minClaimAmountRatio;
 
-            if (_newClaimAmount > originalClaimAmount) {
+            if (_newClaimAmount < _minimumClaimAmount) {
+                _newClaimAmount = _minimumClaimAmount;
+            } else if (_newClaimAmount > originalClaimAmount) {
                 _newClaimAmount = originalClaimAmount;
             }
         }
