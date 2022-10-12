@@ -98,7 +98,8 @@ describe.only("Community", () => {
 	const mintAmount = parseEther("10000");
 	const managerRole = keccak256(ethers.utils.toUtf8Bytes("MANAGER_ROLE"));
 	const TREASURY_SAFETY_FACTOR = 10;
-	const minClaimAmountRatioDefault = 100;
+	const minClaimAmountRatioDefault = 10000;
+	const minClaimAmountRatioPrecision = 100;
 
 	async function init() {
 		[
@@ -587,6 +588,18 @@ describe.only("Community", () => {
 					.updateMinClaimAmountRatio(123)
 			).to.be.rejectedWith(
 				"CommunityAdmin: Not Owner Or ImpactMarketCouncil"
+			);
+
+			expect(await communityAdminProxy.minClaimAmountRatio()).to.be.equal(
+				minClaimAmountRatioDefault
+			);
+		});
+
+		it("should not updateMinClaimAmountRatio if minClaimAmountRatio too small", async () => {
+			await expect(
+				communityAdminProxy.updateMinClaimAmountRatio(50)
+			).to.be.rejectedWith(
+				"CommunityAdmin::updateMinClaimAmountRatio: Invalid minClaimAmountRatio"
 			);
 
 			expect(await communityAdminProxy.minClaimAmountRatio()).to.be.equal(
@@ -3924,7 +3937,9 @@ describe.only("Community", () => {
 				.should.emit(communityProxy, "ClaimAmountUpdated")
 				.withArgs(
 					originalClaimAmountDefault,
-					originalClaimAmountDefault.div(minClaimAmountRatioDefault)
+					originalClaimAmountDefault
+						.mul(minClaimAmountRatioPrecision)
+						.div(minClaimAmountRatioDefault)
 				);
 
 			(await cUSD.balanceOf(communityProxy.address)).should.eq(
@@ -3937,7 +3952,9 @@ describe.only("Community", () => {
 				originalClaimAmountDefault
 			);
 			(await communityProxy.claimAmount()).should.eq(
-				originalClaimAmountDefault.div(minClaimAmountRatioDefault)
+				originalClaimAmountDefault
+					.mul(minClaimAmountRatioPrecision)
+					.div(minClaimAmountRatioDefault)
 			);
 
 			await communityProxy.connect(beneficiaryA).claim();
@@ -3947,12 +3964,16 @@ describe.only("Community", () => {
 			);
 			beneficiaryAData.claims.should.eq(1);
 			beneficiaryAData.claimedAmount.should.eq(
-				originalClaimAmountDefault.div(minClaimAmountRatioDefault)
+				originalClaimAmountDefault
+					.mul(minClaimAmountRatioPrecision)
+					.div(minClaimAmountRatioDefault)
 			);
 
 			(await cUSD.balanceOf(beneficiaryA.address)).should.eq(
 				initialAmountDefault.add(
-					originalClaimAmountDefault.div(minClaimAmountRatioDefault)
+					originalClaimAmountDefault
+						.mul(minClaimAmountRatioPrecision)
+						.div(minClaimAmountRatioDefault)
 				)
 			);
 		});
@@ -4092,7 +4113,9 @@ describe.only("Community", () => {
 				.should.emit(communityProxy, "ClaimAmountUpdated")
 				.withArgs(
 					originalClaimAmountDefault,
-					originalClaimAmountDefault.div(minClaimAmountRatioDefault)
+					originalClaimAmountDefault
+						.mul(minClaimAmountRatioPrecision)
+						.div(minClaimAmountRatioDefault)
 				);
 
 			await treasuryProxy.transfer(
@@ -4106,7 +4129,9 @@ describe.only("Community", () => {
 				.requestFunds()
 				.should.emit(communityProxy, "ClaimAmountUpdated")
 				.withArgs(
-					originalClaimAmountDefault.div(minClaimAmountRatioDefault),
+					originalClaimAmountDefault
+						.mul(minClaimAmountRatioPrecision)
+						.div(minClaimAmountRatioDefault),
 					toEther(10).div(20)
 				);
 
@@ -4235,121 +4260,6 @@ describe.only("Community", () => {
 			);
 			beneficiaryBData.claims.should.eq(1);
 			beneficiaryBData.claimedAmount.should.eq(newClaimAmount);
-		});
-
-		it("should recalculate claimAmount if minClaimAmountRatio is 0 #1", async () => {
-			await communityProxy
-				.connect(communityManagerA)
-				.addBeneficiaries([
-					beneficiaryA.address,
-					beneficiaryB.address,
-					beneficiaryC.address,
-					beneficiaryD.address,
-				]);
-
-			(await communityProxy.validBeneficiaryCount()).should.eq(4);
-
-			const communityInitialBalance = await cUSD.balanceOf(
-				communityProxy.address
-			);
-
-			await communityAdminProxy.updateMinClaimAmountRatio(0);
-
-			await communityAdminProxy.transferFromCommunity(
-				communityProxy.address,
-				cUSD.address,
-				adminAccount1.address,
-				communityInitialBalance.sub(toEther(2))
-			);
-
-			(await cUSD.balanceOf(communityProxy.address)).should.eq(
-				toEther(2)
-			);
-
-			(await communityProxy.originalClaimAmount()).should.eq(
-				originalClaimAmountDefault
-			);
-			(await communityProxy.claimAmount()).should.eq(
-				originalClaimAmountDefault
-			);
-
-			await communityProxy.connect(beneficiaryA).claim();
-
-			const beneficiaryAData = await communityProxy.beneficiaries(
-				beneficiaryA.address
-			);
-			beneficiaryAData.claims.should.eq(1);
-			beneficiaryAData.claimedAmount.should.eq(
-				originalClaimAmountDefault
-			);
-
-			(await cUSD.balanceOf(beneficiaryA.address)).should.eq(
-				initialAmountDefault.add(originalClaimAmountDefault)
-			);
-		});
-
-		it("should recalculate claimAmount if minClaimAmountRatio is 0 #2", async () => {
-			await communityProxy
-				.connect(communityManagerA)
-				.addBeneficiaries([
-					beneficiaryA.address,
-					beneficiaryB.address,
-					beneficiaryC.address,
-					beneficiaryD.address,
-				]);
-
-			(await communityProxy.validBeneficiaryCount()).should.eq(4);
-
-			const communityInitialBalance = await cUSD.balanceOf(
-				communityProxy.address
-			);
-
-			await communityAdminProxy
-				.transferFromCommunity(
-					communityProxy.address,
-					cUSD.address,
-					adminAccount1.address,
-					communityInitialBalance.sub(toEther(4))
-				)
-				.should.emit(communityProxy, "ClaimAmountUpdated")
-				.withArgs(originalClaimAmountDefault, toEther(4).div(4));
-
-			await communityAdminProxy.updateMinClaimAmountRatio(0);
-
-			await communityAdminProxy
-				.transferFromCommunity(
-					communityProxy.address,
-					cUSD.address,
-					adminAccount1.address,
-					toEther(2)
-				)
-				.should.emit(communityProxy, "ClaimAmountUpdated")
-				.withArgs(toEther(4).div(4), originalClaimAmountDefault);
-
-			(await cUSD.balanceOf(communityProxy.address)).should.eq(
-				toEther(2)
-			);
-
-			(await communityProxy.originalClaimAmount()).should.eq(
-				originalClaimAmountDefault
-			);
-			(await communityProxy.claimAmount()).should.eq(
-				originalClaimAmountDefault
-			);
-
-			await communityProxy.connect(beneficiaryA).claim();
-
-			const beneficiaryAData = await communityProxy.beneficiaries(
-				beneficiaryA.address
-			);
-			beneficiaryAData.claims.should.eq(1);
-			beneficiaryAData.claimedAmount.should.eq(
-				originalClaimAmountDefault
-			);
-
-			(await cUSD.balanceOf(beneficiaryA.address)).should.eq(
-				initialAmountDefault.add(originalClaimAmountDefault)
-			);
 		});
 	});
 

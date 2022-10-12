@@ -31,6 +31,7 @@ contract CommunityAdminImplementation is
     uint256 private constant DEFAULT_AMOUNT = 5e16;
     uint256 private constant TREASURY_SAFETY_FACTOR = 10;
     uint256 private constant TREASURY_SAFETY_LIMIT = 100e18;
+    uint256 private constant MIN_CLAIM_AMOUNT_RATIO_PRECISION = 100;
 
     /**
      * @notice Triggered when a community has been added
@@ -209,6 +210,15 @@ contract CommunityAdminImplementation is
     }
 
     /**
+     * @notice Returns the MIN_CLAIM_AMOUNT_RATIO_PRECISION
+     *
+     * @return uint256 number of communities
+     */
+    function minClaimAmountRatioPrecision() external pure override returns (uint256) {
+        return MIN_CLAIM_AMOUNT_RATIO_PRECISION;
+    }
+
+    /**
      * @notice Returns if an address is the ambassador or entity of the community
      *
      * @return bool true if the address is an ambassador or entity of the community
@@ -266,12 +276,18 @@ contract CommunityAdminImplementation is
     /** Updates the value of the minClaimAmountRatio
      *
      * @param _newMinClaimAmountRatio value of the minClaimAmountRatio
+     *
+     * !!! be aware that this value will be divided by MIN_CLAIM_AMOUNT_RATIO_PRECISION
      */
     function updateMinClaimAmountRatio(uint256 _newMinClaimAmountRatio)
         external
         override
         onlyOwnerOrImpactMarketCouncil
     {
+        require(
+            _newMinClaimAmountRatio >= MIN_CLAIM_AMOUNT_RATIO_PRECISION,
+            "CommunityAdmin::updateMinClaimAmountRatio: Invalid minClaimAmountRatio"
+        );
         minClaimAmountRatio = _newMinClaimAmountRatio;
     }
 

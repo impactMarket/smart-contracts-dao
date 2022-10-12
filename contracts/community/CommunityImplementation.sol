@@ -1281,13 +1281,19 @@ contract CommunityImplementation is
     function _updateClaimAmount() internal {
         uint256 _newClaimAmount;
         uint256 _minClaimAmountRatio = communityAdmin.minClaimAmountRatio();
+        uint256 _minClaimAmountRatioPrecision = communityAdmin.minClaimAmountRatioPrecision();
 
-        if (validBeneficiaryCount == 0 || isSelfFunding() || _minClaimAmountRatio < 2) {
+        if (
+            validBeneficiaryCount == 0 ||
+            isSelfFunding() ||
+            _minClaimAmountRatio <= _minClaimAmountRatioPrecision
+        ) {
             _newClaimAmount = originalClaimAmount;
         } else {
             _newClaimAmount = token().balanceOf(address(this)) / validBeneficiaryCount;
 
-            uint256 _minimumClaimAmount = originalClaimAmount / _minClaimAmountRatio;
+            uint256 _minimumClaimAmount = (originalClaimAmount * _minClaimAmountRatioPrecision) /
+                _minClaimAmountRatio;
 
             if (_newClaimAmount < _minimumClaimAmount) {
                 _newClaimAmount = _minimumClaimAmount;

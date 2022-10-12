@@ -81,7 +81,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	);
 
 	await CommunityAdminContract.updateTreasury(Treasury.address);
-	await CommunityAdminContract.updateMinClaimAmountRatio(100);
+	await CommunityAdminContract.updateMinClaimAmountRatio(10000);
 
 	await TreasuryContract.updateCommunityAdmin(
 		communityAdminProxyResult.address
