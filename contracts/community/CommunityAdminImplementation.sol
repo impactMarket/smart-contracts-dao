@@ -574,16 +574,18 @@ contract CommunityAdminImplementation is
 
     /**
      * @notice Updates proxy implementation address of a community
+     * use this only for changing the implementation for one community
+     * for updating the implementation for (almost) all communities, just update the communityImplementation param
      *
-     * @param _CommunityMiddleProxy address of the community
+     * @param _communityMiddleProxy address of the community
      * @param _newCommunityImplementation address of new implementation contract
      */
     function updateProxyImplementation(
-        address _CommunityMiddleProxy,
+        address _communityMiddleProxy,
         address _newCommunityImplementation
     ) external override onlyOwnerOrImpactMarketCouncil {
         communityProxyAdmin.upgrade(
-            TransparentUpgradeableProxy(payable(_CommunityMiddleProxy)),
+            TransparentUpgradeableProxy(payable(_communityMiddleProxy)),
             _newCommunityImplementation
         );
     }
@@ -627,6 +629,17 @@ contract CommunityAdminImplementation is
     {
         emit CommunityMiddleProxyUpdated(communityMiddleProxy, _newCommunityMiddleProxy);
         communityMiddleProxy = _newCommunityMiddleProxy;
+    }
+
+    /**
+     * @notice Gets a community implementation address
+     *
+     * @param _communityProxyAddress  address of the community
+     */
+    function getCommunityProxyImplementation(
+        address _communityProxyAddress
+    ) external view override returns(address) {
+        return communityProxyAdmin.getProxyImplementation(TransparentUpgradeableProxy(payable(_communityProxyAddress)));
     }
 
     /**

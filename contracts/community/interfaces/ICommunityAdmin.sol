@@ -91,4 +91,5 @@ interface ICommunityAdmin {
         address _to,
         uint256 _amount
     ) external;
+    function getCommunityProxyImplementation(address _communityProxyAddress) external view returns(address);
 }
