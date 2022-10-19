@@ -13,15 +13,13 @@ let deployer: SignerWithAddress;
 // const proxyAdminAddress = "0x79f9ca5f1A01e1768b9C24AD37FF63A0199E3Fe5";
 // const communityAdminProxyAddress = "0x1c33D75bcE52132c7a0e220c1C338B9db7cf3f3A";
 
-
 // mainnet
 const governanceDelegatorAddress = "0x8f8BB984e652Cb8D0aa7C9D6712Ec2020EB1BAb4";
 const proxyAdminAddress = "0xFC641CE792c242EACcD545B7bee2028f187f61EC";
 const communityAdminProxyAddress = "0xd61c407c3A00dFD8C355973f7a14c55ebaFDf6F9";
 
-const contractName = 'CommunityAdminImplementation';
-
-let newImplementationAddress: string;
+let newCommunityAdminImplementationAddress: string;
+let newCommunityImplementationAddress: string;
 
 let GovernanceProxy: ethersTypes.Contract;
 
@@ -37,14 +35,17 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		governanceDelegatorAddress
 	);
 
-	await deployNewImplementation();
+	await deployNewCommunityImplementation();
+	await deployNewCommunityAdminImplementation();
 	await createUpgradeImplementation();
 };
 
-async function deployNewImplementation() {
-	console.log("Deploying new contract for donation miner");
-	newImplementationAddress = (
-		await deploy(contractName, {
+async function deployNewCommunityImplementation() {
+	console.log("Deploying new contract for Community");
+
+	await new Promise((resolve) => setTimeout(resolve, 6000));
+	newCommunityImplementationAddress = (
+		await deploy('CommunityImplementation', {
 			from: deployer.address,
 			args: [],
 			log: true,
@@ -53,6 +54,17 @@ async function deployNewImplementation() {
 	).address;
 }
 
+async function deployNewCommunityAdminImplementation() {
+	console.log("Deploying new contract for CommunityAdmin");
+	newCommunityAdminImplementationAddress = (
+		await deploy('CommunityAdminImplementation', {
+			from: deployer.address,
+			args: [],
+			log: true,
+			// gasLimit: 13000000,
+		})
+	).address;
+}
 async function createUpgradeImplementation() {
 	console.log("Creating new proposal");
 
@@ -62,19 +74,30 @@ async function createUpgradeImplementation() {
 		deployer,
 		[
 			proxyAdminAddress,
-			communityAdminProxyAddress
+			communityAdminProxyAddress,
+			communityAdminProxyAddress,
+			communityAdminProxyAddress,
 		],
-		[0, 0],
+		[0, 0, 0, 0],
 		[
 			"upgrade(address,address)",
-			"communities(address)"   //this method is called only to check if the new implementation is correct
+			"updateCommunityImplementation(address)",
+			"updateAuthorizedWalletAddress(address)",
+			"updateMinClaimAmountRatio(uint256)"
 		],
-		[["address", "address"], ["address"]],
 		[
-			[communityAdminProxyAddress, newImplementationAddress],
-			[deployer.address]
+			["address", "address"],
+			["address"],
+			["address"],
+			["uint256"]
 		],
-		'Upgrade CommunityAdmin implementation'
+		[
+			[communityAdminProxyAddress, newCommunityAdminImplementationAddress],
+			[newCommunityImplementationAddress],
+			['0x8903B83B6e1B1379f41a9cc82080Be10E1c8E6d3'],  //todo: change this value with the backend wallet address
+			[5000],
+		],
+		'Upgrade CommunityAdmin implementation and CommunityImplementation'
 	);
 }
 

@@ -13,10 +13,10 @@ import "./ICommunityAdmin.sol";
  */
 abstract contract CommunityStorageV1 is ICommunity {
     bool public override locked;
-    uint256 public override claimAmount;
+    uint256 public override originalClaimAmount; //the maximum amount that can be claimed by a beneficiary once
     uint256 public override baseInterval;
     uint256 public override incrementInterval;
-    uint256 public override maxClaim;
+    uint256 public override maxTotalClaim; //the total amount that can be claimed by a beneficiary over time
     uint256 public override validBeneficiaryCount;
     uint256 public override treasuryFunds;
     uint256 public override privateFunds;
