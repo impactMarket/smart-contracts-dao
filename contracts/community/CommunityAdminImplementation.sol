@@ -636,10 +636,16 @@ contract CommunityAdminImplementation is
      *
      * @param _communityProxyAddress  address of the community
      */
-    function getCommunityProxyImplementation(
-        address _communityProxyAddress
-    ) external view override returns(address) {
-        return communityProxyAdmin.getProxyImplementation(TransparentUpgradeableProxy(payable(_communityProxyAddress)));
+    function getCommunityProxyImplementation(address _communityProxyAddress)
+        external
+        view
+        override
+        returns (address)
+    {
+        return
+            communityProxyAdmin.getProxyImplementation(
+                TransparentUpgradeableProxy(payable(_communityProxyAddress))
+            );
     }
 
     /**
