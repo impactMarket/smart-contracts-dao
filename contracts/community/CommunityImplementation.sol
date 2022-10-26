@@ -406,6 +406,14 @@ contract CommunityImplementation is
     }
 
     /**
+     * @notice Returns the 0 address
+     * only used for backwards compatibility
+     */
+    function impactMarketAddress() public pure override returns (address) {
+        return address(0);
+    }
+
+    /**
      * @notice Returns the data of a beneficiary
      *
      * @param _beneficiaryAddress    address of the beneficiary
