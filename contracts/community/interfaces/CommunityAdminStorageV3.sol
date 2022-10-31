@@ -15,4 +15,6 @@ abstract contract CommunityAdminStorageV3 is CommunityAdminStorageV2 {
     // the claim amount will be calculated based on the community funds and the number of beneficiary
     // originalClaimAmount * MIN_CLAIM_AMOUNT_RATIO_PRECISION / minClaimAmountRatio <=  claimAmount <= originalClaimAmount
     uint256 public override minClaimAmountRatio;
+    uint256 public override treasurySafetyPercentage;
+    uint256 public override treasuryMinBalance;
 }

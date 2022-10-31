@@ -29,8 +29,6 @@ contract CommunityAdminImplementation is
     using EnumerableSet for EnumerableSet.AddressSet;
 
     uint256 private constant DEFAULT_AMOUNT = 5e16;
-    uint256 private constant TREASURY_SAFETY_FACTOR = 10;
-    uint256 private constant TREASURY_SAFETY_LIMIT = 100e18;
     uint256 private constant MIN_CLAIM_AMOUNT_RATIO_PRECISION = 100;
 
     /**
@@ -289,6 +287,36 @@ contract CommunityAdminImplementation is
             "CommunityAdmin::updateMinClaimAmountRatio: Invalid minClaimAmountRatio"
         );
         minClaimAmountRatio = _newMinClaimAmountRatio;
+    }
+
+    /** Updates the value of the treasurySafetyPercentage
+     *
+     * @param _newTreasurySafetyPercentage value of the treasurySafetyPercentage
+     *
+     */
+    function updateTreasurySafetyPercentage(uint256 _newTreasurySafetyPercentage)
+        external
+        override
+        onlyOwnerOrImpactMarketCouncil
+    {
+        require(
+            _newTreasurySafetyPercentage > 0 && _newTreasurySafetyPercentage < 101,
+            "CommunityAdmin::updateTreasurySafetyPercentage: Invalid treasurySafetyPercentage"
+        );
+        treasurySafetyPercentage = _newTreasurySafetyPercentage;
+    }
+
+    /** Updates the value of the treasuryMinBalance
+     *
+     * @param _newTreasuryMinBalance value of the treasuryMinBalance
+     *
+     */
+    function updateTreasuryMinBalance(uint256 _newTreasuryMinBalance)
+        external
+        override
+        onlyOwnerOrImpactMarketCouncil
+    {
+        treasuryMinBalance = _newTreasuryMinBalance;
     }
 
     /**
@@ -735,7 +763,7 @@ contract CommunityAdminImplementation is
         if (
             _communityBalance >= _community.minTranche() ||
             block.number <= _community.lastFundRequest() + _community.baseInterval() ||
-            _token.balanceOf(address(treasury)) < TREASURY_SAFETY_LIMIT ||
+            _token.balanceOf(address(treasury)) < treasuryMinBalance ||
             _maxTranche == 0
         ) {
             return 0;
@@ -760,8 +788,8 @@ contract CommunityAdminImplementation is
         if (_trancheAmount > _communityBalance) {
             _amount = _trancheAmount - _communityBalance;
 
-            uint256 _treasurySafetyBalance = _token.balanceOf(address(treasury)) /
-                TREASURY_SAFETY_FACTOR;
+            uint256 _treasurySafetyBalance = (_token.balanceOf(address(treasury)) *
+                treasurySafetyPercentage) / 100;
 
             if (_amount > _treasurySafetyBalance) {
                 _amount = _treasurySafetyBalance;

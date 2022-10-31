@@ -2,7 +2,7 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { deployments, ethers } from "hardhat";
-import {createProposal, toEther} from "../../../test/utils/helpers";
+import { createProposal } from "../../../test/utils/helpers";
 import * as ethersTypes from "ethers";
 
 const { deploy } = deployments;
@@ -19,6 +19,7 @@ const proxyAdminAddress = "0xFC641CE792c242EACcD545B7bee2028f187f61EC";
 const communityAdminProxyAddress = "0xd61c407c3A00dFD8C355973f7a14c55ebaFDf6F9";
 
 let newCommunityAdminImplementationAddress: string;
+let newCommunityImplementationAddress: string;
 
 let GovernanceProxy: ethersTypes.Contract;
 
@@ -34,9 +35,24 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		governanceDelegatorAddress
 	);
 
+	await deployNewCommunityImplementation();
 	await deployNewCommunityAdminImplementation();
 	await createUpgradeImplementation();
 };
+
+async function deployNewCommunityImplementation() {
+	console.log("Deploying new contract for Community");
+
+	await new Promise((resolve) => setTimeout(resolve, 6000));
+	newCommunityImplementationAddress = (
+		await deploy('CommunityImplementation', {
+			from: deployer.address,
+			args: [],
+			log: true,
+			// gasLimit: 13000000,
+		})
+	).address;
+}
 
 async function deployNewCommunityAdminImplementation() {
 	console.log("Deploying new contract for CommunityAdmin");
@@ -60,26 +76,30 @@ async function createUpgradeImplementation() {
 			proxyAdminAddress,
 			communityAdminProxyAddress,
 			communityAdminProxyAddress,
+			communityAdminProxyAddress,
 		],
-		[0, 0, 0],
+		[0, 0, 0, 0],
 		[
 			"upgrade(address,address)",
-			"updateTreasurySafetyPercentage(uint256)",
-			"updateTreasuryMinBalance(uint256)",
+			"updateCommunityImplementation(address)",
+			"updateAuthorizedWalletAddress(address)",
+			"updateMinClaimAmountRatio(uint256)"
 		],
 		[
 			["address", "address"],
-			["uint256"],
+			["address"],
+			["address"],
 			["uint256"]
 		],
 		[
 			[communityAdminProxyAddress, newCommunityAdminImplementationAddress],
-			[10],
-			[toEther(5)],
+			[newCommunityImplementationAddress],
+			['0x8903B83B6e1B1379f41a9cc82080Be10E1c8E6d3'],  //todo: change this value with the backend wallet address
+			[5000],
 		],
-		'Upgrade CommunityAdmin implementation and set treasury safety params'
+		'Upgrade CommunityAdmin implementation and CommunityImplementation'
 	);
 }
 
 export default func;
-func.tags = ["UpgradeCommunityAdmin"];
+func.tags = ["UpgradeCommunityAdmin&Community"];

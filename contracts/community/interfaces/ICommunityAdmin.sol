@@ -30,6 +30,8 @@ interface ICommunityAdmin {
     function communityProxyAdmin() external view returns(ProxyAdmin);
     function communityListAt(uint256 _index) external view returns (address);
     function communityListLength() external view returns (uint256);
+    function treasurySafetyPercentage() external view returns (uint256);
+    function treasuryMinBalance() external view returns (uint256);
     function isAmbassadorOrEntityOfCommunity(address _community, address _ambassadorOrEntity) external view returns (bool);
     function updateTreasury(ITreasury _newTreasury) external;
     function updateImpactMarketCouncil(IImpactMarketCouncil _newImpactMarketCouncil) external;
@@ -38,6 +40,8 @@ interface ICommunityAdmin {
     function updateCommunityImplementation(ICommunity _communityImplementation_) external;
     function updateAuthorizedWalletAddress(address _newSignerAddress) external;
     function updateMinClaimAmountRatio(uint256 _newMinClaimAmountRatio) external;
+    function updateTreasurySafetyPercentage(uint256 _newTreasurySafetyPercentage) external;
+    function updateTreasuryMinBalance(uint256 _newTreasuryMinBalance) external;
     function setCommunityToAmbassador(address _ambassador, ICommunity _communityAddress) external;
     function updateBeneficiaryParams(
         ICommunity _community,

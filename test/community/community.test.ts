@@ -31,7 +31,7 @@ chai.use(chaiAsPromised);
 const expect = chai.expect;
 const provider = waffle.provider;
 
-describe.only("Community", () => {
+describe("Community", () => {
 	enum BeneficiaryState {
 		NONE = 0,
 		Valid = 1,
@@ -97,7 +97,8 @@ describe.only("Community", () => {
 	const zeroAddress = "0x0000000000000000000000000000000000000000";
 	const mintAmount = parseEther("10000");
 	const managerRole = keccak256(ethers.utils.toUtf8Bytes("MANAGER_ROLE"));
-	const TREASURY_SAFETY_FACTOR = 10;
+	const TREASURY_SAFETY_PERCENTAGE = 9;
+	const TREASURY_MIN_BALANCE = toEther(100);
 	const minClaimAmountRatioDefault = 10000;
 	const minClaimAmountRatioPrecision = 100;
 
@@ -304,6 +305,13 @@ describe.only("Community", () => {
 			(await communityAdminProxy.getVersion()).should.be.equal(3);
 			(await communityAdminProxy.minClaimAmountRatio()).should.be.equal(
 				minClaimAmountRatioDefault
+			);
+
+			(await communityAdminProxy.treasurySafetyPercentage()).should.eq(
+				TREASURY_SAFETY_PERCENTAGE
+			);
+			(await communityAdminProxy.treasuryMinBalance()).should.eq(
+				TREASURY_MIN_BALANCE
 			);
 		});
 
@@ -606,6 +614,88 @@ describe.only("Community", () => {
 				minClaimAmountRatioDefault
 			);
 		});
+
+		it("should updateTreasurySafetyPercentage if owner or impactMarketCouncil", async () => {
+			await expect(communityAdminProxy.updateTreasurySafetyPercentage(13))
+				.to.be.fulfilled;
+
+			expect(
+				await communityAdminProxy.treasurySafetyPercentage()
+			).to.be.equal(13);
+
+			await expect(communityAdminProxy.updateTreasurySafetyPercentage(31))
+				.to.be.fulfilled;
+
+			expect(
+				await communityAdminProxy.treasurySafetyPercentage()
+			).to.be.equal(31);
+		});
+
+		it("should not updateTreasurySafetyPercentage if not owner nor impactMarketCouncil", async () => {
+			await expect(
+				communityAdminProxy
+					.connect(adminAccount1)
+					.updateTreasurySafetyPercentage(123)
+			).to.be.rejectedWith(
+				"CommunityAdmin: Not Owner Or ImpactMarketCouncil"
+			);
+
+			expect(
+				await communityAdminProxy.treasurySafetyPercentage()
+			).to.be.equal(TREASURY_SAFETY_PERCENTAGE);
+		});
+
+		it("should not updateTreasurySafetyPercentage with invalid percentage", async () => {
+			await expect(
+				communityAdminProxy
+					.connect(deployer)
+					.updateTreasurySafetyPercentage(123)
+			).to.be.rejectedWith(
+				"CommunityAdmin::updateTreasurySafetyPercentage: Invalid treasurySafetyPercentage"
+			);
+
+			await expect(
+				communityAdminProxy
+					.connect(deployer)
+					.updateTreasurySafetyPercentage(0)
+			).to.be.rejectedWith(
+				"CommunityAdmin::updateTreasurySafetyPercentage: Invalid treasurySafetyPercentage"
+			);
+
+			expect(
+				await communityAdminProxy.treasurySafetyPercentage()
+			).to.be.equal(TREASURY_SAFETY_PERCENTAGE);
+		});
+
+		it("should updateTreasuryMinBalance if owner or impactMarketCouncil", async () => {
+			await expect(communityAdminProxy.updateTreasuryMinBalance(123)).to
+				.be.fulfilled;
+
+			expect(await communityAdminProxy.treasuryMinBalance()).to.be.equal(
+				123
+			);
+
+			await expect(communityAdminProxy.updateTreasuryMinBalance(321)).to
+				.be.fulfilled;
+
+			expect(await communityAdminProxy.treasuryMinBalance()).to.be.equal(
+				321
+			);
+		});
+
+		it("should not updateTreasuryMinBalance if not owner nor impactMarketCouncil", async () => {
+			await expect(
+				communityAdminProxy
+					.connect(adminAccount1)
+					.updateTreasuryMinBalance(123)
+			).to.be.rejectedWith(
+				"CommunityAdmin: Not Owner Or ImpactMarketCouncil"
+			);
+
+			expect(await communityAdminProxy.treasuryMinBalance()).to.be.equal(
+				TREASURY_MIN_BALANCE
+			);
+		});
 	});
 
 	describe("Community", () => {
@@ -703,424 +793,6 @@ describe.only("Community", () => {
 				"CommunityAdmin: Not Owner Or ImpactMarketCouncil"
 			);
 		});
-
-		// it("Should have same storage after update community implementation #1", async function () {
-		// 	const CommunityImplementationMockFactory =
-		// 		await ethers.getContractFactory("CommunityImplementationMock");
-		//
-		// 	communityProxy = await ethers.getContractAt(
-		// 		"CommunityImplementationMock",
-		// 		communityProxy.address
-		// 	);
-		//
-		// 	const newCommunityImplementation =
-		// 		await CommunityImplementationMockFactory.deploy();
-		//
-		// 	await communityProxy
-		// 		.connect(communityManagerA)
-		// 		.addBeneficiaries([beneficiaryA.address]);
-		// 	await communityProxy
-		// 		.connect(communityManagerA)
-		// 		.lockBeneficiary(beneficiaryA.address);
-		// 	await communityProxy
-		// 		.connect(communityManagerA)
-		// 		.addBeneficiaries([beneficiaryB.address]);
-		//
-		// 	await expect(
-		// 		communityAdminProxy.updateProxyImplementation(
-		// 			communityProxy.address,
-		// 			newCommunityImplementation.address
-		// 		)
-		// 	).to.be.fulfilled;
-		//
-		// 	// expect(await communityProxy.owner()).to.be.equal(zeroAddress);
-		// 	// await communityProxy.initialize();
-		//
-		// 	await communityProxy
-		// 		.connect(communityManagerA)
-		// 		.addBeneficiaries([beneficiaryC.address]);
-		//
-		// 	expect(await communityProxy.owner()).to.be.equal(
-		// 		communityAdminProxy.address
-		// 	);
-		// 	expect(await communityProxy.locked()).to.be.equal(false);
-		// 	expect(await communityProxy.originalClaimAmount()).to.be.equal(
-		// 		originalClaimAmountTwo
-		// 	);
-		// 	expect(await communityProxy.baseInterval()).to.be.equal(
-		// 		threeMinutesInBlocks
-		// 	);
-		// 	expect(await communityProxy.incrementInterval()).to.be.equal(
-		// 		oneMinuteInBlocks
-		// 	);
-		// 	expect(await communityProxy.maxTotalClaim()).to.be.equal(
-		// 		maxClaimTen.sub(oneCent.mul(2))
-		// 	);
-		// 	expect(await communityProxy.validBeneficiaryCount()).to.be.equal(2);
-		// 	expect(await communityProxy.treasuryFunds()).to.be.equal(
-		// 		communityMinTranche
-		// 	);
-		// 	expect(await communityProxy.privateFunds()).to.be.equal("0");
-		// 	expect(await communityProxy.decreaseStep()).to.be.equal(oneCent);
-		// 	expect(await communityProxy.minTranche()).to.be.equal(
-		// 		communityMinTranche
-		// 	);
-		// 	expect(await communityProxy.maxTranche()).to.be.equal(
-		// 		communityMaxTranche
-		// 	);
-		// 	expect(await communityProxy.previousCommunity()).to.be.equal(
-		// 		zeroAddress
-		// 	);
-		// 	expect(await communityProxy.communityAdmin()).to.be.equal(
-		// 		communityAdminProxy.address
-		// 	);
-		// 	expect(
-		// 		(await communityProxy.beneficiaries(beneficiaryA.address)).state
-		// 	).to.be.equal(BeneficiaryState.Locked);
-		// 	expect(
-		// 		(await communityProxy.beneficiaries(beneficiaryB.address)).state
-		// 	).to.be.equal(BeneficiaryState.Valid);
-		// 	expect(
-		// 		(await communityProxy.beneficiaries(beneficiaryC.address)).state
-		// 	).to.be.equal(BeneficiaryState.Valid);
-		// 	expect(await communityProxy.beneficiaryListLength()).to.be.equal(3);
-		// 	expect(await communityProxy.beneficiaryListAt(0)).to.be.equal(
-		// 		beneficiaryA.address
-		// 	);
-		// 	expect(await communityProxy.beneficiaryListAt(1)).to.be.equal(
-		// 		beneficiaryB.address
-		// 	);
-		// 	expect(await communityProxy.beneficiaryListAt(2)).to.be.equal(
-		// 		beneficiaryC.address
-		// 	);
-		// });
-		//
-		// it("Should have same storage after update community implementation #2", async function () {
-		// 	const CommunityImplementationMockFactory =
-		// 		await ethers.getContractFactory("CommunityImplementationMock");
-		//
-		// 	const newCommunityImplementation =
-		// 		await CommunityImplementationMockFactory.deploy();
-		//
-		// 	await communityProxy
-		// 		.connect(communityManagerA)
-		// 		.addBeneficiaries([beneficiaryA.address]);
-		// 	await communityProxy
-		// 		.connect(communityManagerA)
-		// 		.lockBeneficiary(beneficiaryA.address);
-		// 	await communityProxy
-		// 		.connect(communityManagerA)
-		// 		.addBeneficiaries([beneficiaryB.address]);
-		//
-		// 	await expect(
-		// 		communityAdminProxy.updateCommunityImplementation(
-		// 			newCommunityImplementation.address
-		// 		)
-		// 	).to.be.fulfilled;
-		//
-		// 	communityProxy = await ethers.getContractAt(
-		// 		"CommunityImplementationMock",
-		// 		communityProxy.address
-		// 	);
-		//
-		// 	communityProxy
-		// 		.connect(communityManagerA)
-		// 		.addBeneficiaries([beneficiaryC.address]);
-		//
-		// 	await communityProxy.setParams();
-		//
-		// 	expect(await communityProxy.addressTest1()).to.be.equal(
-		// 		"0x0000000000000000000000000000000000000001"
-		// 	);
-		// 	expect(await communityProxy.addressTest2()).to.be.equal(
-		// 		"0x0000000000000000000000000000000000000002"
-		// 	);
-		// 	expect(await communityProxy.addressTest3()).to.be.equal(
-		// 		"0x0000000000000000000000000000000000000003"
-		// 	);
-		//
-		// 	expect(await communityProxy.uint256Test1()).to.be.equal(1);
-		// 	expect(await communityProxy.uint256Test2()).to.be.equal(2);
-		// 	expect(await communityProxy.uint256Test3()).to.be.equal(3);
-		//
-		// 	expect(
-		// 		await communityProxy.mapTest2(
-		// 			"0x0000000000000000000000000000000000000001"
-		// 		)
-		// 	).to.be.equal(true);
-		// 	expect(await communityProxy.mapTest3(1)).to.be.equal(
-		// 		"0x0000000000000000000000000000000000000001"
-		// 	);
-		//
-		// 	expect(await communityProxy.owner()).to.be.equal(
-		// 		communityAdminProxy.address
-		// 	);
-		// 	expect(await communityProxy.locked()).to.be.equal(false);
-		// 	expect(await communityProxy.originalClaimAmount()).to.be.equal(
-		// 		originalClaimAmountTwo
-		// 	);
-		// 	expect(await communityProxy.baseInterval()).to.be.equal(
-		// 		threeMinutesInBlocks
-		// 	);
-		// 	expect(await communityProxy.incrementInterval()).to.be.equal(
-		// 		oneMinuteInBlocks
-		// 	);
-		// 	expect(await communityProxy.maxTotalClaim()).to.be.equal(
-		// 		maxClaimTen.sub(oneCent.mul(2))
-		// 	);
-		// 	expect(await communityProxy.validBeneficiaryCount()).to.be.equal(2);
-		// 	expect(await communityProxy.treasuryFunds()).to.be.equal(
-		// 		communityMinTranche
-		// 	);
-		// 	expect(await communityProxy.privateFunds()).to.be.equal("0");
-		// 	expect(await communityProxy.decreaseStep()).to.be.equal(oneCent);
-		// 	expect(await communityProxy.minTranche()).to.be.equal(
-		// 		communityMinTranche
-		// 	);
-		// 	expect(await communityProxy.maxTranche()).to.be.equal(
-		// 		communityMaxTranche
-		// 	);
-		// 	expect(await communityProxy.previousCommunity()).to.be.equal(
-		// 		zeroAddress
-		// 	);
-		// 	expect(await communityProxy.communityAdmin()).to.be.equal(
-		// 		communityAdminProxy.address
-		// 	);
-		// 	expect(
-		// 		(await communityProxy.beneficiaries(beneficiaryA.address)).state
-		// 	).to.be.equal(BeneficiaryState.Locked);
-		// 	expect(
-		// 		(await communityProxy.beneficiaries(beneficiaryB.address)).state
-		// 	).to.be.equal(BeneficiaryState.Valid);
-		// 	expect(
-		// 		(await communityProxy.beneficiaries(beneficiaryC.address)).state
-		// 	).to.be.equal(BeneficiaryState.Valid);
-		// 	expect(await communityProxy.beneficiaryListLength()).to.be.equal(3);
-		// 	expect(await communityProxy.beneficiaryListAt(0)).to.be.equal(
-		// 		beneficiaryA.address
-		// 	);
-		// 	expect(await communityProxy.beneficiaryListAt(1)).to.be.equal(
-		// 		beneficiaryB.address
-		// 	);
-		// 	expect(await communityProxy.beneficiaryListAt(2)).to.be.equal(
-		// 		beneficiaryC.address
-		// 	);
-		// });
-
-		// it("Should have update all communities by changing communityAdmin.communityTemplate #1", async function () {
-		// 	await communityProxy
-		// 		.connect(communityManagerA)
-		// 		.addBeneficiaries([beneficiaryA.address]);
-		// 	await communityProxy
-		// 		.connect(communityManagerA)
-		// 		.lockBeneficiary(beneficiaryA.address);
-		// 	await communityProxy
-		// 		.connect(communityManagerA)
-		// 		.addBeneficiaries([beneficiaryB.address]);
-		//
-		// 	let communityProxy2 = await ethers.getContractAt(
-		// 		"CommunityImplementation",
-		// 		await createCommunity(communityAdminProxy)
-		// 	);
-		// 	await communityProxy2
-		// 		.connect(communityManagerA)
-		// 		.addBeneficiaries([beneficiaryB.address]);
-		//
-		// 	const newCommunityImplementation = await (
-		// 		await ethers.getContractFactory("CommunityImplementationMock")
-		// 	).deploy();
-		//
-		// 	await expect(
-		// 		communityAdminProxy.updateCommunityImplementation(
-		// 			newCommunityImplementation.address
-		// 		)
-		// 	).to.be.fulfilled;
-		//
-		// 	communityProxy = await ethers.getContractAt(
-		// 		"CommunityImplementationMock",
-		// 		communityProxy.address
-		// 	);
-		//
-		// 	await communityProxy.setParams();
-		//
-		// 	expect(await communityProxy.addressTest1()).to.be.equal(
-		// 		"0x0000000000000000000000000000000000000001"
-		// 	);
-		// 	expect(await communityProxy.addressTest2()).to.be.equal(
-		// 		"0x0000000000000000000000000000000000000002"
-		// 	);
-		// 	expect(await communityProxy.addressTest3()).to.be.equal(
-		// 		"0x0000000000000000000000000000000000000003"
-		// 	);
-		//
-		// 	expect(await communityProxy.uint256Test1()).to.be.equal(1);
-		// 	expect(await communityProxy.uint256Test2()).to.be.equal(2);
-		// 	expect(await communityProxy.uint256Test3()).to.be.equal(3);
-		//
-		// 	expect(
-		// 		await communityProxy.mapTest2(
-		// 			"0x0000000000000000000000000000000000000001"
-		// 		)
-		// 	).to.be.equal(true);
-		// 	expect(await communityProxy.mapTest3(1)).to.be.equal(
-		// 		"0x0000000000000000000000000000000000000001"
-		// 	);
-		//
-		// 	//*****************************************************************
-		//
-		// 	communityProxy2 = await ethers.getContractAt(
-		// 		"CommunityImplementationMock",
-		// 		communityProxy2.address
-		// 	);
-		//
-		// 	await communityProxy2.setParams();
-		//
-		// 	expect(await communityProxy2.addressTest1()).to.be.equal(
-		// 		"0x0000000000000000000000000000000000000001"
-		// 	);
-		// 	expect(await communityProxy2.addressTest2()).to.be.equal(
-		// 		"0x0000000000000000000000000000000000000002"
-		// 	);
-		// 	expect(await communityProxy2.addressTest3()).to.be.equal(
-		// 		"0x0000000000000000000000000000000000000003"
-		// 	);
-		//
-		// 	expect(await communityProxy2.uint256Test1()).to.be.equal(1);
-		// 	expect(await communityProxy2.uint256Test2()).to.be.equal(2);
-		// 	expect(await communityProxy2.uint256Test3()).to.be.equal(3);
-		//
-		// 	expect(
-		// 		await communityProxy2.mapTest2(
-		// 			"0x0000000000000000000000000000000000000001"
-		// 		)
-		// 	).to.be.equal(true);
-		// 	expect(await communityProxy2.mapTest3(1)).to.be.equal(
-		// 		"0x0000000000000000000000000000000000000001"
-		// 	);
-		// });
-
-		// it("Should revert implementation for only one community", async function () {
-		// 	await communityProxy
-		// 		.connect(communityManagerA)
-		// 		.addBeneficiaries([beneficiaryA.address]);
-		// 	await communityProxy
-		// 		.connect(communityManagerA)
-		// 		.lockBeneficiary(beneficiaryA.address);
-		// 	await communityProxy
-		// 		.connect(communityManagerA)
-		// 		.addBeneficiaries([beneficiaryB.address]);
-		//
-		// 	let communityProxy2 = await ethers.getContractAt(
-		// 		"CommunityImplementation",
-		// 		await createCommunity(communityAdminProxy)
-		// 	);
-		// 	await communityProxy2
-		// 		.connect(communityManagerA)
-		// 		.addBeneficiaries([beneficiaryB.address]);
-		//
-		// 	const newCommunityImplementation = await (
-		// 		await ethers.getContractFactory("CommunityImplementationMock")
-		// 	).deploy();
-		//
-		// 	await expect(
-		// 		communityAdminProxy.updateCommunityImplementation(
-		// 			newCommunityImplementation.address
-		// 		)
-		// 	).to.be.fulfilled;
-		//
-		// 	communityProxy = await ethers.getContractAt(
-		// 		"CommunityImplementationMock",
-		// 		communityProxy.address
-		// 	);
-		//
-		// 	await communityProxy.setParams();
-		//
-		// 	expect(await communityProxy.addressTest1()).to.be.equal(
-		// 		"0x0000000000000000000000000000000000000001"
-		// 	);
-		// 	expect(await communityProxy.addressTest2()).to.be.equal(
-		// 		"0x0000000000000000000000000000000000000002"
-		// 	);
-		// 	expect(await communityProxy.addressTest3()).to.be.equal(
-		// 		"0x0000000000000000000000000000000000000003"
-		// 	);
-		//
-		// 	expect(await communityProxy.uint256Test1()).to.be.equal(1);
-		// 	expect(await communityProxy.uint256Test2()).to.be.equal(2);
-		// 	expect(await communityProxy.uint256Test3()).to.be.equal(3);
-		//
-		// 	expect(
-		// 		await communityProxy.mapTest2(
-		// 			"0x0000000000000000000000000000000000000001"
-		// 		)
-		// 	).to.be.equal(true);
-		// 	expect(await communityProxy.mapTest3(1)).to.be.equal(
-		// 		"0x0000000000000000000000000000000000000001"
-		// 	);
-		//
-		// 	//*****************************************************************
-		//
-		// 	communityProxy2 = await ethers.getContractAt(
-		// 		"CommunityImplementationMock",
-		// 		communityProxy2.address
-		// 	);
-		//
-		// 	await communityProxy2.setParams();
-		//
-		// 	expect(await communityProxy2.addressTest1()).to.be.equal(
-		// 		"0x0000000000000000000000000000000000000001"
-		// 	);
-		// 	expect(await communityProxy2.addressTest2()).to.be.equal(
-		// 		"0x0000000000000000000000000000000000000002"
-		// 	);
-		// 	expect(await communityProxy2.addressTest3()).to.be.equal(
-		// 		"0x0000000000000000000000000000000000000003"
-		// 	);
-		//
-		// 	expect(await communityProxy2.uint256Test1()).to.be.equal(1);
-		// 	expect(await communityProxy2.uint256Test2()).to.be.equal(2);
-		// 	expect(await communityProxy2.uint256Test3()).to.be.equal(3);
-		//
-		// 	expect(
-		// 		await communityProxy2.mapTest2(
-		// 			"0x0000000000000000000000000000000000000001"
-		// 		)
-		// 	).to.be.equal(true);
-		// 	expect(await communityProxy2.mapTest3(1)).to.be.equal(
-		// 		"0x0000000000000000000000000000000000000001"
-		// 	);
-		//
-		// 	//*****************************************************************
-		// 	//revert to initial implementation for community2
-		//
-		// 	await expect(
-		// 		communityAdminProxy.updateProxyImplementation(
-		// 			communityProxy2.address,
-		// 			communityImplementation.address
-		// 		)
-		// 	).to.be.fulfilled;
-		//
-		// 	await expect(communityProxy.setParams()).to.be.fulfilled;
-		//
-		// 	// yarn coverage throws this error message
-		// 	// await expect(communityProxy2.setParams()).to.be.rejectedWith(
-		// 	// 	"Transaction reverted: function selector was not recognized and there's no fallback function"
-		// 	// );
-		//
-		// 	// yarn test throws this error message
-		// 	// await expect(communityProxy2.setParams()).to.be.rejectedWith(
-		// 	// 	"Transaction reverted without a reason string"
-		// 	// );
-		//
-		// 	// this error message matches both cases
-		// 	await expect(communityProxy2.setParams()).to.be.rejectedWith(
-		// 		"Transaction reverted"
-		// 	);
-		//
-		// 	expect(await communityProxy2.communityAdmin()).to.be.equal(
-		// 		communityAdminProxy.address
-		// 	);
-		// });
 
 		it("Should update maxBeneficiaries if ambassador", async function () {
 			expect(await communityProxy.maxBeneficiaries()).to.be.equal(100);
@@ -3734,7 +3406,9 @@ describe.only("Community", () => {
 			);
 			const treasurySafetyLimit = (
 				await cUSD.balanceOf(treasuryProxy.address)
-			).div(TREASURY_SAFETY_FACTOR);
+			)
+				.mul(TREASURY_SAFETY_PERCENTAGE)
+				.div(100);
 
 			expect(
 				await communityAdminProxy.calculateCommunityTrancheAmount(
@@ -4124,6 +3798,9 @@ describe.only("Community", () => {
 				(await cUSD.balanceOf(treasuryProxy.address)).sub(toEther(100))
 			);
 
+			const treasurySafetyLimit = toEther(100)
+				.mul(TREASURY_SAFETY_PERCENTAGE)
+				.div(100);
 			await communityProxy
 				.connect(communityManagerA)
 				.requestFunds()
@@ -4132,17 +3809,19 @@ describe.only("Community", () => {
 					originalClaimAmountDefault
 						.mul(minClaimAmountRatioPrecision)
 						.div(minClaimAmountRatioDefault),
-					toEther(10).div(20)
+					treasurySafetyLimit.div(20)
 				);
 
 			(await cUSD.balanceOf(communityProxy.address)).should.eq(
-				toEther(10)
+				treasurySafetyLimit
 			);
 
 			(await communityProxy.originalClaimAmount()).should.eq(
 				originalClaimAmountDefault
 			);
-			(await communityProxy.claimAmount()).should.eq(toEther(10).div(20));
+			(await communityProxy.claimAmount()).should.eq(
+				treasurySafetyLimit.div(20)
+			);
 
 			await communityProxy.connect(beneficiaryA).claim();
 
@@ -4150,10 +3829,12 @@ describe.only("Community", () => {
 				beneficiaryA.address
 			);
 			beneficiaryAData.claims.should.eq(1);
-			beneficiaryAData.claimedAmount.should.eq(toEther(10).div(20));
+			beneficiaryAData.claimedAmount.should.eq(
+				treasurySafetyLimit.div(20)
+			);
 
 			(await cUSD.balanceOf(beneficiaryA.address)).should.eq(
-				initialAmountDefault.add(toEther(10).div(20))
+				initialAmountDefault.add(treasurySafetyLimit.div(20))
 			);
 		});
 
@@ -4181,11 +3862,14 @@ describe.only("Community", () => {
 				adminAccount1.address,
 				(await cUSD.balanceOf(treasuryProxy.address)).sub(toEther(100))
 			);
+			const treasurySafetyLimit = toEther(100)
+				.mul(TREASURY_SAFETY_PERCENTAGE)
+				.div(100);
 
 			await communityProxy.connect(communityManagerA).requestFunds();
 
 			(await cUSD.balanceOf(communityProxy.address)).should.eq(
-				toEther(10)
+				treasurySafetyLimit
 			);
 
 			(await communityProxy.originalClaimAmount()).should.eq(
