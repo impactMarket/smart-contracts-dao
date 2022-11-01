@@ -2,6 +2,7 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { toEther } from "../../test/utils/helpers";
+import {generateMerkleTree} from "../../script/merkleTree/generateMerkleTree";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// @ts-ignore
@@ -43,17 +44,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const trancheAmount = toEther(100);
 	const totalAmount = toEther(1000);
 	const cooldown = 3600;
-	const merkleRoot =
-		require("../../airdrop_scripts/tree_scripts/merkleTree_test.json")[
-			"merkleRoot"
-		];
+
 	await airdropV2Contract.initialize(
 		PACT.address,
 		startTime,
 		trancheAmount,
 		totalAmount,
 		cooldown,
-		merkleRoot
+		generateMerkleTree([deployer.address])
 	);
 
 	await airdropV2Contract.transferOwnership(ownerAddress);
@@ -61,4 +59,4 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 export default func;
 func.dependencies = ["ImpactProxyAdminTest", "TokenTest"];
-func.tags = ["AirdropV2Test", "Test"];
+func.tags = ["AirdropV2Test"];

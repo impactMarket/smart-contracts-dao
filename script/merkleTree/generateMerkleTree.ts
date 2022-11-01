@@ -19,8 +19,6 @@ export function getProof(address: string): any {
 }
 
 
-function main() {
-    console.log(generateMerkleTree(beneficiaryList));
+export function generateMerkleTreeFromFile() {
+    return generateMerkleTree(beneficiaryList);
 }
-
-main();

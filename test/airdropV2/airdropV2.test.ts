@@ -34,10 +34,7 @@ describe.only("AirdropV2", () => {
 	const trancheAmount = toEther(100);
 	const totalAmount = toEther(1000);
 	const cooldown = 3600;
-	const merkleRoot =
-		require("../../airdrop_scripts/tree_scripts/merkleTree_test.json")[
-			"merkleRoot"
-		];
+	let merkleRoot: string;
 
 	let owner: SignerWithAddress;
 	let beneficiary1: SignerWithAddress;
@@ -55,7 +52,7 @@ describe.only("AirdropV2", () => {
 	let AirdropV2: ethersTypes.Contract;
 
 	const deploy = deployments.createFixture(async () => {
-		await deployments.fixture("Test", { fallbackToGlobal: false });
+		await deployments.fixture("AirdropV2Test", { fallbackToGlobal: false });
 
 		ImpactProxyAdmin = await ethers.getContractAt(
 			"ImpactProxyAdmin",
@@ -93,6 +90,8 @@ describe.only("AirdropV2", () => {
 				beneficiary8,
 				beneficiary9,
 			] = await ethers.getSigners();
+
+			merkleRoot = generateMerkleTree([owner.address])
 		});
 
 		beforeEach(async () => {
@@ -178,7 +177,6 @@ describe.only("AirdropV2", () => {
 
 	describe("Airdrop  - basic", () => {
 		const initialBalance = toEther(1000000);
-		let merkleRoot: string;
 
 		before(async function () {
 			[
@@ -345,7 +343,7 @@ describe.only("AirdropV2", () => {
 			(await PACT.balanceOf(beneficiary1.address)).should.eq(totalAmount);
 		});
 
-		it("should not claim more than total amount", async function () {
+		it.only("should not claim more than total amount", async function () {
 			const numberOfClaims = Math.ceil(
 				Number(totalAmount.div(trancheAmount))
 			);
