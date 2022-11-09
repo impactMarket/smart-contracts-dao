@@ -13,6 +13,5 @@ import "./ILearnAndEarn.sol";
 abstract contract LearnAndEarnStorageV1 is ILearnAndEarn {
     address public override signerWalletAddress;
     ICommunityAdmin public override communityAdmin;
-    mapping(uint256 => Program) internal _programs;
-    EnumerableSet.UintSet internal _programList;
+    mapping(uint256 => Program) _programs;
 }
