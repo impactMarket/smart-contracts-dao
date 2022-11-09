@@ -19,6 +19,7 @@ import { BigNumber } from "@ethersproject/bignumber";
 import { parseUnits } from "@ethersproject/units";
 import {
 	generateMerkleTree,
+	getMerkleTree,
 	getProof,
 } from "../../script/merkleTree/generateMerkleTree";
 
@@ -91,14 +92,15 @@ describe.only("AirdropV2", () => {
 				beneficiary9,
 			] = await ethers.getSigners();
 
-			merkleRoot = generateMerkleTree([owner.address])
+			merkleRoot = generateMerkleTree([owner.address]);
 		});
 
 		beforeEach(async () => {
 			await deploy();
 		});
 
-		it("should have correct values", async function () {
+		it.only("should have correct values", async function () {
+			console.log(getMerkleTree());
 			(await AirdropV2.getVersion()).should.eq(1);
 			(await AirdropV2.PACT()).should.eq(PACT.address);
 			(await AirdropV2.startTime()).should.eq(startTime);
@@ -343,7 +345,7 @@ describe.only("AirdropV2", () => {
 			(await PACT.balanceOf(beneficiary1.address)).should.eq(totalAmount);
 		});
 
-		it.only("should not claim more than total amount", async function () {
+		it("should not claim more than total amount", async function () {
 			const numberOfClaims = Math.ceil(
 				Number(totalAmount.div(trancheAmount))
 			);

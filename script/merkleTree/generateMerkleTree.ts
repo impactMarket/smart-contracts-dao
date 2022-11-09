@@ -22,3 +22,8 @@ export function getProof(address: string): any {
 export function generateMerkleTreeFromFile() {
     return generateMerkleTree(beneficiaryList);
 }
+
+export function getMerkleTree() {
+    return merkleTree.toString();
+}
+
