@@ -28,7 +28,12 @@ contract LearnAndEarnImplementation is
      * @param sender            Address of the sender
      * @param amount            Amount of the fund
      */
-    event ProgramLevelFunded(uint256 indexed programId, uint256 indexed levelId, address indexed sender, uint256 amount);
+    event ProgramLevelFunded(
+        uint256 indexed programId,
+        uint256 indexed levelId,
+        address indexed sender,
+        uint256 amount
+    );
 
     /**
      * @notice Triggered when a program has been created
@@ -44,7 +49,11 @@ contract LearnAndEarnImplementation is
      * @param levelId           Id of the program
      * @param state             New state of the program
      */
-    event LevelStateChanged(uint256 indexed programId, uint256 indexed levelId, LevelState indexed state);
+    event LevelStateChanged(
+        uint256 indexed programId,
+        uint256 indexed levelId,
+        LevelState indexed state
+    );
 
     /**
      * @notice Triggered when a reward has been claimed
@@ -90,22 +99,26 @@ contract LearnAndEarnImplementation is
     /**
      * @notice Returns the current implementation version
      */
-    function getVersion() external pure override returns (uint256)
-    {
+    function getVersion() external pure override returns (uint256) {
         return 1;
     }
 
-    function programs(uint256 _programId) external view override returns (
-        string memory name,
-        IERC20 token
-    ) {
+    function programs(uint256 _programId)
+        external
+        view
+        override
+        returns (string memory name, IERC20 token)
+    {
         Program storage _program = _programs[_programId];
         name = _program.name;
         token = _program.token;
     }
 
     function programLevels(uint256 _programId, uint256 _levelId)
-        external view override returns (uint256 balance, LevelState state)
+        external
+        view
+        override
+        returns (uint256 balance, LevelState state)
     {
         Level storage _level = _programs[_programId].levels[_levelId];
         balance = _level.balance;
@@ -170,14 +183,19 @@ contract LearnAndEarnImplementation is
      * @param _name       the name of the program
      * @param _token      the token used for reward
      */
-    function addProgram(uint256 _programId, string calldata _name, IERC20 _token)
-        external override onlyOwnerOrImpactMarketCouncil
-    {
+    function addProgram(
+        uint256 _programId,
+        string calldata _name,
+        IERC20 _token
+    ) external override onlyOwnerOrImpactMarketCouncil {
         require(address(_token) != address(0), "LearnAndLearn::addProgram: Invalid token");
 
         Program storage _program = _programs[_programId];
 
-        require(address(_program.token) == address(0), "LearnAndLearn::addProgram: Invalid program id");
+        require(
+            address(_program.token) == address(0),
+            "LearnAndLearn::addProgram: Invalid program id"
+        );
 
         _program.name = _name;
         _program.token = _token;
@@ -192,13 +210,21 @@ contract LearnAndEarnImplementation is
      * @param _levelId    the id of the level
      */
     function addProgramLevel(uint256 _programId, uint256 _levelId)
-        external override onlyOwnerOrImpactMarketCouncil
+        external
+        override
+        onlyOwnerOrImpactMarketCouncil
     {
         Program storage _program = _programs[_programId];
 
-        require(address(_program.token) != address(0), "LearnAndLearn::addProgramLevel: Invalid program id");
+        require(
+            address(_program.token) != address(0),
+            "LearnAndLearn::addProgramLevel: Invalid program id"
+        );
 
-        require(_program.levels[_levelId].state == LevelState.Invalid, "LearnAndLearn::addProgramLevel: Invalid program level id");
+        require(
+            _program.levels[_levelId].state == LevelState.Invalid,
+            "LearnAndLearn::addProgramLevel: Invalid program level id"
+        );
 
         _program.levels[_levelId].state = LevelState.Valid;
 
@@ -212,9 +238,11 @@ contract LearnAndEarnImplementation is
      * @param _levelId   the id of the program level
      * @param _amount the amount to be funded
      */
-    function fundProgramLevel(uint256 _programId, uint256 _levelId, uint256 _amount)
-        external override {
-
+    function fundProgramLevel(
+        uint256 _programId,
+        uint256 _levelId,
+        uint256 _amount
+    ) external override {
         Program storage _program = _programs[_programId];
         Level storage _level = _program.levels[_levelId];
 
@@ -237,7 +265,9 @@ contract LearnAndEarnImplementation is
      * @param _levelId id of the program level
      */
     function pauseProgramLevel(uint256 _programId, uint256 _levelId)
-        external override onlyOwnerOrImpactMarketCouncil
+        external
+        override
+        onlyOwnerOrImpactMarketCouncil
     {
         Program storage _program = _programs[_programId];
         Level storage _level = _program.levels[_levelId];
@@ -259,7 +289,9 @@ contract LearnAndEarnImplementation is
      * @param _levelId id of the program level
      */
     function unpauseProgramLevel(uint256 _programId, uint256 _levelId)
-        external override onlyOwnerOrImpactMarketCouncil
+        external
+        override
+        onlyOwnerOrImpactMarketCouncil
     {
         Program storage _program = _programs[_programId];
         Level storage _level = _program.levels[_levelId];
@@ -281,9 +313,11 @@ contract LearnAndEarnImplementation is
      * @param _levelId id of the program level
      * @param _fundRecipient the address of the recipient who will receive the funds allocated for this program
      */
-    function cancelProgramLevel(uint256 _programId, uint256 _levelId, address _fundRecipient)
-        external override onlyOwnerOrImpactMarketCouncil
-    {
+    function cancelProgramLevel(
+        uint256 _programId,
+        uint256 _levelId,
+        address _fundRecipient
+    ) external override onlyOwnerOrImpactMarketCouncil {
         Program storage _program = _programs[_programId];
         Level storage _level = _program.levels[_levelId];
 
@@ -339,10 +373,7 @@ contract LearnAndEarnImplementation is
             //if the beneficiary has already claimed the reward for this level,
             // or if the rewardAmount is 0
             //we skip this level
-            if (
-                _level.claims[_beneficiary] > 0 ||
-                _rewardAmounts[_index] == 0
-            ) {
+            if (_level.claims[_beneficiary] > 0 || _rewardAmounts[_index] == 0) {
                 continue;
             }
 

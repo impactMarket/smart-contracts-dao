@@ -43,10 +43,12 @@ interface ICommunity {
     ) external;
     function getVersion() external pure returns(uint256);
     function previousCommunity() external view returns(ICommunity);
+    function originalClaimAmount() external view returns(uint256);
     function claimAmount() external view returns(uint256);
     function baseInterval() external view returns(uint256);
     function incrementInterval() external view returns(uint256);
     function maxClaim() external view returns(uint256);
+    function maxTotalClaim() external view returns(uint256);
     function validBeneficiaryCount() external view returns(uint);
     function maxBeneficiaries() external view returns(uint);
     function treasuryFunds() external view returns(uint);
@@ -66,6 +68,7 @@ interface ICommunity {
         returns (uint256[] memory claimedAmounts);
     function decreaseStep() external view returns(uint);
     function beneficiaryListAt(uint256 _index) external view returns (address);
+    function impactMarketAddress() external pure returns (address);
     function beneficiaryListLength() external view returns (uint256);
     function minTranche() external view returns(uint256);
     function maxTranche() external view returns(uint256);
@@ -76,6 +79,7 @@ interface ICommunity {
         uint256 startBlock
     );
     function tokensLength() external view returns (uint256);
+    function isSelfFunding() external view returns (bool);
     function updateCommunityAdmin(ICommunityAdmin _communityAdmin) external;
     function updatePreviousCommunity(ICommunity _newPreviousCommunity) external;
     function updateBeneficiaryParams(

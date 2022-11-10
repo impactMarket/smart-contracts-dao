@@ -242,8 +242,7 @@ describe.only("LearnAndEarn", () => {
 	});
 
 	describe("LearnAndEarn - Program", () => {
-		before(async function () {
-		});
+		before(async function () {});
 
 		beforeEach(async () => {
 			await deploy();
@@ -251,78 +250,105 @@ describe.only("LearnAndEarn", () => {
 
 		it("Should add program if owner", async function () {
 			await LearnAndEarn.connect(owner)
-				.addProgram(123, 'program name', cUSD.address)
+				.addProgram(123, "program name", cUSD.address)
 				.should.emit(LearnAndEarn, "ProgramAdded")
 				.withArgs(123);
 
 			const program = await LearnAndEarn.programs(123);
 			program.token.should.be.equal(cUSD.address);
-			program.name.should.be.equal('program name');
+			program.name.should.be.equal("program name");
 		});
 
 		it("Should add program if ImpactMarketCouncil", async function () {
 			await LearnAndEarn.connect(impactMarketCouncil)
-				.addProgram(123, 'program name', cUSD.address)
+				.addProgram(123, "program name", cUSD.address)
 				.should.emit(LearnAndEarn, "ProgramAdded")
 				.withArgs(123);
 
 			const program = await LearnAndEarn.programs(123);
 			program.token.should.be.equal(cUSD.address);
-			program.name.should.be.equal('program name');
+			program.name.should.be.equal("program name");
 		});
 
 		it("Should not add program if not owner nor ImpactMarketCouncil", async function () {
 			await LearnAndEarn.connect(signerWallet)
-				.addProgram(123, 'program name 1', cUSD.address)
+				.addProgram(123, "program name 1", cUSD.address)
 				.should.be.rejectedWith(
 					"LearnAndEarn: caller is not the owner nor ImpactMarketCouncil"
 				);
 		});
 
 		it("Should not re-add program ", async function () {
-			await LearnAndEarn.connect(owner).addProgram(123, 'program name 1', cUSD.address);
+			await LearnAndEarn.connect(owner).addProgram(
+				123,
+				"program name 1",
+				cUSD.address
+			);
 
 			await LearnAndEarn.connect(owner)
-				.addProgram(123, 'program name 1', cUSD.address)
-				.should.be.rejectedWith("LearnAndLearn::addProgram: Invalid program id");
+				.addProgram(123, "program name 1", cUSD.address)
+				.should.be.rejectedWith(
+					"LearnAndLearn::addProgram: Invalid program id"
+				);
 		});
 
 		it("Should add multiple programs if owner", async function () {
-			await LearnAndEarn.connect(owner).addProgram(1, 'program 1 name', cUSD.address)
-				.should.be.fulfilled;
-			await LearnAndEarn.connect(owner).addProgram(2, 'program 2 name', cUSD.address)
-				.should.be.fulfilled;
-			await LearnAndEarn.connect(owner).addProgram(3, 'program 3 name', cUSD.address)
-				.should.be.fulfilled;
+			await LearnAndEarn.connect(owner).addProgram(
+				1,
+				"program 1 name",
+				cUSD.address
+			).should.be.fulfilled;
+			await LearnAndEarn.connect(owner).addProgram(
+				2,
+				"program 2 name",
+				cUSD.address
+			).should.be.fulfilled;
+			await LearnAndEarn.connect(owner).addProgram(
+				3,
+				"program 3 name",
+				cUSD.address
+			).should.be.fulfilled;
 
 			let program = await LearnAndEarn.programs(1);
 			program.token.should.be.equal(cUSD.address);
-			program.name.should.be.equal('program 1 name');
+			program.name.should.be.equal("program 1 name");
 
 			program = await LearnAndEarn.programs(2);
 			program.token.should.be.equal(cUSD.address);
-			program.name.should.be.equal('program 2 name');
+			program.name.should.be.equal("program 2 name");
 
 			program = await LearnAndEarn.programs(3);
 			program.token.should.be.equal(cUSD.address);
-			program.name.should.be.equal('program 3 name');
+			program.name.should.be.equal("program 3 name");
 		});
 	});
 
 	describe("LearnAndEarn - add program level", () => {
-		before(async function () {
-		});
+		before(async function () {});
 
 		beforeEach(async () => {
 			await deploy();
 
-			await LearnAndEarn.connect(owner).addProgram(1, 'program 1 name', cUSD.address);
-			await LearnAndEarn.connect(owner).addProgram(2, 'program 2 name', cUSD.address);
-			await LearnAndEarn.connect(owner).addProgram(3, 'program 3 name', cUSD.address);
+			await LearnAndEarn.connect(owner).addProgram(
+				1,
+				"program 1 name",
+				cUSD.address
+			);
+			await LearnAndEarn.connect(owner).addProgram(
+				2,
+				"program 2 name",
+				cUSD.address
+			);
+			await LearnAndEarn.connect(owner).addProgram(
+				3,
+				"program 3 name",
+				cUSD.address
+			);
 		});
 
 		it("Should add program level if owner", async function () {
-			await LearnAndEarn.connect(owner).addProgramLevel(1, 1)
+			await LearnAndEarn.connect(owner)
+				.addProgramLevel(1, 1)
 				.should.emit(LearnAndEarn, "LevelStateChanged")
 				.withArgs(1, 1, LevelState.Valid);
 
@@ -332,7 +358,8 @@ describe.only("LearnAndEarn", () => {
 		});
 
 		it("Should add program level if ImpactMarketCouncil", async function () {
-			await LearnAndEarn.connect(owner).addProgramLevel(1, 1)
+			await LearnAndEarn.connect(owner)
+				.addProgramLevel(1, 1)
 				.should.emit(LearnAndEarn, "LevelStateChanged")
 				.withArgs(1, 1, LevelState.Valid);
 
@@ -342,20 +369,24 @@ describe.only("LearnAndEarn", () => {
 		});
 
 		it("Should not add program level if not owner nor ImpactMarketCouncil", async function () {
-			await LearnAndEarn.connect(signerWallet).addProgramLevel(1, 1)
+			await LearnAndEarn.connect(signerWallet)
+				.addProgramLevel(1, 1)
 				.should.be.rejectedWith(
 					"LearnAndEarn: caller is not the owner nor ImpactMarketCouncil"
 				);
 		});
 
 		it("Should add multiple program levels", async function () {
-			await LearnAndEarn.connect(owner).addProgramLevel(1, 1)
+			await LearnAndEarn.connect(owner)
+				.addProgramLevel(1, 1)
 				.should.emit(LearnAndEarn, "LevelStateChanged")
 				.withArgs(1, 1, LevelState.Valid);
-			await LearnAndEarn.connect(owner).addProgramLevel(1, 2)
+			await LearnAndEarn.connect(owner)
+				.addProgramLevel(1, 2)
 				.should.emit(LearnAndEarn, "LevelStateChanged")
 				.withArgs(1, 2, LevelState.Valid);
-			await LearnAndEarn.connect(owner).addProgramLevel(1, 3)
+			await LearnAndEarn.connect(owner)
+				.addProgramLevel(1, 3)
 				.should.emit(LearnAndEarn, "LevelStateChanged")
 				.withArgs(1, 3, LevelState.Valid);
 
@@ -414,9 +445,21 @@ describe.only("LearnAndEarn", () => {
 		beforeEach(async () => {
 			await deploy();
 
-			await LearnAndEarn.connect(owner).addProgram(1, 'program 1 name', cUSD.address);
-			await LearnAndEarn.connect(owner).addProgram(2, 'program 2 name', cUSD.address);
-			await LearnAndEarn.connect(owner).addProgram(3, 'program 3 name', cUSD.address);
+			await LearnAndEarn.connect(owner).addProgram(
+				1,
+				"program 1 name",
+				cUSD.address
+			);
+			await LearnAndEarn.connect(owner).addProgram(
+				2,
+				"program 2 name",
+				cUSD.address
+			);
+			await LearnAndEarn.connect(owner).addProgram(
+				3,
+				"program 3 name",
+				cUSD.address
+			);
 
 			await LearnAndEarn.connect(owner).addProgramLevel(1, 1);
 			await LearnAndEarn.connect(owner).addProgramLevel(1, 2);
@@ -617,7 +660,11 @@ describe.only("LearnAndEarn", () => {
 			await cUSD
 				.connect(user1)
 				.approve(LearnAndEarn.address, toEther(100));
-			await LearnAndEarn.connect(user1).fundProgramLevel(1, 2, toEther(100));
+			await LearnAndEarn.connect(user1).fundProgramLevel(
+				1,
+				2,
+				toEther(100)
+			);
 
 			const user1Balance = await cUSD.balanceOf(user1.address);
 			await LearnAndEarn.connect(owner)
@@ -642,7 +689,11 @@ describe.only("LearnAndEarn", () => {
 			await cUSD
 				.connect(user1)
 				.approve(LearnAndEarn.address, toEther(100));
-			await LearnAndEarn.connect(user1).fundProgramLevel(1, 2, toEther(100));
+			await LearnAndEarn.connect(user1).fundProgramLevel(
+				1,
+				2,
+				toEther(100)
+			);
 
 			const user1Balance = await cUSD.balanceOf(user1.address);
 			await LearnAndEarn.connect(impactMarketCouncil)
@@ -675,7 +726,11 @@ describe.only("LearnAndEarn", () => {
 		});
 
 		it("Should not fund a canceled program level", async function () {
-			await LearnAndEarn.connect(owner).cancelProgramLevel(1, 1, user1.address);
+			await LearnAndEarn.connect(owner).cancelProgramLevel(
+				1,
+				1,
+				user1.address
+			);
 
 			await LearnAndEarn.connect(user1)
 				.fundProgramLevel(1, 1, toEther(100))
@@ -685,7 +740,11 @@ describe.only("LearnAndEarn", () => {
 		});
 
 		it("Should not unpause program level if the program is canceled", async function () {
-			await LearnAndEarn.connect(owner).cancelProgramLevel(1, 1, user1.address);
+			await LearnAndEarn.connect(owner).cancelProgramLevel(
+				1,
+				1,
+				user1.address
+			);
 
 			await LearnAndEarn.unpauseProgramLevel(1, 1).should.be.rejectedWith(
 				"LearnAndEarn::unpauseProgram: Invalid program level id"
@@ -696,7 +755,11 @@ describe.only("LearnAndEarn", () => {
 		});
 
 		it("Should not pause program level if the program is canceled", async function () {
-			await LearnAndEarn.connect(owner).cancelProgramLevel(1, 1, user1.address);
+			await LearnAndEarn.connect(owner).cancelProgramLevel(
+				1,
+				1,
+				user1.address
+			);
 
 			await LearnAndEarn.pauseProgramLevel(1, 1).should.be.rejectedWith(
 				"LearnAndEarn::pauseProgram: Invalid program level id"
@@ -718,17 +781,15 @@ describe.only("LearnAndEarn", () => {
 		const program3Level2InitialBalance = toEther(3002);
 		const program3Level3InitialBalance = toEther(3003);
 
-		const learnAndEarnInitialBalanceCUSD =
-			program1Level1InitialBalance
-				.add(program1Level2InitialBalance)
-				.add(program1Level3InitialBalance)
-				.add(program2Level1InitialBalance)
-				.add(program2Level2InitialBalance)
-				.add(program2Level3InitialBalance);
-		const learnAndEarnInitialBalancePACT =
-			program3Level1InitialBalance
-				.add(program3Level2InitialBalance)
-				.add(program3Level3InitialBalance)
+		const learnAndEarnInitialBalanceCUSD = program1Level1InitialBalance
+			.add(program1Level2InitialBalance)
+			.add(program1Level3InitialBalance)
+			.add(program2Level1InitialBalance)
+			.add(program2Level2InitialBalance)
+			.add(program2Level3InitialBalance);
+		const learnAndEarnInitialBalancePACT = program3Level1InitialBalance
+			.add(program3Level2InitialBalance)
+			.add(program3Level3InitialBalance);
 
 		before(async function () {});
 
@@ -737,17 +798,17 @@ describe.only("LearnAndEarn", () => {
 
 			await LearnAndEarn.connect(owner).addProgram(
 				1,
-				'name1',
+				"name1",
 				cUSD.address
 			);
 			await LearnAndEarn.connect(owner).addProgram(
 				2,
-				'name2',
+				"name2",
 				cUSD.address
 			);
 			await LearnAndEarn.connect(owner).addProgram(
 				3,
-				'name3',
+				"name3",
 				PACT.address
 			);
 
@@ -770,7 +831,6 @@ describe.only("LearnAndEarn", () => {
 				LearnAndEarn.address,
 				learnAndEarnInitialBalancePACT
 			);
-
 
 			await LearnAndEarn.connect(user1).fundProgramLevel(
 				1,
@@ -817,7 +877,6 @@ describe.only("LearnAndEarn", () => {
 				3,
 				program3Level3InitialBalance
 			);
-
 		});
 
 		it("Should claim reward", async function () {
@@ -1253,7 +1312,9 @@ describe.only("LearnAndEarn", () => {
 
 			const program1Level1 = await LearnAndEarn.programLevels(1, 1);
 			program1Level1.balance.should.be.equal(
-				program1Level1InitialBalance.sub(rewardAmount1).sub(rewardAmount2)
+				program1Level1InitialBalance
+					.sub(rewardAmount1)
+					.sub(rewardAmount2)
 			);
 
 			(await cUSD.balanceOf(beneficiary1.address)).should.eq(
@@ -1463,7 +1524,9 @@ describe.only("LearnAndEarn", () => {
 			).should.eq(0);
 
 			const program1Level1 = await LearnAndEarn.programLevels(1, 1);
-			program1Level1.balance.should.be.equal(program1Level1InitialBalance);
+			program1Level1.balance.should.be.equal(
+				program1Level1InitialBalance
+			);
 
 			(await cUSD.balanceOf(beneficiary1.address)).should.eq(
 				beneficiary1InitialBalance
@@ -1559,7 +1622,9 @@ describe.only("LearnAndEarn", () => {
 			).should.eq(0);
 
 			const program1Level1 = await LearnAndEarn.programLevels(1, 1);
-			program1Level1.balance.should.be.equal(program1Level1InitialBalance);
+			program1Level1.balance.should.be.equal(
+				program1Level1InitialBalance
+			);
 
 			const program2Level1 = await LearnAndEarn.programLevels(2, 1);
 			program2Level1.balance.should.be.equal(0);
@@ -1609,7 +1674,9 @@ describe.only("LearnAndEarn", () => {
 			).should.eq(0);
 
 			const program1Level1 = await LearnAndEarn.programLevels(1, 1);
-			program1Level1.balance.should.be.equal(program1Level1InitialBalance);
+			program1Level1.balance.should.be.equal(
+				program1Level1InitialBalance
+			);
 
 			(await cUSD.balanceOf(beneficiary1.address)).should.eq(
 				beneficiary1InitialBalance
@@ -1666,7 +1733,9 @@ describe.only("LearnAndEarn", () => {
 			).should.eq(0);
 
 			const program1Level1 = await LearnAndEarn.programLevels(1, 1);
-			program1Level1.balance.should.be.equal(program1Level1InitialBalance);
+			program1Level1.balance.should.be.equal(
+				program1Level1InitialBalance
+			);
 
 			(await cUSD.balanceOf(beneficiary1.address)).should.eq(
 				beneficiary1InitialBalance
@@ -1723,10 +1792,14 @@ describe.only("LearnAndEarn", () => {
 			).should.eq(0);
 
 			const program1Level1 = await LearnAndEarn.programLevels(1, 1);
-			program1Level1.balance.should.be.equal(program1Level1InitialBalance);
+			program1Level1.balance.should.be.equal(
+				program1Level1InitialBalance
+			);
 
 			const program2Level1 = await LearnAndEarn.programLevels(2, 1);
-			program2Level1.balance.should.be.equal(program2Level1InitialBalance);
+			program2Level1.balance.should.be.equal(
+				program2Level1InitialBalance
+			);
 
 			(await cUSD.balanceOf(beneficiary1.address)).should.eq(
 				beneficiary1InitialBalance
@@ -1780,7 +1853,9 @@ describe.only("LearnAndEarn", () => {
 			).should.eq(0);
 
 			const program1Level1 = await LearnAndEarn.programLevels(1, 1);
-			program1Level1.balance.should.be.equal(program1Level1InitialBalance);
+			program1Level1.balance.should.be.equal(
+				program1Level1InitialBalance
+			);
 
 			(await cUSD.balanceOf(beneficiary1.address)).should.eq(
 				beneficiary1InitialBalance
@@ -1828,7 +1903,9 @@ describe.only("LearnAndEarn", () => {
 			).should.eq(0);
 
 			const program1Level1 = await LearnAndEarn.programLevels(1, 1);
-			program1Level1.balance.should.be.equal(program1Level1InitialBalance);
+			program1Level1.balance.should.be.equal(
+				program1Level1InitialBalance
+			);
 
 			(await cUSD.balanceOf(beneficiary1.address)).should.eq(
 				beneficiary1InitialBalance

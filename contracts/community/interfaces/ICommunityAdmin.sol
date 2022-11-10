@@ -23,11 +23,15 @@ interface ICommunityAdmin {
     function ambassadors() external view returns(IAmbassadors);
     function communityMiddleProxy() external view returns(address);
     function authorizedWalletAddress() external view returns(address);
+    function minClaimAmountRatio() external view returns(uint256);
+    function minClaimAmountRatioPrecision() external view returns(uint256);
     function communities(address _community) external view returns(CommunityState);
     function communityImplementation() external view returns(ICommunity);
     function communityProxyAdmin() external view returns(ProxyAdmin);
     function communityListAt(uint256 _index) external view returns (address);
     function communityListLength() external view returns (uint256);
+    function treasurySafetyPercentage() external view returns (uint256);
+    function treasuryMinBalance() external view returns (uint256);
     function isAmbassadorOrEntityOfCommunity(address _community, address _ambassadorOrEntity) external view returns (bool);
     function updateTreasury(ITreasury _newTreasury) external;
     function updateImpactMarketCouncil(IImpactMarketCouncil _newImpactMarketCouncil) external;
@@ -35,6 +39,9 @@ interface ICommunityAdmin {
     function updateCommunityMiddleProxy(address _communityMiddleProxy) external;
     function updateCommunityImplementation(ICommunity _communityImplementation_) external;
     function updateAuthorizedWalletAddress(address _newSignerAddress) external;
+    function updateMinClaimAmountRatio(uint256 _newMinClaimAmountRatio) external;
+    function updateTreasurySafetyPercentage(uint256 _newTreasurySafetyPercentage) external;
+    function updateTreasuryMinBalance(uint256 _newTreasuryMinBalance) external;
     function setCommunityToAmbassador(address _ambassador, ICommunity _communityAddress) external;
     function updateBeneficiaryParams(
         ICommunity _community,
@@ -88,4 +95,5 @@ interface ICommunityAdmin {
         address _to,
         uint256 _amount
     ) external;
+    function getCommunityProxyImplementation(address _communityProxyAddress) external view returns(address);
 }
