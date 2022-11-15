@@ -1,6 +1,6 @@
 // @ts-ignore
 import {ethers, config, network} from "hardhat";
-import {fromEther, toEther} from "../test/utils/helpers";
+import {fromEther, toEther} from "../../test/utils/helpers";
 
 // mainnet
 const communityAdminAddress = "0xd61c407c3A00dFD8C355973f7a14c55ebaFDf6F9";
@@ -11,7 +11,6 @@ const cUSDAddress = "0x765DE816845861e75A25fCA122bb6898B8B1282a";
 // // alfajores
 // const communityAdminAddress = "0x1c33D75bcE52132c7a0e220c1C338B9db7cf3f3A";
 // const proxyAdminAddress = "0x79f9ca5f1A01e1768b9C24AD37FF63A0199E3Fe5";
-
 
 
 async function main() {

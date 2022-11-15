@@ -1,8 +1,8 @@
 const {MerkleTree} = require("merkletreejs");
 const keccak256 = require("keccak256");
 const fs = require('fs');
-import {beneficiaryList} from "./beneficiaryList_test";
-// import {beneficiaryList} from "./beneficiaryList_prod";
+// import {beneficiaryList} from "./beneficiaryList_test";
+import {beneficiaryList} from "./beneficiaryList_prod";
 
 let merkleTree: any;
 
@@ -25,11 +25,6 @@ export function generateMerkleTreeFromFile() {
 }
 
 export function generateMerkleTreeFromFileAndWriteProofs() {
-    // let beneficiaryList: string[] = [];
-    // for (let i = 1; i<=4; i++) {
-    //     beneficiaryList.push('0x00000000000000000000000000000000000' + i);
-    // }
-
     generateMerkleTree(beneficiaryList);
 
     let beneficiaryProofs: {[key: string]: string[]} = {};
@@ -52,5 +47,6 @@ export function getMerkleTree() {
     return merkleTree.toString();
 }
 
-generateMerkleTreeFromFileAndWriteProofs();
+// generateMerkleTreeFromFileAndWriteProofs();
 
+console.log(generateMerkleTree(beneficiaryList))
