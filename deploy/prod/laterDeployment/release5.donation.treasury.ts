@@ -14,7 +14,7 @@ let deployer: SignerWithAddress;
 // const stakingProxyAddress = "0x2Bdd85857eDd9A4fAA72b663536189e38D8E3C71";
 // const donationMinerProxyAddress = "0x09Cdc8f50994F63103bc165B139631A6ad18EF49";
 
-// // mainnet
+// mainnet
 const governanceDelegatorAddress = "0x8f8BB984e652Cb8D0aa7C9D6712Ec2020EB1BAb4";
 const proxyAdminAddress = "0xFC641CE792c242EACcD545B7bee2028f187f61EC";
 const stakingProxyAddress = "0x1751e740379FC08b7f0eF6d49183fc0931Bd8179";

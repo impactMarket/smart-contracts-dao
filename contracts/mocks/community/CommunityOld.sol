@@ -4,8 +4,7 @@ pragma solidity 0.8.4;
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./interfaces/ICommunity.sol";
 import "./interfaces/ICommunityOld.sol";
@@ -27,7 +26,7 @@ contract CommunityOld is
     ReentrancyGuardUpgradeable,
     CommunityStorageV1
 {
-    using SafeERC20 for IERC20;
+    using SafeERC20Upgradeable for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
     bytes32 private constant MANAGER_ROLE = keccak256("MANAGER_ROLE");

@@ -147,10 +147,11 @@ describe("Community", () => {
 			).address
 		);
 
-		const treasury = await deployments.get("TreasuryProxy");
 		treasuryProxy = await ethers.getContractAt(
 			"TreasuryImplementation",
-			treasury.address
+			(
+				await deployments.get("TreasuryProxy")
+			).address
 		);
 
 		expect(
@@ -181,17 +182,6 @@ describe("Community", () => {
 			"CommunityMiddleProxy",
 			(
 				await deployments.get("CommunityMiddleProxy")
-			).address
-		);
-
-		await communityAdminProxy.updateImpactMarketCouncil(
-			(
-				await deployments.get("ImpactMarketCouncilProxy")
-			).address
-		);
-		await communityAdminProxy.updateAmbassadors(
-			(
-				await deployments.get("AmbassadorsProxy")
 			).address
 		);
 
