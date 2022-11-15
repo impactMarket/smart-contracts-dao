@@ -27,26 +27,37 @@ export function generateMerkleTreeFromFile() {
 export function generateMerkleTreeFromFileAndWriteProofs() {
     generateMerkleTree(beneficiaryList);
 
-    let beneficiaryProofs: {[key: string]: string[]} = {};
+    // let beneficiaryProofs: {[key: string]: string[]} = {};
 
-    beneficiaryList.forEach(beneficiary => {
-        beneficiaryProofs[beneficiary] = getProof(beneficiary);
-    });
+    const csvString = [
+        [
+            "Beneficiary",
+            "Proof"
+        ],
+        ...beneficiaryList.map(beneficiaryAddress => [
+            beneficiaryAddress,
+            getProof(beneficiaryAddress)
+        ])
+    ].map(e => e.join(";")).join("\n");;
 
-    console.log(beneficiaryProofs);
-
-
-    // fs.writeFileSync("proofs.json", JSON.stringify(beneficiaryProofs), function (err: any) {
-    //     if (err) {
-    //         return console.log(err);
-    //     }
+    // beneficiaryList.forEach(beneficiary => {
+    //     beneficiaryProofs[beneficiary] = getProof(beneficiary);
     // });
+
+    // console.log(csvString);
+
+
+    fs.writeFileSync("proofs.csv", csvString, function (err: any) {
+        if (err) {
+            return console.log(err);
+        }
+    });
 }
 
 export function getMerkleTree() {
     return merkleTree.toString();
 }
 
-// generateMerkleTreeFromFileAndWriteProofs();
+generateMerkleTreeFromFileAndWriteProofs();
 
-console.log(generateMerkleTree(beneficiaryList))
+// console.log(generateMerkleTree(beneficiaryList))
