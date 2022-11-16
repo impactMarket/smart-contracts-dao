@@ -1,8 +1,8 @@
 const {MerkleTree} = require("merkletreejs");
 const keccak256 = require("keccak256");
 const fs = require('fs');
-// import {beneficiaryList} from "./beneficiaryList_test";
-import {beneficiaryList} from "./beneficiaryList_prod";
+import {beneficiaryList} from "./beneficiaryList_test";
+// import {beneficiaryList} from "./beneficiaryList_prod";
 
 let merkleTree: any;
 
@@ -19,15 +19,12 @@ export function getProof(address: string): any {
     return merkleTree.getHexProof(hashedAddress);
 }
 
-
 export function generateMerkleTreeFromFile() {
     return generateMerkleTree(beneficiaryList);
 }
 
 export function generateMerkleTreeFromFileAndWriteProofs() {
     generateMerkleTree(beneficiaryList);
-
-    // let beneficiaryProofs: {[key: string]: string[]} = {};
 
     const csvString = [
         [
@@ -40,11 +37,6 @@ export function generateMerkleTreeFromFileAndWriteProofs() {
         ])
     ].map(e => e.join(";")).join("\n");;
 
-    // beneficiaryList.forEach(beneficiary => {
-    //     beneficiaryProofs[beneficiary] = getProof(beneficiary);
-    // });
-
-    // console.log(csvString);
 
 
     fs.writeFileSync("proofs.csv", csvString, function (err: any) {
@@ -58,6 +50,6 @@ export function getMerkleTree() {
     return merkleTree.toString();
 }
 
-generateMerkleTreeFromFileAndWriteProofs();
+// generateMerkleTreeFromFileAndWriteProofs();
 
 // console.log(generateMerkleTree(beneficiaryList))
