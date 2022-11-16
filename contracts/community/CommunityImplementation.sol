@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.4;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./interfaces/ICommunity.sol";
 import "./interfaces/ICommunityAdmin.sol";
 import "./interfaces/CommunityStorageV3.sol";
@@ -29,7 +27,7 @@ contract CommunityImplementation is
     ReentrancyGuardUpgradeable,
     CommunityStorageV3
 {
-    using SafeERC20Upgradeable for IERC20Upgradeable;
+    using SafeERC20Upgradeable for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
     using ECDSA for bytes32;
 
@@ -362,7 +360,7 @@ contract CommunityImplementation is
         uint256 _i;
         uint256 _numberOfManagers = _managers.length;
         for (; _i < _numberOfManagers; _i++) {
-            addManager(_managers[_i]);
+            _addManager(_managers[_i]);
         }
     }
 
@@ -515,7 +513,7 @@ contract CommunityImplementation is
         emit CommunityAdminUpdated(address(communityAdmin), address(_newCommunityAdmin));
         communityAdmin = _newCommunityAdmin;
 
-        addManager(address(communityAdmin));
+        _addManager(address(communityAdmin));
     }
 
     /** Updates the address of the previousCommunity
@@ -687,10 +685,7 @@ contract CommunityImplementation is
      * @param _account address of the manager to be added
      */
     function addManager(address _account) public override onlyAmbassadorOrEntity {
-        if (!hasRole(MANAGER_ROLE, _account)) {
-            super._grantRole(MANAGER_ROLE, _account);
-            emit ManagerAdded(msg.sender, _account);
-        }
+        _addManager(_account);
     }
 
     /**
@@ -1284,6 +1279,18 @@ contract CommunityImplementation is
         }
 
         return _computedClaimAmount;
+    }
+
+    /**
+     * @notice Adds a new manager
+     *
+     * @param _account address of the manager to be added
+     */
+    function _addManager(address _account) internal {
+        if (!hasRole(MANAGER_ROLE, _account)) {
+            super._grantRole(MANAGER_ROLE, _account);
+            emit ManagerAdded(msg.sender, _account);
+        }
     }
 
     function _updateClaimAmount() internal {

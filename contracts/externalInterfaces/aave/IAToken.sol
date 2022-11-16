@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.4;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20 as IERC20Aave} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IScaledBalanceToken} from './IScaledBalanceToken.sol';
 import {IInitializableAToken} from './IInitializableAToken.sol';
 import {IAaveIncentivesController} from './IAaveIncentivesController.sol';
 
-interface IAToken is IERC20, IScaledBalanceToken, IInitializableAToken {
+interface IAToken is IERC20Aave, IScaledBalanceToken, IInitializableAToken {
   /**
    * @dev Emitted after the mint action
    * @param from The address performing the mint
