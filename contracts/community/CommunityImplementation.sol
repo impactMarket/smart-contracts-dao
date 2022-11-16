@@ -977,7 +977,7 @@ contract CommunityImplementation is
      * @notice Requests treasury funds from the communityAdmin
      */
     function requestFunds() external override whenNotLocked onlyManagers {
-        require(!isSelfFunding(), "Community::requestFunds: This coomunity is self-funding");
+        require(!isSelfFunding(), "Community::requestFunds: This community is self-funding");
 
         communityAdmin.fundCommunity();
 

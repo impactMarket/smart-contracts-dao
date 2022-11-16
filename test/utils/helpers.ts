@@ -73,19 +73,6 @@ export async function createAndExecuteProposal(
 	await governanceDelegator.execute(1);
 }
 
-//E.g.
-// await createProposal(
-// 	governanceDelegator,
-// 	user1,
-// 	[proxyAdmin.address, governanceDelegator.address],
-// 	[0, 0],
-// 	["upgrade(address,address)", "_setReleaseToken(address)"],
-// 	[["address", "address"], ["address"]],
-// 	[
-// 		[governanceDelegator.address, newGovernanceDelegate.address],
-// 		[ADDRESS_TEST],
-// 	]
-// );
 export async function createProposal(
 	governanceDelegator: ethersTypes.Contract,
 	proposer: SignerWithAddress,

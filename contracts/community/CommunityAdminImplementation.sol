@@ -759,7 +759,7 @@ contract CommunityAdminImplementation is
         uint256 _maxTranche = _community.maxTranche();
 
         if (
-            _communityBalance >= _community.minTranche() ||
+            _communityBalance >= _minTranche ||
             block.number <= _community.lastFundRequest() + _community.baseInterval() ||
             _token.balanceOf(address(treasury)) < treasuryMinBalance ||
             _maxTranche == 0
