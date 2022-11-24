@@ -28,7 +28,7 @@ const MTokenABI = require("../../integrations/moola/abi/MToken.json");
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 
-describe.only("AirdropV2", () => {
+describe("AirdropV2", () => {
 	const FAKE_ADDRESS = "0x000000000000000000000000000000000000dEaD";
 
 	const startTime = 0;
@@ -99,7 +99,7 @@ describe.only("AirdropV2", () => {
 			await deploy();
 		});
 
-		it.only("should have correct values", async function () {
+		it("should have correct values", async function () {
 			console.log(getMerkleTree());
 			(await AirdropV2.getVersion()).should.eq(1);
 			(await AirdropV2.PACT()).should.eq(PACT.address);

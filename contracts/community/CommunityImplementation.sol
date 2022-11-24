@@ -32,7 +32,7 @@ contract CommunityImplementation is
     using ECDSA for bytes32;
 
     bytes32 private constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
-    uint256 private constant DEFAULT_AMOUNT = 5e16;
+    uint256 private constant DEFAULT_AMOUNT = 1e16;
     uint256 private constant MAX_TOKEN_LIST_LENGTH = 10;
 
     /**

@@ -8,7 +8,7 @@ import * as ethersTypes from "ethers";
 const { deploy } = deployments;
 let deployer: SignerWithAddress;
 
-// //alfajores
+//alfajores
 // const governanceDelegatorAddress = "0x5c27e2600a3eDEF53DE0Ec32F01efCF145419eDF";
 // const communityAdminProxyAddress = "0x1c33D75bcE52132c7a0e220c1C338B9db7cf3f3A";
 // const communityTestAddress = '0xDFFCace49060DFdADF3e28A6125Bf67298F7c88A';

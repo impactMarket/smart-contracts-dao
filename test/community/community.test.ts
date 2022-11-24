@@ -31,7 +31,7 @@ chai.use(chaiAsPromised);
 const expect = chai.expect;
 const provider = waffle.provider;
 
-describe("Community", () => {
+describe.only("Community", () => {
 	enum BeneficiaryState {
 		NONE = 0,
 		Valid = 1,
@@ -93,7 +93,7 @@ describe("Community", () => {
 	const communityMinTrancheDefault = parseEther("100");
 	const communityMaxTrancheDefault = parseEther("5000");
 	const maxBeneficiariesDefault = 100;
-	const initialAmountDefault = parseEther("0.05");
+	const initialAmountDefault = parseEther("0.01");
 	const zeroAddress = "0x0000000000000000000000000000000000000000";
 	const mintAmount = parseEther("10000");
 	const managerRole = keccak256(ethers.utils.toUtf8Bytes("MANAGER_ROLE"));
@@ -4600,7 +4600,7 @@ describe("Community", () => {
 			);
 
 			expect(await celo.balanceOf(communityProxy.address)).equal(
-				toEther("48.672098774831796728")
+				toEther("48.691971201478320251")
 			);
 
 			//second claim - after token update
@@ -4757,7 +4757,7 @@ describe("Community", () => {
 			);
 
 			expect(await celo.balanceOf(communityProxy.address)).equal(
-				toEther("48.672098774831796728")
+				toEther("48.691971201478320251")
 			);
 
 			//second claim - after token update
@@ -4849,7 +4849,7 @@ describe("Community", () => {
 				toEther(0)
 			);
 			expect(await mUSD.balanceOf(communityProxy.address)).equal(
-				toEther("89.085599505569500181")
+				toEther("89.125232885170615862")
 			);
 
 			//third claim - after token update
@@ -4936,7 +4936,7 @@ describe("Community", () => {
 			);
 
 			expect(await cUSD.balanceOf(communityProxy.address)).equal(
-				toEther("86.833786890238093963")
+				toEther("86.873309173496115552")
 			);
 
 			//forth claim - after token update
@@ -5094,7 +5094,7 @@ describe("Community", () => {
 			);
 
 			expect(await cUSD.balanceOf(communityProxy.address)).equal(
-				toEther("96.780048567975995775")
+				toEther("96.819570862390927199")
 			);
 
 			//forth claim - after token update
