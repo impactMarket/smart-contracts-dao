@@ -431,7 +431,7 @@ contract PACTDelegateOld is
             abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(NAME)), getChainIdInternal(), address(this))
         );
         bytes32 _structHash = keccak256(abi.encode(BALLOT_TYPEHASH, _proposalId, _support));
-        bytes32 _digest = keccak256(abi.encodePacked("\x19\x01", _domainSeparator, _structHash));
+        bytes32 _digest = keccak256(abi.encode("\x19\x01", _domainSeparator, _structHash));
         address _signatory = ecrecover(_digest, _v, _r, _s);
         require(_signatory != address(0), "PACT::castVoteBySig: invalid signature");
         emit VoteCast(

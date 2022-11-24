@@ -1249,7 +1249,7 @@ contract CommunityImplementation is
         require(_expirationTimestamp >= block.timestamp, "Community: Signature too old");
 
         bytes32 _messageHash = keccak256(
-            abi.encodePacked(msg.sender, address(this), _expirationTimestamp)
+            abi.encode(msg.sender, address(this), _expirationTimestamp)
         );
 
         address _signerAddress = _messageHash.toEthSignedMessageHash().recover(_signature);

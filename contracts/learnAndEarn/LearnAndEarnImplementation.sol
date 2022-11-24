@@ -378,7 +378,7 @@ contract LearnAndEarnImplementation is
             }
 
             _messageHash = keccak256(
-                abi.encodePacked(
+                abi.encode(
                     _beneficiary,
                     _programId,
                     _levelIds[_index],

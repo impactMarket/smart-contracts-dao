@@ -42,7 +42,7 @@ const deploy = deployments.createFixture(async () => {
 	);
 });
 
-describe("Merkle Distributor", () => {
+xdescribe("Merkle Distributor", () => {
 	before(async function () {});
 
 	beforeEach(async () => {

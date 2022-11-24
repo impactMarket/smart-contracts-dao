@@ -237,12 +237,13 @@ describe.only("Community", () => {
 		communityAddress: string,
 		expirationTimestamp: number
 	): Promise<string> {
-		const message = ethers.utils.solidityKeccak256(
+		const encoded = ethers.utils.defaultAbiCoder.encode(
 			["address", "address", "uint256"],
 			[empoweredAddress, communityAddress, expirationTimestamp]
-		);
-		const arrayifyMessage = ethers.utils.arrayify(message);
-		return signerManager.signMessage(arrayifyMessage);
+		)
+		const hash = ethers.utils.keccak256(encoded)
+
+		return signerManager.signMessage(ethers.utils.arrayify(hash));
 	}
 
 	describe("CommunityAdmin", () => {
