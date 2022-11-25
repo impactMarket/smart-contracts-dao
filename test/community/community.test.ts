@@ -37,6 +37,7 @@ describe.only("Community", () => {
 		Valid = 1,
 		Locked = 2,
 		Removed = 3,
+		AddressChanged = 4,
 	}
 
 	enum CommunityState {
@@ -240,8 +241,8 @@ describe.only("Community", () => {
 		const encoded = ethers.utils.defaultAbiCoder.encode(
 			["address", "address", "uint256"],
 			[empoweredAddress, communityAddress, expirationTimestamp]
-		)
-		const hash = ethers.utils.keccak256(encoded)
+		);
+		const hash = ethers.utils.keccak256(encoded);
 
 		return signerManager.signMessage(ethers.utils.arrayify(hash));
 	}
@@ -2319,6 +2320,26 @@ describe.only("Community", () => {
 			).to.be.rejectedWith("Community: NOT_VALID_BENEFICIARY");
 		});
 
+		it("should not claim if beneficiary has been changed", async () => {
+			const baseInterval = (
+				await communityProxy.baseInterval()
+			).toNumber();
+
+			await advanceTimeAndBlockNTimes(baseInterval + 1);
+
+			await communityProxy
+				.connect(communityManagerA)
+				.changeBeneficiaryAddressByManager(
+					beneficiaryA.address,
+					beneficiaryB.address
+				);
+
+			await communityProxy
+				.connect(beneficiaryA)
+				.claim()
+				.should.be.rejectedWith("Community: NOT_VALID_BENEFICIARY");
+		});
+
 		it("should not claim if community is locked", async () => {
 			await expect(communityProxy.connect(ambassadorA).lock())
 				.to.emit(communityProxy, "CommunityLocked")
@@ -2432,6 +2453,435 @@ describe.only("Community", () => {
 			).to.be.rejectedWith(
 				"Community::claim: Already claimed everything"
 			);
+		});
+
+		it("should changeBeneficiaryAddressByManager #new beneficiary", async () => {
+			await advanceTimeAndBlockNTimes(baseIntervalDefault + 1);
+			await communityProxy.connect(beneficiaryA).claim();
+			await communityProxy
+				.connect(communityManagerA)
+				.changeBeneficiaryAddressByManager(
+					beneficiaryA.address,
+					beneficiaryB.address
+				)
+				.should.emit(communityProxy, "BeneficiaryAddressChanged")
+				.withArgs(beneficiaryA.address, beneficiaryB.address);
+
+			const beneficiaryADetails = await communityProxy.beneficiaries(
+				beneficiaryA.address
+			);
+			const beneficiaryBDetails = await communityProxy.beneficiaries(
+				beneficiaryB.address
+			);
+			const beneficiaryAClaimedAmounts =
+				await communityProxy.beneficiaryClaimedAmounts(
+					beneficiaryA.address
+				);
+			const beneficiaryBClaimedAmounts =
+				await communityProxy.beneficiaryClaimedAmounts(
+					beneficiaryB.address
+				);
+
+			beneficiaryBDetails.state.should.eq(BeneficiaryState.Valid);
+			beneficiaryBDetails.claims.should.eq(beneficiaryADetails.claims);
+			beneficiaryBDetails.claimedAmount.should.eq(
+				beneficiaryADetails.claimedAmount
+			);
+			beneficiaryBDetails.lastClaim.should.eq(
+				beneficiaryADetails.lastClaim
+			);
+
+			beneficiaryADetails.state.should.eq(
+				BeneficiaryState.AddressChanged
+			);
+
+			beneficiaryBClaimedAmounts[0].should.eq(
+				beneficiaryAClaimedAmounts[0]
+			);
+		});
+
+		it("should changeBeneficiaryAddress #new beneficiary", async () => {
+			await advanceTimeAndBlockNTimes(baseIntervalDefault + 1);
+			await communityProxy.connect(beneficiaryA).claim();
+			await communityProxy
+				.connect(beneficiaryA)
+				.changeBeneficiaryAddress(beneficiaryB.address)
+				.should.emit(communityProxy, "BeneficiaryAddressChanged")
+				.withArgs(beneficiaryA.address, beneficiaryB.address);
+
+			const beneficiaryADetails = await communityProxy.beneficiaries(
+				beneficiaryA.address
+			);
+			const beneficiaryBDetails = await communityProxy.beneficiaries(
+				beneficiaryB.address
+			);
+			const beneficiaryAClaimedAmounts =
+				await communityProxy.beneficiaryClaimedAmounts(
+					beneficiaryA.address
+				);
+			const beneficiaryBClaimedAmounts =
+				await communityProxy.beneficiaryClaimedAmounts(
+					beneficiaryB.address
+				);
+
+			beneficiaryBDetails.state.should.eq(BeneficiaryState.Valid);
+			beneficiaryBDetails.claims.should.eq(beneficiaryADetails.claims);
+			beneficiaryBDetails.claimedAmount.should.eq(
+				beneficiaryADetails.claimedAmount
+			);
+			beneficiaryBDetails.lastClaim.should.eq(
+				beneficiaryADetails.lastClaim
+			);
+
+			beneficiaryADetails.state.should.eq(
+				BeneficiaryState.AddressChanged
+			);
+
+			beneficiaryBClaimedAmounts[0].should.eq(
+				beneficiaryAClaimedAmounts[0]
+			);
+		});
+
+		it("should changeBeneficiaryAddressByManager #existing beneficiary #1", async () => {
+			await communityProxy
+				.connect(communityManagerA)
+				.addBeneficiaries([beneficiaryB.address]);
+
+			await advanceTimeAndBlockNTimes(baseIntervalDefault + 1);
+
+			await communityProxy.connect(beneficiaryA).claim();
+			await communityProxy.connect(beneficiaryB).claim();
+
+			await advanceTimeAndBlockNTimes(
+				baseIntervalDefault + incrementIntervalDefault + 1
+			);
+			await communityProxy.connect(beneficiaryA).claim();
+
+			const beneficiaryABefore = await communityProxy.beneficiaries(
+				beneficiaryA.address
+			);
+			const beneficiaryBBefore = await communityProxy.beneficiaries(
+				beneficiaryB.address
+			);
+			const beneficiaryAClaimedAmountsBefore =
+				await communityProxy.beneficiaryClaimedAmounts(
+					beneficiaryA.address
+				);
+			const beneficiaryBClaimedAmountsBefore =
+				await communityProxy.beneficiaryClaimedAmounts(
+					beneficiaryB.address
+				);
+
+			await communityProxy
+				.connect(communityManagerA)
+				.changeBeneficiaryAddressByManager(
+					beneficiaryA.address,
+					beneficiaryB.address
+				)
+				.should.emit(communityProxy, "BeneficiaryAddressChanged")
+				.withArgs(beneficiaryA.address, beneficiaryB.address);
+
+			const beneficiaryAAfter = await communityProxy.beneficiaries(
+				beneficiaryA.address
+			);
+			const beneficiaryBAfter = await communityProxy.beneficiaries(
+				beneficiaryB.address
+			);
+			const beneficiaryAClaimedAmountsAfter =
+				await communityProxy.beneficiaryClaimedAmounts(
+					beneficiaryA.address
+				);
+			const beneficiaryBClaimedAmountsAfter =
+				await communityProxy.beneficiaryClaimedAmounts(
+					beneficiaryB.address
+				);
+
+			beneficiaryBAfter.state.should.eq(beneficiaryBBefore.state);
+			beneficiaryBAfter.claims.should.eq(
+				beneficiaryABefore.claims.toNumber() +
+					beneficiaryBBefore.claims.toNumber()
+			);
+			beneficiaryBAfter.claimedAmount.should.eq(
+				beneficiaryABefore.claimedAmount.add(
+					beneficiaryBBefore.claimedAmount
+				)
+			);
+			beneficiaryBAfter.lastClaim.should.eq(beneficiaryABefore.lastClaim);
+			beneficiaryBClaimedAmountsAfter[0].should.eq(
+				beneficiaryAClaimedAmountsBefore[0].add(
+					beneficiaryBClaimedAmountsBefore[0]
+				)
+			);
+
+			beneficiaryAAfter.state.should.eq(BeneficiaryState.AddressChanged);
+			beneficiaryAAfter.claims.should.eq(beneficiaryABefore.claims);
+			beneficiaryAAfter.claimedAmount.should.eq(
+				beneficiaryABefore.claimedAmount
+			);
+			beneficiaryAAfter.lastClaim.should.eq(beneficiaryABefore.lastClaim);
+			beneficiaryAClaimedAmountsAfter[0].should.eq(
+				beneficiaryAClaimedAmountsBefore[0]
+			);
+		});
+
+		it("should changeBeneficiaryAddressByManager #existing beneficiary #2", async () => {
+			await communityProxy
+				.connect(communityManagerA)
+				.addBeneficiaries([beneficiaryB.address]);
+
+			await advanceTimeAndBlockNTimes(baseIntervalDefault + 1);
+
+			await communityProxy.connect(beneficiaryA).claim();
+			await communityProxy.connect(beneficiaryB).claim();
+
+			await advanceTimeAndBlockNTimes(
+				baseIntervalDefault + incrementIntervalDefault + 1
+			);
+			await communityProxy.connect(beneficiaryB).claim();
+
+			const beneficiaryABefore = await communityProxy.beneficiaries(
+				beneficiaryA.address
+			);
+			const beneficiaryBBefore = await communityProxy.beneficiaries(
+				beneficiaryB.address
+			);
+			const beneficiaryAClaimedAmountsBefore =
+				await communityProxy.beneficiaryClaimedAmounts(
+					beneficiaryA.address
+				);
+			const beneficiaryBClaimedAmountsBefore =
+				await communityProxy.beneficiaryClaimedAmounts(
+					beneficiaryB.address
+				);
+
+			await communityProxy
+				.connect(communityManagerA)
+				.changeBeneficiaryAddressByManager(
+					beneficiaryA.address,
+					beneficiaryB.address
+				)
+				.should.emit(communityProxy, "BeneficiaryAddressChanged")
+				.withArgs(beneficiaryA.address, beneficiaryB.address);
+
+			const beneficiaryAAfter = await communityProxy.beneficiaries(
+				beneficiaryA.address
+			);
+			const beneficiaryBAfter = await communityProxy.beneficiaries(
+				beneficiaryB.address
+			);
+			const beneficiaryAClaimedAmountsAfter =
+				await communityProxy.beneficiaryClaimedAmounts(
+					beneficiaryA.address
+				);
+			const beneficiaryBClaimedAmountsAfter =
+				await communityProxy.beneficiaryClaimedAmounts(
+					beneficiaryB.address
+				);
+
+			beneficiaryBAfter.state.should.eq(beneficiaryBBefore.state);
+			beneficiaryBAfter.claims.should.eq(
+				beneficiaryABefore.claims.toNumber() +
+					beneficiaryBBefore.claims.toNumber()
+			);
+			beneficiaryBAfter.claimedAmount.should.eq(
+				beneficiaryABefore.claimedAmount.add(
+					beneficiaryBBefore.claimedAmount
+				)
+			);
+			beneficiaryBAfter.lastClaim.should.eq(beneficiaryBBefore.lastClaim);
+			beneficiaryBClaimedAmountsAfter[0].should.eq(
+				beneficiaryAClaimedAmountsBefore[0].add(
+					beneficiaryBClaimedAmountsBefore[0]
+				)
+			);
+
+			beneficiaryAAfter.state.should.eq(BeneficiaryState.AddressChanged);
+			beneficiaryAAfter.claims.should.eq(beneficiaryABefore.claims);
+			beneficiaryAAfter.claimedAmount.should.eq(
+				beneficiaryABefore.claimedAmount
+			);
+			beneficiaryAAfter.lastClaim.should.eq(beneficiaryABefore.lastClaim);
+			beneficiaryAClaimedAmountsAfter[0].should.eq(
+				beneficiaryAClaimedAmountsBefore[0]
+			);
+		});
+
+		it("should not changeBeneficiaryAddress if the target user is not new", async () => {
+			await communityProxy
+				.connect(communityManagerA)
+				.addBeneficiary(beneficiaryB.address);
+
+			await communityProxy
+				.connect(beneficiaryA)
+				.changeBeneficiaryAddress(beneficiaryB.address)
+				.should.be.rejectedWith(
+					"Community::changeBeneficiaryAddress: Invalid beneficiary"
+				);
+		});
+
+		it("should changeBeneficiaryAddress and copy status for a new user", async () => {
+			await communityProxy
+				.connect(communityManagerA)
+				.lockBeneficiary(beneficiaryA.address);
+			await communityProxy
+				.connect(beneficiaryA)
+				.changeBeneficiaryAddress(beneficiaryB.address);
+
+			(
+				await communityProxy.beneficiaries(beneficiaryB.address)
+			).state.should.eq(BeneficiaryState.Locked);
+
+			await communityProxy
+				.connect(communityManagerA)
+				.unlockBeneficiary(beneficiaryB.address);
+			await communityProxy
+				.connect(beneficiaryB)
+				.changeBeneficiaryAddress(beneficiaryC.address);
+			(
+				await communityProxy.beneficiaries(beneficiaryC.address)
+			).state.should.eq(BeneficiaryState.Valid);
+
+			await communityProxy
+				.connect(communityManagerA)
+				.removeBeneficiary(beneficiaryC.address);
+			await communityProxy
+				.connect(beneficiaryC)
+				.changeBeneficiaryAddress(beneficiaryD.address);
+			(
+				await communityProxy.beneficiaries(beneficiaryD.address)
+			).state.should.eq(BeneficiaryState.Removed);
+		});
+
+		it("should changeBeneficiaryAddressByManager and not copy status for an existing user", async () => {
+			await communityProxy
+				.connect(communityManagerA)
+				.addBeneficiaries([
+					beneficiaryB.address,
+					beneficiaryC.address,
+					beneficiaryD.address,
+				]);
+
+			await communityProxy
+				.connect(communityManagerA)
+				.lockBeneficiary(beneficiaryA.address);
+			await communityProxy
+				.connect(communityManagerA)
+				.changeBeneficiaryAddressByManager(
+					beneficiaryA.address,
+					beneficiaryB.address
+				);
+
+			(
+				await communityProxy.beneficiaries(beneficiaryB.address)
+			).state.should.eq(BeneficiaryState.Valid);
+
+			await communityProxy
+				.connect(communityManagerA)
+				.lockBeneficiary(beneficiaryC.address);
+
+			await communityProxy
+				.connect(communityManagerA)
+				.changeBeneficiaryAddressByManager(
+					beneficiaryB.address,
+					beneficiaryC.address
+				);
+			(
+				await communityProxy.beneficiaries(beneficiaryC.address)
+			).state.should.eq(BeneficiaryState.Locked);
+
+			await communityProxy
+				.connect(communityManagerA)
+				.removeBeneficiary(beneficiaryD.address);
+
+			await communityProxy
+				.connect(communityManagerA)
+				.changeBeneficiaryAddressByManager(
+					beneficiaryC.address,
+					beneficiaryD.address
+				);
+			(
+				await communityProxy.beneficiaries(beneficiaryD.address)
+			).state.should.eq(BeneficiaryState.Removed);
+		});
+
+		it("should not changeBeneficiaryAddressByManager if old beneficiary has been changed ", async () => {
+			await communityProxy
+				.connect(communityManagerA)
+				.changeBeneficiaryAddressByManager(
+					beneficiaryA.address,
+					beneficiaryB.address
+				);
+
+			await communityProxy
+				.connect(communityManagerA)
+				.changeBeneficiaryAddressByManager(
+					beneficiaryA.address,
+					beneficiaryB.address
+				)
+				.should.be.rejectedWith(
+					"Community::changeBeneficiaryAddress: Invalid beneficiary"
+				);
+		});
+
+		it("should not changeBeneficiaryAddressByManager if new beneficiary has been changed ", async () => {
+			await communityProxy
+				.connect(communityManagerA)
+				.addBeneficiaries([beneficiaryB.address]);
+
+			await communityProxy
+				.connect(communityManagerA)
+				.changeBeneficiaryAddressByManager(
+					beneficiaryB.address,
+					beneficiaryC.address
+				);
+
+			await communityProxy
+				.connect(communityManagerA)
+				.changeBeneficiaryAddressByManager(
+					beneficiaryA.address,
+					beneficiaryB.address
+				)
+				.should.be.rejectedWith(
+					"Community::changeBeneficiaryAddress: Invalid target beneficiary"
+				);
+		});
+
+		it("should not changeBeneficiaryAddress if old beneficiary has been changed ", async () => {
+			await communityProxy
+				.connect(communityManagerA)
+				.changeBeneficiaryAddressByManager(
+					beneficiaryA.address,
+					beneficiaryB.address
+				);
+
+			await communityProxy
+				.connect(beneficiaryA)
+				.changeBeneficiaryAddress(beneficiaryB.address)
+				.should.be.rejectedWith(
+					"Community::changeBeneficiaryAddress: Invalid beneficiary"
+				);
+		});
+
+		it("should not changeBeneficiaryAddressByManager if old beneficiary is new", async () => {
+			await communityProxy
+				.connect(communityManagerA)
+				.changeBeneficiaryAddressByManager(
+					beneficiaryB.address,
+					beneficiaryA.address
+				)
+				.should.be.rejectedWith(
+					"Community::changeBeneficiaryAddress: Invalid beneficiary"
+				);
+
+			await communityProxy
+				.connect(communityManagerA)
+				.changeBeneficiaryAddressByManager(
+					beneficiaryB.address,
+					beneficiaryC.address
+				)
+				.should.be.rejectedWith(
+					"Community::changeBeneficiaryAddress: Invalid beneficiary"
+				);
 		});
 	});
 
@@ -4528,14 +4978,14 @@ describe.only("Community", () => {
 				toEther("49.690556565466314747")
 			);
 
-			expect(await communityProxy.tokensLength()).equal(2);
+			expect(await communityProxy.tokenUpdatesLength()).equal(2);
 
-			const token1 = await communityProxy.tokens(0);
+			const token1 = await communityProxy.tokenUpdates(0);
 			expect(token1.tokenAddress).to.be.equal(cUSD.address);
 			expect(token1.ratio).to.be.equal(toEther(1));
 			expect(token1.startBlock).to.be.equal(0);
 
-			const token2 = await communityProxy.tokens(1);
+			const token2 = await communityProxy.tokenUpdates(1);
 			expect(token2.tokenAddress).to.be.equal(celo.address);
 			expect(token2.ratio).to.be.equal(toEther(3));
 			expect(token2.startBlock).to.be.equal(await getBlockNumber());
@@ -4701,7 +5151,7 @@ describe.only("Community", () => {
 			);
 		});
 
-		it("should beneficiary claim after multiple token update #1", async function () {
+		it("should beneficiary claim after multiple token updates #1", async function () {
 			await communityProxy
 				.connect(communityManagerA)
 				.addBeneficiaries([beneficiaryA.address]);
@@ -5245,6 +5695,871 @@ describe.only("Community", () => {
 				(await communityProxy.beneficiaries(beneficiaryA.address))
 					.claimedAmount
 			).to.eq(originalClaimAmountDefault.div(2));
+		});
+
+		it("should changeBeneficiaryAddress after multiple token updates #new target beneficiary", async function () {
+			await communityProxy
+				.connect(communityManagerA)
+				.addBeneficiaries([beneficiaryA.address]);
+
+			//first claim
+			await expect(communityProxy.connect(beneficiaryA).claim());
+
+			const claimedAmounts =
+				await communityProxy.beneficiaryClaimedAmounts(
+					beneficiaryA.address
+				);
+			expect(claimedAmounts[0]).to.be.eq(originalClaimAmountDefault);
+
+			await expect(
+				communityAdminProxy.updateCommunityToken(
+					communityProxy.address,
+					celo.address,
+					[cUSD.address, mUSD.address, celo.address],
+					originalClaimAmountDefault.mul(2),
+					maxClaimDefault.mul(3),
+					decreaseStepDefault.mul(4),
+					baseIntervalDefault * 2,
+					incrementIntervalDefault
+				)
+			).to.be.fulfilled;
+
+			expect(await communityProxy.claimAmount()).equal(
+				originalClaimAmountDefault.mul(2)
+			);
+
+			//second claim - after token update
+			await advanceTimeAndBlockNTimes(
+				baseIntervalDefault * 2 + incrementIntervalDefault * 2
+			);
+
+			await expect(communityProxy.connect(beneficiaryA).claim());
+
+			let claimedAmounts2 =
+				await communityProxy.beneficiaryClaimedAmounts(
+					beneficiaryA.address
+				);
+			expect(claimedAmounts2[0]).to.be.eq(originalClaimAmountDefault);
+			expect(claimedAmounts2[1]).to.be.eq(
+				originalClaimAmountDefault.mul(2)
+			);
+
+			let beneficiaryADetails = await communityProxy.beneficiaries(
+				beneficiaryA.address
+			);
+			expect(beneficiaryADetails.claimedAmount).to.eq(
+				originalClaimAmountDefault
+					.mul(3)
+					.add(originalClaimAmountDefault.mul(2))
+			);
+
+			await communityAdminProxy.updateCommunityToken(
+				communityProxy.address,
+				mUSD.address,
+				[celo.address, mUSD.address],
+				originalClaimAmountDefault,
+				maxClaimDefault,
+				decreaseStepDefault,
+				baseIntervalDefault,
+				incrementIntervalDefault
+			);
+
+			//third claim - after token update
+			await advanceTimeAndBlockNTimes(
+				baseIntervalDefault + incrementIntervalDefault
+			);
+
+			await communityProxy.connect(beneficiaryA).claim();
+
+			expect(await cUSD.balanceOf(beneficiaryA.address)).to.be.equal(
+				originalClaimAmountDefault.add(initialAmountDefault)
+			);
+			expect(await celo.balanceOf(beneficiaryA.address)).to.be.equal(
+				originalClaimAmountDefault.mul(2)
+			);
+			expect(await mUSD.balanceOf(beneficiaryA.address)).to.be.equal(
+				originalClaimAmountDefault
+			);
+
+			claimedAmounts2 = await communityProxy.beneficiaryClaimedAmounts(
+				beneficiaryA.address
+			);
+			expect(claimedAmounts2[0]).to.be.eq(originalClaimAmountDefault);
+			expect(claimedAmounts2[1]).to.be.eq(
+				originalClaimAmountDefault.mul(2)
+			);
+			expect(claimedAmounts2[2]).to.be.eq(originalClaimAmountDefault);
+
+			beneficiaryADetails = await communityProxy.beneficiaries(
+				beneficiaryA.address
+			);
+			expect(beneficiaryADetails.claimedAmount.div(10)).to.eq(
+				//div(10) to skip the last decimal
+				originalClaimAmountDefault
+					.mul(3)
+					.add(originalClaimAmountDefault.mul(2))
+					.div(3)
+					.add(originalClaimAmountDefault)
+					.div(10) //div(10) to skip the last decimal
+			);
+
+			await communityAdminProxy.updateCommunityToken(
+				communityProxy.address,
+				cUSD.address,
+				[mUSD.address, cUSD.address],
+				originalClaimAmountDefault.div(2),
+				maxClaimDefault.div(2),
+				decreaseStepDefault,
+				baseIntervalDefault,
+				incrementIntervalDefault
+			);
+
+			//forth claim - after token update
+			await advanceTimeAndBlockNTimes(
+				baseIntervalDefault + incrementIntervalDefault * 3
+			);
+
+			await communityProxy.connect(beneficiaryA).claim();
+
+			expect(await cUSD.balanceOf(beneficiaryA.address)).to.be.equal(
+				originalClaimAmountDefault
+					.add(initialAmountDefault)
+					.add(originalClaimAmountDefault.div(2))
+			);
+			expect(await celo.balanceOf(beneficiaryA.address)).to.be.equal(
+				originalClaimAmountDefault.mul(2)
+			);
+			expect(await mUSD.balanceOf(beneficiaryA.address)).to.be.equal(
+				originalClaimAmountDefault
+			);
+
+			claimedAmounts2 = await communityProxy.beneficiaryClaimedAmounts(
+				beneficiaryA.address
+			);
+
+			expect(claimedAmounts2[0]).to.be.eq(
+				originalClaimAmountDefault.add(
+					originalClaimAmountDefault.div(2)
+				)
+			);
+			expect(claimedAmounts2[1]).to.be.eq(
+				originalClaimAmountDefault.mul(2)
+			);
+			expect(claimedAmounts2[2]).to.be.eq(originalClaimAmountDefault);
+
+			beneficiaryADetails = await communityProxy.beneficiaries(
+				beneficiaryA.address
+			);
+
+			expect(beneficiaryADetails.claimedAmount.div(10)).to.eq(
+				//div(10) to skip the last decimal
+				originalClaimAmountDefault
+					.mul(3)
+					.add(originalClaimAmountDefault.mul(2))
+					.div(3)
+					.add(originalClaimAmountDefault)
+					.div(2)
+					.add(originalClaimAmountDefault.div(2))
+					.div(10) //div(10) to skip the last decimal
+			);
+
+			const beneficiaryABefore = await communityProxy.beneficiaries(
+				beneficiaryA.address
+			);
+			const beneficiaryBBefore = await communityProxy.beneficiaries(
+				beneficiaryB.address
+			);
+			const beneficiaryAClaimedAmountsBefore =
+				await communityProxy.beneficiaryClaimedAmounts(
+					beneficiaryA.address
+				);
+			const beneficiaryBClaimedAmountsBefore =
+				await communityProxy.beneficiaryClaimedAmounts(
+					beneficiaryB.address
+				);
+
+			await communityProxy
+				.connect(communityManagerA)
+				.changeBeneficiaryAddressByManager(
+					beneficiaryA.address,
+					beneficiaryB.address
+				)
+				.should.emit(communityProxy, "BeneficiaryAddressChanged")
+				.withArgs(beneficiaryA.address, beneficiaryB.address);
+
+			const beneficiaryAAfter = await communityProxy.beneficiaries(
+				beneficiaryA.address
+			);
+			const beneficiaryBAfter = await communityProxy.beneficiaries(
+				beneficiaryB.address
+			);
+			const beneficiaryAClaimedAmountsAfter =
+				await communityProxy.beneficiaryClaimedAmounts(
+					beneficiaryA.address
+				);
+			const beneficiaryBClaimedAmountsAfter =
+				await communityProxy.beneficiaryClaimedAmounts(
+					beneficiaryB.address
+				);
+
+			beneficiaryBAfter.state.should.eq(beneficiaryABefore.state);
+			beneficiaryBAfter.claims.should.eq(
+				beneficiaryABefore.claims.toNumber()
+			);
+			beneficiaryBAfter.claimedAmount.should.eq(
+				beneficiaryABefore.claimedAmount
+			);
+			beneficiaryBAfter.lastClaim.should.eq(beneficiaryABefore.lastClaim);
+			beneficiaryBClaimedAmountsAfter[0].should.eq(
+				beneficiaryAClaimedAmountsBefore[0]
+			);
+			beneficiaryBClaimedAmountsAfter[1].should.eq(
+				beneficiaryAClaimedAmountsBefore[1]
+			);
+			beneficiaryBClaimedAmountsAfter[2].should.eq(
+				beneficiaryAClaimedAmountsBefore[2]
+			);
+
+			beneficiaryAAfter.state.should.eq(BeneficiaryState.AddressChanged);
+			beneficiaryAAfter.claims.should.eq(beneficiaryABefore.claims);
+			beneficiaryAAfter.claimedAmount.should.eq(
+				beneficiaryABefore.claimedAmount
+			);
+			beneficiaryAAfter.lastClaim.should.eq(beneficiaryABefore.lastClaim);
+			beneficiaryAClaimedAmountsAfter[0].should.eq(
+				beneficiaryAClaimedAmountsBefore[0]
+			);
+			beneficiaryAClaimedAmountsAfter[1].should.eq(
+				beneficiaryAClaimedAmountsBefore[1]
+			);
+			beneficiaryAClaimedAmountsAfter[2].should.eq(
+				beneficiaryAClaimedAmountsBefore[2]
+			);
+		});
+
+		it("should changeBeneficiaryAddress after multiple token updates #old target beneficiary #1", async function () {
+			await communityProxy
+				.connect(communityManagerA)
+				.addBeneficiaries([beneficiaryA.address, beneficiaryB.address]);
+
+			//first claim
+			await expect(communityProxy.connect(beneficiaryA).claim());
+			await expect(communityProxy.connect(beneficiaryB).claim());
+
+			const claimedAmounts =
+				await communityProxy.beneficiaryClaimedAmounts(
+					beneficiaryA.address
+				);
+			expect(claimedAmounts[0]).to.be.eq(originalClaimAmountDefault);
+
+			await expect(
+				communityAdminProxy.updateCommunityToken(
+					communityProxy.address,
+					celo.address,
+					[cUSD.address, mUSD.address, celo.address],
+					originalClaimAmountDefault.mul(2),
+					maxClaimDefault.mul(3),
+					decreaseStepDefault.mul(4),
+					baseIntervalDefault * 2,
+					incrementIntervalDefault
+				)
+			).to.be.fulfilled;
+
+			expect(await communityProxy.claimAmount()).equal(
+				originalClaimAmountDefault.mul(2)
+			);
+
+			//second claim - after token update
+			await advanceTimeAndBlockNTimes(
+				baseIntervalDefault * 2 + incrementIntervalDefault * 2
+			);
+
+			await expect(communityProxy.connect(beneficiaryA).claim());
+			await expect(communityProxy.connect(beneficiaryB).claim());
+
+			let claimedAmounts2 =
+				await communityProxy.beneficiaryClaimedAmounts(
+					beneficiaryA.address
+				);
+			expect(claimedAmounts2[0]).to.be.eq(originalClaimAmountDefault);
+			expect(claimedAmounts2[1]).to.be.eq(
+				originalClaimAmountDefault.mul(2)
+			);
+
+			let beneficiaryADetails = await communityProxy.beneficiaries(
+				beneficiaryA.address
+			);
+			expect(beneficiaryADetails.claimedAmount).to.eq(
+				originalClaimAmountDefault
+					.mul(3)
+					.add(originalClaimAmountDefault.mul(2))
+			);
+
+			await communityAdminProxy.updateCommunityToken(
+				communityProxy.address,
+				mUSD.address,
+				[celo.address, mUSD.address],
+				originalClaimAmountDefault,
+				maxClaimDefault,
+				decreaseStepDefault,
+				baseIntervalDefault,
+				incrementIntervalDefault
+			);
+
+			//third claim - after token update
+			await advanceTimeAndBlockNTimes(
+				baseIntervalDefault + incrementIntervalDefault
+			);
+
+			await communityProxy.connect(beneficiaryA).claim();
+			await communityProxy.connect(beneficiaryB).claim();
+
+			expect(await cUSD.balanceOf(beneficiaryA.address)).to.be.equal(
+				originalClaimAmountDefault.add(initialAmountDefault)
+			);
+			expect(await celo.balanceOf(beneficiaryA.address)).to.be.equal(
+				originalClaimAmountDefault.mul(2)
+			);
+			expect(await mUSD.balanceOf(beneficiaryA.address)).to.be.equal(
+				originalClaimAmountDefault
+			);
+
+			claimedAmounts2 = await communityProxy.beneficiaryClaimedAmounts(
+				beneficiaryA.address
+			);
+			expect(claimedAmounts2[0]).to.be.eq(originalClaimAmountDefault);
+			expect(claimedAmounts2[1]).to.be.eq(
+				originalClaimAmountDefault.mul(2)
+			);
+			expect(claimedAmounts2[2]).to.be.eq(originalClaimAmountDefault);
+
+			beneficiaryADetails = await communityProxy.beneficiaries(
+				beneficiaryA.address
+			);
+			expect(beneficiaryADetails.claimedAmount.div(10)).to.eq(
+				//div(10) to skip the last decimal
+				originalClaimAmountDefault
+					.mul(3)
+					.add(originalClaimAmountDefault.mul(2))
+					.div(3)
+					.add(originalClaimAmountDefault)
+					.div(10) //div(10) to skip the last decimal
+			);
+
+			await communityAdminProxy.updateCommunityToken(
+				communityProxy.address,
+				cUSD.address,
+				[mUSD.address, cUSD.address],
+				originalClaimAmountDefault.div(2),
+				maxClaimDefault.div(2),
+				decreaseStepDefault,
+				baseIntervalDefault,
+				incrementIntervalDefault
+			);
+
+			//forth claim - after token update
+			await advanceTimeAndBlockNTimes(
+				baseIntervalDefault + incrementIntervalDefault * 3
+			);
+
+			await communityProxy.connect(beneficiaryA).claim();
+			await communityProxy.connect(beneficiaryB).claim();
+
+			expect(await cUSD.balanceOf(beneficiaryA.address)).to.be.equal(
+				originalClaimAmountDefault
+					.add(initialAmountDefault)
+					.add(originalClaimAmountDefault.div(2))
+			);
+			expect(await celo.balanceOf(beneficiaryA.address)).to.be.equal(
+				originalClaimAmountDefault.mul(2)
+			);
+			expect(await mUSD.balanceOf(beneficiaryA.address)).to.be.equal(
+				originalClaimAmountDefault
+			);
+
+			claimedAmounts2 = await communityProxy.beneficiaryClaimedAmounts(
+				beneficiaryA.address
+			);
+
+			expect(claimedAmounts2[0]).to.be.eq(
+				originalClaimAmountDefault.add(
+					originalClaimAmountDefault.div(2)
+				)
+			);
+			expect(claimedAmounts2[1]).to.be.eq(
+				originalClaimAmountDefault.mul(2)
+			);
+			expect(claimedAmounts2[2]).to.be.eq(originalClaimAmountDefault);
+
+			beneficiaryADetails = await communityProxy.beneficiaries(
+				beneficiaryA.address
+			);
+
+			expect(beneficiaryADetails.claimedAmount.div(10)).to.eq(
+				//div(10) to skip the last decimal
+				originalClaimAmountDefault
+					.mul(3)
+					.add(originalClaimAmountDefault.mul(2))
+					.div(3)
+					.add(originalClaimAmountDefault)
+					.div(2)
+					.add(originalClaimAmountDefault.div(2))
+					.div(10) //div(10) to skip the last decimal
+			);
+
+			const beneficiaryABefore = await communityProxy.beneficiaries(
+				beneficiaryA.address
+			);
+			const beneficiaryBBefore = await communityProxy.beneficiaries(
+				beneficiaryB.address
+			);
+			const beneficiaryAClaimedAmountsBefore =
+				await communityProxy.beneficiaryClaimedAmounts(
+					beneficiaryA.address
+				);
+			const beneficiaryBClaimedAmountsBefore =
+				await communityProxy.beneficiaryClaimedAmounts(
+					beneficiaryB.address
+				);
+
+			await communityProxy
+				.connect(communityManagerA)
+				.changeBeneficiaryAddressByManager(
+					beneficiaryA.address,
+					beneficiaryB.address
+				)
+				.should.emit(communityProxy, "BeneficiaryAddressChanged")
+				.withArgs(beneficiaryA.address, beneficiaryB.address);
+
+			const beneficiaryAAfter = await communityProxy.beneficiaries(
+				beneficiaryA.address
+			);
+			const beneficiaryBAfter = await communityProxy.beneficiaries(
+				beneficiaryB.address
+			);
+			const beneficiaryAClaimedAmountsAfter =
+				await communityProxy.beneficiaryClaimedAmounts(
+					beneficiaryA.address
+				);
+			const beneficiaryBClaimedAmountsAfter =
+				await communityProxy.beneficiaryClaimedAmounts(
+					beneficiaryB.address
+				);
+
+			beneficiaryBAfter.state.should.eq(beneficiaryBBefore.state);
+			beneficiaryBAfter.claims.should.eq(
+				beneficiaryABefore.claims.toNumber() +
+					beneficiaryBBefore.claims.toNumber()
+			);
+			beneficiaryBAfter.claimedAmount.should.eq(
+				beneficiaryABefore.claimedAmount.add(
+					beneficiaryBBefore.claimedAmount
+				)
+			);
+			beneficiaryBAfter.lastClaim.should.eq(beneficiaryBBefore.lastClaim);
+			beneficiaryBClaimedAmountsAfter[0].should.eq(
+				beneficiaryAClaimedAmountsBefore[0].add(
+					beneficiaryBClaimedAmountsBefore[0]
+				)
+			);
+			beneficiaryBClaimedAmountsAfter[1].should.eq(
+				beneficiaryAClaimedAmountsBefore[1].add(
+					beneficiaryBClaimedAmountsBefore[1]
+				)
+			);
+			beneficiaryBClaimedAmountsAfter[2].should.eq(
+				beneficiaryAClaimedAmountsBefore[2].add(
+					beneficiaryBClaimedAmountsBefore[2]
+				)
+			);
+
+			beneficiaryAAfter.state.should.eq(BeneficiaryState.AddressChanged);
+			beneficiaryAAfter.claims.should.eq(beneficiaryABefore.claims);
+			beneficiaryAAfter.claimedAmount.should.eq(
+				beneficiaryABefore.claimedAmount
+			);
+			beneficiaryAAfter.lastClaim.should.eq(beneficiaryABefore.lastClaim);
+			beneficiaryAClaimedAmountsAfter[0].should.eq(
+				beneficiaryAClaimedAmountsBefore[0]
+			);
+			beneficiaryAClaimedAmountsAfter[1].should.eq(
+				beneficiaryAClaimedAmountsBefore[1]
+			);
+			beneficiaryAClaimedAmountsAfter[2].should.eq(
+				beneficiaryAClaimedAmountsBefore[2]
+			);
+		});
+
+		it("should changeBeneficiaryAddress after multiple token updates #old target beneficiary #2", async function () {
+			await communityProxy
+				.connect(communityManagerA)
+				.addBeneficiaries([beneficiaryA.address, beneficiaryB.address]);
+
+			//first claim
+			await expect(communityProxy.connect(beneficiaryA).claim());
+
+			let claimedAmountsA =
+				await communityProxy.beneficiaryClaimedAmounts(
+					beneficiaryA.address
+				);
+			expect(claimedAmountsA[0]).to.be.eq(originalClaimAmountDefault);
+
+			await expect(
+				communityAdminProxy.updateCommunityToken(
+					communityProxy.address,
+					celo.address,
+					[cUSD.address, mUSD.address, celo.address],
+					originalClaimAmountDefault.mul(2),
+					maxClaimDefault.mul(3),
+					decreaseStepDefault.mul(4),
+					baseIntervalDefault * 2,
+					incrementIntervalDefault
+				)
+			).to.be.fulfilled;
+
+			expect(await communityProxy.claimAmount()).equal(
+				originalClaimAmountDefault.mul(2)
+			);
+
+			//second claim - after token update
+			await advanceTimeAndBlockNTimes(
+				baseIntervalDefault * 2 + incrementIntervalDefault * 2
+			);
+
+			await expect(communityProxy.connect(beneficiaryB).claim());
+
+			let claimedAmountsB =
+				await communityProxy.beneficiaryClaimedAmounts(
+					beneficiaryB.address
+				);
+			expect(claimedAmountsB[0]).to.be.eq(0);
+			expect(claimedAmountsB[1]).to.be.eq(
+				originalClaimAmountDefault.mul(2)
+			);
+
+			await communityAdminProxy.updateCommunityToken(
+				communityProxy.address,
+				mUSD.address,
+				[celo.address, mUSD.address],
+				originalClaimAmountDefault,
+				maxClaimDefault,
+				decreaseStepDefault,
+				baseIntervalDefault,
+				incrementIntervalDefault
+			);
+
+			//third claim - after token update
+			await advanceTimeAndBlockNTimes(
+				baseIntervalDefault + incrementIntervalDefault
+			);
+
+			await communityProxy.connect(beneficiaryA).claim();
+
+			claimedAmountsA = await communityProxy.beneficiaryClaimedAmounts(
+				beneficiaryA.address
+			);
+			expect(claimedAmountsA[0]).to.be.eq(originalClaimAmountDefault);
+			expect(claimedAmountsA[1]).to.be.eq(0);
+			expect(claimedAmountsA[2]).to.be.eq(originalClaimAmountDefault);
+
+			await communityAdminProxy.updateCommunityToken(
+				communityProxy.address,
+				cUSD.address,
+				[mUSD.address, cUSD.address],
+				originalClaimAmountDefault.div(2),
+				maxClaimDefault.div(2),
+				decreaseStepDefault,
+				baseIntervalDefault,
+				incrementIntervalDefault
+			);
+
+			//forth claim - after token update
+			await advanceTimeAndBlockNTimes(
+				baseIntervalDefault + incrementIntervalDefault * 3
+			);
+
+			await communityProxy.connect(beneficiaryA).claim();
+
+			claimedAmountsA = await communityProxy.beneficiaryClaimedAmounts(
+				beneficiaryA.address
+			);
+
+			expect(claimedAmountsA[0]).to.be.eq(
+				originalClaimAmountDefault.add(
+					originalClaimAmountDefault.div(2)
+				)
+			);
+			expect(claimedAmountsA[1]).to.be.eq(0);
+			expect(claimedAmountsA[2]).to.be.eq(originalClaimAmountDefault);
+
+			const beneficiaryABefore = await communityProxy.beneficiaries(
+				beneficiaryA.address
+			);
+			const beneficiaryBBefore = await communityProxy.beneficiaries(
+				beneficiaryB.address
+			);
+			const beneficiaryAClaimedAmountsBefore =
+				await communityProxy.beneficiaryClaimedAmounts(
+					beneficiaryA.address
+				);
+			const beneficiaryBClaimedAmountsBefore =
+				await communityProxy.beneficiaryClaimedAmounts(
+					beneficiaryB.address
+				);
+
+			await communityProxy
+				.connect(communityManagerA)
+				.changeBeneficiaryAddressByManager(
+					beneficiaryA.address,
+					beneficiaryB.address
+				)
+				.should.emit(communityProxy, "BeneficiaryAddressChanged")
+				.withArgs(beneficiaryA.address, beneficiaryB.address);
+
+			const beneficiaryAAfter = await communityProxy.beneficiaries(
+				beneficiaryA.address
+			);
+			const beneficiaryBAfter = await communityProxy.beneficiaries(
+				beneficiaryB.address
+			);
+			const beneficiaryAClaimedAmountsAfter =
+				await communityProxy.beneficiaryClaimedAmounts(
+					beneficiaryA.address
+				);
+			const beneficiaryBClaimedAmountsAfter =
+				await communityProxy.beneficiaryClaimedAmounts(
+					beneficiaryB.address
+				);
+
+			beneficiaryBAfter.state.should.eq(beneficiaryBBefore.state);
+			beneficiaryBAfter.claims.should.eq(
+				beneficiaryABefore.claims.toNumber() +
+					beneficiaryBBefore.claims.toNumber()
+			);
+			beneficiaryBAfter.claimedAmount.should.eq(
+				beneficiaryABefore.claimedAmount.add(
+					beneficiaryBBefore.claimedAmount
+				)
+			);
+
+			beneficiaryBAfter.lastClaim.should.eq(beneficiaryABefore.lastClaim);
+			beneficiaryBClaimedAmountsAfter[0].should.eq(
+				beneficiaryAClaimedAmountsBefore[0].add(
+					beneficiaryBClaimedAmountsBefore[0]
+				)
+			);
+			beneficiaryBClaimedAmountsAfter[1].should.eq(
+				beneficiaryAClaimedAmountsBefore[1].add(
+					beneficiaryBClaimedAmountsBefore[1]
+				)
+			);
+			beneficiaryBClaimedAmountsAfter[2].should.eq(
+				beneficiaryAClaimedAmountsBefore[2].add(
+					beneficiaryBClaimedAmountsBefore[2]
+				)
+			);
+
+			beneficiaryAAfter.state.should.eq(BeneficiaryState.AddressChanged);
+			beneficiaryAAfter.claims.should.eq(beneficiaryABefore.claims);
+			beneficiaryAAfter.claimedAmount.should.eq(
+				beneficiaryABefore.claimedAmount
+			);
+			beneficiaryAAfter.lastClaim.should.eq(beneficiaryABefore.lastClaim);
+			beneficiaryAClaimedAmountsAfter[0].should.eq(
+				beneficiaryAClaimedAmountsBefore[0]
+			);
+			beneficiaryAClaimedAmountsAfter[1].should.eq(
+				beneficiaryAClaimedAmountsBefore[1]
+			);
+			beneficiaryAClaimedAmountsAfter[2].should.eq(
+				beneficiaryAClaimedAmountsBefore[2]
+			);
+		});
+
+		it("should changeBeneficiaryAddress after multiple token updates #old target beneficiary #3", async function () {
+			await communityProxy
+				.connect(communityManagerA)
+				.addBeneficiaries([beneficiaryA.address, beneficiaryB.address]);
+
+			//first claim
+			await expect(communityProxy.connect(beneficiaryB).claim());
+
+			let claimedAmountsB =
+				await communityProxy.beneficiaryClaimedAmounts(
+					beneficiaryB.address
+				);
+			expect(claimedAmountsB[0]).to.be.eq(originalClaimAmountDefault);
+
+			await expect(
+				communityAdminProxy.updateCommunityToken(
+					communityProxy.address,
+					celo.address,
+					[cUSD.address, mUSD.address, celo.address],
+					originalClaimAmountDefault.mul(2),
+					maxClaimDefault.mul(3),
+					decreaseStepDefault.mul(4),
+					baseIntervalDefault * 2,
+					incrementIntervalDefault
+				)
+			).to.be.fulfilled;
+
+			expect(await communityProxy.claimAmount()).equal(
+				originalClaimAmountDefault.mul(2)
+			);
+
+			//second claim - after token update
+			await advanceTimeAndBlockNTimes(
+				baseIntervalDefault * 2 + incrementIntervalDefault * 2
+			);
+
+			await expect(communityProxy.connect(beneficiaryA).claim());
+
+			let claimedAmountsA =
+				await communityProxy.beneficiaryClaimedAmounts(
+					beneficiaryA.address
+				);
+			expect(claimedAmountsA[0]).to.be.eq(0);
+			expect(claimedAmountsA[1]).to.be.eq(
+				originalClaimAmountDefault.mul(2)
+			);
+
+			await communityAdminProxy.updateCommunityToken(
+				communityProxy.address,
+				mUSD.address,
+				[celo.address, mUSD.address],
+				originalClaimAmountDefault,
+				maxClaimDefault,
+				decreaseStepDefault,
+				baseIntervalDefault,
+				incrementIntervalDefault
+			);
+
+			//third claim - after token update
+			await advanceTimeAndBlockNTimes(
+				baseIntervalDefault + incrementIntervalDefault
+			);
+
+			await communityProxy.connect(beneficiaryB).claim();
+
+			claimedAmountsB = await communityProxy.beneficiaryClaimedAmounts(
+				beneficiaryB.address
+			);
+			expect(claimedAmountsB[0]).to.be.eq(originalClaimAmountDefault);
+			expect(claimedAmountsB[1]).to.be.eq(0);
+			expect(claimedAmountsB[2]).to.be.eq(originalClaimAmountDefault);
+
+			await communityAdminProxy.updateCommunityToken(
+				communityProxy.address,
+				cUSD.address,
+				[mUSD.address, cUSD.address],
+				originalClaimAmountDefault.div(2),
+				maxClaimDefault.div(2),
+				decreaseStepDefault,
+				baseIntervalDefault,
+				incrementIntervalDefault
+			);
+
+			//forth claim - after token update
+			await advanceTimeAndBlockNTimes(
+				baseIntervalDefault + incrementIntervalDefault * 3
+			);
+
+			await communityProxy.connect(beneficiaryB).claim();
+
+			claimedAmountsB = await communityProxy.beneficiaryClaimedAmounts(
+				beneficiaryB.address
+			);
+
+			expect(claimedAmountsB[0]).to.be.eq(
+				originalClaimAmountDefault.add(
+					originalClaimAmountDefault.div(2)
+				)
+			);
+			expect(claimedAmountsB[1]).to.be.eq(0);
+			expect(claimedAmountsB[2]).to.be.eq(originalClaimAmountDefault);
+
+			const beneficiaryABefore = await communityProxy.beneficiaries(
+				beneficiaryA.address
+			);
+			const beneficiaryBBefore = await communityProxy.beneficiaries(
+				beneficiaryB.address
+			);
+			const beneficiaryAClaimedAmountsBefore =
+				await communityProxy.beneficiaryClaimedAmounts(
+					beneficiaryA.address
+				);
+			const beneficiaryBClaimedAmountsBefore =
+				await communityProxy.beneficiaryClaimedAmounts(
+					beneficiaryB.address
+				);
+
+			await communityProxy
+				.connect(communityManagerA)
+				.changeBeneficiaryAddressByManager(
+					beneficiaryA.address,
+					beneficiaryB.address
+				)
+				.should.emit(communityProxy, "BeneficiaryAddressChanged")
+				.withArgs(beneficiaryA.address, beneficiaryB.address);
+
+			const beneficiaryAAfter = await communityProxy.beneficiaries(
+				beneficiaryA.address
+			);
+			const beneficiaryBAfter = await communityProxy.beneficiaries(
+				beneficiaryB.address
+			);
+			const beneficiaryAClaimedAmountsAfter =
+				await communityProxy.beneficiaryClaimedAmounts(
+					beneficiaryA.address
+				);
+			const beneficiaryBClaimedAmountsAfter =
+				await communityProxy.beneficiaryClaimedAmounts(
+					beneficiaryB.address
+				);
+
+			beneficiaryBAfter.state.should.eq(beneficiaryBBefore.state);
+			beneficiaryBAfter.claims.should.eq(
+				beneficiaryABefore.claims.toNumber() +
+					beneficiaryBBefore.claims.toNumber()
+			);
+			beneficiaryBAfter.claimedAmount.should.eq(
+				beneficiaryABefore.claimedAmount.add(
+					beneficiaryBBefore.claimedAmount
+				)
+			);
+
+			beneficiaryBAfter.lastClaim.should.eq(beneficiaryBBefore.lastClaim);
+			beneficiaryBClaimedAmountsAfter[0].should.eq(
+				beneficiaryAClaimedAmountsBefore[0].add(
+					beneficiaryBClaimedAmountsBefore[0]
+				)
+			);
+			beneficiaryBClaimedAmountsAfter[1].should.eq(
+				beneficiaryAClaimedAmountsBefore[1].add(
+					beneficiaryBClaimedAmountsBefore[1]
+				)
+			);
+			beneficiaryBClaimedAmountsAfter[2].should.eq(
+				beneficiaryAClaimedAmountsBefore[2].add(
+					beneficiaryBClaimedAmountsBefore[2]
+				)
+			);
+
+			beneficiaryAAfter.state.should.eq(BeneficiaryState.AddressChanged);
+			beneficiaryAAfter.claims.should.eq(beneficiaryABefore.claims);
+			beneficiaryAAfter.claimedAmount.should.eq(
+				beneficiaryABefore.claimedAmount
+			);
+			beneficiaryAAfter.lastClaim.should.eq(beneficiaryABefore.lastClaim);
+			beneficiaryAClaimedAmountsAfter[0].should.eq(
+				beneficiaryAClaimedAmountsBefore[0]
+			);
+			beneficiaryAClaimedAmountsAfter[1].should.eq(
+				beneficiaryAClaimedAmountsBefore[1]
+			);
+			beneficiaryAClaimedAmountsAfter[2].should.eq(
+				beneficiaryAClaimedAmountsBefore[2]
+			);
 		});
 	});
 });

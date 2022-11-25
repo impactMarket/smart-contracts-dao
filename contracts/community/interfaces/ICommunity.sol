@@ -10,7 +10,8 @@ interface ICommunity {
         NONE, //the beneficiary hasn't been added yet
         Valid,
         Locked,
-        Removed
+        Removed,
+        AddressChanged
     }
 
     struct Beneficiary {
@@ -22,7 +23,7 @@ interface ICommunity {
         mapping(address => uint256) claimedAmounts;
     }
 
-    struct Token {
+    struct TokenUpdates {
         address tokenAddress;    //address of the token
         uint256 ratio;           //ratio between maxClaim and previous token maxClaim
         uint256 startBlock;      //the number of the block from which the this token was "active"
@@ -73,12 +74,12 @@ interface ICommunity {
     function minTranche() external view returns(uint256);
     function maxTranche() external view returns(uint256);
     function lastFundRequest() external view returns(uint256);
-    function tokens(uint256 _index) external view returns (
+    function tokenUpdates(uint256 _index) external view returns (
         address tokenAddress,
         uint256 ratio,
         uint256 startBlock
     );
-    function tokensLength() external view returns (uint256);
+    function tokenUpdatesLength() external view returns (uint256);
     function isSelfFunding() external view returns (bool);
     function updateCommunityAdmin(ICommunityAdmin _communityAdmin) external;
     function updatePreviousCommunity(ICommunity _newPreviousCommunity) external;
@@ -136,6 +137,8 @@ interface ICommunity {
         uint256 _expirationTimestamp,
         bytes calldata _signature
     ) external;
+    function changeBeneficiaryAddressByManager(address _oldBeneficiaryAddress, address _newBeneficiaryAddress) external;
+    function changeBeneficiaryAddress(address _newBeneficiaryAddress) external;
     function claim() external;
     function lastInterval(address _beneficiaryAddress) external view returns (uint256);
     function claimCooldown(address _beneficiaryAddress) external view returns (uint256);

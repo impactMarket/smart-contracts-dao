@@ -129,6 +129,14 @@ contract CommunityImplementation is
     event BeneficiaryJoined(address indexed beneficiary);
 
     /**
+     * @notice Triggered when two beneficiaries has been merged
+     *
+     * @param beneficiary1       Address of the first beneficiary
+     * @param beneficiary2       Address of the second beneficiary
+     */
+    event BeneficiaryAddressChanged(address indexed beneficiary1, address indexed beneficiary2);
+
+    /**
      * @notice Triggered when beneficiary params has been updated
      *
      * @param oldOriginalClaimAmount    Old originalClaimAmount value
@@ -436,7 +444,7 @@ contract CommunityImplementation is
         return (
             _beneficiary.state,
             _beneficiary.claims,
-            _beneficiaryClaimedAmount(_beneficiary),
+            _calculateBeneficiaryClaimedAmount(_beneficiary, block.number),
             _beneficiary.lastClaim
         );
     }
@@ -473,8 +481,8 @@ contract CommunityImplementation is
     /**
      * @notice Returns the length of the tokenList
      */
-    function tokensLength() external view override returns (uint256) {
-        return tokens.length;
+    function tokenUpdatesLength() external view override returns (uint256) {
+        return tokenUpdates.length;
     }
 
     function tokenList() public view override returns (address[] memory) {
@@ -623,7 +631,7 @@ contract CommunityImplementation is
         ITreasury _treasury = communityAdmin.treasury();
 
         require(
-            tokens.length < MAX_TOKEN_LIST_LENGTH,
+            tokenUpdates.length < MAX_TOKEN_LIST_LENGTH,
             "Community::updateToken: Token list length too big"
         );
 
@@ -644,15 +652,15 @@ contract CommunityImplementation is
             "Community::updateToken: invalid exchangePath"
         );
 
-        //for communities already deployed, we need to add the current token before changing
-        if (tokens.length == 0) {
-            tokens.push(Token(address(token()), 1e18, 0));
+        //for communities deployed before, we need to add the current token before changing
+        if (tokenUpdates.length == 0) {
+            tokenUpdates.push(TokenUpdates(address(token()), 1e18, 0));
             _tokenList.add(address(token()));
         }
 
         uint256 _conversionRatio = (1e18 * _maxTotalClaim) / getInitialMaxTotalClaim();
 
-        tokens.push(Token(address(_newToken), _conversionRatio, block.number));
+        tokenUpdates.push(TokenUpdates(address(_newToken), _conversionRatio, block.number));
         _tokenList.add(address(_newToken));
 
         IUniswapV2Router _uniswap = _treasury.uniswapRouter();
@@ -896,12 +904,72 @@ contract CommunityImplementation is
     }
 
     /**
+     * @notice Allows a beneficiary from the previousCommunity to join in this community
+     */
+    function beneficiaryJoinFromMigrated(address _beneficiaryAddress) external override {
+        // no need to check if it's a beneficiary, as the state is copied
+        Beneficiary storage _beneficiary = _beneficiaries[_beneficiaryAddress];
+
+        require(
+            _beneficiary.state == BeneficiaryState.NONE,
+            "Community::beneficiaryJoinFromMigrated: Beneficiary exists"
+        );
+
+        (
+            BeneficiaryState _oldBeneficiaryState,
+            uint256 _oldBeneficiaryClaims,
+            uint256 _oldBeneficiaryClaimedAmount,
+            uint256 _oldBeneficiaryLastClaim
+        ) = previousCommunity.beneficiaries(_beneficiaryAddress);
+
+        _changeBeneficiaryState(_beneficiary, _oldBeneficiaryState);
+        _beneficiary.claims = _oldBeneficiaryClaims;
+        _beneficiary.lastClaim = _oldBeneficiaryLastClaim;
+        _beneficiary.claimedAmount = _oldBeneficiaryClaimedAmount;
+
+        beneficiaryList.add(_beneficiaryAddress);
+
+        emit BeneficiaryJoined(_beneficiaryAddress);
+    }
+
+    /**
+     * @notice Changes the address of a beneficiary
+     * this action adds claim details from both addresses
+     *
+     * @dev used by managers
+     */
+    function changeBeneficiaryAddressByManager(
+        address _oldBeneficiaryAddress,
+        address _newBeneficiaryAddress
+    ) external override onlyManagers {
+        _changeBeneficiaryAddress(_oldBeneficiaryAddress, _newBeneficiaryAddress);
+    }
+
+    /**
+     * @notice Allows a beneficiary to use another address
+     * this action adds claim details from both addresses
+     *
+     * @dev used by beneficiaries
+     */
+    function changeBeneficiaryAddress(address _newBeneficiaryAddress) external override {
+        require(
+            _beneficiaries[_newBeneficiaryAddress].state == BeneficiaryState.NONE,
+            "Community::changeBeneficiaryAddress: Invalid beneficiary"
+        );
+
+        _changeBeneficiaryAddress(msg.sender, _newBeneficiaryAddress);
+    }
+
+    /**
      * @dev Transfers tokens to a valid beneficiary
      */
     function claim() external override whenNotLocked onlyValidBeneficiary nonReentrant {
         Beneficiary storage _beneficiary = _beneficiaries[msg.sender];
 
-        uint256 _totalClaimedAmount = _beneficiaryClaimedAmount(_beneficiary);
+        uint256 _totalClaimedAmount = _calculateBeneficiaryClaimedAmount(
+            _beneficiary,
+            block.number
+        );
 
         require(claimCooldown(msg.sender) <= block.number, "Community::claim: NOT_YET");
         require(
@@ -917,15 +985,15 @@ contract CommunityImplementation is
 
         //this is necessary for communities with version < 3
         //and for beneficiaries that haven't claimed after updating to v3
-        if (tokens.length > 1 && _beneficiary.lastClaim < tokens[1].startBlock) {
-            _beneficiary.claimedAmounts[tokens[0].tokenAddress] = _beneficiary.claimedAmount;
+        if (tokenUpdates.length > 1 && _beneficiary.lastClaim < tokenUpdates[1].startBlock) {
+            _beneficiary.claimedAmounts[tokenUpdates[0].tokenAddress] = _beneficiary.claimedAmount;
         }
 
         _beneficiary.claimedAmount = _totalClaimedAmount + _toClaim;
         _beneficiary.claims++;
         _beneficiary.lastClaim = block.number;
 
-        if (tokens.length > 1) {
+        if (tokenUpdates.length > 1) {
             _beneficiary.claimedAmounts[address(token())] += _toClaim;
         }
 
@@ -1036,35 +1104,6 @@ contract CommunityImplementation is
     }
 
     /**
-     * @notice Allows a beneficiary from the previousCommunity to join in this community
-     */
-    function beneficiaryJoinFromMigrated(address _beneficiaryAddress) external override {
-        // no need to check if it's a beneficiary, as the state is copied
-        Beneficiary storage _beneficiary = _beneficiaries[_beneficiaryAddress];
-
-        require(
-            _beneficiary.state == BeneficiaryState.NONE,
-            "Community::beneficiaryJoinFromMigrated: Beneficiary exists"
-        );
-
-        (
-            BeneficiaryState _oldBeneficiaryState,
-            uint256 _oldBeneficiaryClaims,
-            uint256 _oldBeneficiaryClaimedAmount,
-            uint256 _oldBeneficiaryLastClaim
-        ) = previousCommunity.beneficiaries(_beneficiaryAddress);
-
-        _changeBeneficiaryState(_beneficiary, _oldBeneficiaryState);
-        _beneficiary.claims = _oldBeneficiaryClaims;
-        _beneficiary.lastClaim = _oldBeneficiaryLastClaim;
-        _beneficiary.claimedAmount = _oldBeneficiaryClaimedAmount;
-
-        beneficiaryList.add(_beneficiaryAddress);
-
-        emit BeneficiaryJoined(_beneficiaryAddress);
-    }
-
-    /**
      * @notice Returns the initial maxTotalClaim
      * todo: do be deleted after updating all communities to v3
      */
@@ -1077,38 +1116,6 @@ contract CommunityImplementation is
      */
     function getInitialMaxTotalClaim() public view returns (uint256) {
         return maxTotalClaim + validBeneficiaryCount * decreaseStep;
-    }
-
-    /**
-     * @notice Changes the state of a beneficiary
-     *
-     * @param _beneficiary address of the beneficiary
-     * @param _newState new state
-     */
-    function _changeBeneficiaryState(Beneficiary storage _beneficiary, BeneficiaryState _newState)
-        internal
-    {
-        if (_beneficiary.state == _newState) {
-            return;
-        }
-
-        if (_newState == BeneficiaryState.Valid) {
-            require(
-                maxTotalClaim - decreaseStep >= originalClaimAmount,
-                "Community::_changeBeneficiaryState: Max claim too low"
-            );
-            require(
-                maxBeneficiaries == 0 || validBeneficiaryCount < maxBeneficiaries,
-                "Community::_changeBeneficiaryState: This community has reached the maximum number of valid beneficiaries"
-            );
-            validBeneficiaryCount++;
-            maxTotalClaim -= decreaseStep;
-        } else if (_beneficiary.state == BeneficiaryState.Valid) {
-            validBeneficiaryCount--;
-            maxTotalClaim += decreaseStep;
-        }
-
-        _beneficiary.state = _newState;
     }
 
     /**
@@ -1234,6 +1241,72 @@ contract CommunityImplementation is
     }
 
     /**
+     * @notice Changes the address of a beneficiary
+     * this action adds claim details from both addresses
+     */
+    function _changeBeneficiaryAddress(
+        address _oldBeneficiaryAddress,
+        address _newBeneficiaryAddress
+    ) internal {
+        require(
+            _oldBeneficiaryAddress != _newBeneficiaryAddress,
+            "Community::changeBeneficiaryAddress: Beneficiaries must be different"
+        );
+
+        Beneficiary storage _oldBeneficiary = _beneficiaries[_oldBeneficiaryAddress];
+        Beneficiary storage _newBeneficiary = _beneficiaries[_newBeneficiaryAddress];
+
+        require(
+            _oldBeneficiary.state != BeneficiaryState.AddressChanged &&
+                _oldBeneficiary.state != BeneficiaryState.NONE,
+            "Community::changeBeneficiaryAddress: Invalid beneficiary"
+        );
+        require(
+            _newBeneficiary.state != BeneficiaryState.AddressChanged,
+            "Community::changeBeneficiaryAddress: Invalid target beneficiary"
+        );
+
+        if (_newBeneficiary.state == BeneficiaryState.NONE) {
+            _changeBeneficiaryState(_newBeneficiary, _oldBeneficiary.state);
+        }
+
+        _changeBeneficiaryState(_oldBeneficiary, BeneficiaryState.AddressChanged);
+
+        _newBeneficiary.claims += _oldBeneficiary.claims;
+
+        // we have to align both beneficiaries lastClaim and claimedAmount
+        // we choose the bigger lastClaim as the alignment point
+        if (_newBeneficiary.lastClaim > _oldBeneficiary.lastClaim) {
+            // _newBeneficiary.claimedAmount was updated later than _oldBeneficiary.claimedAmount
+            // we have to _calculateBeneficiaryClaimedAmount for _oldBeneficiary
+            //      taking into account all token updates between  _oldBeneficiary.lasClaim and _newBeneficiary.lastClaim
+            _newBeneficiary.claimedAmount += _calculateBeneficiaryClaimedAmount(
+                _oldBeneficiary,
+                _newBeneficiary.lastClaim
+            );
+        } else {
+            // _oldBeneficiary.claimedAmount was updated later than _newBeneficiary.claimedAmount
+            // we have to _calculateBeneficiaryClaimedAmount for _newBeneficiary
+            //      taking into account all token updates between _newBeneficiary.lasClaim and _oldBeneficiary.lastClaim
+            _newBeneficiary.claimedAmount =
+                _oldBeneficiary.claimedAmount +
+                _calculateBeneficiaryClaimedAmount(_newBeneficiary, _oldBeneficiary.lastClaim);
+            _newBeneficiary.lastClaim = _oldBeneficiary.lastClaim;
+        }
+
+        uint256 _tokensLength = _tokenList.length();
+        address _tokenAddress;
+        for (uint256 _index = 0; _index < _tokensLength; _index++) {
+            _tokenAddress = _tokenList.at(_index);
+            _newBeneficiary.claimedAmounts[_tokenAddress] += _oldBeneficiary.claimedAmounts[
+                _tokenAddress
+            ];
+        }
+
+        emit BeneficiaryAddressChanged(_oldBeneficiaryAddress, _newBeneficiaryAddress);
+    }
+
+    /**
      * @notice Checks a manager signature
      *
      * @param _expirationTimestamp  timestamp when the signature will expire/expired
@@ -1256,13 +1329,19 @@ contract CommunityImplementation is
         require(hasRole(MANAGER_ROLE, _signerAddress), "Community: Invalid signature");
     }
 
-    function _beneficiaryClaimedAmount(Beneficiary storage _beneficiary)
-        internal
-        view
-        returns (uint256)
-    {
-        uint256 _tokensLength = tokens.length;
-        if (_tokensLength < 2) {
+    /**
+     * @notice Calculates the claimed amount of a beneficiary based on all currencies
+     *
+     * @param _beneficiary                 the beneficiary
+     * @param _skipTokenUpdatesAfterBlock  the method will ignore all token updates made after this block
+     *                                     used only by merge beneficiaries methods
+     */
+    function _calculateBeneficiaryClaimedAmount(
+        Beneficiary storage _beneficiary,
+        uint256 _skipTokenUpdatesAfterBlock
+    ) internal view returns (uint256) {
+        uint256 _tokenUpdatesLength = tokenUpdates.length;
+        if (_tokenUpdatesLength < 2) {
             return _beneficiary.claimedAmount;
         }
 
@@ -1271,11 +1350,14 @@ contract CommunityImplementation is
         //if beneficiary didn't claim for a long time and the token has been changed,
         //we multiply the claimed amount with all token ratios that user haven't claimed
         for (
-            uint256 _index = _tokensLength - 1;
-            tokens[_index].startBlock > _beneficiary.lastClaim;
+            uint256 _index = _tokenUpdatesLength - 1;
+            tokenUpdates[_index].startBlock > _beneficiary.lastClaim;
             _index--
         ) {
-            _computedClaimAmount = (_computedClaimAmount * tokens[_index].ratio) / 1e18;
+            if (_skipTokenUpdatesAfterBlock < tokenUpdates[_index].startBlock) {
+                continue;
+            }
+            _computedClaimAmount = (_computedClaimAmount * tokenUpdates[_index].ratio) / 1e18;
         }
 
         return _computedClaimAmount;
@@ -1320,6 +1402,39 @@ contract CommunityImplementation is
         if (_newClaimAmount != claimAmount) {
             emit ClaimAmountUpdated(claimAmount, _newClaimAmount);
             claimAmount = _newClaimAmount;
+            claimAmount = _newClaimAmount;
         }
+    }
+
+    /**
+     * @notice Changes the state of a beneficiary
+     *
+     * @param _beneficiary address of the beneficiary
+     * @param _newState new state
+     */
+    function _changeBeneficiaryState(Beneficiary storage _beneficiary, BeneficiaryState _newState)
+        internal
+    {
+        if (_beneficiary.state == _newState) {
+            return;
+        }
+
+        if (_newState == BeneficiaryState.Valid) {
+            require(
+                maxTotalClaim - decreaseStep >= originalClaimAmount,
+                "Community::_changeBeneficiaryState: Max claim too low"
+            );
+            require(
+                maxBeneficiaries == 0 || validBeneficiaryCount < maxBeneficiaries,
+                "Community::_changeBeneficiaryState: This community has reached the maximum number of valid beneficiaries"
+            );
+            validBeneficiaryCount++;
+            maxTotalClaim -= decreaseStep;
+        } else if (_beneficiary.state == BeneficiaryState.Valid) {
+            validBeneficiaryCount--;
+            maxTotalClaim += decreaseStep;
+        }
+
+        _beneficiary.state = _newState;
     }
 }
