@@ -8,8 +8,6 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import "./interfaces/DepositStorageV1.sol";
 import "../externalInterfaces/aave/IAToken.sol";
 
-import "hardhat/console.sol";
-
 contract DepositImplementation is
     Initializable,
     OwnableUpgradeable,

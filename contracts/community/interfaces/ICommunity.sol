@@ -10,7 +10,8 @@ interface ICommunity {
         NONE, //the beneficiary hasn't been added yet
         Valid,
         Locked,
-        Removed
+        Removed,
+        Copied  //the beneficiary has been moved in a copy community
     }
 
     struct Beneficiary {
@@ -43,6 +44,8 @@ interface ICommunity {
     ) external;
     function getVersion() external pure returns(uint256);
     function previousCommunity() external view returns(ICommunity);
+    function copyOf() external view returns(ICommunity);
+    function copies() external view returns(address[] memory);
     function originalClaimAmount() external view returns(uint256);
     function claimAmount() external view returns(uint256);
     function baseInterval() external view returns(uint256);
@@ -80,6 +83,7 @@ interface ICommunity {
     );
     function tokensLength() external view returns (uint256);
     function isSelfFunding() external view returns (bool);
+    function setBeneficiaryState(address _beneficiaryAddress, BeneficiaryState _state) external;
     function updateCommunityAdmin(ICommunityAdmin _communityAdmin) external;
     function updatePreviousCommunity(ICommunity _newPreviousCommunity) external;
     function updateBeneficiaryParams(
@@ -115,6 +119,7 @@ interface ICommunity {
         uint256 _expirationTimestamp,
         bytes calldata _signature
     ) external;
+    function copyBeneficiaries(address[] memory _beneficiaryAddresses) external;
     function lockBeneficiary(address _beneficiaryAddress) external;
     function lockBeneficiaries(address[] memory _beneficiaryAddresses) external;
     function lockBeneficiariesUsingSignature(
@@ -144,4 +149,6 @@ interface ICommunity {
     function requestFunds() external;
     function beneficiaryJoinFromMigrated(address _beneficiaryAddress) external;
     function getInitialMaxClaim() external view returns (uint256);
+    function addCopy(ICommunity _copy) external;
+    function copyCommunityDetails(ICommunity _originalCommunity) external;
 }
