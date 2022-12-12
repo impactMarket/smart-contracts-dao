@@ -21,52 +21,29 @@ contract LearnAndEarnImplementation is
     using ECDSA for bytes32;
 
     /**
-     * @notice Triggered when a program has been funded
+     * @notice Triggered when a level has been funded
      *
-     * @param programId         Id of the program
-     * @param levelId           Id of the program level
+     * @param levelId           Id of the level
      * @param sender            Address of the sender
      * @param amount            Amount of the fund
      */
-    event ProgramLevelFunded(
-        uint256 indexed programId,
-        uint256 indexed levelId,
-        address indexed sender,
-        uint256 amount
-    );
+    event LevelFunded(uint256 indexed levelId, address indexed sender, uint256 amount);
 
     /**
-     * @notice Triggered when a program has been created
+     * @notice Triggered when a level state has been changed
      *
-     * @param programId         Id of the program
+     * @param levelId           Id of the level
+     * @param state             New state of the level
      */
-    event ProgramAdded(uint256 indexed programId);
-
-    /**
-     * @notice Triggered when a program level state has been changed
-     *
-     * @param programId         Id of the program
-     * @param levelId           Id of the program
-     * @param state             New state of the program
-     */
-    event LevelStateChanged(
-        uint256 indexed programId,
-        uint256 indexed levelId,
-        LevelState indexed state
-    );
+    event LevelStateChanged(uint256 indexed levelId, LevelState indexed state);
 
     /**
      * @notice Triggered when a reward has been claimed
      *
      * @param beneficiary    address of the beneficiary to be rewarded
-     * @param programId      the id of the program
      * @param levelId       the id of the level
      */
-    event RewardClaimed(
-        address indexed beneficiary,
-        uint256 indexed programId,
-        uint256 indexed levelId
-    );
+    event RewardClaimed(address indexed beneficiary, uint256 indexed levelId);
 
     /**
      * @notice Enforces sender to be a valid community
@@ -103,42 +80,39 @@ contract LearnAndEarnImplementation is
         return 1;
     }
 
-    function programs(uint256 _programId)
-        external
-        view
-        override
-        returns (string memory name, IERC20 token)
-    {
-        Program storage _program = _programs[_programId];
-        name = _program.name;
-        token = _program.token;
+    /**
+     * @notice Returns the id of a level from levelList
+     *
+     * @param _index index of the level
+     * @return id of the level
+     */
+    function levelListAt(uint256 _index) external view override returns (uint256) {
+        return _levelList.at(_index);
     }
 
-    function programLevels(uint256 _programId, uint256 _levelId)
-        external
-        view
-        override
-        returns (uint256 balance, LevelState state)
-    {
-        Level storage _level = _programs[_programId].levels[_levelId];
-        balance = _level.balance;
-        state = _level.state;
+    /**
+     * @notice Returns the number of levels
+     *
+     * @return uint256 number of levels
+     */
+    function levelListLength() external view override returns (uint256) {
+        return _levelList.length();
     }
 
     /**
      * @notice Returns the reward amount claimed by a beneficiary for a level
      *
-     * @param _programId id of the program
      * @param _levelId id of the level
      * @param _beneficiary address of the beneficiary
      * @return reward amount claimed by the beneficiary for a level
      */
-    function programLevelClaims(
-        uint256 _programId,
-        uint256 _levelId,
-        address _beneficiary
-    ) external view override returns (uint256) {
-        return _programs[_programId].levels[_levelId].claims[_beneficiary];
+    function levelClaims(uint256 _levelId, address _beneficiary)
+        external
+        view
+        override
+        returns (uint256)
+    {
+        return levels[_levelId].claims[_beneficiary];
     }
 
     /**
@@ -177,181 +151,121 @@ contract LearnAndEarnImplementation is
     }
 
     /**
-     * @notice Adds a new program
+     * @notice Adds a new level
      *
-     * @param _programId  the id of the program
-     * @param _name       the name of the program
+     * @param _levelId    the id of the level
      * @param _token      the token used for reward
      */
-    function addProgram(
-        uint256 _programId,
-        string calldata _name,
-        IERC20 _token
-    ) external override onlyOwnerOrImpactMarketCouncil {
-        require(address(_token) != address(0), "LearnAndLearn::addProgram: Invalid token");
-
-        Program storage _program = _programs[_programId];
-
-        require(
-            address(_program.token) == address(0),
-            "LearnAndLearn::addProgram: Invalid program id"
-        );
-
-        _program.name = _name;
-        _program.token = _token;
-
-        emit ProgramAdded(_programId);
-    }
-
-    /**
-     * @notice Adds a new program level
-     *
-     * @param _programId  the id of the program
-     * @param _levelId    the id of the level
-     */
-    function addProgramLevel(uint256 _programId, uint256 _levelId)
+    function addLevel(uint256 _levelId, IERC20 _token)
         external
         override
         onlyOwnerOrImpactMarketCouncil
     {
-        Program storage _program = _programs[_programId];
-
         require(
-            address(_program.token) != address(0),
-            "LearnAndLearn::addProgramLevel: Invalid program id"
+            levels[_levelId].state == LevelState.Invalid,
+            "LearnAndLearn::addLevel: Invalid level id"
         );
 
-        require(
-            _program.levels[_levelId].state == LevelState.Invalid,
-            "LearnAndLearn::addProgramLevel: Invalid program level id"
-        );
+        levels[_levelId].state = LevelState.Valid;
+        levels[_levelId].token = _token;
 
-        _program.levels[_levelId].state = LevelState.Valid;
+        _levelList.add(_levelId);
 
-        emit LevelStateChanged(_programId, _levelId, LevelState.Valid);
+        emit LevelStateChanged(_levelId, LevelState.Valid);
     }
 
     /**
-     * @notice Funds a program level
+     * @notice Pauses a level
      *
-     * @param _programId the id of the program
-     * @param _levelId   the id of the program level
-     * @param _amount the amount to be funded
+     * @param _levelId id of the level
      */
-    function fundProgramLevel(
-        uint256 _programId,
-        uint256 _levelId,
-        uint256 _amount
-    ) external override {
-        Program storage _program = _programs[_programId];
-        Level storage _level = _program.levels[_levelId];
+    function pauseLevel(uint256 _levelId) external override onlyOwnerOrImpactMarketCouncil {
+        Level storage _level = levels[_levelId];
 
-        require(
-            _level.state == LevelState.Valid || _level.state == LevelState.Paused,
-            "LearnAndEarn::fundProgram: Invalid program level id"
-        );
-
-        _program.token.safeTransferFrom(msg.sender, address(this), _amount);
-
-        _level.balance += _amount;
-
-        emit ProgramLevelFunded(_programId, _levelId, msg.sender, _amount);
-    }
-
-    /**
-     * @notice Pauses a program level
-     *
-     * @param _programId id of the program
-     * @param _levelId id of the program level
-     */
-    function pauseProgramLevel(uint256 _programId, uint256 _levelId)
-        external
-        override
-        onlyOwnerOrImpactMarketCouncil
-    {
-        Program storage _program = _programs[_programId];
-        Level storage _level = _program.levels[_levelId];
-
-        require(
-            _level.state == LevelState.Valid,
-            "LearnAndEarn::pauseProgram: Invalid program level id"
-        );
+        require(_level.state == LevelState.Valid, "LearnAndEarn::pauseLevel: Invalid level id");
 
         _level.state = LevelState.Paused;
 
-        emit LevelStateChanged(_programId, _levelId, LevelState.Paused);
+        emit LevelStateChanged(_levelId, LevelState.Paused);
     }
 
     /**
-     * @notice Unpauses a program
+     * @notice Unpauses a level
      *
-     * @param _programId id of the program
-     * @param _levelId id of the program level
+     * @param _levelId id of the level
      */
-    function unpauseProgramLevel(uint256 _programId, uint256 _levelId)
+    function unpauseLevel(uint256 _levelId) external override onlyOwnerOrImpactMarketCouncil {
+        Level storage _level = levels[_levelId];
+
+        require(_level.state == LevelState.Paused, "LearnAndEarn::unpauseLevel: Invalid level id");
+
+        _level.state = LevelState.Valid;
+
+        emit LevelStateChanged(_levelId, LevelState.Valid);
+    }
+
+    /**
+     * @notice Cancels a level
+     *
+     * @param _levelId id of the level
+     * @param _fundRecipient the address of the recipient who will receive the funds allocated for this level
+     */
+    function cancelLevel(uint256 _levelId, address _fundRecipient)
         external
         override
         onlyOwnerOrImpactMarketCouncil
     {
-        Program storage _program = _programs[_programId];
-        Level storage _level = _program.levels[_levelId];
-
-        require(
-            _level.state == LevelState.Paused,
-            "LearnAndEarn::unpauseProgram: Invalid program level id"
-        );
-
-        _level.state = LevelState.Valid;
-
-        emit LevelStateChanged(_programId, _levelId, LevelState.Valid);
-    }
-
-    /**
-     * @notice Cancels a program level
-     *
-     * @param _programId id of the program
-     * @param _levelId id of the program level
-     * @param _fundRecipient the address of the recipient who will receive the funds allocated for this program
-     */
-    function cancelProgramLevel(
-        uint256 _programId,
-        uint256 _levelId,
-        address _fundRecipient
-    ) external override onlyOwnerOrImpactMarketCouncil {
-        Program storage _program = _programs[_programId];
-        Level storage _level = _program.levels[_levelId];
+        Level storage _level = levels[_levelId];
 
         require(
             _level.state == LevelState.Valid || _level.state == LevelState.Paused,
-            "LearnAndEarn::cancelProgram: Invalid program level id"
+            "LearnAndEarn::cancelLevel: Invalid level id"
         );
 
         _level.state = LevelState.Canceled;
         uint256 _levelBalance = _level.balance;
         _level.balance = 0;
 
-        _program.token.safeTransfer(_fundRecipient, _levelBalance);
+        _level.token.safeTransfer(_fundRecipient, _levelBalance);
 
-        emit LevelStateChanged(_programId, _levelId, LevelState.Canceled);
+        emit LevelStateChanged(_levelId, LevelState.Canceled);
+    }
+
+    /**
+     * @notice Funds a level
+     *
+     * @param _levelId   the id of the level
+     * @param _amount the amount to be funded
+     */
+    function fundLevel(uint256 _levelId, uint256 _amount) external override {
+        Level storage _level = levels[_levelId];
+
+        require(
+            _level.state == LevelState.Valid || _level.state == LevelState.Paused,
+            "LearnAndEarn::fundLevel: Invalid level id"
+        );
+
+        _level.token.safeTransferFrom(msg.sender, address(this), _amount);
+
+        _level.balance += _amount;
+
+        emit LevelFunded(_levelId, msg.sender, _amount);
     }
 
     /**
      * @notice Allows beneficiaries to claim the reward for a list of levels using a signature
      *
      * @param _beneficiary     address of the beneficiary to be rewarded
-     * @param _programId       the id of the program
      * @param _levelIds        the ids of the levels
-     * @param _rewardAmounts   the amounts of the program tokens to be send to the beneficiary as reward for each levels
+     * @param _rewardAmounts   the amounts of the tokens to be send to the beneficiary as reward for each level
      * @param _signatures      the signatures from the backend
      */
     function claimRewardForLevels(
         address _beneficiary,
-        uint256 _programId,
         uint256[] calldata _levelIds,
         uint256[] calldata _rewardAmounts,
         bytes[] calldata _signatures
     ) external override {
-        Program storage _program = _programs[_programId];
         Level storage _level;
 
         require(
@@ -363,27 +277,21 @@ contract LearnAndEarnImplementation is
         bytes32 _messageHash;
 
         for (_index = 0; _index < _levelIds.length; _index++) {
-            _level = _program.levels[_levelIds[_index]];
+            _level = levels[_levelIds[_index]];
 
             require(
                 _level.state == LevelState.Valid,
-                "LearnAndEarn::claimRewardForLevels: Invalid program level id"
+                "LearnAndEarn::claimRewardForLevels: Invalid level id"
             );
 
             //if the beneficiary has already claimed the reward for this level,
-            // or if the rewardAmount is 0
-            //we skip this level
+            // or if the rewardAmount is 0, skip this level
             if (_level.claims[_beneficiary] > 0 || _rewardAmounts[_index] == 0) {
                 continue;
             }
 
             _messageHash = keccak256(
-                abi.encodePacked(
-                    _beneficiary,
-                    _programId,
-                    _levelIds[_index],
-                    _rewardAmounts[_index]
-                )
+                abi.encodePacked(_beneficiary, _levelIds[_index], _rewardAmounts[_index])
             );
 
             require(
@@ -396,13 +304,13 @@ contract LearnAndEarnImplementation is
 
             require(
                 _level.balance >= _rewardAmounts[_index],
-                "LearnAndEarn::claimRewardForLevels: Program level doesn't have enough funds"
+                "LearnAndEarn::claimRewardForLevels: Level doesn't have enough funds"
             );
 
-            _program.token.safeTransfer(_beneficiary, _rewardAmounts[_index]);
+            _level.token.safeTransfer(_beneficiary, _rewardAmounts[_index]);
             _level.balance -= _rewardAmounts[_index];
 
-            emit RewardClaimed(_beneficiary, _programId, _levelIds[_index]);
+            emit RewardClaimed(_beneficiary, _levelIds[_index]);
         }
     }
 }
