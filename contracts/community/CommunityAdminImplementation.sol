@@ -78,6 +78,14 @@ contract CommunityAdminImplementation is
     );
 
     /**
+     * @notice Triggered when a community has been copied
+     *
+     * @param originalCommunity         Address of the community that has been copied
+     * @param copyCommunity             Address of the copy
+     */
+    event CommunityCopied(address indexed originalCommunity, address indexed copyCommunity);
+
+    /**
      * @notice Triggered when the treasury address has been updated
      *
      * @param oldTreasury             Old treasury address
@@ -321,14 +329,14 @@ contract CommunityAdminImplementation is
      * @notice Set an existing ambassador to an existing community
      *
      * @param _ambassador address of the ambassador
-     * @param _communityAddress address of the community contract
+     * @param _community address of the community contract
      */
-    function setCommunityToAmbassador(address _ambassador, ICommunity _communityAddress)
+    function setCommunityToAmbassador(address _ambassador, ICommunity _community)
         external
         override
         onlyOwnerOrImpactMarketCouncil
     {
-        ambassadors.setCommunityToAmbassador(_ambassador, address(_communityAddress));
+        ambassadors.setCommunityToAmbassador(_ambassador, address(_community));
     }
 
     /**
@@ -364,7 +372,7 @@ contract CommunityAdminImplementation is
             "CommunityAdmin::addCommunity: Community should have at least one manager"
         );
 
-        address _communityAddress = deployCommunity(
+        address _communityAddress = _deployCommunity(
             _tokenAddress,
             _managers,
             _originalClaimAmount,
@@ -428,7 +436,7 @@ contract CommunityAdminImplementation is
             ? _previousCommunity.originalClaimAmount()
             : IPreviousCommunity(address(_previousCommunity)).claimAmount();
 
-        address newCommunityAddress = deployCommunity(
+        address newCommunityAddress = _deployCommunity(
             address(_previousCommunityToken),
             _managers,
             _previousOriginalClaimAmount,
@@ -451,6 +459,65 @@ contract CommunityAdminImplementation is
         communityList.add(newCommunityAddress);
 
         emit CommunityMigrated(_managers, newCommunityAddress, address(_previousCommunity));
+    }
+
+    /**
+     * @notice Migrates a community by deploying a new contract.
+     *
+     * @param _community       address of the community to be split
+     * @param _numberOfCopies  the number of communities that will copy the data
+     * @param _ambassador address of the ambassador
+     * @param _managers address of the community managers
+     */
+    function splitCommunity(
+        ICommunity _community,
+        uint256 _numberOfCopies,
+        address _ambassador,
+        address[] memory _managers
+    ) external override onlyOwnerOrImpactMarketCouncil nonReentrant {
+        require(
+            communities[address(_community)] == CommunityState.Valid,
+            "CommunityAdmin::splitCommunity: invalid community state"
+        );
+
+        require(
+            _community.getVersion() >= 3,
+            "CommunityAdmin::splitCommunity: invalid community version"
+        );
+
+        address _newCommunityAddress;
+        while (_numberOfCopies > 0) {
+            --_numberOfCopies;
+
+            _newCommunityAddress = _deployCommunity(
+                address(_community.token()),
+                _managers,
+                _community.originalClaimAmount(),
+                _community.getInitialMaxClaim(),
+                _community.decreaseStep(),
+                _community.baseInterval(),
+                _community.incrementInterval(),
+                _community.minTranche(),
+                _community.maxTranche(),
+                _community.maxBeneficiaries(),
+                ICommunity(address(0))
+            );
+
+            require(
+                _newCommunityAddress != address(0),
+                "CommunityAdmin::migrateCommunity: NOT_VALID"
+            );
+
+            communities[_newCommunityAddress] = CommunityState.Valid;
+            communityList.add(_newCommunityAddress);
+
+            _community.addCopy(ICommunity(_newCommunityAddress));
+            ICommunity(_newCommunityAddress).copyCommunityDetails(_community);
+
+            ambassadors.setCommunityToAmbassador(_ambassador, _newCommunityAddress);
+
+            emit CommunityCopied(address(_community), _newCommunityAddress);
+        }
     }
 
     /**
@@ -706,7 +773,7 @@ contract CommunityAdminImplementation is
      * @param _maxBeneficiaries maximum number of valid beneficiaries
      * @param _previousCommunity address of the previous community. Used for migrating communities
      */
-    function deployCommunity(
+    function _deployCommunity(
         address _tokenAddress,
         address[] memory _managers,
         uint256 _originalClaimAmount,

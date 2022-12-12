@@ -8,9 +8,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "./interfaces/ICommunity.sol";
 import "./interfaces/ICommunityAdmin.sol";
-import "./interfaces/CommunityStorageV3.sol";
-
-import "hardhat/console.sol";
+import "./interfaces/CommunityStorageV4.sol";
 
 /**
  * @notice Welcome to the Community contract. For each community
@@ -25,7 +23,7 @@ contract CommunityImplementation is
     AccessControlUpgradeable,
     OwnableUpgradeable,
     ReentrancyGuardUpgradeable,
-    CommunityStorageV3
+    CommunityStorageV4
 {
     using SafeERC20Upgradeable for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -59,6 +57,14 @@ contract CommunityImplementation is
      * @param beneficiary       Address of the beneficiary that has been added
      */
     event BeneficiaryAdded(address indexed manager, address indexed beneficiary);
+
+    /**
+     * @notice Triggered when a beneficiary has been copied
+     *
+     * @param manager           Address of the manager that triggered the event
+     * @param beneficiary       Address of the beneficiary that has been added
+     */
+    event BeneficiaryCopied(address indexed manager, address indexed beneficiary);
 
     /**
      * @notice Triggered when a beneficiary has been locked
@@ -294,6 +300,14 @@ contract CommunityImplementation is
     }
 
     /**
+     * @notice Enforces sender to be a valid beneficiary
+     */
+    modifier onlyCommunityCopy() {
+        require(_copies.contains(msg.sender), "Community: Invalid community copy");
+        _;
+    }
+
+    /**
      * @notice Used to initialize a new Community contract
      *
      * @param _tokenAddress        Address of the token used by the community
@@ -376,7 +390,7 @@ contract CommunityImplementation is
      * @notice Returns the current implementation version
      */
     function getVersion() external pure override returns (uint256) {
-        return 3;
+        return 4;
     }
 
     /**
@@ -485,20 +499,37 @@ contract CommunityImplementation is
         return tokenUpdates.length;
     }
 
-    function tokenList() public view override returns (address[] memory) {
-        address[] memory _tokenListArray = new address[](_tokenList.length());
-        uint256 _length = _tokenList.length();
+    //    function tokenList() external view override returns (address[] memory) {
+    //        uint256 _length = _tokenList.length();
+    //        address[] memory _tokenListArray = new address[](_length);
+    //
+    //        for (uint256 _index = 0; _index < _length; _index++) {
+    //            _tokenListArray[_index] = _tokenList.at(_index);
+    //        }
+    //
+    //        if (_tokenListArray.length == 0) {
+    //            _tokenListArray = new address[](1);
+    //            _tokenListArray[0] = address(token());
+    //        }
+    //
+    //        return _tokenListArray;
+    //    }
 
-        for (uint256 _index = 0; _index < _length; _index++) {
-            _tokenListArray[_index] = _tokenList.at(_index);
-        }
-
-        if (_tokenListArray.length == 0) {
-            _tokenListArray = new address[](1);
+    function tokenList() external view override returns (address[] memory) {
+        if (_tokenList.length() == 0) {
+            address[] memory _tokenListArray = new address[](1);
             _tokenListArray[0] = address(token());
+            return _tokenListArray;
         }
 
-        return _tokenListArray;
+        return _tokenList.values();
+    }
+
+    /**
+     * @notice Returns the list with all communities copies
+     */
+    function copies() external view override returns (address[] memory) {
+        return _copies.values();
     }
 
     /**
@@ -652,7 +683,7 @@ contract CommunityImplementation is
             "Community::updateToken: invalid exchangePath"
         );
 
-        //for communities deployed before, we need to add the current token before changing
+        //for communities deployed before this functionality, we need to add the current token before changing
         if (tokenUpdates.length == 0) {
             tokenUpdates.push(TokenUpdates(address(token()), 1e18, 0));
             _tokenList.add(address(token()));
@@ -663,17 +694,20 @@ contract CommunityImplementation is
         tokenUpdates.push(TokenUpdates(address(_newToken), _conversionRatio, block.number));
         _tokenList.add(address(_newToken));
 
-        IUniswapV2Router _uniswap = _treasury.uniswapRouter();
-
         uint256 _balance = token().balanceOf(address(this));
-        token().approve(address(_uniswap), _balance);
-        _uniswap.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-            _balance,
-            0,
-            _exchangePath,
-            address(this),
-            block.timestamp + 3600
-        );
+
+        if (_balance > 0) {
+            IUniswapV2Router _uniswap = _treasury.uniswapRouter();
+
+            token().approve(address(_uniswap), _balance);
+            _uniswap.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+                _balance,
+                0,
+                _exchangePath,
+                address(this),
+                block.timestamp + 3600
+            );
+        }
 
         emit TokenUpdated(address(_token), address(_newToken));
         _token = _newToken;
@@ -685,6 +719,58 @@ contract CommunityImplementation is
             _baseInterval,
             _incrementInterval
         );
+    }
+
+    /**
+     * @notice Adds a new copy of this community
+     *
+     * @param _copy  address of the 'child' community
+     */
+    function addCopy(ICommunity _copy) external override onlyOwner {
+        _copies.add(address(_copy));
+    }
+
+    /**
+     * @notice Copies the original community details that haven't been copied in the initialize method
+     *  !!used only by communityAdmin.copyCommunity method
+     *
+     * @param _originalCommunity  address of the 'parent' community
+     */
+    function copyCommunityDetails(ICommunity _originalCommunity) external override onlyOwner {
+        copyOf = _originalCommunity;
+
+        uint256 _index;
+
+        //copy tokens
+        uint256 _tokenUpdatesLength = copyOf.tokenUpdatesLength();
+
+        uint256 _initialCommunityCopyTokensLength = tokenUpdates.length;
+        for (_index = 0; _index < _initialCommunityCopyTokensLength; _index++) {
+            tokenUpdates.pop();
+        }
+
+        address _tokenAddress;
+        uint256 _ratio;
+        uint256 _startBlock;
+        for (_index = 0; _index < _tokenUpdatesLength; _index++) {
+            (_tokenAddress, _ratio, _startBlock) = copyOf.tokenUpdates(_index);
+            tokenUpdates.push(TokenUpdates(_tokenAddress, _ratio, _startBlock));
+        }
+
+        //        copy tokenList
+        uint256 _initialCommunityCopyTokenListLength = _tokenList.length();
+
+        while (_initialCommunityCopyTokenListLength > 0) {
+            _tokenList.remove(_tokenList.at(0));
+            --_initialCommunityCopyTokenListLength;
+        }
+
+        address[] memory _tokenListToCopy = copyOf.tokenList();
+        uint256 _tokenListLength = _tokenListToCopy.length;
+
+        for (_index = 0; _index < _tokenListLength; _index++) {
+            _tokenList.add(_tokenListToCopy[_index]);
+        }
     }
 
     /**
@@ -775,6 +861,43 @@ contract CommunityImplementation is
         _checkManagerSignature(_expirationTimestamp, _signature);
 
         _addBeneficiaries(_beneficiaryAddresses);
+    }
+
+    /**
+     * @notice Copies beneficiaries from the original community
+     *
+     * @param _beneficiaryAddresses addresses of the beneficiaries to be copied
+     */
+    function copyBeneficiaries(address[] memory _beneficiaryAddresses)
+        external
+        override
+        whenNotLocked
+        onlyManagers
+        nonReentrant
+    {
+        require(
+            address(copyOf) != address(0),
+            "Community::copyBeneficiaries: Invalid parent community"
+        );
+        _copyBeneficiaries(_beneficiaryAddresses);
+    }
+
+    /**
+     * @notice Sets a beneficiary's state
+     *
+     * @param _beneficiaryAddress address of the beneficiary
+     * @param _state  beneficiary's state
+     */
+    function setBeneficiaryState(address _beneficiaryAddress, BeneficiaryState _state)
+        external
+        override
+        whenNotLocked
+        onlyCommunityCopy
+        nonReentrant
+    {
+        Beneficiary storage _beneficiary = _beneficiaries[_beneficiaryAddress];
+
+        _changeBeneficiaryState(_beneficiary, _state);
     }
 
     /**
@@ -1130,6 +1253,15 @@ contract CommunityImplementation is
             return;
         }
 
+        if (address(copyOf) != address(0)) {
+            BeneficiaryState _originalState;
+            (_originalState, , , ) = copyOf.beneficiaries(_beneficiaryAddress);
+            require(
+                _originalState == BeneficiaryState.NONE,
+                "Community::addBeneficiary: Invalid beneficiary state"
+            );
+        }
+
         _changeBeneficiaryState(_beneficiary, BeneficiaryState.Valid);
         _beneficiary.lastClaim = block.number;
 
@@ -1150,6 +1282,69 @@ contract CommunityImplementation is
         for (; _index < _numberOfBeneficiaries; _index++) {
             _addBeneficiary(_beneficiaryAddresses[_index]);
             emit BeneficiaryAdded(msg.sender, _beneficiaryAddresses[_index]);
+        }
+    }
+
+    /**
+     * @notice Copy a beneficiary
+     *
+     * @param _beneficiaryAddress address of the beneficiary to be copied
+     */
+    function _copyBeneficiary(address _beneficiaryAddress) internal {
+        Beneficiary storage _beneficiary = _beneficiaries[_beneficiaryAddress];
+
+        if (_beneficiary.state != BeneficiaryState.NONE) {
+            return;
+        }
+
+        BeneficiaryState _originalState;
+        uint256 _originalClaims;
+        uint256 _originalClaimedAmount;
+        uint256 _originalLastClaim;
+        (_originalState, _originalClaims, _originalClaimedAmount, _originalLastClaim) = copyOf
+            .beneficiaries(_beneficiaryAddress);
+
+        require(
+            _originalState != BeneficiaryState.Copied,
+            "Community::copyBeneficiary: Beneficiary already copied"
+        );
+
+        _changeBeneficiaryState(_beneficiary, _originalState);
+        _beneficiary.claims = _originalClaims;
+        _beneficiary.claimedAmount = _originalClaimedAmount;
+        _beneficiary.lastClaim = _originalLastClaim;
+
+        uint256[] memory _originalClaimedAmounts = copyOf.beneficiaryClaimedAmounts(
+            _beneficiaryAddress
+        );
+        address[] memory _originalTokens = copyOf.tokenList();
+        uint256 _originalLength = _originalClaimedAmounts.length;
+
+        for (uint256 _index = 0; _index < _originalLength; _index++) {
+            if (_tokenList.contains(_originalTokens[_index])) {
+                _beneficiary.claimedAmounts[_originalTokens[_index]] = _originalClaimedAmounts[
+                    _index
+                ];
+            }
+        }
+
+        copyOf.setBeneficiaryState(_beneficiaryAddress, BeneficiaryState.Copied);
+
+        beneficiaryList.add(_beneficiaryAddress);
+
+        emit BeneficiaryCopied(msg.sender, _beneficiaryAddress);
+    }
+
+    /**
+     * @notice Copies beneficiaries
+     *
+     * @param _beneficiaryAddresses addresses of beneficiaries to be copied
+     */
+    function _copyBeneficiaries(address[] memory _beneficiaryAddresses) internal {
+        uint256 _index;
+        uint256 _numberOfBeneficiaries = _beneficiaryAddresses.length;
+        for (; _index < _numberOfBeneficiaries; _index++) {
+            _copyBeneficiary(_beneficiaryAddresses[_index]);
         }
     }
 
