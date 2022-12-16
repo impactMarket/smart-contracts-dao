@@ -85,6 +85,12 @@ interface ICommunityAdmin {
         address[] memory _managers,
         ICommunity _previousCommunity
     ) external;
+    function splitCommunity(
+        ICommunity _community,
+        uint256 _numberOfCopies,
+        address _ambassador,
+        address[] memory _managers
+    ) external;
     function removeCommunity(ICommunity _community) external;
     function fundCommunity() external;
     function calculateCommunityTrancheAmount(ICommunity _community) external view returns (uint256);

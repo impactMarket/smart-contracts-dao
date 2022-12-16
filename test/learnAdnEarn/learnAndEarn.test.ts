@@ -122,17 +122,18 @@ describe.only("LearnAndEarn", () => {
 	});
 
 	async function signParams(
-		signerManager: SignerWithAddress,
+		signer: SignerWithAddress,
 		beneficiary: SignerWithAddress,
 		levelId: number,
 		rewardAmount: BigNumber
 	): Promise<string> {
-		const message = ethers.utils.solidityKeccak256(
+		const encoded = ethers.utils.defaultAbiCoder.encode(
 			["address", "uint256", "uint256"],
 			[beneficiary.address, levelId, rewardAmount]
 		);
-		const arrayifyMessage = ethers.utils.arrayify(message);
-		return signerManager.signMessage(arrayifyMessage);
+		const hash = ethers.utils.keccak256(encoded);
+
+		return signer.signMessage(ethers.utils.arrayify(hash));
 	}
 
 	describe("LearnAndEarn - Basic", () => {

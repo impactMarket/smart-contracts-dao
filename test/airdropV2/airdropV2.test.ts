@@ -28,7 +28,7 @@ const MTokenABI = require("../../integrations/moola/abi/MToken.json");
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 
-describe("AirdropV2", () => {
+xdescribe("AirdropV2", () => {
 	const FAKE_ADDRESS = "0x000000000000000000000000000000000000dEaD";
 
 	const startTime = 0;

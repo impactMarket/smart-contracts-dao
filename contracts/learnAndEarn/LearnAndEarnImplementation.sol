@@ -291,7 +291,7 @@ contract LearnAndEarnImplementation is
             }
 
             _messageHash = keccak256(
-                abi.encodePacked(_beneficiary, _levelIds[_index], _rewardAmounts[_index])
+                abi.encode(_beneficiary, _levelIds[_index], _rewardAmounts[_index])
             );
 
             require(
