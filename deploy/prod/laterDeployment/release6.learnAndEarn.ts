@@ -6,10 +6,16 @@ import { deployments, ethers } from "hardhat";
 const { deploy } = deployments;
 let deployer: SignerWithAddress;
 
-// mainnet
+// // mainnet
+// const timelockAddress = "";
+// const proxyAdminAddress = "";
+// const communityAdminProxyAddress = "";
+// const signerWalletAddress = "0x0000000000000000000000000000000000000000";
+
+// alfajores
 const timelockAddress = "0xcb0C15AdE117C812E4d96165472EbF83Bed231B0";
 const proxyAdminAddress = "0x79f9ca5f1A01e1768b9C24AD37FF63A0199E3Fe5";
-const communityAdminProxyAddress = "0xd61c407c3A00dFD8C355973f7a14c55ebaFDf6F9";
+const communityAdminProxyAddress = "0x1c33D75bcE52132c7a0e220c1C338B9db7cf3f3A";
 const signerWalletAddress = "0x0000000000000000000000000000000000000000";
 
 
@@ -51,8 +57,8 @@ async function deployLearnAndEarn() {
 		communityAdminProxyAddress
 	);
 
-	await new Promise((resolve) => setTimeout(resolve, 6000));
-	await LearnAndEarnContract.transferOwnership(timelockAddress);
+	// await new Promise((resolve) => setTimeout(resolve, 6000));
+	// await LearnAndEarnContract.transferOwnership(timelockAddress);
 }
 
 export default func;
