@@ -1087,6 +1087,8 @@ contract CommunityImplementation is
      * @dev Transfers tokens to a valid beneficiary
      */
     function claim() external override whenNotLocked onlyValidBeneficiary nonReentrant {
+        _requestFunds();
+
         Beneficiary storage _beneficiary = _beneficiaries[msg.sender];
 
         uint256 _totalClaimedAmount = _calculateBeneficiaryClaimedAmount(
@@ -1168,15 +1170,7 @@ contract CommunityImplementation is
      * @notice Requests treasury funds from the communityAdmin
      */
     function requestFunds() external override whenNotLocked onlyManagers {
-        require(!isSelfFunding(), "Community::requestFunds: This community is self-funding");
-
-        communityAdmin.fundCommunity();
-
-        lastFundRequest = block.number;
-
-        _updateClaimAmount();
-
-        emit FundsRequested(msg.sender);
+        _requestFunds();
     }
 
     /**
@@ -1631,5 +1625,21 @@ contract CommunityImplementation is
         }
 
         _beneficiary.state = _newState;
+    }
+
+    function _requestFunds() internal {
+        if (isSelfFunding()) {
+            return;
+        }
+
+        uint256 _amount = communityAdmin.fundCommunity();
+
+        if (_amount > 0) {
+            lastFundRequest = block.number;
+
+            _updateClaimAmount();
+
+            emit FundsRequested(msg.sender);
+        }
     }
 }

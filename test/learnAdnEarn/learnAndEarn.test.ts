@@ -12,7 +12,7 @@ import { BigNumber } from "@ethersproject/bignumber";
 
 chai.use(chaiAsPromised);
 
-describe.only("LearnAndEarn", () => {
+describe("LearnAndEarn", () => {
 	const FAKE_ADDRESS = "0x000000000000000000000000000000000000dEaD";
 
 	let owner: SignerWithAddress;

@@ -13,8 +13,9 @@ import {
 	getCurrentBlockTimestamp,
 } from "../utils/TimeTravel";
 import { keccak256 } from "ethers/lib/utils";
-import { toEther } from "../utils/helpers";
+import { fromEther, toEther } from "../utils/helpers";
 import { JsonRpcSigner } from "@ethersproject/providers/src.ts/json-rpc-provider";
+import { BigNumber } from "@ethersproject/bignumber";
 
 should();
 
@@ -3614,13 +3615,20 @@ describe.only("Community", () => {
 				.connect(communityManagerA)
 				.addBeneficiaries([beneficiaryA.address]);
 
-			await communityProxy.connect(beneficiaryA).claim();
+			const balance = await cUSD.balanceOf(communityProxy.address);
+
+			await communityAdminProxy.transferFromCommunity(
+				communityProxy.address,
+				cUSD.address,
+				deployer.address,
+				balance
+			);
 
 			expect(
 				await communityAdminProxy.calculateCommunityTrancheAmount(
 					communityProxy.address
 				)
-			).to.eq(originalClaimAmountDefault.add(initialAmountDefault));
+			).to.eq(originalClaimAmountDefault);
 			await expect(
 				communityProxy.connect(communityManagerA).requestFunds()
 			).to.be.fulfilled;
@@ -3635,7 +3643,7 @@ describe.only("Community", () => {
 			);
 
 			expect(await cUSD.balanceOf(communityProxy.address)).to.eq(
-				communityMinTrancheDefault
+				originalClaimAmountDefault
 			);
 		});
 
@@ -3739,13 +3747,14 @@ describe.only("Community", () => {
 				.connect(communityManagerA)
 				.addBeneficiaries([beneficiaryA.address]);
 
-			communityProxy.connect(beneficiaryA).claim();
+			await transferCommunityFundsExcept();
 
 			expect(
 				await communityAdminProxy.calculateCommunityTrancheAmount(
 					communityProxy.address
 				)
-			).to.eq(originalClaimAmountDefault.add(initialAmountDefault));
+			).to.eq(originalClaimAmountDefault);
+
 			await expect(
 				communityProxy.connect(communityManagerA).requestFunds()
 			).to.be.fulfilled;
@@ -3760,7 +3769,7 @@ describe.only("Community", () => {
 			);
 
 			expect(await cUSD.balanceOf(communityProxy.address)).to.eq(
-				communityMinTrancheDefault
+				originalClaimAmountDefault
 			);
 		});
 
@@ -3773,13 +3782,13 @@ describe.only("Community", () => {
 				.connect(communityManagerA)
 				.addBeneficiaries([beneficiaryA.address]);
 
-			communityProxy.connect(beneficiaryA).claim();
+			await transferCommunityFundsExcept();
 
 			expect(
 				await communityAdminProxy.calculateCommunityTrancheAmount(
 					communityProxy.address
 				)
-			).to.eq(originalClaimAmountDefault.add(initialAmountDefault));
+			).to.eq(originalClaimAmountDefault);
 			await expect(
 				communityProxy.connect(communityManagerA).requestFunds()
 			).to.be.fulfilled;
@@ -3794,27 +3803,24 @@ describe.only("Community", () => {
 			);
 
 			expect(await cUSD.balanceOf(communityProxy.address)).to.eq(
-				communityMinTrancheDefault
+				originalClaimAmountDefault
 			);
 
-			await expect(
-				communityAdminProxy.transferFromCommunity(
-					communityProxy.address,
-					cUSD.address,
-					adminAccount1.address,
-					communityMinTrancheDefault
-				)
-			).to.be.fulfilled;
+			await transferCommunityFundsExcept(toEther(1));
 
 			expect(
 				await communityAdminProxy.calculateCommunityTrancheAmount(
 					communityProxy.address
 				)
 			).to.eq(0);
+
+			const beforeBalance = await cUSD.balanceOf(communityProxy.address);
 			await expect(
 				communityProxy.connect(communityManagerA).requestFunds()
-			).to.be.rejectedWith(
-				"CommunityAdmin::fundCommunity: this community cannot request now"
+			).to.be.fulfilled;
+
+			(await cUSD.balanceOf(communityProxy.address)).should.eq(
+				beforeBalance
 			);
 
 			expect(await communityProxy.lastFundRequest()).to.eq(
@@ -3831,13 +3837,14 @@ describe.only("Community", () => {
 				.connect(communityManagerA)
 				.addBeneficiaries([beneficiaryA.address]);
 
-			communityProxy.connect(beneficiaryA).claim();
+			await transferCommunityFundsExcept(toEther(0.1));
 
 			expect(
 				await communityAdminProxy.calculateCommunityTrancheAmount(
 					communityProxy.address
 				)
-			).to.eq(originalClaimAmountDefault.add(initialAmountDefault));
+			).to.eq(originalClaimAmountDefault.sub(toEther(0.1)));
+
 			await expect(
 				communityProxy.connect(communityManagerA).requestFunds()
 			).to.be.fulfilled;
@@ -3852,17 +3859,10 @@ describe.only("Community", () => {
 			);
 
 			expect(await cUSD.balanceOf(communityProxy.address)).to.eq(
-				communityMinTrancheDefault
+				originalClaimAmountDefault
 			);
 
-			await expect(
-				communityAdminProxy.transferFromCommunity(
-					communityProxy.address,
-					cUSD.address,
-					adminAccount1.address,
-					communityMinTrancheDefault
-				)
-			).to.be.fulfilled;
+			await transferCommunityFundsExcept();
 
 			await advanceBlockNTimes(baseIntervalDefault);
 
@@ -3870,7 +3870,7 @@ describe.only("Community", () => {
 				await communityAdminProxy.calculateCommunityTrancheAmount(
 					communityProxy.address
 				)
-			).to.eq(communityMinTrancheDefault);
+			).to.eq(originalClaimAmountDefault);
 			await expect(
 				communityProxy.connect(communityManagerA).requestFunds()
 			).to.be.fulfilled;
@@ -3885,7 +3885,7 @@ describe.only("Community", () => {
 			);
 
 			expect(await cUSD.balanceOf(communityProxy.address)).to.eq(
-				communityMinTrancheDefault
+				originalClaimAmountDefault
 			);
 		});
 
@@ -3894,46 +3894,23 @@ describe.only("Community", () => {
 				communityMinTrancheDefault
 			);
 
-			await treasuryProxy.transfer(
-				cUSD.address,
-				adminAccount1.address,
-				await cUSD.balanceOf(treasuryProxy.address)
-			);
-			await cUSD.mint(treasuryProxy.address, parseEther("100"));
-
 			await communityProxy
 				.connect(communityManagerA)
-				.addBeneficiaries([beneficiaryA.address]);
-			communityProxy.connect(beneficiaryA).claim();
+				.addBeneficiaries([
+					beneficiaryA.address,
+					beneficiaryB.address,
+					beneficiaryC.address,
+					beneficiaryD.address,
+				]);
 
-			await communityProxy
-				.connect(communityManagerA)
-				.addBeneficiaries([beneficiaryB.address]);
-			communityProxy.connect(beneficiaryB).claim();
+			await transferTreasuryFundsExcept(toEther(50));
+			await transferCommunityFundsExcept();
 
-			await communityProxy
-				.connect(communityManagerA)
-				.addBeneficiaries([beneficiaryC.address]);
-			communityProxy.connect(beneficiaryC).claim();
-
-			await communityProxy
-				.connect(communityManagerA)
-				.addBeneficiaries([beneficiaryD.address]);
-			communityProxy.connect(beneficiaryD).claim();
-
-			await communityProxy
-				.connect(communityManagerA)
-				.addBeneficiaries([communityManagerA.address]);
-			communityProxy.connect(communityManagerA).claim();
-
-			const communityBalance = await cUSD.balanceOf(
-				communityProxy.address
-			);
-			const treasurySafetyLimit = (
-				await cUSD.balanceOf(treasuryProxy.address)
-			)
+			const treasurySafetyLimit = toEther(50)
 				.mul(TREASURY_SAFETY_PERCENTAGE)
 				.div(100);
+
+			await communityAdminProxy.updateTreasuryMinBalance(0);
 
 			expect(
 				await communityAdminProxy.calculateCommunityTrancheAmount(
@@ -3950,7 +3927,7 @@ describe.only("Community", () => {
 			).to.eq(0);
 
 			expect(await cUSD.balanceOf(communityProxy.address)).to.eq(
-				communityBalance.add(treasurySafetyLimit)
+				treasurySafetyLimit
 			);
 		});
 
@@ -3977,10 +3954,14 @@ describe.only("Community", () => {
 					communityProxy.address
 				)
 			).to.eq(0);
+
+			const beforeBalance = await cUSD.balanceOf(communityProxy.address);
 			await expect(
 				communityProxy.connect(communityManagerA).requestFunds()
-			).to.be.rejectedWith(
-				"CommunityAdmin::fundCommunity: this community cannot request now"
+			).to.be.fulfilled;
+
+			(await cUSD.balanceOf(communityProxy.address)).should.eq(
+				beforeBalance
 			);
 		});
 
@@ -4032,9 +4013,7 @@ describe.only("Community", () => {
 			).to.eq(0);
 			await expect(
 				communityProxy.connect(communityManagerA).requestFunds()
-			).to.be.rejectedWith(
-				"CommunityAdmin::fundCommunity: this community cannot request now"
-			);
+			).to.be.fulfilled;
 			expect(await cUSD.balanceOf(communityProxy.address)).to.eq(
 				communityMinTrancheDefault.add(user1Donation)
 			);
@@ -4063,7 +4042,7 @@ describe.only("Community", () => {
 			);
 		});
 
-		it("should get more funds if have private donations", async () => {
+		xit("should get more funds if have private donations", async () => {
 			const user1Donation = parseEther("20000");
 
 			await communityProxy
@@ -4207,6 +4186,7 @@ describe.only("Community", () => {
 				originalClaimAmountDefault
 			);
 			(await communityProxy.claimAmount()).should.eq(toEther(2).div(4));
+			await transferTreasuryFundsExcept();
 
 			await communityProxy.connect(beneficiaryA).claim();
 
@@ -4383,14 +4363,11 @@ describe.only("Community", () => {
 				adminAccount1.address,
 				(await cUSD.balanceOf(treasuryProxy.address)).sub(toEther(100))
 			);
-			const treasurySafetyLimit = toEther(100)
-				.mul(TREASURY_SAFETY_PERCENTAGE)
-				.div(100);
 
 			await communityProxy.connect(communityManagerA).requestFunds();
 
 			(await cUSD.balanceOf(communityProxy.address)).should.eq(
-				treasurySafetyLimit
+				originalClaimAmountDefault.mul(2)
 			);
 
 			(await communityProxy.originalClaimAmount()).should.eq(
@@ -4437,12 +4414,14 @@ describe.only("Community", () => {
 				communityProxy.address
 			);
 
-			communityAdminProxy.transferFromCommunity(
+			await communityAdminProxy.transferFromCommunity(
 				communityProxy.address,
 				cUSD.address,
 				adminAccount1.address,
 				communityInitialBalance.sub(toEther(2))
 			);
+
+			await transferTreasuryFundsExcept();
 
 			(await cUSD.balanceOf(communityProxy.address)).should.eq(
 				toEther(2)
@@ -4465,6 +4444,55 @@ describe.only("Community", () => {
 			);
 			beneficiaryBData.claims.should.eq(1);
 			beneficiaryBData.claimedAmount.should.eq(newClaimAmount);
+		});
+
+		it("should requestFunds when claiming", async () => {
+			expect(await cUSD.balanceOf(communityProxy.address)).to.eq(
+				communityMinTrancheDefault
+			);
+
+			await communityProxy
+				.connect(communityManagerA)
+				.addBeneficiaries([
+					beneficiaryA.address,
+					beneficiaryB.address,
+					beneficiaryC.address,
+				]);
+
+			await transferCommunityFundsExcept();
+
+			expect(
+				await communityAdminProxy.calculateCommunityTrancheAmount(
+					communityProxy.address
+				)
+			).to.eq(originalClaimAmountDefault.mul(3));
+
+			await expect(communityProxy.connect(beneficiaryA).claim()).to.be
+				.fulfilled;
+			expect(
+				await communityAdminProxy.calculateCommunityTrancheAmount(
+					communityProxy.address
+				)
+			).to.eq(0);
+
+			expect(await communityProxy.lastFundRequest()).to.eq(
+				firstBlock + 3
+			);
+
+			expect(await cUSD.balanceOf(communityProxy.address)).to.eq(
+				originalClaimAmountDefault.mul(2)
+			);
+
+			await expect(communityProxy.connect(beneficiaryB).claim()).to.be
+				.fulfilled;
+
+			expect(await cUSD.balanceOf(communityProxy.address)).to.eq(
+				originalClaimAmountDefault
+			);
+
+			expect(await communityProxy.lastFundRequest()).to.eq(
+				firstBlock + 3
+			);
 		});
 	});
 
@@ -7699,4 +7727,33 @@ describe.only("Community", () => {
 			beneficiaryClaimedAmountsCopy[3].should.eq(0);
 		});
 	});
+
+	async function transferTreasuryFundsExcept(
+		finalBalance: BigNumber = toEther(0)
+	) {
+		const treasuryInitialBalance = await cUSD.balanceOf(
+			treasuryProxy.address
+		);
+
+		await treasuryProxy.transfer(
+			cUSD.address,
+			adminAccount1.address,
+			treasuryInitialBalance.sub(finalBalance)
+		);
+	}
+
+	async function transferCommunityFundsExcept(
+		finalBalance: BigNumber = toEther(0)
+	) {
+		const communityInitialBalance = await cUSD.balanceOf(
+			communityProxy.address
+		);
+
+		await communityAdminProxy.transferFromCommunity(
+			communityProxy.address,
+			cUSD.address,
+			adminAccount1.address,
+			communityInitialBalance.sub(finalBalance)
+		);
+	}
 });

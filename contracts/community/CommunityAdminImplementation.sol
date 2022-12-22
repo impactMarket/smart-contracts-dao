@@ -548,16 +548,18 @@ contract CommunityAdminImplementation is
     /**
      * @dev Funds an existing community if it hasn't enough funds
      */
-    function fundCommunity() external override onlyCommunities {
+    function fundCommunity() external override onlyCommunities returns (uint256) {
         ICommunity _community = ICommunity(msg.sender);
         IERC20 _token = (_community.getVersion() == 1) ? _community.cUSD() : _community.token();
         uint256 _balance = _token.balanceOf(msg.sender);
 
         uint256 _amount = calculateCommunityTrancheAmount(ICommunity(msg.sender));
 
-        require(_amount > 0, "CommunityAdmin::fundCommunity: this community cannot request now");
+        if (_amount > 0) {
+            transferToCommunity(_community, _amount);
+        }
 
-        transferToCommunity(_community, _amount);
+        return _amount;
     }
 
     /**
@@ -841,9 +843,10 @@ contract CommunityAdminImplementation is
 
         uint256 _trancheAmount = _validBeneficiaries * _originalClaimAmount;
 
-        if (_trancheAmount < _minTranche) {
-            _trancheAmount = _minTranche;
-        }
+        // no need to have a minTranche, considering that every claim triggers the request fund
+        //        if (_trancheAmount < _minTranche) {
+        //            _trancheAmount = _minTranche;
+        //        }
 
         if (_trancheAmount > _maxTranche) {
             _trancheAmount = _maxTranche;
