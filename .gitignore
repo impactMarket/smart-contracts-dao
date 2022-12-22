@@ -118,6 +118,7 @@ ganache-cli.log
 
 # hardhat
 cache
+artifacts
 
 # ide
 .idea/
