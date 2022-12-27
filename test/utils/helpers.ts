@@ -119,3 +119,68 @@ export async function createProposal(
 
 	return await governanceDelegator.proposalCount();
 }
+
+export async function createImpactMarketCouncilProposal(
+	impactMarketCouncil: ethersTypes.Contract,
+	proposer: SignerWithAddress,
+	targets: string[],
+	signatures: string[],
+	calldataTyeps: string[][],
+	calldataValues: any[][],
+	description: string = ""
+) {
+	if (
+		targets.length != signatures.length ||
+		targets.length != calldataTyeps.length ||
+		targets.length != calldataValues.length
+	) {
+		throw new Error("proposal function information arity mismatch");
+	}
+
+	const calldatas: string[] = [];
+	for (let i = 0; i < calldataTyeps.length; i++) {
+		if (calldataTyeps[i].length != calldataValues[i].length) {
+			throw new Error("proposal calldata information arity mismatch");
+		}
+
+		calldatas.push(
+			ethers.utils.defaultAbiCoder.encode(
+				calldataTyeps[i],
+				calldataValues[i]
+			)
+		);
+	}
+
+	await impactMarketCouncil
+		.connect(proposer)
+		.propose(targets, signatures, calldatas, description);
+
+	return await impactMarketCouncil.proposalCount();
+}
+
+export async function createAndExecuteImpactMarketCouncilProposal(
+	impactMarketCouncil: ethersTypes.Contract,
+	proposer: SignerWithAddress,
+	voters: SignerWithAddress[],
+	targets: string[],
+	signatures: string[],
+	calldataTyeps: string[][],
+	calldataValues: any[][],
+	description: string = ""
+) {
+	await createImpactMarketCouncilProposal(
+		impactMarketCouncil,
+		proposer,
+		targets,
+		signatures,
+		calldataTyeps,
+		calldataValues,
+		description
+	);
+
+	for (let i = 0; i < voters.length; i++) {
+		await impactMarketCouncil.connect(voters[i]).castVote(1, 1);
+	}
+
+	await impactMarketCouncil.execute(1);
+}
