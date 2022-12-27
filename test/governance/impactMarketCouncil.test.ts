@@ -8,7 +8,10 @@ import type * as ethersTypes from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { parseEther } from "@ethersproject/units";
 import { advanceBlockNTimes } from "../utils/TimeTravel";
-import {createAndExecuteImpactMarketCouncilProposal, createImpactMarketCouncilProposal} from "../utils/helpers";
+import {
+	createAndExecuteImpactMarketCouncilProposal,
+	createImpactMarketCouncilProposal,
+} from "../utils/helpers";
 
 chai.use(chaiAsPromised);
 
@@ -52,7 +55,7 @@ describe.only("ImpactMarketCouncil", function () {
 		ambassador = accounts[5];
 	}
 	async function beforeEachBasic() {
-		await deployments.fixture("Test", {fallbackToGlobal: false});
+		await deployments.fixture("Test", { fallbackToGlobal: false });
 
 		const pactDelegatorDeployment = await deployments.get("PACTDelegator");
 		pactDelegator = await ethers.getContractAt(
@@ -91,7 +94,6 @@ describe.only("ImpactMarketCouncil", function () {
 			ImpactProxyAdmin.address
 		);
 
-
 		communityAdmin = await ethers.getContractAt(
 			"CommunityAdminImplementation",
 			communityAdmin.address
@@ -111,9 +113,8 @@ describe.only("ImpactMarketCouncil", function () {
 		await ambassadors.connect(entity).addAmbassador(ambassador.address);
 
 		await communityAdmin.transferOwnership(pactDelegator.address);
-		await expect(
-			impactMarketCouncil.addMember(alice.address)
-		).to.be.fulfilled;
+		await expect(impactMarketCouncil.addMember(alice.address)).to.be
+			.fulfilled;
 
 		const cUSDDeployment = await deployments.get("TokenMock");
 		cUSD = await ethers.getContractAt("TokenMock", cUSDDeployment.address);
@@ -133,10 +134,40 @@ describe.only("ImpactMarketCouncil", function () {
 			impactMarketCouncil,
 			alice,
 			[communityAdmin.address],
-			["addCommunity(address,address[],address,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256)"],
-			[["address", "address[]", "address", "uint256", "uint256", "uint256", "uint256", "uint256", "uint256", "uint256", "uint256"]],
-			[[cUSD.address, [carol.address], ambassador.address, parseEther("100"), parseEther("1000"), parseEther("0.01"), 1111, 111, communityMinTranche, communityMaxTranche, maxBeneficiaries]],
-				'description'
+			[
+				"addCommunity(address,address[],address,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256)",
+			],
+			[
+				[
+					"address",
+					"address[]",
+					"address",
+					"uint256",
+					"uint256",
+					"uint256",
+					"uint256",
+					"uint256",
+					"uint256",
+					"uint256",
+					"uint256",
+				],
+			],
+			[
+				[
+					cUSD.address,
+					[carol.address],
+					ambassador.address,
+					parseEther("100"),
+					parseEther("1000"),
+					parseEther("0.01"),
+					1111,
+					111,
+					communityMinTranche,
+					communityMaxTranche,
+					maxBeneficiaries,
+				],
+			],
+			"description"
 		);
 	}
 
@@ -204,8 +235,8 @@ describe.only("ImpactMarketCouncil", function () {
 
 			await createCommunityProposal();
 
-			await expect(impactMarketCouncil.connect(alice).castVote(1, 1)).to.be
-				.fulfilled;
+			await expect(impactMarketCouncil.connect(alice).castVote(1, 1)).to
+				.be.fulfilled;
 			await expect(impactMarketCouncil.connect(bob).castVote(1, 1)).to.be
 				.fulfilled;
 			await expect(impactMarketCouncil.connect(alice).execute(1)).to.be
@@ -242,8 +273,8 @@ describe.only("ImpactMarketCouncil", function () {
 
 			await createCommunityProposal();
 
-			await expect(impactMarketCouncil.connect(alice).castVote(1, 1)).to.be
-				.fulfilled;
+			await expect(impactMarketCouncil.connect(alice).castVote(1, 1)).to
+				.be.fulfilled;
 			await expect(
 				impactMarketCouncil.connect(bob).castVote(1, 1)
 			).to.be.rejectedWith("PACT::castVoteInternal: voting is closed");
@@ -256,8 +287,8 @@ describe.only("ImpactMarketCouncil", function () {
 
 			await createCommunityProposal();
 
-			await expect(impactMarketCouncil.connect(alice).castVote(1, 1)).to.be
-				.fulfilled;
+			await expect(impactMarketCouncil.connect(alice).castVote(1, 1)).to
+				.be.fulfilled;
 			await expect(
 				impactMarketCouncil.connect(alice).castVote(1, 1)
 			).to.be.rejectedWith("PACT::castVoteInternal: voter already voted");
@@ -272,8 +303,8 @@ describe.only("ImpactMarketCouncil", function () {
 
 			await createCommunityProposal();
 
-			await expect(impactMarketCouncil.connect(alice).castVote(1, 1)).to.be
-				.fulfilled;
+			await expect(impactMarketCouncil.connect(alice).castVote(1, 1)).to
+				.be.fulfilled;
 			await expect(impactMarketCouncil.connect(bob).castVote(1, 1)).to.be
 				.fulfilled;
 			await expect(impactMarketCouncil.setQuorumVotes(2)).to.be.fulfilled;
@@ -305,8 +336,8 @@ describe.only("ImpactMarketCouncil", function () {
 		it("should create community if impactMarket Council", async function () {
 			await createCommunityProposal();
 
-			await expect(impactMarketCouncil.connect(alice).castVote(1, 1)).to.be
-				.fulfilled;
+			await expect(impactMarketCouncil.connect(alice).castVote(1, 1)).to
+				.be.fulfilled;
 			await expect(impactMarketCouncil.connect(alice).execute(1)).to.be
 				.fulfilled;
 		});
@@ -315,8 +346,8 @@ describe.only("ImpactMarketCouncil", function () {
 			const targets = [communityAdmin.address];
 			await createCommunityProposal();
 
-			await expect(impactMarketCouncil.connect(alice).castVote(1, 1)).to.be
-				.fulfilled;
+			await expect(impactMarketCouncil.connect(alice).castVote(1, 1)).to
+				.be.fulfilled;
 			await expect(impactMarketCouncil.connect(alice).execute(1)).to.be
 				.fulfilled;
 
@@ -337,8 +368,8 @@ describe.only("ImpactMarketCouncil", function () {
 					.propose(targets, signatures, calldatas, descriptions)
 			).to.be.fulfilled;
 
-			await expect(impactMarketCouncil.connect(alice).castVote(2, 1)).to.be
-				.fulfilled;
+			await expect(impactMarketCouncil.connect(alice).castVote(2, 1)).to
+				.be.fulfilled;
 			await expect(impactMarketCouncil.connect(alice).execute(2)).to.be
 				.fulfilled;
 		});
@@ -403,7 +434,7 @@ describe.only("ImpactMarketCouncil", function () {
 				["updateSignerWalletAddress(address)"],
 				[["address"]],
 				[[FAKE_ADDRESS]],
-				'description'
+				"description"
 			);
 
 			(await learnAndEarn.signerWalletAddress()).should.be.equal(
@@ -420,7 +451,7 @@ describe.only("ImpactMarketCouncil", function () {
 				["pause()"],
 				[[]],
 				[[]],
-				'description'
+				"description"
 			);
 
 			(await learnAndEarn.paused()).should.be.equal(true);
@@ -433,11 +464,10 @@ describe.only("ImpactMarketCouncil", function () {
 				[alice],
 				[learnAndEarn.address],
 				["addLevel(uint256,address)"],
-				[["uint256","address"]],
+				[["uint256", "address"]],
 				[[123, cUSD.address]],
-				'description'
+				"description"
 			);
-
 
 			(await learnAndEarn.levelListLength()).should.eq(1);
 			(await learnAndEarn.levelListAt(0)).should.eq(123);
