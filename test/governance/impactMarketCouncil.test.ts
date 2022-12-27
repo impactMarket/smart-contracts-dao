@@ -8,35 +8,42 @@ import type * as ethersTypes from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { parseEther } from "@ethersproject/units";
 import { advanceBlockNTimes } from "../utils/TimeTravel";
+import {
+	createAndExecuteImpactMarketCouncilProposal,
+	createImpactMarketCouncilProposal,
+} from "../utils/helpers";
 
 chai.use(chaiAsPromised);
 
 const expect = chai.expect;
 
-const communityMinTranche = parseEther("100");
-const communityMaxTranche = parseEther("5000");
+describe.only("ImpactMarketCouncil", function () {
+	const FAKE_ADDRESS = "0x000000000000000000000000000000000000dEaD";
 
-const maxBeneficiaries = 100;
+	const communityMinTranche = parseEther("100");
+	const communityMaxTranche = parseEther("5000");
 
-// Contracts
-let PACTDelegate: ethersTypes.ContractFactory;
+	const maxBeneficiaries = 100;
 
-//users
-let alice: SignerWithAddress;
-let bob: SignerWithAddress;
-let carol: SignerWithAddress;
-let entity: SignerWithAddress;
-let ambassador: SignerWithAddress;
+	// Contracts
+	let PACTDelegate: ethersTypes.ContractFactory;
 
-// contract instances
-let pactDelegator: ethersTypes.Contract;
-let communityAdmin: ethersTypes.Contract;
-let treasury: ethersTypes.Contract;
-let impactMarketCouncil: ethersTypes.Contract;
-let cUSD: ethersTypes.Contract;
+	//users
+	let alice: SignerWithAddress;
+	let bob: SignerWithAddress;
+	let carol: SignerWithAddress;
+	let entity: SignerWithAddress;
+	let ambassador: SignerWithAddress;
 
-describe("ImpactMarketCouncil", function () {
-	before(async function () {
+	// contract instances
+	let pactDelegator: ethersTypes.Contract;
+	let communityAdmin: ethersTypes.Contract;
+	let treasury: ethersTypes.Contract;
+	let impactMarketCouncil: ethersTypes.Contract;
+	let cUSD: ethersTypes.Contract;
+	let learnAndEarn: ethersTypes.Contract;
+
+	async function beforeBasic() {
 		PACTDelegate = await ethers.getContractFactory("PACTDelegate");
 
 		const accounts: SignerWithAddress[] = await ethers.getSigners();
@@ -46,9 +53,8 @@ describe("ImpactMarketCouncil", function () {
 		carol = accounts[3];
 		entity = accounts[4];
 		ambassador = accounts[5];
-	});
-
-	beforeEach(async function () {
+	}
+	async function beforeEachBasic() {
 		await deployments.fixture("Test", { fallbackToGlobal: false });
 
 		const pactDelegatorDeployment = await deployments.get("PACTDelegator");
@@ -88,16 +94,6 @@ describe("ImpactMarketCouncil", function () {
 			ImpactProxyAdmin.address
 		);
 
-		const CommunityAdminImplementation = await deployments.get(
-			"CommunityAdminImplementation"
-		);
-
-		expect(
-			await impactProxyAdmin.getProxyImplementation(
-				communityAdmin.address
-			)
-		).to.be.equal(CommunityAdminImplementation.address);
-
 		communityAdmin = await ethers.getContractAt(
 			"CommunityAdminImplementation",
 			communityAdmin.address
@@ -117,23 +113,31 @@ describe("ImpactMarketCouncil", function () {
 		await ambassadors.connect(entity).addAmbassador(ambassador.address);
 
 		await communityAdmin.transferOwnership(pactDelegator.address);
-		await expect(
-			impactMarketCouncil.addMember(alice.address)
-		).to.be.fulfilled;
+		await expect(impactMarketCouncil.addMember(alice.address)).to.be
+			.fulfilled;
 
 		const cUSDDeployment = await deployments.get("TokenMock");
 		cUSD = await ethers.getContractAt("TokenMock", cUSDDeployment.address);
 
 		await cUSD.mint(treasury.address, parseEther("1000"));
-	});
+
+		learnAndEarn = await ethers.getContractAt(
+			"LearnAndEarnImplementation",
+			(
+				await deployments.get("LearnAndEarnProxy")
+			).address
+		);
+	}
 
 	async function createCommunityProposal() {
-		const signatures = [
-			"addCommunity(address,address[],address,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256)",
-		];
-
-		const calldatas = [
-			ethers.utils.defaultAbiCoder.encode(
+		await createImpactMarketCouncilProposal(
+			impactMarketCouncil,
+			alice,
+			[communityAdmin.address],
+			[
+				"addCommunity(address,address[],address,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256)",
+			],
+			[
 				[
 					"address",
 					"address[]",
@@ -147,6 +151,8 @@ describe("ImpactMarketCouncil", function () {
 					"uint256",
 					"uint256",
 				],
+			],
+			[
 				[
 					cUSD.address,
 					[carol.address],
@@ -159,238 +165,315 @@ describe("ImpactMarketCouncil", function () {
 					communityMinTranche,
 					communityMaxTranche,
 					maxBeneficiaries,
-				]
-			),
-		];
-		const descriptions = "description";
-
-		await expect(
-			impactMarketCouncil
-				.connect(alice)
-				.propose(signatures, calldatas, descriptions)
-		).to.be.fulfilled;
+				],
+			],
+			"description"
+		);
 	}
 
-	it("should create community if impactMarket Council", async function () {
-		await createCommunityProposal();
+	describe("Basic", function () {
+		before(async function () {
+			await beforeBasic();
+		});
 
-		await expect(impactMarketCouncil.connect(alice).castVote(1, 1)).to.be
-			.fulfilled;
-		await expect(impactMarketCouncil.connect(alice).execute(1)).to.be
-			.fulfilled;
+		beforeEach(async function () {
+			await beforeEachBasic();
+		});
+
+		it("should update params if owner or impactMarket Council", async function () {
+			await expect(impactMarketCouncil.setQuorumVotes(2)).to.be.fulfilled;
+		});
+
+		it("should not update params if not owner or impactMarket Council", async function () {
+			await expect(
+				impactMarketCouncil.connect(bob).setQuorumVotes(0)
+			).to.be.rejectedWith("Ownable: caller is not the owner");
+		});
+
+		it("should add member if owner", async function () {
+			await expect(impactMarketCouncil.addMember(bob.address)).to.be
+				.fulfilled;
+		});
+
+		it("should not add member if not owner", async function () {
+			await expect(
+				impactMarketCouncil.connect(bob).addMember(carol.address)
+			).to.be.rejectedWith("Ownable: caller is not the owner");
+		});
+
+		it("should not be able to add member if already member", async function () {
+			await expect(impactMarketCouncil.addMember(bob.address)).to.be
+				.fulfilled;
+			await expect(
+				impactMarketCouncil.addMember(bob.address)
+			).to.be.rejectedWith("PACT::addMember: already a member");
+		});
+
+		it("should not be able to add member if already member", async function () {
+			await expect(
+				impactMarketCouncil.removeMember(bob.address)
+			).to.be.rejectedWith("PACT::removeMember: not a member");
+		});
+
+		it("should be able to add many members", async function () {
+			await expect(impactMarketCouncil.addMember(bob.address)).to.be
+				.fulfilled;
+			await expect(impactMarketCouncil.addMember(carol.address)).to.be
+				.fulfilled;
+		});
+
+		it("should be able to change quorum", async function () {
+			await expect(impactMarketCouncil.addMember(bob.address)).to.be
+				.fulfilled;
+			await expect(impactMarketCouncil.setQuorumVotes(2)).to.be.fulfilled;
+		});
+
+		it("should be able to execute after reaching quorum", async function () {
+			await expect(impactMarketCouncil.addMember(bob.address)).to.be
+				.fulfilled;
+			await expect(impactMarketCouncil.setQuorumVotes(2)).to.be.fulfilled;
+
+			await createCommunityProposal();
+
+			await expect(impactMarketCouncil.connect(alice).castVote(1, 1)).to
+				.be.fulfilled;
+			await expect(impactMarketCouncil.connect(bob).castVote(1, 1)).to.be
+				.fulfilled;
+			await expect(impactMarketCouncil.connect(alice).execute(1)).to.be
+				.fulfilled;
+		});
+
+		it("should not be able to execute without reaching quorum", async function () {
+			await expect(impactMarketCouncil.addMember(bob.address)).to.be
+				.fulfilled;
+			await expect(impactMarketCouncil.setQuorumVotes(2)).to.be.fulfilled;
+
+			await createCommunityProposal();
+
+			await expect(
+				impactMarketCouncil.connect(alice).execute(1)
+			).to.be.rejectedWith(
+				"PACT::execute: proposal can only be executed if it is succeeded"
+			);
+		});
+
+		it("should not be able to execute a canceled proposal", async function () {
+			await createCommunityProposal();
+
+			await expect(impactMarketCouncil.connect(alice).cancel(1)).to.be
+				.fulfilled;
+			await expect(
+				impactMarketCouncil.connect(alice).castVote(1, 1)
+			).to.be.rejectedWith("PACT::castVoteInternal: voting is closed");
+		});
+
+		it("should not be able to vote once proposal meet quorum already", async function () {
+			await expect(impactMarketCouncil.addMember(bob.address)).to.be
+				.fulfilled;
+
+			await createCommunityProposal();
+
+			await expect(impactMarketCouncil.connect(alice).castVote(1, 1)).to
+				.be.fulfilled;
+			await expect(
+				impactMarketCouncil.connect(bob).castVote(1, 1)
+			).to.be.rejectedWith("PACT::castVoteInternal: voting is closed");
+		});
+
+		it("should not be able to vote twice", async function () {
+			await expect(impactMarketCouncil.addMember(bob.address)).to.be
+				.fulfilled;
+			await expect(impactMarketCouncil.setQuorumVotes(2)).to.be.fulfilled;
+
+			await createCommunityProposal();
+
+			await expect(impactMarketCouncil.connect(alice).castVote(1, 1)).to
+				.be.fulfilled;
+			await expect(
+				impactMarketCouncil.connect(alice).castVote(1, 1)
+			).to.be.rejectedWith("PACT::castVoteInternal: voter already voted");
+		});
+
+		it("if quorum is set to a number higher or equal than current votes, should be able to execute", async function () {
+			await expect(impactMarketCouncil.addMember(bob.address)).to.be
+				.fulfilled;
+			await expect(impactMarketCouncil.addMember(carol.address)).to.be
+				.fulfilled;
+			await expect(impactMarketCouncil.setQuorumVotes(3)).to.be.fulfilled;
+
+			await createCommunityProposal();
+
+			await expect(impactMarketCouncil.connect(alice).castVote(1, 1)).to
+				.be.fulfilled;
+			await expect(impactMarketCouncil.connect(bob).castVote(1, 1)).to.be
+				.fulfilled;
+			await expect(impactMarketCouncil.setQuorumVotes(2)).to.be.fulfilled;
+			await expect(impactMarketCouncil.connect(bob).execute(1)).to.be
+				.fulfilled;
+		});
+
+		xit("should not be able to vote once vote period ends", async function () {
+			await createCommunityProposal();
+
+			const VOTING_PERIOD_BLOCKS = 518400;
+			await advanceBlockNTimes(VOTING_PERIOD_BLOCKS);
+
+			await expect(
+				impactMarketCouncil.connect(alice).castVote(1, 1)
+			).to.be.rejectedWith("PACT::castVoteInternal: voting is closed");
+		});
 	});
 
-	it("should remove a community if impactMarket Council", async () => {
-		await createCommunityProposal();
+	describe("Community", function () {
+		before(async function () {
+			await beforeBasic();
+		});
 
-		await expect(impactMarketCouncil.connect(alice).castVote(1, 1)).to.be
-			.fulfilled;
-		await expect(impactMarketCouncil.connect(alice).execute(1)).to.be
-			.fulfilled;
+		beforeEach(async function () {
+			await beforeEachBasic();
+		});
 
-		const communityAddress = await communityAdmin.communityListAt(0);
-		const signatures = ["removeCommunity(address)"];
+		it("should create community if impactMarket Council", async function () {
+			await createCommunityProposal();
 
-		const calldatas = [
-			ethers.utils.defaultAbiCoder.encode(
-				["address"],
-				[communityAddress]
-			),
-		];
-		const descriptions = "description";
+			await expect(impactMarketCouncil.connect(alice).castVote(1, 1)).to
+				.be.fulfilled;
+			await expect(impactMarketCouncil.connect(alice).execute(1)).to.be
+				.fulfilled;
+		});
 
-		await expect(
-			impactMarketCouncil
-				.connect(alice)
-				.propose(signatures, calldatas, descriptions)
-		).to.be.fulfilled;
+		it("should remove a community if impactMarket Council", async () => {
+			const targets = [communityAdmin.address];
+			await createCommunityProposal();
 
-		await expect(impactMarketCouncil.connect(alice).castVote(2, 1)).to.be
-			.fulfilled;
-		await expect(impactMarketCouncil.connect(alice).execute(2)).to.be
-			.fulfilled;
+			await expect(impactMarketCouncil.connect(alice).castVote(1, 1)).to
+				.be.fulfilled;
+			await expect(impactMarketCouncil.connect(alice).execute(1)).to.be
+				.fulfilled;
+
+			const communityAddress = await communityAdmin.communityListAt(0);
+			const signatures = ["removeCommunity(address)"];
+
+			const calldatas = [
+				ethers.utils.defaultAbiCoder.encode(
+					["address"],
+					[communityAddress]
+				),
+			];
+			const descriptions = "description";
+
+			await expect(
+				impactMarketCouncil
+					.connect(alice)
+					.propose(targets, signatures, calldatas, descriptions)
+			).to.be.fulfilled;
+
+			await expect(impactMarketCouncil.connect(alice).castVote(2, 1)).to
+				.be.fulfilled;
+			await expect(impactMarketCouncil.connect(alice).execute(2)).to.be
+				.fulfilled;
+		});
+
+		it("should not be able to add community if not member", async function () {
+			const targets = [communityAdmin.address];
+			const signatures = [
+				"addCommunity(address[],uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256)",
+			];
+
+			const calldatas = [
+				ethers.utils.defaultAbiCoder.encode(
+					[
+						"address[]",
+						"uint256",
+						"uint256",
+						"uint256",
+						"uint256",
+						"uint256",
+						"uint256",
+						"uint256",
+						"uint256",
+					],
+					[
+						[carol.address],
+						parseEther("100"),
+						parseEther("1000"),
+						parseEther("0.01"),
+						1111,
+						111,
+						communityMinTranche,
+						communityMaxTranche,
+						maxBeneficiaries,
+					]
+				),
+			];
+			const descriptions = "description";
+
+			await expect(
+				impactMarketCouncil
+					.connect(bob)
+					.propose(targets, signatures, calldatas, descriptions)
+			).to.be.rejectedWith("PACT:: Not a member");
+		});
 	});
 
-	it("should update params if owner or impactMarket Council", async function () {
-		await expect(impactMarketCouncil.setQuorumVotes(2)).to.be.fulfilled;
-	});
+	describe("LearnAndEarn", function () {
+		before(async function () {
+			await beforeBasic();
+		});
 
-	it("should not update params if not owner or impactMarket Council", async function () {
-		await expect(
-			impactMarketCouncil.connect(bob).setQuorumVotes(0)
-		).to.be.rejectedWith("Ownable: caller is not the owner");
-	});
+		beforeEach(async function () {
+			await beforeEachBasic();
+		});
 
-	it("should add member if owner", async function () {
-		await expect(impactMarketCouncil.addMember(bob.address)).to.be
-			.fulfilled;
-	});
+		it("Should update signerWallet if ImpactMarketCouncil", async function () {
+			await createAndExecuteImpactMarketCouncilProposal(
+				impactMarketCouncil,
+				alice,
+				[alice],
+				[learnAndEarn.address],
+				["updateSignerWalletAddress(address)"],
+				[["address"]],
+				[[FAKE_ADDRESS]],
+				"description"
+			);
 
-	it("should not add member if not owner", async function () {
-		await expect(
-			impactMarketCouncil.connect(bob).addMember(carol.address)
-		).to.be.rejectedWith("Ownable: caller is not the owner");
-	});
+			(await learnAndEarn.signerWalletAddress()).should.be.equal(
+				FAKE_ADDRESS
+			);
+		});
 
-	it("should not be able to add community if not member", async function () {
-		const signatures = [
-			"addCommunity(address[],uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256)",
-		];
+		it("Should pause if ImpactMarketCouncil", async function () {
+			await createAndExecuteImpactMarketCouncilProposal(
+				impactMarketCouncil,
+				alice,
+				[alice],
+				[learnAndEarn.address],
+				["pause()"],
+				[[]],
+				[[]],
+				"description"
+			);
 
-		const calldatas = [
-			ethers.utils.defaultAbiCoder.encode(
-				[
-					"address[]",
-					"uint256",
-					"uint256",
-					"uint256",
-					"uint256",
-					"uint256",
-					"uint256",
-					"uint256",
-					"uint256",
-				],
-				[
-					[carol.address],
-					parseEther("100"),
-					parseEther("1000"),
-					parseEther("0.01"),
-					1111,
-					111,
-					communityMinTranche,
-					communityMaxTranche,
-					maxBeneficiaries,
-				]
-			),
-		];
-		const descriptions = "description";
+			(await learnAndEarn.paused()).should.be.equal(true);
+		});
 
-		await expect(
-			impactMarketCouncil
-				.connect(bob)
-				.propose(signatures, calldatas, descriptions)
-		).to.be.rejectedWith("PACT:: Not a member");
-	});
+		it("Should add level if ImpactMarketCouncil", async function () {
+			await createAndExecuteImpactMarketCouncilProposal(
+				impactMarketCouncil,
+				alice,
+				[alice],
+				[learnAndEarn.address],
+				["addLevel(uint256,address)"],
+				[["uint256", "address"]],
+				[[123, cUSD.address]],
+				"description"
+			);
 
-	it("should not be able to add member if already member", async function () {
-		await expect(impactMarketCouncil.addMember(bob.address)).to.be
-			.fulfilled;
-		await expect(
-			impactMarketCouncil.addMember(bob.address)
-		).to.be.rejectedWith("PACT::addMember: already a member");
-	});
+			(await learnAndEarn.levelListLength()).should.eq(1);
+			(await learnAndEarn.levelListAt(0)).should.eq(123);
 
-	it("should not be able to add member if already member", async function () {
-		await expect(
-			impactMarketCouncil.removeMember(bob.address)
-		).to.be.rejectedWith("PACT::removeMember: not a member");
-	});
-
-	it("should be able to add many members", async function () {
-		await expect(impactMarketCouncil.addMember(bob.address)).to.be
-			.fulfilled;
-		await expect(impactMarketCouncil.addMember(carol.address)).to.be
-			.fulfilled;
-	});
-
-	it("should be able to change quorum", async function () {
-		await expect(impactMarketCouncil.addMember(bob.address)).to.be
-			.fulfilled;
-		await expect(impactMarketCouncil.setQuorumVotes(2)).to.be.fulfilled;
-	});
-
-	it("should be able to execute after reaching quorum", async function () {
-		await expect(impactMarketCouncil.addMember(bob.address)).to.be
-			.fulfilled;
-		await expect(impactMarketCouncil.setQuorumVotes(2)).to.be.fulfilled;
-
-		await createCommunityProposal();
-
-		await expect(impactMarketCouncil.connect(alice).castVote(1, 1)).to.be
-			.fulfilled;
-		await expect(impactMarketCouncil.connect(bob).castVote(1, 1)).to.be
-			.fulfilled;
-		await expect(impactMarketCouncil.connect(alice).execute(1)).to.be
-			.fulfilled;
-	});
-
-	it("should not be able to execute without reaching quorum", async function () {
-		await expect(impactMarketCouncil.addMember(bob.address)).to.be
-			.fulfilled;
-		await expect(impactMarketCouncil.setQuorumVotes(2)).to.be.fulfilled;
-
-		await createCommunityProposal();
-
-		await expect(
-			impactMarketCouncil.connect(alice).execute(1)
-		).to.be.rejectedWith(
-			"PACT::execute: proposal can only be executed if it is succeeded"
-		);
-	});
-
-	it("should not be able to execute a canceled proposal", async function () {
-		await createCommunityProposal();
-
-		await expect(impactMarketCouncil.connect(alice).cancel(1)).to.be
-			.fulfilled;
-		await expect(
-			impactMarketCouncil.connect(alice).castVote(1, 1)
-		).to.be.rejectedWith("PACT::castVoteInternal: voting is closed");
-	});
-
-	it("should not be able to vote once proposal meet quorum already", async function () {
-		await expect(impactMarketCouncil.addMember(bob.address)).to.be
-			.fulfilled;
-
-		await createCommunityProposal();
-
-		await expect(impactMarketCouncil.connect(alice).castVote(1, 1)).to.be
-			.fulfilled;
-		await expect(
-			impactMarketCouncil.connect(bob).castVote(1, 1)
-		).to.be.rejectedWith("PACT::castVoteInternal: voting is closed");
-	});
-
-	it("should not be able to vote twice", async function () {
-		await expect(impactMarketCouncil.addMember(bob.address)).to.be
-			.fulfilled;
-		await expect(impactMarketCouncil.setQuorumVotes(2)).to.be.fulfilled;
-
-		await createCommunityProposal();
-
-		await expect(impactMarketCouncil.connect(alice).castVote(1, 1)).to.be
-			.fulfilled;
-		await expect(
-			impactMarketCouncil.connect(alice).castVote(1, 1)
-		).to.be.rejectedWith("PACT::castVoteInternal: voter already voted");
-	});
-
-	it("if quorum is set to a number higher or equal than current votes, should be able to execute", async function () {
-		await expect(impactMarketCouncil.addMember(bob.address)).to.be
-			.fulfilled;
-		await expect(impactMarketCouncil.addMember(carol.address)).to.be
-			.fulfilled;
-		await expect(impactMarketCouncil.setQuorumVotes(3)).to.be.fulfilled;
-
-		await createCommunityProposal();
-
-		await expect(impactMarketCouncil.connect(alice).castVote(1, 1)).to.be
-			.fulfilled;
-		await expect(impactMarketCouncil.connect(bob).castVote(1, 1)).to.be
-			.fulfilled;
-		await expect(impactMarketCouncil.setQuorumVotes(2)).to.be.fulfilled;
-		await expect(impactMarketCouncil.connect(bob).execute(1)).to.be
-			.fulfilled;
-	});
-
-	xit("should not be able to vote once vote period ends", async function () {
-		await createCommunityProposal();
-
-		const VOTING_PERIOD_BLOCKS = 518400;
-		await advanceBlockNTimes(VOTING_PERIOD_BLOCKS);
-
-		await expect(
-			impactMarketCouncil.connect(alice).castVote(1, 1)
-		).to.be.rejectedWith("PACT::castVoteInternal: voting is closed");
+			const level = await learnAndEarn.levels(123);
+			level.token.should.be.equal(cUSD.address);
+		});
 	});
 });

@@ -22,6 +22,7 @@ contract ImpactMarketCouncilImplementation is
     event ProposalCreated(
         uint256 id,
         address proposer,
+        address[] targets,
         string[] signatures,
         bytes[] calldatas,
         uint256 endBlock,
@@ -119,6 +120,7 @@ contract ImpactMarketCouncilImplementation is
         emit ProposalCreated(
             _dummyProposal.id,
             address(this),
+            proposalTargets[_dummyProposal.id],
             proposalSignatures[_dummyProposal.id],
             proposalCalldatas[_dummyProposal.id],
             0,
@@ -152,17 +154,20 @@ contract ImpactMarketCouncilImplementation is
 
     /**
      * @notice Function used to propose a new proposal. Sender must have delegates above the proposal threshold.
+     * @param _targets Target addresses for proposal calls.
      * @param _signatures Function signatures for proposal calls.
      * @param _calldatas Calldatas for proposal calls.
      * @param _description String description of the proposal.
      * @return Proposal id of new proposal.
      */
     function propose(
+        address[] memory _targets,
         string[] memory _signatures,
         bytes[] memory _calldatas,
         string memory _description
     ) external onlyMember returns (uint256) {
         require(
+            _targets.length == _calldatas.length &&
             _signatures.length == _calldatas.length,
             "PACT::propose: proposal function information arity mismatch"
         );
@@ -184,6 +189,7 @@ contract ImpactMarketCouncilImplementation is
         proposalCount++;
 
         proposals[_newProposal.id] = _newProposal;
+        proposalTargets[_newProposal.id] = _targets;
         proposalSignatures[_newProposal.id] = _signatures;
         proposalCalldatas[_newProposal.id] = _calldatas;
         latestProposalIds[_newProposal.proposer] = _newProposal.id;
@@ -191,6 +197,7 @@ contract ImpactMarketCouncilImplementation is
         emit ProposalCreated(
             _newProposal.id,
             msg.sender,
+            _targets,
             _signatures,
             _calldatas,
             _endBlock,
@@ -224,7 +231,7 @@ contract ImpactMarketCouncilImplementation is
             }
 
             // solium-disable-next-line security/no-call-value
-            (bool _success, ) = address(communityAdmin).call{value: 0}(_callData);
+            (bool _success, ) = proposalTargets[_proposalId][_i].call{value: 0}(_callData);
             require(_success, "PACT::execute: Transaction execution reverted.");
         }
         emit ProposalExecuted(_proposalId);
