@@ -54,3 +54,5 @@ $ yarn test
 | `/ambassadors/AmbassadorsImplementation.sol`                          | Implementation for AmbassadorsProxy                                          | 0x3d150B0f44DaE282D4E5751DD7B8ABE297CD0d49  |
 | `/airdropV2/AirdropV2Proxy.sol`                                       | AirdropV2Proxy                                                               | 0x482E748D452e6ECD86D58E597B673C5E653dAbe9  |
 | `/airdropV2/AirdropV2Implementation.sol`                              | Implementation for AirdropV2Proxy                                            | 0x72b957fb8F6F25cA6d0a49b0Eb49771Ee16757E6  |
+| `/learnAndEarn/LearnAndEarnProxy.sol`                                 | LearnAndEarnProxy                                                            | 0x496F7De1420ad52659e257C7Aa3f79a995274dbc  |
+| `/learnAndEarn/LearnAndEarnImplementation.sol`                        | Implementation for LearnAndEarnProxy                                         | 0xF01a6816902eC89D8adb9cbD85f4b995756bcF4A  |
