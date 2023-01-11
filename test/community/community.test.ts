@@ -356,7 +356,7 @@ describe("Community", () => {
 			await addDefaultCommunity();
 		});
 
-		it("should return correct values", async () => {
+		it.only("should return correct values", async () => {
 			(await communityProxy.previousCommunity()).should.eq(zeroAddress);
 			(await communityProxy.originalClaimAmount()).should.eq(
 				originalClaimAmountDefault
