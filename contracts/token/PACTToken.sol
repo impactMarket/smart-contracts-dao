@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.4;
 
-import "@ubeswap/governance/contracts/voting/TransferrableVotingToken.sol";
+import "./TransferrableVotingToken.sol";
 
 contract PACTToken is TransferrableVotingToken {
     /// @notice The maximum supply of PACT Tokens.

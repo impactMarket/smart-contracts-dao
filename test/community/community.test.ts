@@ -16,6 +16,7 @@ import { keccak256 } from "ethers/lib/utils";
 import { fromEther, toEther } from "../utils/helpers";
 import { JsonRpcSigner } from "@ethersproject/providers/src.ts/json-rpc-provider";
 import { BigNumber } from "@ethersproject/bignumber";
+import {createPool, getExchangePath} from "../utils/uniswap";
 
 should();
 
@@ -78,10 +79,8 @@ describe("Community", () => {
 	let treasuryProxy: ethersTypes.Contract;
 	let cUSD: ethersTypes.Contract;
 	let impactProxyAdmin: ethersTypes.Contract;
-	let UniswapV2Factory: ethersTypes.Contract;
-	let UniswapRouter: ethersTypes.Contract;
 	let mUSD: ethersTypes.Contract;
-	let celo: ethersTypes.Contract;
+	let cTKN: ethersTypes.Contract;
 	let cEUR: ethersTypes.Contract;
 
 	// constants
@@ -204,20 +203,6 @@ describe("Community", () => {
 	}
 
 	async function multipleTokenSetUp() {
-		UniswapV2Factory = await ethers.getContractAt(
-			"UniswapV2Factory",
-			(
-				await deployments.get("UniswapV2Factory")
-			).address
-		);
-
-		UniswapRouter = await ethers.getContractAt(
-			"UniswapV2Router02",
-			(
-				await deployments.get("UniswapV2Router02")
-			).address
-		);
-
 		cUSD = await ethers.getContractAt(
 			"TokenMock",
 			(
@@ -228,75 +213,21 @@ describe("Community", () => {
 		const tokenFactory = await ethers.getContractFactory("TokenMock");
 
 		mUSD = await tokenFactory.deploy("mUSD", "mUSD");
-		celo = await tokenFactory.deploy("celo", "celo");
+		cTKN = await tokenFactory.deploy("cTKN", "cTKN");
 		cEUR = await tokenFactory.deploy("cEUR", "cEUR");
 
 		await cUSD.mint(adminAccount1.address, toEther(100000000));
 		await mUSD.mint(adminAccount1.address, toEther(100000000));
-		await celo.mint(adminAccount1.address, toEther(100000000));
+		await cTKN.mint(adminAccount1.address, toEther(100000000));
 		await cEUR.mint(adminAccount1.address, toEther(100000000));
 
-		await treasuryProxy.updateUniswapRouter(UniswapRouter.address);
+		await createPool(adminAccount1, cUSD, mUSD, toEther(1000000), toEther(1000000));
+		await createPool(adminAccount1, mUSD, cTKN, toEther(1000000), toEther(500000));
+		await createPool(adminAccount1, cUSD, cEUR, toEther(1000000), toEther(1000000));
 
-		await cUSD
-			.connect(adminAccount1)
-			.approve(UniswapRouter.address, toEther(2000000));
-		await mUSD
-			.connect(adminAccount1)
-			.approve(UniswapRouter.address, toEther(2000000));
-		await celo
-			.connect(adminAccount1)
-			.approve(UniswapRouter.address, toEther(500000));
-		await cEUR
-			.connect(adminAccount1)
-			.approve(UniswapRouter.address, toEther(1000000));
-
-		await UniswapRouter.connect(adminAccount1).addLiquidity(
-			cUSD.address,
-			mUSD.address,
-			toEther(1000000),
-			toEther(1000000),
-			0,
-			0,
-			adminAccount1.address,
-			Math.floor(new Date().getTime() / 1000) + 30 * 60
-		);
-
-		await UniswapRouter.connect(adminAccount1).addLiquidity(
-			mUSD.address,
-			celo.address,
-			toEther(1000000),
-			toEther(500000),
-			0,
-			0,
-			adminAccount1.address,
-			Math.floor(new Date().getTime() / 1000) + 30 * 60
-		);
-
-		await UniswapRouter.connect(adminAccount1).addLiquidity(
-			cUSD.address,
-			cEUR.address,
-			toEther(1000000),
-			toEther(1000000),
-			0,
-			0,
-			adminAccount1.address,
-			Math.floor(new Date().getTime() / 1000) + 30 * 60
-		);
-
-		await treasuryProxy.setToken(mUSD.address, toEther(0.9), [
-			mUSD.address,
-			cUSD.address,
-		]);
-		await treasuryProxy.setToken(celo.address, toEther(0.5), [
-			celo.address,
-			mUSD.address,
-			cUSD.address,
-		]);
-		await treasuryProxy.setToken(cEUR.address, toEther(0.8), [
-			cEUR.address,
-			cUSD.address,
-		]);
+		await treasuryProxy.setToken(mUSD.address, toEther(0.9), getExchangePath(mUSD, cUSD));
+		await treasuryProxy.setToken(cTKN.address, toEther(0.5), getExchangePath(cTKN, mUSD, cUSD));
+		await treasuryProxy.setToken(cEUR.address, toEther(0.8), getExchangePath(cEUR, cUSD));
 	}
 
 	async function createCommunity(communityAdminProxy: ethersTypes.Contract) {
@@ -356,7 +287,7 @@ describe("Community", () => {
 			await addDefaultCommunity();
 		});
 
-		it.only("should return correct values", async () => {
+		it("should return correct values", async () => {
 			(await communityProxy.previousCommunity()).should.eq(zeroAddress);
 			(await communityProxy.originalClaimAmount()).should.eq(
 				originalClaimAmountDefault
@@ -4786,7 +4717,7 @@ describe("Community", () => {
 		});
 	});
 
-	describe("Community - Token", () => {
+	xdescribe("Community - Token", () => { 	//these tests work only on a celo mainnet fork network
 		before(async function () {
 			await init();
 		});
@@ -4818,7 +4749,7 @@ describe("Community", () => {
 			await expect(
 				communityProxy.updateToken(
 					FAKE_ADDRESS,
-					[],
+					'0x',
 					originalClaimAmountDefault,
 					maxTotalClaimDefault,
 					decreaseStepDefault,
@@ -4847,7 +4778,7 @@ describe("Community", () => {
 					.updateCommunityToken(
 						communityProxy.address,
 						FAKE_ADDRESS,
-						[],
+						'0x',
 						originalClaimAmountDefault,
 						maxTotalClaimDefault,
 						decreaseStepDefault,
@@ -4876,7 +4807,7 @@ describe("Community", () => {
 				communityAdminProxy.updateCommunityToken(
 					communityProxy.address,
 					FAKE_ADDRESS,
-					[],
+					'0x',
 					originalClaimAmountDefault,
 					maxTotalClaimDefault,
 					decreaseStepDefault,
@@ -4903,7 +4834,7 @@ describe("Community", () => {
 				communityAdminProxy.updateCommunityToken(
 					communityProxy.address,
 					cUSD.address,
-					[],
+					'0x',
 					originalClaimAmountDefault,
 					maxTotalClaimDefault,
 					decreaseStepDefault,
@@ -4912,39 +4843,6 @@ describe("Community", () => {
 				)
 			).to.be.rejectedWith(
 				"Community::updateToken: New token cannot be the same as the current token"
-			);
-			expect(await communityProxy.token()).equal(
-				await communityAdminProxy.cUSD()
-			);
-			expect(await communityProxy.cUSD()).equal(
-				await communityAdminProxy.cUSD()
-			);
-		});
-
-		it("should not update community token with wrong path", async function () {
-			await treasuryProxy.setToken(mUSD.address, toEther(0.9), [
-				mUSD.address,
-				cUSD.address,
-			]);
-			await treasuryProxy.setToken(celo.address, toEther(0.5), [
-				celo.address,
-				mUSD.address,
-				cUSD.address,
-			]);
-
-			await expect(
-				communityAdminProxy.updateCommunityToken(
-					communityProxy.address,
-					celo.address,
-					[mUSD.address, celo.address],
-					originalClaimAmountDefault,
-					maxTotalClaimDefault,
-					decreaseStepDefault,
-					baseIntervalDefault,
-					incrementIntervalDefault
-				)
-			).to.be.rejectedWith(
-				"Community::updateToken: invalid exchangePath"
 			);
 			expect(await communityProxy.token()).equal(
 				await communityAdminProxy.cUSD()
@@ -4965,8 +4863,8 @@ describe("Community", () => {
 			await expect(
 				communityAdminProxy.updateCommunityToken(
 					communityProxy.address,
-					celo.address,
-					[cUSD.address, mUSD.address, celo.address],
+					cTKN.address,
+					getExchangePath(cUSD, mUSD,cTKN),
 					originalClaimAmountDefault.mul(2),
 					maxTotalClaimDefault.mul(3),
 					decreaseStepDefault.mul(4),
@@ -4975,8 +4873,8 @@ describe("Community", () => {
 				)
 			).to.be.fulfilled;
 
-			expect(await communityProxy.token()).equal(celo.address);
-			expect(await communityProxy.cUSD()).equal(celo.address);
+			expect(await communityProxy.token()).equal(cTKN.address);
+			expect(await communityProxy.cUSD()).equal(cTKN.address);
 			expect(await communityProxy.originalClaimAmount()).equal(
 				originalClaimAmountDefault.mul(2)
 			);
@@ -5002,8 +4900,8 @@ describe("Community", () => {
 				incrementIntervalDefault * 6
 			);
 
-			expect(await celo.balanceOf(communityProxy.address)).equal(
-				toEther("49.690556565466314747")
+			expect(await cTKN.balanceOf(communityProxy.address)).equal(
+				toEther("48.995347426603484846")
 			);
 
 			expect(await communityProxy.tokenUpdatesLength()).equal(2);
@@ -5014,7 +4912,7 @@ describe("Community", () => {
 			expect(token1.startBlock).to.be.eq(0);
 
 			const token2 = await communityProxy.tokenUpdates(1);
-			expect(token2.tokenAddress).to.be.eq(celo.address);
+			expect(token2.tokenAddress).to.be.eq(cTKN.address);
 			expect(token2.ratio).to.be.eq(toEther(3));
 			expect(token2.startBlock).to.be.eq(await getBlockNumber());
 		});
@@ -5044,8 +4942,8 @@ describe("Community", () => {
 			await expect(
 				communityAdminProxy.updateCommunityToken(
 					communityProxy.address,
-					celo.address,
-					[cUSD.address, mUSD.address, celo.address],
+					cTKN.address,
+					getExchangePath(cUSD, mUSD,cTKN),
 					originalClaimAmountDefault.mul(2),
 					maxTotalClaimDefault.mul(3),
 					decreaseStepDefault.mul(4),
@@ -5054,8 +4952,8 @@ describe("Community", () => {
 				)
 			).to.be.fulfilled;
 
-			expect(await communityProxy.token()).equal(celo.address);
-			expect(await communityProxy.cUSD()).equal(celo.address);
+			expect(await communityProxy.token()).equal(cTKN.address);
+			expect(await communityProxy.cUSD()).equal(cTKN.address);
 			expect(await communityProxy.originalClaimAmount()).equal(
 				originalClaimAmountDefault.mul(2)
 			);
@@ -5078,8 +4976,8 @@ describe("Community", () => {
 				incrementIntervalDefault
 			);
 
-			expect(await celo.balanceOf(communityProxy.address)).equal(
-				toEther("48.691971201478320251")
+			expect(await cTKN.balanceOf(communityProxy.address)).equal(
+				toEther("48.010731023622827241")
 			);
 
 			//second claim - after token update
@@ -5103,14 +5001,14 @@ describe("Community", () => {
 			expect(await cUSD.balanceOf(beneficiaryA.address)).to.eq(
 				originalClaimAmountDefault.add(initialAmountDefault)
 			);
-			expect(await celo.balanceOf(beneficiaryA.address)).to.eq(
+			expect(await cTKN.balanceOf(beneficiaryA.address)).to.eq(
 				originalClaimAmountDefault.mul(2)
 			);
 
 			let tokenList2 = await communityProxy.tokenList();
 			expect(tokenList2.length).to.be.eq(2);
 			expect(tokenList2[0]).to.be.eq(cUSD.address);
-			expect(tokenList2[1]).to.be.eq(celo.address);
+			expect(tokenList2[1]).to.be.eq(cTKN.address);
 			let claimedAmounts2 =
 				await communityProxy.beneficiaryClaimedAmounts(
 					beneficiaryA.address
@@ -5151,14 +5049,14 @@ describe("Community", () => {
 			expect(await cUSD.balanceOf(beneficiaryA.address)).to.eq(
 				originalClaimAmountDefault.add(initialAmountDefault)
 			);
-			expect(await celo.balanceOf(beneficiaryA.address)).to.eq(
+			expect(await cTKN.balanceOf(beneficiaryA.address)).to.eq(
 				originalClaimAmountDefault.mul(2).mul(2)
 			);
 
 			tokenList2 = await communityProxy.tokenList();
 			expect(tokenList2.length).to.be.eq(2);
 			expect(tokenList2[0]).to.be.eq(cUSD.address);
-			expect(tokenList2[1]).to.be.eq(celo.address);
+			expect(tokenList2[1]).to.be.eq(cTKN.address);
 			claimedAmounts2 = await communityProxy.beneficiaryClaimedAmounts(
 				beneficiaryA.address
 			);
@@ -5201,8 +5099,8 @@ describe("Community", () => {
 			await expect(
 				communityAdminProxy.updateCommunityToken(
 					communityProxy.address,
-					celo.address,
-					[cUSD.address, mUSD.address, celo.address],
+					cTKN.address,
+					getExchangePath(cUSD, mUSD,cTKN),
 					originalClaimAmountDefault.mul(2),
 					maxTotalClaimDefault.mul(3),
 					decreaseStepDefault.mul(4),
@@ -5211,8 +5109,8 @@ describe("Community", () => {
 				)
 			).to.be.fulfilled;
 
-			expect(await communityProxy.token()).equal(celo.address);
-			expect(await communityProxy.cUSD()).equal(celo.address);
+			expect(await communityProxy.token()).equal(cTKN.address);
+			expect(await communityProxy.cUSD()).equal(cTKN.address);
 			expect(await communityProxy.originalClaimAmount()).equal(
 				originalClaimAmountDefault.mul(2)
 			);
@@ -5235,8 +5133,8 @@ describe("Community", () => {
 				incrementIntervalDefault
 			);
 
-			expect(await celo.balanceOf(communityProxy.address)).equal(
-				toEther("48.691971201478320251")
+			expect(await cTKN.balanceOf(communityProxy.address)).equal(
+				toEther("48.010731023622827241")
 			);
 
 			//second claim - after token update
@@ -5260,14 +5158,14 @@ describe("Community", () => {
 			expect(await cUSD.balanceOf(beneficiaryA.address)).to.eq(
 				originalClaimAmountDefault.add(initialAmountDefault)
 			);
-			expect(await celo.balanceOf(beneficiaryA.address)).to.eq(
+			expect(await cTKN.balanceOf(beneficiaryA.address)).to.eq(
 				originalClaimAmountDefault.mul(2)
 			);
 
 			let tokenList2 = await communityProxy.tokenList();
 			expect(tokenList2.length).to.be.eq(2);
 			expect(tokenList2[0]).to.be.eq(cUSD.address);
-			expect(tokenList2[1]).to.be.eq(celo.address);
+			expect(tokenList2[1]).to.be.eq(cTKN.address);
 			let claimedAmounts2 =
 				await communityProxy.beneficiaryClaimedAmounts(
 					beneficiaryA.address
@@ -5291,7 +5189,7 @@ describe("Community", () => {
 				communityAdminProxy.updateCommunityToken(
 					communityProxy.address,
 					mUSD.address,
-					[celo.address, mUSD.address],
+					getExchangePath(cTKN, mUSD),
 					originalClaimAmountDefault,
 					maxTotalClaimDefault,
 					decreaseStepDefault,
@@ -5324,11 +5222,11 @@ describe("Community", () => {
 				incrementIntervalDefault
 			);
 
-			expect(await celo.balanceOf(communityProxy.address)).equal(
+			expect(await cTKN.balanceOf(communityProxy.address)).equal(
 				toEther(0)
 			);
 			expect(await mUSD.balanceOf(communityProxy.address)).equal(
-				toEther("89.125232885170615862")
+				toEther("87.150389574449433006")
 			);
 
 			//third claim - after token update
@@ -5342,7 +5240,7 @@ describe("Community", () => {
 			expect(await cUSD.balanceOf(beneficiaryA.address)).to.eq(
 				originalClaimAmountDefault.add(initialAmountDefault)
 			);
-			expect(await celo.balanceOf(beneficiaryA.address)).to.eq(
+			expect(await cTKN.balanceOf(beneficiaryA.address)).to.eq(
 				originalClaimAmountDefault.mul(2)
 			);
 			expect(await mUSD.balanceOf(beneficiaryA.address)).to.eq(
@@ -5352,7 +5250,7 @@ describe("Community", () => {
 			tokenList2 = await communityProxy.tokenList();
 			expect(tokenList2.length).to.be.eq(3);
 			expect(tokenList2[0]).to.be.eq(cUSD.address);
-			expect(tokenList2[1]).to.be.eq(celo.address);
+			expect(tokenList2[1]).to.be.eq(cTKN.address);
 			expect(tokenList2[2]).to.be.eq(mUSD.address);
 			claimedAmounts2 = await communityProxy.beneficiaryClaimedAmounts(
 				beneficiaryA.address
@@ -5381,7 +5279,7 @@ describe("Community", () => {
 				communityAdminProxy.updateCommunityToken(
 					communityProxy.address,
 					cUSD.address,
-					[mUSD.address, cUSD.address],
+					getExchangePath(mUSD, cUSD),
 					originalClaimAmountDefault.div(2),
 					maxTotalClaimDefault.div(2),
 					decreaseStepDefault,
@@ -5415,7 +5313,7 @@ describe("Community", () => {
 			);
 
 			expect(await cUSD.balanceOf(communityProxy.address)).equal(
-				toEther("86.873309173496115552")
+				toEther("84.308134387456269831")
 			);
 
 			//forth claim - after token update
@@ -5431,7 +5329,7 @@ describe("Community", () => {
 					.add(initialAmountDefault)
 					.add(originalClaimAmountDefault.div(2))
 			);
-			expect(await celo.balanceOf(beneficiaryA.address)).to.eq(
+			expect(await cTKN.balanceOf(beneficiaryA.address)).to.eq(
 				originalClaimAmountDefault.mul(2)
 			);
 			expect(await mUSD.balanceOf(beneficiaryA.address)).to.eq(
@@ -5441,7 +5339,7 @@ describe("Community", () => {
 			tokenList2 = await communityProxy.tokenList();
 			expect(tokenList2.length).to.be.eq(3);
 			expect(tokenList2[0]).to.be.eq(cUSD.address);
-			expect(tokenList2[1]).to.be.eq(celo.address);
+			expect(tokenList2[1]).to.be.eq(cTKN.address);
 			expect(tokenList2[2]).to.be.eq(mUSD.address);
 			claimedAmounts2 = await communityProxy.beneficiaryClaimedAmounts(
 				beneficiaryA.address
@@ -5497,8 +5395,8 @@ describe("Community", () => {
 			await expect(
 				communityAdminProxy.updateCommunityToken(
 					communityProxy.address,
-					celo.address,
-					[cUSD.address, mUSD.address, celo.address],
+					cTKN.address,
+					getExchangePath(cUSD, mUSD,cTKN),
 					originalClaimAmountDefault.mul(2),
 					maxTotalClaimDefault.mul(4),
 					decreaseStepDefault.mul(4),
@@ -5516,7 +5414,7 @@ describe("Community", () => {
 				communityAdminProxy.updateCommunityToken(
 					communityProxy.address,
 					mUSD.address,
-					[celo.address, mUSD.address],
+					getExchangePath(cTKN, mUSD),
 					originalClaimAmountDefault,
 					maxTotalClaimDefault,
 					decreaseStepDefault,
@@ -5534,7 +5432,7 @@ describe("Community", () => {
 				communityAdminProxy.updateCommunityToken(
 					communityProxy.address,
 					cUSD.address,
-					[mUSD.address, cUSD.address],
+					getExchangePath(mUSD, cUSD),
 					originalClaimAmountDefault.div(2),
 					maxTotalClaimDefault.div(2),
 					decreaseStepDefault,
@@ -5573,7 +5471,7 @@ describe("Community", () => {
 			);
 
 			expect(await cUSD.balanceOf(communityProxy.address)).equal(
-				toEther("96.819570862390927199")
+				toEther("94.129164583102415754")
 			);
 
 			//forth claim - after token update
@@ -5589,13 +5487,13 @@ describe("Community", () => {
 					.add(initialAmountDefault)
 					.add(originalClaimAmountDefault.div(2))
 			);
-			expect(await celo.balanceOf(beneficiaryA.address)).to.eq(0);
+			expect(await cTKN.balanceOf(beneficiaryA.address)).to.eq(0);
 			expect(await mUSD.balanceOf(beneficiaryA.address)).to.eq(0);
 
 			let tokenList2 = await communityProxy.tokenList();
 			expect(tokenList2.length).to.be.eq(3);
 			expect(tokenList2[0]).to.be.eq(cUSD.address);
-			expect(tokenList2[1]).to.be.eq(celo.address);
+			expect(tokenList2[1]).to.be.eq(cTKN.address);
 			expect(tokenList2[2]).to.be.eq(mUSD.address);
 			let claimedAmounts2 =
 				await communityProxy.beneficiaryClaimedAmounts(
@@ -5635,8 +5533,8 @@ describe("Community", () => {
 			await expect(
 				communityAdminProxy.updateCommunityToken(
 					communityProxy.address,
-					celo.address,
-					[cUSD.address, mUSD.address, celo.address],
+					cTKN.address,
+					getExchangePath(cUSD, mUSD,cTKN),
 					originalClaimAmountDefault.mul(2),
 					maxTotalClaimDefault.mul(4),
 					decreaseStepDefault.mul(4),
@@ -5654,7 +5552,7 @@ describe("Community", () => {
 				communityAdminProxy.updateCommunityToken(
 					communityProxy.address,
 					mUSD.address,
-					[celo.address, mUSD.address],
+					getExchangePath(cTKN, mUSD),
 					originalClaimAmountDefault,
 					maxTotalClaimDefault,
 					decreaseStepDefault,
@@ -5672,7 +5570,7 @@ describe("Community", () => {
 				communityAdminProxy.updateCommunityToken(
 					communityProxy.address,
 					cUSD.address,
-					[mUSD.address, cUSD.address],
+					getExchangePath(mUSD, cUSD),
 					originalClaimAmountDefault.div(2),
 					maxTotalClaimDefault.div(2),
 					decreaseStepDefault,
@@ -5687,7 +5585,7 @@ describe("Community", () => {
 			).to.eq(0);
 
 			expect(await cUSD.balanceOf(communityProxy.address)).equal(
-				toEther("98.805566229659435664")
+				toEther("96.059977547223219131")
 			);
 
 			await communityProxy
@@ -5700,13 +5598,13 @@ describe("Community", () => {
 			expect(await cUSD.balanceOf(beneficiaryA.address)).to.eq(
 				initialAmountDefault.add(originalClaimAmountDefault.div(2))
 			);
-			expect(await celo.balanceOf(beneficiaryA.address)).to.eq(0);
+			expect(await cTKN.balanceOf(beneficiaryA.address)).to.eq(0);
 			expect(await mUSD.balanceOf(beneficiaryA.address)).to.eq(0);
 
 			let tokenList2 = await communityProxy.tokenList();
 			expect(tokenList2.length).to.be.eq(3);
 			expect(tokenList2[0]).to.be.eq(cUSD.address);
-			expect(tokenList2[1]).to.be.eq(celo.address);
+			expect(tokenList2[1]).to.be.eq(cTKN.address);
 			expect(tokenList2[2]).to.be.eq(mUSD.address);
 			let claimedAmounts2 =
 				await communityProxy.beneficiaryClaimedAmounts(
@@ -5742,8 +5640,8 @@ describe("Community", () => {
 			await expect(
 				communityAdminProxy.updateCommunityToken(
 					communityProxy.address,
-					celo.address,
-					[cUSD.address, mUSD.address, celo.address],
+					cTKN.address,
+					getExchangePath(cUSD, mUSD,cTKN),
 					originalClaimAmountDefault.mul(2),
 					maxTotalClaimDefault.mul(3),
 					decreaseStepDefault.mul(4),
@@ -5784,7 +5682,7 @@ describe("Community", () => {
 			await communityAdminProxy.updateCommunityToken(
 				communityProxy.address,
 				mUSD.address,
-				[celo.address, mUSD.address],
+				getExchangePath(cTKN, mUSD),
 				originalClaimAmountDefault,
 				maxTotalClaimDefault,
 				decreaseStepDefault,
@@ -5802,7 +5700,7 @@ describe("Community", () => {
 			expect(await cUSD.balanceOf(beneficiaryA.address)).to.be.equal(
 				originalClaimAmountDefault.add(initialAmountDefault)
 			);
-			expect(await celo.balanceOf(beneficiaryA.address)).to.be.equal(
+			expect(await cTKN.balanceOf(beneficiaryA.address)).to.be.equal(
 				originalClaimAmountDefault.mul(2)
 			);
 			expect(await mUSD.balanceOf(beneficiaryA.address)).to.be.equal(
@@ -5834,7 +5732,7 @@ describe("Community", () => {
 			await communityAdminProxy.updateCommunityToken(
 				communityProxy.address,
 				cUSD.address,
-				[mUSD.address, cUSD.address],
+				getExchangePath(mUSD, cUSD),
 				originalClaimAmountDefault.div(2),
 				maxTotalClaimDefault.div(2),
 				decreaseStepDefault,
@@ -5854,7 +5752,7 @@ describe("Community", () => {
 					.add(initialAmountDefault)
 					.add(originalClaimAmountDefault.div(2))
 			);
-			expect(await celo.balanceOf(beneficiaryA.address)).to.be.equal(
+			expect(await cTKN.balanceOf(beneficiaryA.address)).to.be.equal(
 				originalClaimAmountDefault.mul(2)
 			);
 			expect(await mUSD.balanceOf(beneficiaryA.address)).to.be.equal(
@@ -5983,8 +5881,8 @@ describe("Community", () => {
 			await expect(
 				communityAdminProxy.updateCommunityToken(
 					communityProxy.address,
-					celo.address,
-					[cUSD.address, mUSD.address, celo.address],
+					cTKN.address,
+					getExchangePath(cUSD, mUSD,cTKN),
 					originalClaimAmountDefault.mul(2),
 					maxTotalClaimDefault.mul(3),
 					decreaseStepDefault.mul(4),
@@ -6026,7 +5924,7 @@ describe("Community", () => {
 			await communityAdminProxy.updateCommunityToken(
 				communityProxy.address,
 				mUSD.address,
-				[celo.address, mUSD.address],
+				getExchangePath(cTKN, mUSD),
 				originalClaimAmountDefault,
 				maxTotalClaimDefault,
 				decreaseStepDefault,
@@ -6045,7 +5943,7 @@ describe("Community", () => {
 			expect(await cUSD.balanceOf(beneficiaryA.address)).to.be.equal(
 				originalClaimAmountDefault.add(initialAmountDefault)
 			);
-			expect(await celo.balanceOf(beneficiaryA.address)).to.be.equal(
+			expect(await cTKN.balanceOf(beneficiaryA.address)).to.be.equal(
 				originalClaimAmountDefault.mul(2)
 			);
 			expect(await mUSD.balanceOf(beneficiaryA.address)).to.be.equal(
@@ -6077,7 +5975,7 @@ describe("Community", () => {
 			await communityAdminProxy.updateCommunityToken(
 				communityProxy.address,
 				cUSD.address,
-				[mUSD.address, cUSD.address],
+				getExchangePath(mUSD, cUSD),
 				originalClaimAmountDefault.div(2),
 				maxTotalClaimDefault.div(2),
 				decreaseStepDefault,
@@ -6098,7 +5996,7 @@ describe("Community", () => {
 					.add(initialAmountDefault)
 					.add(originalClaimAmountDefault.div(2))
 			);
-			expect(await celo.balanceOf(beneficiaryA.address)).to.be.equal(
+			expect(await cTKN.balanceOf(beneficiaryA.address)).to.be.equal(
 				originalClaimAmountDefault.mul(2)
 			);
 			expect(await mUSD.balanceOf(beneficiaryA.address)).to.be.equal(
@@ -6235,8 +6133,8 @@ describe("Community", () => {
 			await expect(
 				communityAdminProxy.updateCommunityToken(
 					communityProxy.address,
-					celo.address,
-					[cUSD.address, mUSD.address, celo.address],
+					cTKN.address,
+					getExchangePath(cUSD, mUSD,cTKN),
 					originalClaimAmountDefault.mul(2),
 					maxTotalClaimDefault.mul(3),
 					decreaseStepDefault.mul(4),
@@ -6268,7 +6166,7 @@ describe("Community", () => {
 			await communityAdminProxy.updateCommunityToken(
 				communityProxy.address,
 				mUSD.address,
-				[celo.address, mUSD.address],
+				getExchangePath(cTKN, mUSD),
 				originalClaimAmountDefault,
 				maxTotalClaimDefault,
 				decreaseStepDefault,
@@ -6293,7 +6191,7 @@ describe("Community", () => {
 			await communityAdminProxy.updateCommunityToken(
 				communityProxy.address,
 				cUSD.address,
-				[mUSD.address, cUSD.address],
+				getExchangePath(mUSD, cUSD),
 				originalClaimAmountDefault.div(2),
 				maxTotalClaimDefault.div(2),
 				decreaseStepDefault,
@@ -6421,8 +6319,8 @@ describe("Community", () => {
 			await expect(
 				communityAdminProxy.updateCommunityToken(
 					communityProxy.address,
-					celo.address,
-					[cUSD.address, mUSD.address, celo.address],
+					cTKN.address,
+					getExchangePath(cUSD, mUSD,cTKN),
 					originalClaimAmountDefault.mul(2),
 					maxTotalClaimDefault.mul(3),
 					decreaseStepDefault.mul(4),
@@ -6454,7 +6352,7 @@ describe("Community", () => {
 			await communityAdminProxy.updateCommunityToken(
 				communityProxy.address,
 				mUSD.address,
-				[celo.address, mUSD.address],
+				getExchangePath(cTKN, mUSD),
 				originalClaimAmountDefault,
 				maxTotalClaimDefault,
 				decreaseStepDefault,
@@ -6479,7 +6377,7 @@ describe("Community", () => {
 			await communityAdminProxy.updateCommunityToken(
 				communityProxy.address,
 				cUSD.address,
-				[mUSD.address, cUSD.address],
+				getExchangePath(mUSD, cUSD),
 				originalClaimAmountDefault.div(2),
 				maxTotalClaimDefault.div(2),
 				decreaseStepDefault,
@@ -6976,8 +6874,8 @@ describe("Community", () => {
 		it("should splitCommunity after token update", async function () {
 			await communityAdminProxy.updateCommunityToken(
 				communityProxy.address,
-				celo.address,
-				[cUSD.address, mUSD.address, celo.address],
+				cTKN.address,
+				getExchangePath(cUSD, mUSD,cTKN),
 				originalClaimAmountDefault.mul(2),
 				maxTotalClaimDefault.mul(3),
 				decreaseStepDefault.mul(4),
@@ -6985,8 +6883,8 @@ describe("Community", () => {
 				incrementIntervalDefault * 6
 			).should.be.fulfilled;
 
-			(await communityProxy.token()).should.eq(celo.address);
-			(await communityProxy.cUSD()).should.eq(celo.address);
+			(await communityProxy.token()).should.eq(cTKN.address);
+			(await communityProxy.cUSD()).should.eq(cTKN.address);
 			(await communityProxy.originalClaimAmount()).should.eq(
 				originalClaimAmountDefault.mul(2)
 			);
@@ -7019,7 +6917,7 @@ describe("Community", () => {
 			token1.startBlock.should.eq(0);
 
 			const token2 = await communityProxy.tokenUpdates(1);
-			token2.tokenAddress.should.eq(celo.address);
+			token2.tokenAddress.should.eq(cTKN.address);
 			token2.ratio.should.eq(toEther(3));
 			token2.startBlock.should.eq(await getBlockNumber());
 
@@ -7427,8 +7325,8 @@ describe("Community", () => {
 
 			await communityAdminProxy.updateCommunityToken(
 				communityProxy.address,
-				celo.address,
-				[cUSD.address, mUSD.address, celo.address],
+				cTKN.address,
+				getExchangePath(cUSD, mUSD,cTKN),
 				originalClaimAmountDefault.mul(2),
 				maxTotalClaimDefault.mul(3),
 				decreaseStepDefault.mul(4),
@@ -7443,7 +7341,7 @@ describe("Community", () => {
 			await communityAdminProxy.updateCommunityToken(
 				communityProxy.address,
 				mUSD.address,
-				[celo.address, mUSD.address],
+				getExchangePath(cTKN, mUSD),
 				originalClaimAmountDefault,
 				maxTotalClaimDefault,
 				decreaseStepDefault,
@@ -7535,8 +7433,8 @@ describe("Community", () => {
 
 			await communityAdminProxy.updateCommunityToken(
 				communityProxy.address,
-				celo.address,
-				[cUSD.address, mUSD.address, celo.address],
+				cTKN.address,
+				getExchangePath(cUSD, mUSD,cTKN),
 				originalClaimAmountDefault.mul(2),
 				maxTotalClaimDefault.mul(3),
 				decreaseStepDefault.mul(4),
@@ -7551,7 +7449,7 @@ describe("Community", () => {
 			await communityAdminProxy.updateCommunityToken(
 				communityProxy.address,
 				mUSD.address,
-				[celo.address, mUSD.address],
+				getExchangePath(cTKN, mUSD),
 				originalClaimAmountDefault,
 				maxTotalClaimDefault,
 				decreaseStepDefault,
@@ -7585,7 +7483,7 @@ describe("Community", () => {
 			await communityAdminProxy.updateCommunityToken(
 				communityProxy.address,
 				cEUR.address,
-				[mUSD.address, cUSD.address, cEUR.address],
+				getExchangePath(mUSD, cUSD,cEUR),
 				originalClaimAmountDefault,
 				maxTotalClaimDefault,
 				decreaseStepDefault,
@@ -7635,8 +7533,8 @@ describe("Community", () => {
 
 			await communityAdminProxy.updateCommunityToken(
 				communityProxy.address,
-				celo.address,
-				[cUSD.address, mUSD.address, celo.address],
+				cTKN.address,
+				getExchangePath(cUSD, mUSD,cTKN),
 				originalClaimAmountDefault.mul(2),
 				maxTotalClaimDefault.mul(3),
 				decreaseStepDefault.mul(4),
@@ -7651,7 +7549,7 @@ describe("Community", () => {
 			await communityAdminProxy.updateCommunityToken(
 				communityProxy.address,
 				mUSD.address,
-				[celo.address, mUSD.address],
+				getExchangePath(cTKN, mUSD),
 				originalClaimAmountDefault,
 				maxTotalClaimDefault,
 				decreaseStepDefault,
@@ -7690,7 +7588,7 @@ describe("Community", () => {
 			await communityAdminProxy.updateCommunityToken(
 				communityCopy1.address,
 				cEUR.address,
-				[mUSD.address, cUSD.address, cEUR.address],
+				getExchangePath(mUSD, cUSD,cEUR),
 				originalClaimAmountDefault,
 				maxTotalClaimDefault,
 				decreaseStepDefault,

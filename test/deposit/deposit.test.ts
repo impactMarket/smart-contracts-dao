@@ -284,8 +284,7 @@ describe.only("Deposit", () => {
 		});
 	});
 
-	//these tests work only on a celo mainnet fork network
-	xdescribe("Deposit - basic - forking", () => {
+	describe("Deposit - basic - forking", () => {	//these tests work only on a celo mainnet fork network
 		before(async function () {});
 
 		beforeEach(async () => {
@@ -374,8 +373,7 @@ describe.only("Deposit", () => {
 		});
 	});
 
-	//these tests work only on a celo mainnet fork network
-	xdescribe("Deposit - deposit - forking", () => {
+	describe("Deposit - deposit - forking", () => {//these tests work only on a celo mainnet fork network
 		before(async function () {});
 
 		beforeEach(async () => {

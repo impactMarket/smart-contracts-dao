@@ -6,6 +6,8 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "./interfaces/TreasuryStorageV2.sol";
 
+import "hardhat/console.sol";
+
 contract TreasuryImplementation is
     OwnableUpgradeable,
     ReentrancyGuardUpgradeable,
@@ -34,6 +36,14 @@ contract TreasuryImplementation is
     event UniswapRouterUpdated(address indexed oldUniswapRouter, address indexed newUniswapRouter);
 
     /**
+     * @notice Triggered when UniswapQuoter has been updated
+     *
+     * @param oldUniswapQuoter   Old uniswapQuoter address
+     * @param newUniswapQuoter   New uniswapQuoter address
+     */
+    event UniswapQuoterUpdated(address indexed oldUniswapQuoter, address indexed newUniswapQuoter);
+
+    /**
      * @notice Triggered when an amount of an ERC20 has been transferred from this contract to an address
      *
      * @param token               ERC20 token address
@@ -54,9 +64,9 @@ contract TreasuryImplementation is
     event TokenSet(
         address indexed tokenAddress,
         uint256 oldRate,
-        address[] oldExchangePath,
+        bytes oldExchangePath,
         uint256 newRate,
-        address[] newExchangePath
+        bytes newExchangePath
     );
 
     /**
@@ -73,14 +83,14 @@ contract TreasuryImplementation is
      * @param amountIn               Amount changed
      * @param amountOutMin           Minimum amount out
      * @param exchangePath           Exchange path
-     * @param approximateAmountsOut  Approximate value of the final amount out
+     * @param amountsOut             Value of the final amount out
      */
     event AmountConverted(
         address indexed tokenAddress,
         uint256 amountIn,
         uint256 amountOutMin,
-        address[] exchangePath,
-        uint256 approximateAmountsOut
+        bytes exchangePath,
+        uint256 amountsOut
     );
 
     /**
@@ -161,7 +171,7 @@ contract TreasuryImplementation is
         external
         view
         override
-        returns (uint256 rate, address[] memory exchangePath)
+        returns (uint256 rate, bytes memory exchangePath)
     {
         return (_tokens[_tokenAddress].rate, _tokens[_tokenAddress].exchangePath);
     }
@@ -181,9 +191,19 @@ contract TreasuryImplementation is
      *
      * @param _newUniswapRouter address of the new UniswapRouter contract
      */
-    function updateUniswapRouter(IUniswapV2Router _newUniswapRouter) external override onlyOwner {
+    function updateUniswapRouter(IUniswapRouter02 _newUniswapRouter) external override onlyOwner {
         emit UniswapRouterUpdated(address(uniswapRouter), address(_newUniswapRouter));
         uniswapRouter = _newUniswapRouter;
+    }
+
+    /**
+     * @notice Updates the UniswapQuoter contract address
+     *
+     * @param _newUniswapQuoter address of the new UniswapQuoter contract
+     */
+    function updateUniswapQuoter(IQuoter _newUniswapQuoter) external override onlyOwner {
+        emit UniswapQuoterUpdated(address(uniswapQuoter), address(_newUniswapQuoter));
+        uniswapQuoter = _newUniswapQuoter;
     }
 
     /**
@@ -206,19 +226,12 @@ contract TreasuryImplementation is
     function setToken(
         address _tokenAddress,
         uint256 _rate,
-        address[] calldata _exchangePath
+        bytes memory _exchangePath
     ) external override onlyOwner {
-        require(_rate > 0, "Treasury::setToken: invalid rate");
-
-        if (_exchangePath.length > 0) {
-            require(
-                _exchangePath.length > 1 && _exchangePath[0] == _tokenAddress,
-                "Treasury::setToken: invalid exchangePath"
-            );
-
-            uint256[] memory _amounts = uniswapRouter.getAmountsOut(1e18, _exchangePath);
-            require(_amounts[_amounts.length - 1] > 0, "Treasury::setToken: invalid exchangePath");
-        }
+        require(
+            _rate > 0,
+            "Treasury::setToken: Invalid rate"
+        );
 
         emit TokenSet(
             _tokenAddress,
@@ -229,7 +242,15 @@ contract TreasuryImplementation is
         );
 
         _tokens[_tokenAddress].rate = _rate;
-        _tokens[_tokenAddress].exchangePath = _exchangePath;
+
+        if (_exchangePath.length > 0) {
+            require(
+                uniswapQuoter.quoteExactInput(_exchangePath, 1e18) > 0,
+                "Treasury::setToken: invalid exchangePath"
+            );
+
+            _tokens[_tokenAddress].exchangePath = _exchangePath;
+        }
 
         _tokenList.add(_tokenAddress);
     }
@@ -246,11 +267,7 @@ contract TreasuryImplementation is
     }
 
     function getConvertedAmount(address _tokenAddress, uint256 _amount)
-        external
-        view
-        override
-        returns (uint256)
-    {
+        external override returns (uint256) {
         require(
             _tokenList.contains(_tokenAddress),
             "Treasury::getConvertedAmount: this is not a valid token"
@@ -258,16 +275,8 @@ contract TreasuryImplementation is
 
         Token memory _token = _tokens[_tokenAddress];
 
-        uint256 _convertedAmount;
-        if (_token.exchangePath.length == 0) {
-            _convertedAmount = _amount;
-        } else {
-            uint256[] memory _amountsOut = uniswapRouter.getAmountsOut(
-                _amount,
-                _token.exchangePath
-            );
-            _convertedAmount = _amountsOut[_amountsOut.length - 1];
-        }
+        uint256 _convertedAmount = _token.exchangePath.length == 0 ?
+                _amount : uniswapQuoter.quoteExactInput(_token.exchangePath, _amount);
 
         return (_convertedAmount * _token.rate) / 1e18;
     }
@@ -276,8 +285,7 @@ contract TreasuryImplementation is
         address _tokenAddress,
         uint256 _amountIn,
         uint256 _amountOutMin,
-        address[] memory _exchangePath,
-        uint256 _deadline
+        bytes memory _exchangePath
     ) external override onlyOwner {
         require(
             _tokenList.contains(_tokenAddress),
@@ -288,27 +296,25 @@ contract TreasuryImplementation is
             _exchangePath = _tokens[_tokenAddress].exchangePath;
         }
 
-        if (_deadline == 0) {
-            _deadline = block.timestamp + 3600;
-        }
-
-        uint256[] memory _amountsOut = uniswapRouter.getAmountsOut(_amountIn, _exchangePath);
-
         IERC20(_tokenAddress).approve(address(uniswapRouter), _amountIn);
-        uniswapRouter.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-            _amountIn,
-            _amountOutMin,
-            _exchangePath,
-            address(this),
-            _deadline
-        );
+
+        IUniswapRouter02.ExactInputParams memory params =
+            IUniswapRouter02.ExactInputParams({
+                path: _exchangePath,
+                recipient: address(this),
+                amountIn: _amountIn,
+                amountOutMinimum: _amountOutMin
+            });
+
+        // Executes the swap.
+        uint256 amountOut = uniswapRouter.exactInput(params);
 
         emit AmountConverted(
             _tokenAddress,
             _amountIn,
             _amountOutMin,
             _exchangePath,
-            _amountsOut[_amountsOut.length - 1]
+            amountOut
         );
     }
 }
