@@ -101,7 +101,7 @@ interface ICommunity {
     function updateMaxBeneficiaries(uint256 _newMaxBeneficiaries) external;
     function updateToken(
         IERC20 _newToken,
-        address[] calldata _exchangePath,
+        bytes calldata _exchangePath,
         uint256 _claimAmount,
         uint256 _maxClaim,
         uint256 _decreaseStep,

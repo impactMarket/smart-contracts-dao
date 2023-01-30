@@ -5,7 +5,6 @@ import "@nomiclabs/hardhat-waffle";
 import "@nomiclabs/hardhat-waffle";
 import "hardhat-deploy";
 import "@nomiclabs/hardhat-ethers";
-import "@uniswap/hardhat-v3-deploy";
 
 task("accounts", "Prints the list of accounts", async (args, hre) => {
   const accounts = await hre.ethers.getSigners();
@@ -33,11 +32,11 @@ export default {
       timeout: 100000,
       gasPrice: "auto",
       gas: 13000000,
+      forking: {
+        url: "https://forno.celo.org",
+      },
       // forking: {
-      //   url: "https://forno.celo.org",
-      // },
-      // forking: {
-      //   url: "https://mainnet.infura.io/v3/",
+      //   url: "https://mainnet.infura.io/v3/814ad5575e7e46fab437380d19cf77bf",
       // },
     },
     alfajores: {
