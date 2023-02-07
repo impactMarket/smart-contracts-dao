@@ -47,12 +47,7 @@ contract VotingToken is INonTransferrableToken, VotingPower {
         return totalVotingPower();
     }
 
-    function balanceOf(address _account)
-        public
-        view
-        override
-        returns (uint256)
-    {
+    function balanceOf(address _account) public view override returns (uint256) {
         return votingPower(_account);
     }
 }

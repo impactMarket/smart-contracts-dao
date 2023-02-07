@@ -32,9 +32,15 @@ contract VotingPower is IHasVotes, IVotingDelegates {
         require(dst != address(0), "VotingPower::_mintVotes: cannot mint to the zero address");
 
         // transfer the amount to the recipient
-        balances[dst] = add96(balances[dst], amount, "VotingPower::_mintVotes: mint amount overflows");
+        balances[dst] = add96(
+            balances[dst],
+            amount,
+            "VotingPower::_mintVotes: mint amount overflows"
+        );
         totalVotingPowerSupply = add96(
-            totalVotingPowerSupply, amount, "VotingPower::_mintVotes: total supply overflows"
+            totalVotingPowerSupply,
+            amount,
+            "VotingPower::_mintVotes: total supply overflows"
         );
         emit Transfer(address(0), dst, amount);
 
@@ -51,9 +57,15 @@ contract VotingPower is IHasVotes, IVotingDelegates {
         require(src != address(0), "VotingPower::_burnVotes: cannot burn from the zero address");
 
         // transfer the amount to the recipient
-        balances[src] = sub96(balances[src], amount, "VotingPower::_burnVotes: burn amount underflows");
+        balances[src] = sub96(
+            balances[src],
+            amount,
+            "VotingPower::_burnVotes: burn amount underflows"
+        );
         totalVotingPowerSupply = sub96(
-            totalVotingPowerSupply, amount, "VotingPower::_burnVotes: total supply underflows"
+            totalVotingPowerSupply,
+            amount,
+            "VotingPower::_burnVotes: total supply underflows"
         );
         emit Transfer(src, address(0), amount);
 
@@ -86,10 +98,10 @@ contract VotingPower is IHasVotes, IVotingDelegates {
 
     // Official record of token balances for each account
     // XXX: internal => private visibility
-    mapping (address => uint96) private balances;
+    mapping(address => uint96) private balances;
 
     /// @notice A record of each accounts delegate
-    mapping (address => address) public override delegates;
+    mapping(address => address) public override delegates;
 
     /// @notice A checkpoint for marking number of votes from a given block
     struct Checkpoint {
@@ -98,21 +110,23 @@ contract VotingPower is IHasVotes, IVotingDelegates {
     }
 
     /// @notice A record of votes checkpoints for each account, by index
-    mapping (address => mapping (uint32 => Checkpoint)) public checkpoints;
+    mapping(address => mapping(uint32 => Checkpoint)) public checkpoints;
 
     /// @notice The number of checkpoints for each account
-    mapping (address => uint32) public numCheckpoints;
+    mapping(address => uint32) public numCheckpoints;
 
     /// @notice The EIP-712 typehash for the contract's domain
-    bytes32 public constant DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)");
+    bytes32 public constant DOMAIN_TYPEHASH =
+        keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)");
 
     /// @notice The EIP-712 typehash for the delegation struct used by the contract
-    bytes32 public constant DELEGATION_TYPEHASH = keccak256("Delegation(address delegatee,uint256 nonce,uint256 expiry)");
+    bytes32 public constant DELEGATION_TYPEHASH =
+        keccak256("Delegation(address delegatee,uint256 nonce,uint256 expiry)");
 
     // XXX: deleted PERMIT_TYPEHASH
 
     /// @notice A record of states for signing / validating signatures
-    mapping (address => uint) public nonces;
+    mapping(address => uint256) public nonces;
 
     // XXX: deleted MinterChanged
 
@@ -141,9 +155,18 @@ contract VotingPower is IHasVotes, IVotingDelegates {
      * @param r Half of the ECDSA signature pair
      * @param s Half of the ECDSA signature pair
      */
-    function delegateBySig(address delegatee, uint nonce, uint expiry, uint8 v, bytes32 r, bytes32 s) public override {
+    function delegateBySig(
+        address delegatee,
+        uint256 nonce,
+        uint256 expiry,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) public override {
         // XXX_CHANGED: name => _name
-        bytes32 domainSeparator = keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(_name)), getChainId(), address(this)));
+        bytes32 domainSeparator = keccak256(
+            abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(_name)), getChainId(), address(this))
+        );
         bytes32 structHash = keccak256(abi.encode(DELEGATION_TYPEHASH, delegatee, nonce, expiry));
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
         address signatory = ecrecover(digest, v, r, s);
@@ -172,7 +195,12 @@ contract VotingPower is IHasVotes, IVotingDelegates {
      * @param blockNumber The block number to get the vote balance at
      * @return The number of votes the account had as of the given block
      */
-    function getPriorVotes(address account, uint blockNumber) public view override returns (uint96) {
+    function getPriorVotes(address account, uint256 blockNumber)
+        public
+        view
+        override
+        returns (uint96)
+    {
         require(blockNumber < block.number, "Uni::getPriorVotes: not yet determined");
 
         uint32 nCheckpoints = numCheckpoints[account];
@@ -216,74 +244,116 @@ contract VotingPower is IHasVotes, IVotingDelegates {
         _moveDelegates(currentDelegate, delegatee, delegatorBalance);
     }
 
-    function _transferTokens(address src, address dst, uint96 amount) internal {
+    function _transferTokens(
+        address src,
+        address dst,
+        uint96 amount
+    ) internal {
         require(src != address(0), "Uni::_transferTokens: cannot transfer from the zero address");
         require(dst != address(0), "Uni::_transferTokens: cannot transfer to the zero address");
 
-        balances[src] = sub96(balances[src], amount, "Uni::_transferTokens: transfer amount exceeds balance");
-        balances[dst] = add96(balances[dst], amount, "Uni::_transferTokens: transfer amount overflows");
+        balances[src] = sub96(
+            balances[src],
+            amount,
+            "Uni::_transferTokens: transfer amount exceeds balance"
+        );
+        balances[dst] = add96(
+            balances[dst],
+            amount,
+            "Uni::_transferTokens: transfer amount overflows"
+        );
         emit Transfer(src, dst, amount);
 
         _moveDelegates(delegates[src], delegates[dst], amount);
     }
 
-    function _moveDelegates(address srcRep, address dstRep, uint96 amount) internal {
+    function _moveDelegates(
+        address srcRep,
+        address dstRep,
+        uint96 amount
+    ) internal {
         if (srcRep != dstRep && amount > 0) {
             if (srcRep != address(0)) {
                 uint32 srcRepNum = numCheckpoints[srcRep];
                 uint96 srcRepOld = srcRepNum > 0 ? checkpoints[srcRep][srcRepNum - 1].votes : 0;
-                uint96 srcRepNew = sub96(srcRepOld, amount, "Uni::_moveVotes: vote amount underflows");
+                uint96 srcRepNew = sub96(
+                    srcRepOld,
+                    amount,
+                    "Uni::_moveVotes: vote amount underflows"
+                );
                 _writeCheckpoint(srcRep, srcRepNum, srcRepOld, srcRepNew);
             }
 
             if (dstRep != address(0)) {
                 uint32 dstRepNum = numCheckpoints[dstRep];
                 uint96 dstRepOld = dstRepNum > 0 ? checkpoints[dstRep][dstRepNum - 1].votes : 0;
-                uint96 dstRepNew = add96(dstRepOld, amount, "Uni::_moveVotes: vote amount overflows");
+                uint96 dstRepNew = add96(
+                    dstRepOld,
+                    amount,
+                    "Uni::_moveVotes: vote amount overflows"
+                );
                 _writeCheckpoint(dstRep, dstRepNum, dstRepOld, dstRepNew);
             }
         }
     }
 
-    function _writeCheckpoint(address delegatee, uint32 nCheckpoints, uint96 oldVotes, uint96 newVotes) internal {
-      uint32 blockNumber = safe32(block.number, "Uni::_writeCheckpoint: block number exceeds 32 bits");
+    function _writeCheckpoint(
+        address delegatee,
+        uint32 nCheckpoints,
+        uint96 oldVotes,
+        uint96 newVotes
+    ) internal {
+        uint32 blockNumber = safe32(
+            block.number,
+            "Uni::_writeCheckpoint: block number exceeds 32 bits"
+        );
 
-      if (nCheckpoints > 0 && checkpoints[delegatee][nCheckpoints - 1].fromBlock == blockNumber) {
-          checkpoints[delegatee][nCheckpoints - 1].votes = newVotes;
-      } else {
-          checkpoints[delegatee][nCheckpoints] = Checkpoint(blockNumber, newVotes);
-          numCheckpoints[delegatee] = nCheckpoints + 1;
-      }
+        if (nCheckpoints > 0 && checkpoints[delegatee][nCheckpoints - 1].fromBlock == blockNumber) {
+            checkpoints[delegatee][nCheckpoints - 1].votes = newVotes;
+        } else {
+            checkpoints[delegatee][nCheckpoints] = Checkpoint(blockNumber, newVotes);
+            numCheckpoints[delegatee] = nCheckpoints + 1;
+        }
 
-      emit DelegateVotesChanged(delegatee, oldVotes, newVotes);
+        emit DelegateVotesChanged(delegatee, oldVotes, newVotes);
     }
 
-    function safe32(uint n, string memory errorMessage) internal pure returns (uint32) {
+    function safe32(uint256 n, string memory errorMessage) internal pure returns (uint32) {
         require(n < 2**32, errorMessage);
         return uint32(n);
     }
 
-    function safe96(uint n, string memory errorMessage) internal pure returns (uint96) {
+    function safe96(uint256 n, string memory errorMessage) internal pure returns (uint96) {
         require(n < 2**96, errorMessage);
         return uint96(n);
     }
 
-    function add96(uint96 a, uint96 b, string memory errorMessage) internal pure returns (uint96) {
+    function add96(
+        uint96 a,
+        uint96 b,
+        string memory errorMessage
+    ) internal pure returns (uint96) {
         uint96 c = a + b;
         require(c >= a, errorMessage);
         return c;
     }
 
-    function sub96(uint96 a, uint96 b, string memory errorMessage) internal pure returns (uint96) {
+    function sub96(
+        uint96 a,
+        uint96 b,
+        string memory errorMessage
+    ) internal pure returns (uint96) {
         require(b <= a, errorMessage);
         return a - b;
     }
 
-    function getChainId() internal view returns (uint) {
+    function getChainId() internal view returns (uint256) {
         uint256 chainId;
         // XXX: added linter disable
         // solhint-disable-next-line no-inline-assembly
-        assembly { chainId := chainid() }
+        assembly {
+            chainId := chainid()
+        }
         return chainId;
     }
 }

@@ -100,6 +100,10 @@ describe.only("Deposit", () => {
 				await deployments.get("DonationMinerProxy")
 			).address
 		);
+
+		await advanceToBlockN((
+			await DonationMiner.rewardPeriods(1)
+		).startBlock.toNumber())
 	});
 
 	function closeToAssert(
@@ -133,6 +137,7 @@ describe.only("Deposit", () => {
 		token: ethersTypes.Contract,
 		amount: BigNumber
 	): Promise<BigNumber> {
+		const userInitialBalance = await token.balanceOf(user.address);
 		const approximateInterest = await Deposit.interest(
 			user.address,
 			token.address,
@@ -158,6 +163,8 @@ describe.only("Deposit", () => {
 		expect(lastDonation.donor).eq(user.address);
 		closeToAssert(lastDonation.initialAmount, approximateInterest);
 		expect(lastDonation.token).eq(token.address);
+
+		expect(await token.balanceOf(user.address)).eq(userInitialBalance.add(amount))
 
 		return approximateInterest;
 	}
@@ -284,7 +291,8 @@ describe.only("Deposit", () => {
 		});
 	});
 
-	describe("Deposit - basic - forking", () => {	//these tests work only on a celo mainnet fork network
+	describe("Deposit - basic - forking", () => {
+		//these tests work only on a celo mainnet fork network
 		before(async function () {});
 
 		beforeEach(async () => {
@@ -292,7 +300,7 @@ describe.only("Deposit", () => {
 		});
 
 		it("Should not add an invalid lendingPool token", async function () {
-			await Treasury.setToken(FAKE_ADDRESS, 500, []);
+			await Treasury.setToken(FAKE_ADDRESS, 500, '0x', 123);
 
 			await expect(Deposit.addToken(FAKE_ADDRESS)).to.be.rejectedWith(
 				"Deposit::addToken: it must be a valid lendingPool token"
@@ -303,7 +311,7 @@ describe.only("Deposit", () => {
 		});
 
 		it("Should add a valid token if admin", async function () {
-			await Treasury.setToken(cUSD.address, 1000, []);
+			await Treasury.setToken(cUSD.address, 1000, '0x', 123);
 
 			await expect(Deposit.addToken(cUSD.address))
 				.to.emit(Deposit, "TokenAdded")
@@ -315,8 +323,8 @@ describe.only("Deposit", () => {
 		});
 
 		it("Should add multiple valid tokens if admin", async function () {
-			await Treasury.setToken(cUSD.address, 1000, []);
-			await Treasury.setToken(cEUR.address, 1000, []);
+			await Treasury.setToken(cUSD.address, 1000, '0x', 123);
+			await Treasury.setToken(cEUR.address, 1000, '0x', 124);
 
 			await expect(Deposit.addToken(cUSD.address))
 				.to.emit(Deposit, "TokenAdded")
@@ -334,7 +342,7 @@ describe.only("Deposit", () => {
 		});
 
 		it("Should not add a valid token twice", async function () {
-			await Treasury.setToken(cUSD.address, 1000, []);
+			await Treasury.setToken(cUSD.address, 1000, '0x', 123);
 
 			await Deposit.addToken(cUSD.address);
 
@@ -347,7 +355,7 @@ describe.only("Deposit", () => {
 		});
 
 		it("Should not remove token if not admin", async function () {
-			await Treasury.setToken(cUSD.address, 1000, []);
+			await Treasury.setToken(cUSD.address, 1000, '0x', 123);
 
 			await Deposit.addToken(cUSD.address);
 
@@ -360,7 +368,7 @@ describe.only("Deposit", () => {
 		});
 
 		it("Should remove token if admin", async function () {
-			await Treasury.setToken(cUSD.address, 1000, []);
+			await Treasury.setToken(cUSD.address, 1000, '0x', 123);
 
 			await Deposit.addToken(cUSD.address);
 
@@ -373,13 +381,14 @@ describe.only("Deposit", () => {
 		});
 	});
 
-	describe("Deposit - deposit - forking", () => {//these tests work only on a celo mainnet fork network
+	describe("Deposit - deposit - forking", () => {
+		//these tests work only on a celo mainnet fork network
 		before(async function () {});
 
 		beforeEach(async () => {
 			await deploy();
 
-			await Treasury.setToken(cUSD.address, 1000, []);
+			await Treasury.setToken(cUSD.address, 1000, '0x', 123);
 			await Deposit.addToken(cUSD.address);
 
 			await ethers.provider.send("hardhat_impersonateAccount", [

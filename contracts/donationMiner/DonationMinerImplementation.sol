@@ -404,7 +404,9 @@ contract DonationMinerImplementation is
             "DonationMiner::donate: Invalid token"
         );
 
-        IERC20Upgradeable(address(_token)).safeTransferFrom(msg.sender, address(treasury), _amount);
+        _token.safeTransferFrom(msg.sender, address(this), _amount);
+        _token.approve(address(treasury), _amount);
+        treasury.transferToTreasury(_token, _amount);
 
         _addDonation(_delegateAddress, _token, _amount, address(treasury));
     }

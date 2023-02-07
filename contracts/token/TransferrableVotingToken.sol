@@ -33,14 +33,17 @@ contract TransferrableVotingToken is VotingToken {
     // minimumTimeBetweenMints, mintCap
 
     // Allowance amounts on behalf of others
-    mapping (address => mapping (address => uint96)) internal allowances;
+    mapping(address => mapping(address => uint96)) internal allowances;
 
     // XXX: balances, delegates, Checkpoint, checkpoints,
     // numCheckpoints, DOMAIN_TYPEHASH, DELEGATION_TYPEHASH
     // are inherited from VotingPower.sol
 
     /// @notice The EIP-712 typehash for the permit struct used by the contract
-    bytes32 public constant PERMIT_TYPEHASH = keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+    bytes32 public constant PERMIT_TYPEHASH =
+        keccak256(
+            "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
+        );
 
     // XXX: nonces is inherited from VotingPower.sol
 
@@ -59,7 +62,7 @@ contract TransferrableVotingToken is VotingToken {
      * @param spender The address of the account spending the funds
      * @return The number of tokens approved
      */
-    function allowance(address account, address spender) external view returns (uint) {
+    function allowance(address account, address spender) external view returns (uint256) {
         return allowances[account][spender];
     }
 
@@ -75,7 +78,7 @@ contract TransferrableVotingToken is VotingToken {
      * @param rawAmount The number of tokens that are approved (2^256-1 means infinite)
      * @return Whether or not the approval succeeded
      */
-    function approve(address spender, uint rawAmount) external returns (bool) {
+    function approve(address spender, uint256 rawAmount) external returns (bool) {
         uint96 amount;
         // XXX: uint256(-1) => MAX_INT
         if (rawAmount == MAX_INT) {
@@ -101,7 +104,15 @@ contract TransferrableVotingToken is VotingToken {
      * @param r Half of the ECDSA signature pair
      * @param s Half of the ECDSA signature pair
      */
-    function permit(address owner, address spender, uint rawAmount, uint deadline, uint8 v, bytes32 r, bytes32 s) external {
+    function permit(
+        address owner,
+        address spender,
+        uint256 rawAmount,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external {
         uint96 amount;
         // XXX: uint256(-1) => MAX_INT
         if (rawAmount == MAX_INT) {
@@ -112,8 +123,12 @@ contract TransferrableVotingToken is VotingToken {
         }
 
         // XXX_CHANGED: name => name()
-        bytes32 domainSeparator = keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name())), getChainId(), address(this)));
-        bytes32 structHash = keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, rawAmount, nonces[owner]++, deadline));
+        bytes32 domainSeparator = keccak256(
+            abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name())), getChainId(), address(this))
+        );
+        bytes32 structHash = keccak256(
+            abi.encode(PERMIT_TYPEHASH, owner, spender, rawAmount, nonces[owner]++, deadline)
+        );
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
         address signatory = ecrecover(digest, v, r, s);
         require(signatory != address(0), "Uni::permit: invalid signature");
@@ -135,7 +150,7 @@ contract TransferrableVotingToken is VotingToken {
      * @param rawAmount The number of tokens to transfer
      * @return Whether or not the transfer succeeded
      */
-    function transfer(address dst, uint rawAmount) external returns (bool) {
+    function transfer(address dst, uint256 rawAmount) external returns (bool) {
         // XXX_ADDED
         require(
             dst != address(this),
@@ -153,7 +168,11 @@ contract TransferrableVotingToken is VotingToken {
      * @param rawAmount The number of tokens to transfer
      * @return Whether or not the transfer succeeded
      */
-    function transferFrom(address src, address dst, uint rawAmount) external returns (bool) {
+    function transferFrom(
+        address src,
+        address dst,
+        uint256 rawAmount
+    ) external returns (bool) {
         // XXX_ADDED
         require(
             dst != address(this),
@@ -165,7 +184,11 @@ contract TransferrableVotingToken is VotingToken {
 
         // XXX: uint96(-1) => MAX_INT_96
         if (spender != src && spenderAllowance != MAX_INT_96) {
-            uint96 newAllowance = sub96(spenderAllowance, amount, "Uni::transferFrom: transfer amount exceeds spender allowance");
+            uint96 newAllowance = sub96(
+                spenderAllowance,
+                amount,
+                "Uni::transferFrom: transfer amount exceeds spender allowance"
+            );
             allowances[src][spender] = newAllowance;
 
             emit Approval(src, spender, newAllowance);

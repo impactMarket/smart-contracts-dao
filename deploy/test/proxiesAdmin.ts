@@ -1,14 +1,13 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import {ethers} from "hardhat";
-import {constants} from "ethers";
+import { ethers } from "hardhat";
+import { constants } from "ethers";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// @ts-ignore
 	const { deployments, ethers } = hre;
 	const { deploy } = deployments;
-
 
 	const originalBlockFormatter = ethers.provider.formatter._block;
 	ethers.provider.formatter._block = (value: any, format: any) => {
@@ -17,7 +16,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 				gasLimit: constants.Zero,
 				...value,
 			},
-			format,
+			format
 		);
 	};
 

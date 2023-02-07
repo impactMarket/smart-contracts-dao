@@ -44,6 +44,22 @@ contract TreasuryImplementation is
     event UniswapQuoterUpdated(address indexed oldUniswapQuoter, address indexed newUniswapQuoter);
 
     /**
+     * @notice Triggered when UniswapNFTPositionManager has been updated
+     *
+     * @param oldUniswapNFTPositionManager    Old UniswapNFTPositionManager address
+     * @param newUniswapNFTPositionManager    New UniswapNFTPositionManager address
+     */
+    event UniswapNFTPositionManagerUpdated(address indexed oldUniswapNFTPositionManager, address indexed newUniswapNFTPositionManager);
+
+    /**
+     * @notice Triggered when lpPercentage has been updated
+     *
+     * @param oldLpPercentage   Old lpPercentage address
+     * @param newLpPercentage   New lpPercentage address
+     */
+    event LpPercentageUpdated(uint256 oldLpPercentage, uint256 newLpPercentage);
+
+    /**
      * @notice Triggered when an amount of an ERC20 has been transferred from this contract to an address
      *
      * @param token               ERC20 token address
@@ -55,18 +71,22 @@ contract TreasuryImplementation is
     /**
      * @notice Triggered when a token has been set
      *
-     * @param tokenAddress        Address of the token
-     * @param oldRate            Old token rate value
-     * @param oldExchangePath    Old token exchange path
-     * @param newRate            New token rate value
-     * @param newExchangePath    New token exchange path
+     * @param tokenAddress                      Address of the token
+     * @param oldRate                           Old token rate value
+     * @param oldExchangePath                   Old token exchange path
+     * @param oldUniswapNFTPositionManagerId    Old uniswapNFTPositionManagerId
+     * @param newRate                           New token rate value
+     * @param newExchangePath                   New token exchange path
+     * @param newUniswapNFTPositionManagerId    New uniswapNFTPositionManagerId
      */
     event TokenSet(
         address indexed tokenAddress,
         uint256 oldRate,
         bytes oldExchangePath,
+        uint256 oldUniswapNFTPositionManagerId,
         uint256 newRate,
-        bytes newExchangePath
+        bytes newExchangePath,
+        uint256 newUniswapNFTPositionManagerId
     );
 
     /**
@@ -108,6 +128,17 @@ contract TreasuryImplementation is
         require(
             msg.sender == address(communityAdmin) || msg.sender == owner(),
             "Treasury: NOT_COMMUNITY_ADMIN AND NOT_OWNER"
+        );
+        _;
+    }
+
+    /**
+     * @notice Enforces sender to DAO or impactMarketCouncil
+     */
+    modifier onlyOwnerOrImpactMarketCouncil() {
+        require(
+            msg.sender == owner() || msg.sender == address(communityAdmin.impactMarketCouncil()),
+            "Treasury: caller is not the owner nor ImpactMarketCouncil"
         );
         _;
     }
@@ -160,28 +191,28 @@ contract TreasuryImplementation is
         return _tokenList.length();
     }
 
-    /**
-     * @notice Returns the details of a token
-     *
-     * @param _tokenAddress address of the token
-     * @return rate of the token
-     * @return exchangePath of the token
-     */
-    function tokens(address _tokenAddress)
-        external
-        view
-        override
-        returns (uint256 rate, bytes memory exchangePath)
-    {
-        return (_tokens[_tokenAddress].rate, _tokens[_tokenAddress].exchangePath);
-    }
+//    /**
+//     * @notice Returns the details of a token
+//     *
+//     * @param _tokenAddress address of the token
+//     * @return rate of the token
+//     * @return exchangePath of the token
+//     */
+//    function tokens(address _tokenAddress)
+//        external
+//        view
+//        override
+//        returns (uint256 rate, bytes memory exchangePath, uint)
+//    {
+//        return (_tokens[_tokenAddress].rate, _tokens[_tokenAddress].exchangePath);
+//    }
 
     /**
      * @notice Updates the CommunityAdmin contract address
      *
      * @param _newCommunityAdmin address of the new CommunityAdmin contract
      */
-    function updateCommunityAdmin(ICommunityAdmin _newCommunityAdmin) external override onlyOwner {
+    function updateCommunityAdmin(ICommunityAdmin _newCommunityAdmin) external override onlyOwnerOrImpactMarketCouncil {
         emit CommunityAdminUpdated(address(communityAdmin), address(_newCommunityAdmin));
         communityAdmin = _newCommunityAdmin;
     }
@@ -191,7 +222,7 @@ contract TreasuryImplementation is
      *
      * @param _newUniswapRouter address of the new UniswapRouter contract
      */
-    function updateUniswapRouter(IUniswapRouter02 _newUniswapRouter) external override onlyOwner {
+    function updateUniswapRouter(IUniswapRouter02 _newUniswapRouter) external override onlyOwnerOrImpactMarketCouncil {
         emit UniswapRouterUpdated(address(uniswapRouter), address(_newUniswapRouter));
         uniswapRouter = _newUniswapRouter;
     }
@@ -201,9 +232,40 @@ contract TreasuryImplementation is
      *
      * @param _newUniswapQuoter address of the new UniswapQuoter contract
      */
-    function updateUniswapQuoter(IQuoter _newUniswapQuoter) external override onlyOwner {
+    function updateUniswapQuoter(IQuoter _newUniswapQuoter) external override onlyOwnerOrImpactMarketCouncil {
         emit UniswapQuoterUpdated(address(uniswapQuoter), address(_newUniswapQuoter));
         uniswapQuoter = _newUniswapQuoter;
+    }
+
+    /**
+     * @notice Updates the UniswapNFTPositionManager contract address
+     *
+     * @param _newUniswapNFTPositionManager address of the new UniswapNFTPositionManager contract
+     */
+    function updateUniswapNFTPositionManager(INonfungiblePositionManager _newUniswapNFTPositionManager) external override onlyOwnerOrImpactMarketCouncil {
+        emit UniswapNFTPositionManagerUpdated(address(uniswapNFTPositionManager), address(_newUniswapNFTPositionManager));
+
+        uniswapNFTPositionManager = _newUniswapNFTPositionManager;
+    }
+
+    /**
+     * @notice Updates the PACT contract address
+     *
+     * @param _newPACT address of the new PACT contract
+     */
+    function updatePACT(IERC20 _newPACT) external override onlyOwnerOrImpactMarketCouncil {
+        PACT = _newPACT;
+    }
+
+    function updateLpPercentage(uint256 _newLpPercentage) external override onlyOwnerOrImpactMarketCouncil {
+        emit LpPercentageUpdated(lpPercentage, _newLpPercentage);
+
+        if (_newLpPercentage > lpPercentage) {
+
+        }
+
+
+        lpPercentage = _newLpPercentage;
     }
 
     /**
@@ -218,7 +280,7 @@ contract TreasuryImplementation is
         address _to,
         uint256 _amount
     ) external override onlyCommunityAdminOrOwner nonReentrant {
-        IERC20Upgradeable(address(_token)).safeTransfer(_to, _amount);
+        _token.safeTransfer(_to, _amount);
 
         emit TransferERC20(address(_token), _to, _amount);
     }
@@ -226,22 +288,23 @@ contract TreasuryImplementation is
     function setToken(
         address _tokenAddress,
         uint256 _rate,
-        bytes memory _exchangePath
-    ) external override onlyOwner {
-        require(
-            _rate > 0,
-            "Treasury::setToken: Invalid rate"
-        );
+        bytes memory _exchangePath,
+        uint256 _uniswapNFTPositionManagerId
+    ) public override onlyOwnerOrImpactMarketCouncil {
+        require(_rate > 0, "Treasury::setToken: Invalid rate");
 
         emit TokenSet(
             _tokenAddress,
-            _tokens[_tokenAddress].rate,
-            _tokens[_tokenAddress].exchangePath,
+            tokens[_tokenAddress].rate,
+            tokens[_tokenAddress].exchangePath,
+            tokens[_tokenAddress].uniswapNFTPositionManagerId,
             _rate,
-            _exchangePath
+            _exchangePath,
+            _uniswapNFTPositionManagerId
         );
 
-        _tokens[_tokenAddress].rate = _rate;
+        tokens[_tokenAddress].rate = _rate;
+        tokens[_tokenAddress].uniswapNFTPositionManagerId = _uniswapNFTPositionManagerId;
 
         if (_exchangePath.length > 0) {
             require(
@@ -249,17 +312,18 @@ contract TreasuryImplementation is
                 "Treasury::setToken: invalid exchangePath"
             );
 
-            _tokens[_tokenAddress].exchangePath = _exchangePath;
+            tokens[_tokenAddress].exchangePath = _exchangePath;
         }
 
         _tokenList.add(_tokenAddress);
     }
 
-    function removeToken(address _tokenAddress) external override onlyOwner {
+    function removeToken(address _tokenAddress) external override onlyOwnerOrImpactMarketCouncil {
         require(_tokenList.contains(_tokenAddress), "Treasury::removeToken: this is not a token");
 
-        _tokens[_tokenAddress].rate = 0;
-        delete _tokens[_tokenAddress].exchangePath;
+        tokens[_tokenAddress].rate = 0;
+        tokens[_tokenAddress].uniswapNFTPositionManagerId = 0;
+        delete tokens[_tokenAddress].exchangePath;
 
         _tokenList.remove(_tokenAddress);
 
@@ -267,16 +331,20 @@ contract TreasuryImplementation is
     }
 
     function getConvertedAmount(address _tokenAddress, uint256 _amount)
-        external override returns (uint256) {
+        external
+        override
+        returns (uint256)
+    {
         require(
             _tokenList.contains(_tokenAddress),
             "Treasury::getConvertedAmount: this is not a valid token"
         );
 
-        Token memory _token = _tokens[_tokenAddress];
+        Token memory _token = tokens[_tokenAddress];
 
-        uint256 _convertedAmount = _token.exchangePath.length == 0 ?
-                _amount : uniswapQuoter.quoteExactInput(_token.exchangePath, _amount);
+        uint256 _convertedAmount = _token.exchangePath.length == 0
+            ? _amount
+            : uniswapQuoter.quoteExactInput(_token.exchangePath, _amount);
 
         return (_convertedAmount * _token.rate) / 1e18;
     }
@@ -286,35 +354,41 @@ contract TreasuryImplementation is
         uint256 _amountIn,
         uint256 _amountOutMin,
         bytes memory _exchangePath
-    ) external override onlyOwner {
+    ) external override onlyOwnerOrImpactMarketCouncil {
         require(
             _tokenList.contains(_tokenAddress),
             "Treasury::convertAmount: this is not a valid token"
         );
 
         if (_exchangePath.length == 0) {
-            _exchangePath = _tokens[_tokenAddress].exchangePath;
+            _exchangePath = tokens[_tokenAddress].exchangePath;
         }
 
         IERC20(_tokenAddress).approve(address(uniswapRouter), _amountIn);
 
-        IUniswapRouter02.ExactInputParams memory params =
-            IUniswapRouter02.ExactInputParams({
-                path: _exchangePath,
-                recipient: address(this),
-                amountIn: _amountIn,
-                amountOutMinimum: _amountOutMin
-            });
+        IUniswapRouter02.ExactInputParams memory params = IUniswapRouter02.ExactInputParams({
+            path: _exchangePath,
+            recipient: address(this),
+            amountIn: _amountIn,
+            amountOutMinimum: _amountOutMin
+        });
 
         // Executes the swap.
         uint256 amountOut = uniswapRouter.exactInput(params);
 
-        emit AmountConverted(
-            _tokenAddress,
-            _amountIn,
-            _amountOutMin,
-            _exchangePath,
-            amountOut
-        );
+        emit AmountConverted(_tokenAddress, _amountIn, _amountOutMin, _exchangePath, amountOut);
+    }
+
+    /**
+     * @notice Transfers an amount of an ERC20 from the sender to this contract
+     *
+     * @param _token address of the ERC20 token
+     * @param _amount amount of the transaction
+     */
+    function transferToTreasury(
+        IERC20 _token,
+        uint256 _amount
+    ) external override nonReentrant {
+        _token.safeTransferFrom(msg.sender, address(this), _amount);
     }
 }
