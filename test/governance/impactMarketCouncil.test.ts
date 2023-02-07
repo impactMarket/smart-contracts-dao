@@ -17,7 +17,7 @@ chai.use(chaiAsPromised);
 
 const expect = chai.expect;
 
-describe.only("ImpactMarketCouncil", function () {
+describe("ImpactMarketCouncil", function () {
 	const FAKE_ADDRESS = "0x000000000000000000000000000000000000dEaD";
 
 	const communityMinTranche = parseEther("100");

@@ -45,7 +45,6 @@ describe("Deposit", () => {
 
 	let ImpactProxyAdmin: ethersTypes.Contract;
 	let DonationMiner: ethersTypes.Contract;
-	let GovernanceDelegator: ethersTypes.Contract;
 	let PACT: ethersTypes.Contract;
 	let cUSD: ethersTypes.Contract;
 	let mcUSD: ethersTypes.Contract;
@@ -54,7 +53,6 @@ describe("Deposit", () => {
 	let celo: ethersTypes.Contract;
 	let Deposit: ethersTypes.Contract;
 	let Treasury: ethersTypes.Contract;
-	let UniswapRouter: ethersTypes.Contract;
 
 	const deploy = deployments.createFixture(async () => {
 		await deployments.fixture("Test", { fallbackToGlobal: false });
@@ -81,8 +79,6 @@ describe("Deposit", () => {
 		cEUR = await ethers.getContractAt("TokenMock", CEUR_ADDRESS);
 		mcEUR = await ethers.getContractAt(MTokenABI, MCEUR_ADDRESS);
 		celo = await ethers.getContractAt("TokenMock", CELO_ADDRESS);
-
-		// UniswapRouter = await ethers.getContractAt("UniswapV2Router02", UNISWAP_ADDRESS);
 
 		Treasury = await ethers.getContractAt(
 			"TreasuryImplementation",
@@ -799,7 +795,7 @@ describe("Deposit", () => {
 			await cUSD.connect(user1).approve(Deposit.address, user1Amount1);
 			await Deposit.connect(user1).deposit(cUSD.address, user1Amount1);
 
-			await advanceTimeNMonths(6);
+			await advanceTimeNMonths(2);
 
 			const depositorBefore = await Deposit.tokenDepositor(
 				cUSD.address,
@@ -877,7 +873,7 @@ describe("Deposit", () => {
 			await cUSD.connect(user1).approve(Deposit.address, user1Amount1);
 			await Deposit.connect(user1).deposit(cUSD.address, user1Amount1);
 
-			await advanceTimeNMonths(6);
+			await advanceTimeNMonths(2);
 
 			const depositorBefore = await Deposit.tokenDepositor(
 				cUSD.address,
@@ -965,7 +961,7 @@ describe("Deposit", () => {
 			await cUSD.connect(user3).approve(Deposit.address, user3Amount1);
 			await Deposit.connect(user3).deposit(cUSD.address, user3Amount1);
 
-			await advanceTimeNMonths(6);
+			await advanceTimeNMonths(2);
 
 			let tokenBefore = await Deposit.token(cUSD.address);
 			expect(tokenBefore.totalAmount).eq(
@@ -1036,12 +1032,12 @@ describe("Deposit", () => {
 			await cUSD.connect(user1).approve(Deposit.address, user1Amount1);
 			await Deposit.connect(user1).deposit(cUSD.address, user1Amount1);
 
-			await advanceTimeNMonths(3);
+			await advanceTimeNMonths(1);
 
 			await cUSD.connect(user2).approve(Deposit.address, user2Amount1);
 			await Deposit.connect(user2).deposit(cUSD.address, user2Amount1);
 
-			await advanceTimeNMonths(3);
+			await advanceTimeNMonths(1);
 
 			const user1Interest = await withdrawAndCheck(
 				user1,

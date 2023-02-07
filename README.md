@@ -56,3 +56,5 @@ $ yarn test
 | `/airdropV2/AirdropV2Implementation.sol`                              | Implementation for AirdropV2Proxy                                            | 0x72b957fb8F6F25cA6d0a49b0Eb49771Ee16757E6  |
 | `/learnAndEarn/LearnAndEarnProxy.sol`                                 | LearnAndEarnProxy                                                            | 0x496F7De1420ad52659e257C7Aa3f79a995274dbc  |
 | `/learnAndEarn/LearnAndEarnImplementation.sol`                        | Implementation for LearnAndEarnProxy                                         | 0xF01a6816902eC89D8adb9cbD85f4b995756bcF4A  |
+| `/deposit/DepositProxy.sol`                                           | DepositProxy                                                                 | 0xF9163f95DF91ad103659cb7C8936Aceb63c7E410  |
+| `/deposit/DepositImplementation.sol`                                  | Implementation for DepositProxy                                              | 0x0A547bdE3FB47Bd59A78B0A285dB07C3Fce8b8B6  |

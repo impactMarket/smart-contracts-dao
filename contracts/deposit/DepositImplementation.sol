@@ -105,7 +105,7 @@ contract DepositImplementation is
         ITreasury _treasury,
         IDonationMiner _donationMiner,
         ILendingPool _lendingPool,
-        address[] memory _tokenList
+        address[] memory _tokenListAddresses
     ) public initializer {
         require(address(_treasury) != address(0), "Deposit::initialize: invalid _treasury address");
         require(
@@ -122,9 +122,14 @@ contract DepositImplementation is
         lendingPool = _lendingPool;
 
         uint256 _index;
-        uint256 _numberOfTokens = _tokenList.length;
+        uint256 _numberOfTokens = _tokenListAddresses.length;
         for (; _index < _numberOfTokens; _index++) {
-            addToken(_tokenList[_index]);
+            _tokenList.add(_tokenListAddresses[_index]);
+
+            IERC20(_tokenListAddresses[_index]).approve(address(lendingPool), type(uint256).max);
+            IERC20(_tokenListAddresses[_index]).approve(address(donationMiner), type(uint256).max);
+
+            emit TokenAdded(_tokenListAddresses[_index]);
         }
     }
 
