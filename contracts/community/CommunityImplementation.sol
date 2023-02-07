@@ -694,16 +694,15 @@ contract CommunityImplementation is
 
             token().approve(address(_uniswapRouter), _balance);
 
-            IUniswapRouter02.ExactInputParams memory params =
-                IUniswapRouter02.ExactInputParams({
-                    path: _exchangePath,
-                    recipient: address(this),
-                    amountIn: _balance,
-                    amountOutMinimum: 0
-                });
+            IUniswapRouter02.ExactInputParams memory params = IUniswapRouter02.ExactInputParams({
+                path: _exchangePath,
+                recipient: address(this),
+                amountIn: _balance,
+                amountOutMinimum: 0
+            });
 
-                // Executes the swap.
-                uint256 amountOut = _uniswapRouter.exactInput(params);
+            // Executes the swap.
+            uint256 amountOut = _uniswapRouter.exactInput(params);
         }
 
         emit TokenUpdated(address(_token), address(_newToken));

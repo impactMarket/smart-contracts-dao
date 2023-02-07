@@ -22,7 +22,8 @@ const MTokenABI = require("../../integrations/moola/abi/MToken.json");
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 
-xdescribe("Deposit", () => {   	//these tests work only on a celo mainnet fork network
+describe.only("Deposit", () => {
+	//these tests work only on a celo mainnet fork network
 	const LENDING_POOL_ADDRESS = "0x970b12522CA9b4054807a2c5B736149a5BE6f670"; //mainnet
 	const CELO_ADDRESS = "0x471EcE3750Da237f93B8E339c536989b8978a438"; //mainnet
 	const CUSD_ADDRESS = "0x765DE816845861e75A25fCA122bb6898B8B1282a"; //mainnet
@@ -104,6 +105,10 @@ xdescribe("Deposit", () => {   	//these tests work only on a celo mainnet fork n
 				await deployments.get("DonationMinerProxy")
 			).address
 		);
+
+		await advanceToBlockN((
+			await DonationMiner.rewardPeriods(1)
+		).startBlock.toNumber())
 	});
 
 	function closeToAssert(
@@ -137,6 +142,7 @@ xdescribe("Deposit", () => {   	//these tests work only on a celo mainnet fork n
 		token: ethersTypes.Contract,
 		amount: BigNumber
 	): Promise<BigNumber> {
+		const userInitialBalance = await token.balanceOf(user.address);
 		const approximateInterest = await Deposit.interest(
 			user.address,
 			token.address,
@@ -162,6 +168,8 @@ xdescribe("Deposit", () => {   	//these tests work only on a celo mainnet fork n
 		expect(lastDonation.donor).eq(user.address);
 		closeToAssert(lastDonation.initialAmount, approximateInterest);
 		expect(lastDonation.token).eq(token.address);
+
+		expect(await token.balanceOf(user.address)).eq(userInitialBalance.add(amount))
 
 		return approximateInterest;
 	}
@@ -288,7 +296,8 @@ xdescribe("Deposit", () => {   	//these tests work only on a celo mainnet fork n
 		});
 	});
 
-	describe("Deposit - basic - forking", () => {	//these tests work only on a celo mainnet fork network
+	describe("Deposit - basic - forking", () => {
+		//these tests work only on a celo mainnet fork network
 		before(async function () {});
 
 		beforeEach(async () => {
@@ -296,7 +305,7 @@ xdescribe("Deposit", () => {   	//these tests work only on a celo mainnet fork n
 		});
 
 		it("Should not add an invalid lendingPool token", async function () {
-			await Treasury.setToken(FAKE_ADDRESS, 500, []);
+			await Treasury.setToken(FAKE_ADDRESS, 500, '0x', 123);
 
 			await expect(Deposit.addToken(FAKE_ADDRESS)).to.be.rejectedWith(
 				"Deposit::addToken: it must be a valid lendingPool token"
@@ -307,7 +316,7 @@ xdescribe("Deposit", () => {   	//these tests work only on a celo mainnet fork n
 		});
 
 		it("Should add a valid token if admin", async function () {
-			await Treasury.setToken(cUSD.address, 1000, []);
+			await Treasury.setToken(cUSD.address, 1000, '0x', 123);
 
 			await expect(Deposit.addToken(cUSD.address))
 				.to.emit(Deposit, "TokenAdded")
@@ -319,8 +328,8 @@ xdescribe("Deposit", () => {   	//these tests work only on a celo mainnet fork n
 		});
 
 		it("Should add multiple valid tokens if admin", async function () {
-			await Treasury.setToken(cUSD.address, 1000, []);
-			await Treasury.setToken(cEUR.address, 1000, []);
+			await Treasury.setToken(cUSD.address, 1000, '0x', 123);
+			await Treasury.setToken(cEUR.address, 1000, '0x', 124);
 
 			await expect(Deposit.addToken(cUSD.address))
 				.to.emit(Deposit, "TokenAdded")
@@ -338,7 +347,7 @@ xdescribe("Deposit", () => {   	//these tests work only on a celo mainnet fork n
 		});
 
 		it("Should not add a valid token twice", async function () {
-			await Treasury.setToken(cUSD.address, 1000, []);
+			await Treasury.setToken(cUSD.address, 1000, '0x', 123);
 
 			await Deposit.addToken(cUSD.address);
 
@@ -351,7 +360,7 @@ xdescribe("Deposit", () => {   	//these tests work only on a celo mainnet fork n
 		});
 
 		it("Should not remove token if not admin", async function () {
-			await Treasury.setToken(cUSD.address, 1000, []);
+			await Treasury.setToken(cUSD.address, 1000, '0x', 123);
 
 			await Deposit.addToken(cUSD.address);
 
@@ -364,7 +373,7 @@ xdescribe("Deposit", () => {   	//these tests work only on a celo mainnet fork n
 		});
 
 		it("Should remove token if admin", async function () {
-			await Treasury.setToken(cUSD.address, 1000, []);
+			await Treasury.setToken(cUSD.address, 1000, '0x', 123);
 
 			await Deposit.addToken(cUSD.address);
 
@@ -377,13 +386,14 @@ xdescribe("Deposit", () => {   	//these tests work only on a celo mainnet fork n
 		});
 	});
 
-	describe("Deposit - deposit - forking", () => {//these tests work only on a celo mainnet fork network
+	describe("Deposit - deposit - forking", () => {
+		//these tests work only on a celo mainnet fork network
 		before(async function () {});
 
 		beforeEach(async () => {
 			await deploy();
 
-			await Treasury.setToken(cUSD.address, 1000, []);
+			await Treasury.setToken(cUSD.address, 1000, '0x', 123);
 			await Deposit.addToken(cUSD.address);
 
 			await ethers.provider.send("hardhat_impersonateAccount", [
@@ -797,7 +807,7 @@ xdescribe("Deposit", () => {   	//these tests work only on a celo mainnet fork n
 			await cUSD.connect(user1).approve(Deposit.address, user1Amount1);
 			await Deposit.connect(user1).deposit(cUSD.address, user1Amount1);
 
-			await advanceTimeNMonths(6);
+			await advanceTimeNMonths(2);
 
 			const depositorBefore = await Deposit.tokenDepositor(
 				cUSD.address,
@@ -875,7 +885,7 @@ xdescribe("Deposit", () => {   	//these tests work only on a celo mainnet fork n
 			await cUSD.connect(user1).approve(Deposit.address, user1Amount1);
 			await Deposit.connect(user1).deposit(cUSD.address, user1Amount1);
 
-			await advanceTimeNMonths(6);
+			await advanceTimeNMonths(2);
 
 			const depositorBefore = await Deposit.tokenDepositor(
 				cUSD.address,
@@ -963,7 +973,7 @@ xdescribe("Deposit", () => {   	//these tests work only on a celo mainnet fork n
 			await cUSD.connect(user3).approve(Deposit.address, user3Amount1);
 			await Deposit.connect(user3).deposit(cUSD.address, user3Amount1);
 
-			await advanceTimeNMonths(6);
+			await advanceTimeNMonths(2);
 
 			let tokenBefore = await Deposit.token(cUSD.address);
 			expect(tokenBefore.totalAmount).eq(
@@ -1034,12 +1044,12 @@ xdescribe("Deposit", () => {   	//these tests work only on a celo mainnet fork n
 			await cUSD.connect(user1).approve(Deposit.address, user1Amount1);
 			await Deposit.connect(user1).deposit(cUSD.address, user1Amount1);
 
-			await advanceTimeNMonths(3);
+			await advanceTimeNMonths(1);
 
 			await cUSD.connect(user2).approve(Deposit.address, user2Amount1);
 			await Deposit.connect(user2).deposit(cUSD.address, user2Amount1);
 
-			await advanceTimeNMonths(3);
+			await advanceTimeNMonths(1);
 
 			const user1Interest = await withdrawAndCheck(
 				user1,

@@ -160,7 +160,7 @@ contract CommunityAdminImplementation is
     }
 
     /**
-     * @notice Enforces sender to be a valid community
+     * @notice Enforces sender to DAO or impactMarketCouncil
      */
     modifier onlyOwnerOrImpactMarketCouncil() {
         require(

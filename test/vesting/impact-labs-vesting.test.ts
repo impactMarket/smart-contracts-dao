@@ -15,6 +15,7 @@ const expect = chai.expect;
 
 const REWARD_PERIOD_SIZE = 20;
 const INITIAL_REWARD = parseEther("100000001");
+let DONATION_MINER_FIRST_BLOCK = 0;
 
 let owner: SignerWithAddress;
 let donor1: SignerWithAddress;
@@ -67,6 +68,10 @@ const deploy = deployments.createFixture(async () => {
 
 	await cUSD.mint(donor1.address, parseEther("1000000"));
 	await PACT.transfer(DonationMiner.address, parseEther("2000000000"));
+
+	DONATION_MINER_FIRST_BLOCK = (
+		await DonationMiner.rewardPeriods(1)
+	).startBlock.toNumber();
 });
 
 describe("Impact Labs Vesting", () => {
@@ -77,7 +82,7 @@ describe("Impact Labs Vesting", () => {
 	});
 
 	it("Should transfer PACTs on initialization", async function () {
-		await advanceToBlockN(131);
+		await advanceToBlockN(DONATION_MINER_FIRST_BLOCK + 1);
 
 		expect(await PACT.balanceOf(owner.address)).to.be.equal(INITIAL_REWARD);
 		expect(await ImpactLabsVesting.advancePayment()).to.be.equal(
@@ -95,7 +100,7 @@ describe("Impact Labs Vesting", () => {
 	});
 
 	it("Should get more PACTs after delay", async function () {
-		await advanceToBlockN(131);
+		await advanceToBlockN(DONATION_MINER_FIRST_BLOCK + 1);
 
 		expect(await PACT.balanceOf(owner.address)).to.be.equal(INITIAL_REWARD);
 		expect(await ImpactLabsVesting.advancePayment()).to.be.equal(
@@ -234,7 +239,7 @@ describe("Impact Labs Vesting", () => {
 			"2863085814.558982374562208901", //expected reward after 3200 reward periods
 		];
 
-		await advanceToBlockN(100);
+		await advanceToBlockN(DONATION_MINER_FIRST_BLOCK - 1);
 
 		// 9 years = 3285 rewardPeriods
 		for (let i = 0; i < 32; i++) {

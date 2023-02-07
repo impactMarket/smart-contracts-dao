@@ -16,7 +16,7 @@ import { keccak256 } from "ethers/lib/utils";
 import { fromEther, toEther } from "../utils/helpers";
 import { JsonRpcSigner } from "@ethersproject/providers/src.ts/json-rpc-provider";
 import { BigNumber } from "@ethersproject/bignumber";
-import {createPool, getExchangePath} from "../utils/uniswap";
+import { createPool, getExchangePath } from "../utils/uniswap";
 
 should();
 
@@ -203,15 +203,9 @@ describe("Community", () => {
 	}
 
 	async function multipleTokenSetUp() {
-		cUSD = await ethers.getContractAt(
-			"TokenMock",
-			(
-				await deployments.get("TokenMock")
-			).address
-		);
-
 		const tokenFactory = await ethers.getContractFactory("TokenMock");
 
+		const mUSD1 = await tokenFactory.deploy("mUSD", "mUSD");// for a weird reason we need to deploy a blank contract
 		mUSD = await tokenFactory.deploy("mUSD", "mUSD");
 		cTKN = await tokenFactory.deploy("cTKN", "cTKN");
 		cEUR = await tokenFactory.deploy("cEUR", "cEUR");
@@ -221,13 +215,49 @@ describe("Community", () => {
 		await cTKN.mint(adminAccount1.address, toEther(100000000));
 		await cEUR.mint(adminAccount1.address, toEther(100000000));
 
-		await createPool(adminAccount1, cUSD, mUSD, toEther(1000000), toEther(1000000));
-		await createPool(adminAccount1, mUSD, cTKN, toEther(1000000), toEther(500000));
-		await createPool(adminAccount1, cUSD, cEUR, toEther(1000000), toEther(1000000));
+		await createPool(
+			adminAccount1,
+			cUSD,
+			mUSD,
+			toEther(1000000),
+			toEther(1000000)
+		);
 
-		await treasuryProxy.setToken(mUSD.address, toEther(0.9), getExchangePath(mUSD, cUSD));
-		await treasuryProxy.setToken(cTKN.address, toEther(0.5), getExchangePath(cTKN, mUSD, cUSD));
-		await treasuryProxy.setToken(cEUR.address, toEther(0.8), getExchangePath(cEUR, cUSD));
+		await createPool(
+			adminAccount1,
+			mUSD,
+			cTKN,
+			toEther(1000000),
+			toEther(500000)
+		);
+
+		await createPool(
+			adminAccount1,
+			cUSD,
+			cEUR,
+			toEther(1000000),
+			toEther(1000000)
+		);
+
+		await treasuryProxy.setToken(
+			mUSD.address,
+			toEther(0.9),
+			getExchangePath(mUSD, cUSD),
+			123
+		);
+
+		await treasuryProxy.setToken(
+			cTKN.address,
+			toEther(0.5),
+			getExchangePath(cTKN, mUSD, cUSD),
+			124
+		);
+		await treasuryProxy.setToken(
+			cEUR.address,
+			toEther(0.8),
+			getExchangePath(cEUR, cUSD),
+			125
+		);
 	}
 
 	async function createCommunity(communityAdminProxy: ethersTypes.Contract) {
@@ -4717,7 +4747,8 @@ describe("Community", () => {
 		});
 	});
 
-	xdescribe("Community - Token", () => { 	//these tests work only on a celo mainnet fork network
+	xdescribe("Community - Token", () => {
+		//these tests work only on a celo mainnet fork network
 		before(async function () {
 			await init();
 		});
@@ -4749,7 +4780,7 @@ describe("Community", () => {
 			await expect(
 				communityProxy.updateToken(
 					FAKE_ADDRESS,
-					'0x',
+					"0x",
 					originalClaimAmountDefault,
 					maxTotalClaimDefault,
 					decreaseStepDefault,
@@ -4778,7 +4809,7 @@ describe("Community", () => {
 					.updateCommunityToken(
 						communityProxy.address,
 						FAKE_ADDRESS,
-						'0x',
+						"0x",
 						originalClaimAmountDefault,
 						maxTotalClaimDefault,
 						decreaseStepDefault,
@@ -4807,7 +4838,7 @@ describe("Community", () => {
 				communityAdminProxy.updateCommunityToken(
 					communityProxy.address,
 					FAKE_ADDRESS,
-					'0x',
+					"0x",
 					originalClaimAmountDefault,
 					maxTotalClaimDefault,
 					decreaseStepDefault,
@@ -4834,7 +4865,7 @@ describe("Community", () => {
 				communityAdminProxy.updateCommunityToken(
 					communityProxy.address,
 					cUSD.address,
-					'0x',
+					"0x",
 					originalClaimAmountDefault,
 					maxTotalClaimDefault,
 					decreaseStepDefault,
@@ -4864,7 +4895,7 @@ describe("Community", () => {
 				communityAdminProxy.updateCommunityToken(
 					communityProxy.address,
 					cTKN.address,
-					getExchangePath(cUSD, mUSD,cTKN),
+					getExchangePath(cUSD, mUSD, cTKN),
 					originalClaimAmountDefault.mul(2),
 					maxTotalClaimDefault.mul(3),
 					decreaseStepDefault.mul(4),
@@ -4943,7 +4974,7 @@ describe("Community", () => {
 				communityAdminProxy.updateCommunityToken(
 					communityProxy.address,
 					cTKN.address,
-					getExchangePath(cUSD, mUSD,cTKN),
+					getExchangePath(cUSD, mUSD, cTKN),
 					originalClaimAmountDefault.mul(2),
 					maxTotalClaimDefault.mul(3),
 					decreaseStepDefault.mul(4),
@@ -5100,7 +5131,7 @@ describe("Community", () => {
 				communityAdminProxy.updateCommunityToken(
 					communityProxy.address,
 					cTKN.address,
-					getExchangePath(cUSD, mUSD,cTKN),
+					getExchangePath(cUSD, mUSD, cTKN),
 					originalClaimAmountDefault.mul(2),
 					maxTotalClaimDefault.mul(3),
 					decreaseStepDefault.mul(4),
@@ -5396,7 +5427,7 @@ describe("Community", () => {
 				communityAdminProxy.updateCommunityToken(
 					communityProxy.address,
 					cTKN.address,
-					getExchangePath(cUSD, mUSD,cTKN),
+					getExchangePath(cUSD, mUSD, cTKN),
 					originalClaimAmountDefault.mul(2),
 					maxTotalClaimDefault.mul(4),
 					decreaseStepDefault.mul(4),
@@ -5534,7 +5565,7 @@ describe("Community", () => {
 				communityAdminProxy.updateCommunityToken(
 					communityProxy.address,
 					cTKN.address,
-					getExchangePath(cUSD, mUSD,cTKN),
+					getExchangePath(cUSD, mUSD, cTKN),
 					originalClaimAmountDefault.mul(2),
 					maxTotalClaimDefault.mul(4),
 					decreaseStepDefault.mul(4),
@@ -5641,7 +5672,7 @@ describe("Community", () => {
 				communityAdminProxy.updateCommunityToken(
 					communityProxy.address,
 					cTKN.address,
-					getExchangePath(cUSD, mUSD,cTKN),
+					getExchangePath(cUSD, mUSD, cTKN),
 					originalClaimAmountDefault.mul(2),
 					maxTotalClaimDefault.mul(3),
 					decreaseStepDefault.mul(4),
@@ -5882,7 +5913,7 @@ describe("Community", () => {
 				communityAdminProxy.updateCommunityToken(
 					communityProxy.address,
 					cTKN.address,
-					getExchangePath(cUSD, mUSD,cTKN),
+					getExchangePath(cUSD, mUSD, cTKN),
 					originalClaimAmountDefault.mul(2),
 					maxTotalClaimDefault.mul(3),
 					decreaseStepDefault.mul(4),
@@ -6134,7 +6165,7 @@ describe("Community", () => {
 				communityAdminProxy.updateCommunityToken(
 					communityProxy.address,
 					cTKN.address,
-					getExchangePath(cUSD, mUSD,cTKN),
+					getExchangePath(cUSD, mUSD, cTKN),
 					originalClaimAmountDefault.mul(2),
 					maxTotalClaimDefault.mul(3),
 					decreaseStepDefault.mul(4),
@@ -6320,7 +6351,7 @@ describe("Community", () => {
 				communityAdminProxy.updateCommunityToken(
 					communityProxy.address,
 					cTKN.address,
-					getExchangePath(cUSD, mUSD,cTKN),
+					getExchangePath(cUSD, mUSD, cTKN),
 					originalClaimAmountDefault.mul(2),
 					maxTotalClaimDefault.mul(3),
 					decreaseStepDefault.mul(4),
@@ -6875,7 +6906,7 @@ describe("Community", () => {
 			await communityAdminProxy.updateCommunityToken(
 				communityProxy.address,
 				cTKN.address,
-				getExchangePath(cUSD, mUSD,cTKN),
+				getExchangePath(cUSD, mUSD, cTKN),
 				originalClaimAmountDefault.mul(2),
 				maxTotalClaimDefault.mul(3),
 				decreaseStepDefault.mul(4),
@@ -7326,7 +7357,7 @@ describe("Community", () => {
 			await communityAdminProxy.updateCommunityToken(
 				communityProxy.address,
 				cTKN.address,
-				getExchangePath(cUSD, mUSD,cTKN),
+				getExchangePath(cUSD, mUSD, cTKN),
 				originalClaimAmountDefault.mul(2),
 				maxTotalClaimDefault.mul(3),
 				decreaseStepDefault.mul(4),
@@ -7434,7 +7465,7 @@ describe("Community", () => {
 			await communityAdminProxy.updateCommunityToken(
 				communityProxy.address,
 				cTKN.address,
-				getExchangePath(cUSD, mUSD,cTKN),
+				getExchangePath(cUSD, mUSD, cTKN),
 				originalClaimAmountDefault.mul(2),
 				maxTotalClaimDefault.mul(3),
 				decreaseStepDefault.mul(4),
@@ -7483,7 +7514,7 @@ describe("Community", () => {
 			await communityAdminProxy.updateCommunityToken(
 				communityProxy.address,
 				cEUR.address,
-				getExchangePath(mUSD, cUSD,cEUR),
+				getExchangePath(mUSD, cUSD, cEUR),
 				originalClaimAmountDefault,
 				maxTotalClaimDefault,
 				decreaseStepDefault,
@@ -7534,7 +7565,7 @@ describe("Community", () => {
 			await communityAdminProxy.updateCommunityToken(
 				communityProxy.address,
 				cTKN.address,
-				getExchangePath(cUSD, mUSD,cTKN),
+				getExchangePath(cUSD, mUSD, cTKN),
 				originalClaimAmountDefault.mul(2),
 				maxTotalClaimDefault.mul(3),
 				decreaseStepDefault.mul(4),
@@ -7588,7 +7619,7 @@ describe("Community", () => {
 			await communityAdminProxy.updateCommunityToken(
 				communityCopy1.address,
 				cEUR.address,
-				getExchangePath(mUSD, cUSD,cEUR),
+				getExchangePath(mUSD, cUSD, cEUR),
 				originalClaimAmountDefault,
 				maxTotalClaimDefault,
 				decreaseStepDefault,

@@ -14,12 +14,12 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import * as ethersTypes from "ethers";
 import { BigNumber } from "@ethersproject/bignumber";
 import { fromEther, toEther } from "../utils/helpers";
-import {createPool, getExchangePath} from "../utils/uniswap";
+import { createPool, getExchangePath } from "../utils/uniswap";
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 
-describe.only("DonationMiner", () => {
+describe("DonationMiner", () => {
 	const REWARD_PERIOD_SIZE = 20;
 	const CLAIM_DELAY = 5;
 	const AGAINST_PERIODS = 8;
@@ -209,7 +209,9 @@ describe.only("DonationMiner", () => {
 		await mUSD.mint(user9.address, toEther(2000000));
 		await cTKN.mint(user9.address, toEther(500000));
 
-		START_BLOCK = ((await DonationMiner.rewardPeriods(1)).startBlock).toNumber();
+		START_BLOCK = (
+			await DonationMiner.rewardPeriods(1)
+		).startBlock.toNumber();
 	});
 
 	async function logRewardPeriods(DonationMiner: any) {
@@ -399,14 +401,20 @@ describe.only("DonationMiner", () => {
 		expect(rewardPeriod1.rewardPerBlock).to.equal(toEther("216000"));
 		expect(rewardPeriod1.rewardAmount).to.equal(rewards(1));
 		expect(rewardPeriod1.startBlock).to.equal(START_BLOCK);
-		expect(rewardPeriod1.endBlock).to.equal(START_BLOCK + REWARD_PERIOD_SIZE - 1);
+		expect(rewardPeriod1.endBlock).to.equal(
+			START_BLOCK + REWARD_PERIOD_SIZE - 1
+		);
 		expect(rewardPeriod1.donationsAmount).to.equal(0);
 		expect(rewardPeriod1.stakesAmount).to.equal(0);
 		const rewardPeriod2 = await DonationMiner.rewardPeriods(2);
 		expect(rewardPeriod2.rewardPerBlock).to.equal(toEther("215762.832"));
 		expect(rewardPeriod2.rewardAmount).to.equal(rewards(1).add(rewards(2)));
-		expect(rewardPeriod2.startBlock).to.equal(START_BLOCK + REWARD_PERIOD_SIZE);
-		expect(rewardPeriod2.endBlock).to.equal(START_BLOCK + 2 * REWARD_PERIOD_SIZE - 1);
+		expect(rewardPeriod2.startBlock).to.equal(
+			START_BLOCK + REWARD_PERIOD_SIZE
+		);
+		expect(rewardPeriod2.endBlock).to.equal(
+			START_BLOCK + 2 * REWARD_PERIOD_SIZE - 1
+		);
 		expect(rewardPeriod2.donationsAmount).to.equal(
 			user1Donation1.add(user2Donation).add(user1Donation2)
 		);
@@ -418,8 +426,12 @@ describe.only("DonationMiner", () => {
 		expect(rewardPeriod3.rewardAmount).to.equal(
 			toEther("4310518.48820928")
 		);
-		expect(rewardPeriod3.startBlock).to.equal(START_BLOCK + 2 * REWARD_PERIOD_SIZE);
-		expect(rewardPeriod3.endBlock).to.equal(START_BLOCK + 3 * REWARD_PERIOD_SIZE - 1);
+		expect(rewardPeriod3.startBlock).to.equal(
+			START_BLOCK + 2 * REWARD_PERIOD_SIZE
+		);
+		expect(rewardPeriod3.endBlock).to.equal(
+			START_BLOCK + 3 * REWARD_PERIOD_SIZE - 1
+		);
 		expect(rewardPeriod3.donationsAmount).to.equal(
 			user1Donation3.add(user3Donation)
 		);
@@ -431,8 +443,12 @@ describe.only("DonationMiner", () => {
 		expect(rewardPeriod4.rewardAmount).to.equal(
 			toEther("4305785.53890922621056")
 		);
-		expect(rewardPeriod4.startBlock).to.equal(START_BLOCK + 3 * REWARD_PERIOD_SIZE);
-		expect(rewardPeriod4.endBlock).to.equal(START_BLOCK + 4 * REWARD_PERIOD_SIZE - 1);
+		expect(rewardPeriod4.startBlock).to.equal(
+			START_BLOCK + 3 * REWARD_PERIOD_SIZE
+		);
+		expect(rewardPeriod4.endBlock).to.equal(
+			START_BLOCK + 4 * REWARD_PERIOD_SIZE - 1
+		);
 		expect(rewardPeriod4.donationsAmount).to.equal(0);
 		expect(rewardPeriod4.stakesAmount).to.equal(0);
 		const rewardPeriod5 = await DonationMiner.rewardPeriods(5);
@@ -442,8 +458,12 @@ describe.only("DonationMiner", () => {
 		expect(rewardPeriod5.rewardAmount).to.equal(
 			toEther("8606843.325296730090740800")
 		);
-		expect(rewardPeriod5.startBlock).to.equal(START_BLOCK + 4 * REWARD_PERIOD_SIZE);
-		expect(rewardPeriod5.endBlock).to.equal(START_BLOCK + 5 * REWARD_PERIOD_SIZE - 1);
+		expect(rewardPeriod5.startBlock).to.equal(
+			START_BLOCK + 4 * REWARD_PERIOD_SIZE
+		);
+		expect(rewardPeriod5.endBlock).to.equal(
+			START_BLOCK + 5 * REWARD_PERIOD_SIZE - 1
+		);
 		expect(rewardPeriod5.donationsAmount).to.equal(user4Donation);
 		expect(rewardPeriod5.stakesAmount).to.equal(0);
 
@@ -658,14 +678,20 @@ describe.only("DonationMiner", () => {
 			expect(rewardPeriod1.rewardPerBlock).to.equal(toEther("216000"));
 			expect(rewardPeriod1.rewardAmount).to.equal(rewards(1));
 			expect(rewardPeriod1.startBlock).to.equal(START_BLOCK);
-			expect(rewardPeriod1.endBlock).to.equal(START_BLOCK + REWARD_PERIOD_SIZE - 1);
+			expect(rewardPeriod1.endBlock).to.equal(
+				START_BLOCK + REWARD_PERIOD_SIZE - 1
+			);
 			expect(rewardPeriod1.donationsAmount).to.equal(user1Donation1);
 			expect(rewardPeriod1.stakesAmount).to.equal(0);
 			const rewardPeriod2 = await DonationMiner.rewardPeriods(2);
 			expect(rewardPeriod2.rewardPerBlock).to.equal(toEther("21600"));
 			expect(rewardPeriod2.rewardAmount).to.equal(toEther("864000"));
-			expect(rewardPeriod2.startBlock).to.equal(START_BLOCK + REWARD_PERIOD_SIZE);
-			expect(rewardPeriod2.endBlock).to.equal(START_BLOCK + 3 * REWARD_PERIOD_SIZE - 1);
+			expect(rewardPeriod2.startBlock).to.equal(
+				START_BLOCK + REWARD_PERIOD_SIZE
+			);
+			expect(rewardPeriod2.endBlock).to.equal(
+				START_BLOCK + 3 * REWARD_PERIOD_SIZE - 1
+			);
 			expect(rewardPeriod2.donationsAmount).to.equal(user1Donation1);
 			expect(rewardPeriod2.stakesAmount).to.equal(0);
 		});
@@ -3362,7 +3388,8 @@ describe.only("DonationMiner", () => {
 		});
 	});
 
-	describe("Donation Miner + Community", () => {  	//these tests work only on a celo mainnet fork network
+	describe("Donation Miner + Community", () => {
+		//these tests work only on a celo mainnet fork network
 		const oneMinuteInBlocks = 12;
 		const threeMinutesInBlocks = 36;
 		const claimAmountTwo = toEther("2");
@@ -3437,11 +3464,33 @@ describe.only("DonationMiner", () => {
 				communityAddress
 			);
 
-			await createPool(user9, cUSD, mUSD, toEther(1000000), toEther(1000000));
-			await createPool(user9, mUSD, cTKN, toEther(1000000), toEther(500000));
+			await createPool(
+				user9,
+				cUSD,
+				mUSD,
+				toEther(1000000),
+				toEther(1000000)
+			);
+			await createPool(
+				user9,
+				mUSD,
+				cTKN,
+				toEther(1000000),
+				toEther(500000)
+			);
 
-			await Treasury.setToken(mUSD.address, toEther(0.9), getExchangePath(mUSD, cUSD));
-			await Treasury.setToken(cTKN.address, toEther(0.5), getExchangePath(cTKN, mUSD, cUSD));
+			await Treasury.setToken(
+				mUSD.address,
+				toEther(0.9),
+				getExchangePath(mUSD, cUSD),
+				123
+			);
+			await Treasury.setToken(
+				cTKN.address,
+				toEther(0.5),
+				getExchangePath(cTKN, mUSD, cUSD),
+				124
+			);
 		});
 
 		it("Should approve and donate to community, advance time and claim the reward", async function () {
@@ -3643,11 +3692,33 @@ describe.only("DonationMiner", () => {
 
 			await SPACT.transferOwnership(Staking.address);
 
-			await createPool(user9, cUSD, mUSD, toEther(1000000), toEther(1000000));
-			await createPool(user9, mUSD, cTKN, toEther(1000000), toEther(500000));
+			await createPool(
+				user9,
+				cUSD,
+				mUSD,
+				toEther(1000000),
+				toEther(1000000)
+			);
+			await createPool(
+				user9,
+				mUSD,
+				cTKN,
+				toEther(1000000),
+				toEther(500000)
+			);
 
-			await Treasury.setToken(mUSD.address, toEther(0.9), getExchangePath(mUSD, cUSD));
-			await Treasury.setToken(cTKN.address, toEther(0.5), getExchangePath(cTKN, mUSD, cUSD));
+			await Treasury.setToken(
+				mUSD.address,
+				toEther(0.9),
+				getExchangePath(mUSD, cUSD),
+				123
+			);
+			await Treasury.setToken(
+				cTKN.address,
+				toEther(0.5),
+				getExchangePath(cTKN, mUSD, cUSD),
+				124
+			);
 
 			await advanceToBlockN(START_BLOCK);
 		});
@@ -4519,17 +4590,40 @@ describe.only("DonationMiner", () => {
 		});
 	});
 
-	describe("Donation Miner + Treasury", () => {  	//these tests work only on a celo mainnet fork network
+	describe("Donation Miner + Treasury", () => {
+		//these tests work only on a celo mainnet fork network
 		before(async function () {});
 
 		beforeEach(async () => {
 			await deploy();
 
-			await createPool(user9, cUSD, mUSD, toEther(1000000), toEther(1000000));
-			await createPool(user9, mUSD, cTKN, toEther(1000000), toEther(500000));
+			await createPool(
+				user9,
+				cUSD,
+				mUSD,
+				toEther(1000000),
+				toEther(1000000)
+			);
+			await createPool(
+				user9,
+				mUSD,
+				cTKN,
+				toEther(1000000),
+				toEther(500000)
+			);
 
-			await Treasury.setToken(mUSD.address, toEther(0.9), getExchangePath(mUSD, cUSD));
-			await Treasury.setToken(cTKN.address, toEther(0.5), getExchangePath(cTKN, mUSD, cUSD));
+			await Treasury.setToken(
+				mUSD.address,
+				toEther(0.9),
+				getExchangePath(mUSD, cUSD),
+				123
+			);
+			await Treasury.setToken(
+				cTKN.address,
+				toEther(0.5),
+				getExchangePath(cTKN, mUSD, cUSD),
+				124
+			);
 
 			await advanceToRewardPeriodN(1);
 		});
@@ -4560,10 +4654,11 @@ describe.only("DonationMiner", () => {
 				user1.address
 			);
 
-			const user1ConvertedDonation = await Treasury.callStatic.getConvertedAmount(
-				mUSD.address,
-				user1Donation
-			);
+			const user1ConvertedDonation =
+				await Treasury.callStatic.getConvertedAmount(
+					mUSD.address,
+					user1Donation
+				);
 			expect(user1ConvertedDonation).to.be.equal(
 				toEther("89.091179973182654916")
 			);
@@ -4587,6 +4682,10 @@ describe.only("DonationMiner", () => {
 			expect(await PACT.balanceOf(user1.address)).to.equal(
 				user1ExpectedReward
 			);
+
+			expect(await mUSD.balanceOf(Treasury.address)).to.be.equal(
+				user1Donation
+			);
 		});
 
 		it("Should donate other token #2", async function () {
@@ -4605,10 +4704,11 @@ describe.only("DonationMiner", () => {
 				user1.address
 			);
 
-			const user1ConvertedDonation = await Treasury.callStatic.getConvertedAmount(
-				cTKN.address,
-				user1Donation
-			);
+			const user1ConvertedDonation =
+				await Treasury.callStatic.getConvertedAmount(
+					cTKN.address,
+					user1Donation
+				);
 			expect(user1ConvertedDonation).to.be.equal(
 				toEther("97.971397310031901229")
 			);
@@ -4632,9 +4732,13 @@ describe.only("DonationMiner", () => {
 			expect(await PACT.balanceOf(user1.address)).to.equal(
 				user1ExpectedReward
 			);
+
+			expect(await cTKN.balanceOf(Treasury.address)).to.be.equal(
+				user1Donation
+			);
 		});
 
-		it.only("Should donate other token, and get correct reward", async function () {
+		it("Should donate other token, and get correct reward", async function () {
 			const user1Donation = toEther("100");
 			const user2Donation = toEther("100");
 			const user1ExpectedReward = toEther("2137866.591488117697003759");
@@ -4661,10 +4765,11 @@ describe.only("DonationMiner", () => {
 				user2.address
 			);
 
-			const user1ConvertedDonation = await Treasury.callStatic.getConvertedAmount(
-				cTKN.address,
-				user1Donation
-			);
+			const user1ConvertedDonation =
+				await Treasury.callStatic.getConvertedAmount(
+					cTKN.address,
+					user1Donation
+				);
 			expect(user1ConvertedDonation).to.be.equal(
 				toEther("97.971397310031901229")
 			);
@@ -4700,6 +4805,14 @@ describe.only("DonationMiner", () => {
 			expect(await PACT.balanceOf(user2.address)).to.equal(
 				user2ExpectedReward
 			);
+
+			expect(await cTKN.balanceOf(Treasury.address)).to.be.equal(
+				user1Donation
+			);
+
+			expect(await cUSD.balanceOf(Treasury.address)).to.be.equal(
+				user1Donation
+			);
 		});
 
 		it("Should donate to a community that uses other token", async function () {
@@ -4718,10 +4831,11 @@ describe.only("DonationMiner", () => {
 				user1.address
 			);
 
-			const user1ConvertedDonation = await Treasury.callStatic.getConvertedAmount(
-				mUSD.address,
-				user1Donation
-			);
+			const user1ConvertedDonation =
+				await Treasury.callStatic.getConvertedAmount(
+					mUSD.address,
+					user1Donation
+				);
 			expect(user1ConvertedDonation).to.be.equal(
 				toEther("89.091179973182654916")
 			);
@@ -4744,6 +4858,10 @@ describe.only("DonationMiner", () => {
 
 			expect(await PACT.balanceOf(user1.address)).to.equal(
 				user1ExpectedReward
+			);
+
+			expect(await mUSD.balanceOf(Treasury.address)).to.be.equal(
+				user1Donation
 			);
 		});
 	});
