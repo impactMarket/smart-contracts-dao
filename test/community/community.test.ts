@@ -17,6 +17,7 @@ import { fromEther, toEther } from "../utils/helpers";
 import { JsonRpcSigner } from "@ethersproject/providers/src.ts/json-rpc-provider";
 import { BigNumber } from "@ethersproject/bignumber";
 import { createPool, getExchangePath } from "../utils/uniswap";
+import {LpStrategy} from "../treasury/treasury.test";
 
 should();
 
@@ -205,7 +206,7 @@ describe("Community", () => {
 	async function multipleTokenSetUp() {
 		const tokenFactory = await ethers.getContractFactory("TokenMock");
 
-		const mUSD1 = await tokenFactory.deploy("mUSD", "mUSD");// for a weird reason we need to deploy a blank contract
+		const fake = await tokenFactory.deploy("fake", "fake"); // for a weird reason we need to deploy a blank contract
 		mUSD = await tokenFactory.deploy("mUSD", "mUSD");
 		cTKN = await tokenFactory.deploy("cTKN", "cTKN");
 		cEUR = await tokenFactory.deploy("cEUR", "cEUR");
@@ -242,21 +243,27 @@ describe("Community", () => {
 		await treasuryProxy.setToken(
 			mUSD.address,
 			toEther(0.9),
+			LpStrategy.NONE,
+			0,
 			getExchangePath(mUSD, cUSD),
-			123
+			'0x'
 		);
 
 		await treasuryProxy.setToken(
 			cTKN.address,
 			toEther(0.5),
+			LpStrategy.NONE,
+			0,
 			getExchangePath(cTKN, mUSD, cUSD),
-			124
+			'0x'
 		);
 		await treasuryProxy.setToken(
 			cEUR.address,
 			toEther(0.8),
+			LpStrategy.NONE,
+			0,
 			getExchangePath(cEUR, cUSD),
-			125
+			'0x'
 		);
 	}
 
@@ -4747,7 +4754,7 @@ describe("Community", () => {
 		});
 	});
 
-	xdescribe("Community - Token", () => {
+	describe.skip("Community - Token", () => {
 		//these tests work only on a celo mainnet fork network
 		before(async function () {
 			await init();

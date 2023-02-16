@@ -324,7 +324,9 @@ describe("Staking", () => {
 
 			let unstake = await Staking.stakeholderUnstakeAt(user1.address, 0);
 			expect(unstake.amount).to.be.equal(toEther(60));
-			expect(unstake.cooldownBlock).to.be.equal(DONATION_MINER_FIRST_BLOCK + 103);
+			expect(unstake.cooldownBlock).to.be.equal(
+				DONATION_MINER_FIRST_BLOCK + 103
+			);
 		});
 
 		it("should not unstake if not enough funds #2", async function () {
@@ -747,19 +749,27 @@ describe("Staking", () => {
 
 			let unstake = await Staking.stakeholderUnstakeAt(user1.address, 0);
 			expect(unstake.amount).to.be.equal(toEther(80));
-			expect(unstake.cooldownBlock).to.be.equal(DONATION_MINER_FIRST_BLOCK + 212);
+			expect(unstake.cooldownBlock).to.be.equal(
+				DONATION_MINER_FIRST_BLOCK + 212
+			);
 
 			unstake = await Staking.stakeholderUnstakeAt(user2.address, 2);
 			expect(unstake.amount).to.be.equal(toEther(20));
-			expect(unstake.cooldownBlock).to.be.equal(DONATION_MINER_FIRST_BLOCK + 217);
+			expect(unstake.cooldownBlock).to.be.equal(
+				DONATION_MINER_FIRST_BLOCK + 217
+			);
 
 			unstake = await Staking.stakeholderUnstakeAt(user2.address, 4);
 			expect(unstake.amount).to.be.equal(toEther(40));
-			expect(unstake.cooldownBlock).to.be.equal(DONATION_MINER_FIRST_BLOCK + 219);
+			expect(unstake.cooldownBlock).to.be.equal(
+				DONATION_MINER_FIRST_BLOCK + 219
+			);
 
 			unstake = await Staking.stakeholderUnstakeAt(user3.address, 1);
 			expect(unstake.amount).to.be.equal(toEther(70));
-			expect(unstake.cooldownBlock).to.be.equal(DONATION_MINER_FIRST_BLOCK + 210);
+			expect(unstake.cooldownBlock).to.be.equal(
+				DONATION_MINER_FIRST_BLOCK + 210
+			);
 		});
 	});
 });

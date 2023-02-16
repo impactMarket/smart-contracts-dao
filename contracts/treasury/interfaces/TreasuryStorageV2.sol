@@ -12,11 +12,9 @@ import "./TreasuryStorageV1.sol";
  * TreasuryStorageVX.
  */
 abstract contract TreasuryStorageV2 is TreasuryStorageV1 {
-    IUniswapRouter02 public override uniswapRouter;
+    ITreasuryLpSwap public override lpSwap;
     mapping(address => Token) public override tokens;
     EnumerableSet.AddressSet internal _tokenList;
     IERC20 public override PACT;
-    IQuoter public override uniswapQuoter;
-    INonfungiblePositionManager public override uniswapNFTPositionManager;
     uint256 public override lpPercentage;
 }

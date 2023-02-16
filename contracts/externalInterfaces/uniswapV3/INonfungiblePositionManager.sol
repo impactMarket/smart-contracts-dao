@@ -162,4 +162,6 @@ interface INonfungiblePositionManager
     /// must be collected first.
     /// @param tokenId The ID of the token that is being burned
     function burn(uint256 tokenId) external payable;
+
+    function ownerOf(uint256 tokenId) external view returns(address);
 }

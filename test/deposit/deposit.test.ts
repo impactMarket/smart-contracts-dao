@@ -16,13 +16,15 @@ import * as ethersTypes from "ethers";
 import { fromEther, toEther } from "../utils/helpers";
 import { BigNumber } from "@ethersproject/bignumber";
 import { parseUnits } from "@ethersproject/units";
+import {LpStrategy} from "../treasury/treasury.test";
 
 const MTokenABI = require("../../integrations/moola/abi/MToken.json");
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 
-describe.only("Deposit", () => {
+describe("Deposit", () => {
+	//these tests work only on a celo mainnet fork network
 	const LENDING_POOL_ADDRESS = "0x970b12522CA9b4054807a2c5B736149a5BE6f670"; //mainnet
 	const CELO_ADDRESS = "0x471EcE3750Da237f93B8E339c536989b8978a438"; //mainnet
 	const CUSD_ADDRESS = "0x765DE816845861e75A25fCA122bb6898B8B1282a"; //mainnet
@@ -101,9 +103,9 @@ describe.only("Deposit", () => {
 			).address
 		);
 
-		await advanceToBlockN((
-			await DonationMiner.rewardPeriods(1)
-		).startBlock.toNumber())
+		await advanceToBlockN(
+			(await DonationMiner.rewardPeriods(1)).startBlock.toNumber()
+		);
 	});
 
 	function closeToAssert(
@@ -164,7 +166,9 @@ describe.only("Deposit", () => {
 		closeToAssert(lastDonation.initialAmount, approximateInterest);
 		expect(lastDonation.token).eq(token.address);
 
-		expect(await token.balanceOf(user.address)).eq(userInitialBalance.add(amount))
+		expect(await token.balanceOf(user.address)).eq(
+			userInitialBalance.add(amount)
+		);
 
 		return approximateInterest;
 	}
@@ -300,7 +304,7 @@ describe.only("Deposit", () => {
 		});
 
 		it("Should not add an invalid lendingPool token", async function () {
-			await Treasury.setToken(FAKE_ADDRESS, 500, '0x', 123);
+			await Treasury.setToken(FAKE_ADDRESS, toEther(0.5), LpStrategy.NONE, 0, '0x', '0x');
 
 			await expect(Deposit.addToken(FAKE_ADDRESS)).to.be.rejectedWith(
 				"Deposit::addToken: it must be a valid lendingPool token"
@@ -311,7 +315,7 @@ describe.only("Deposit", () => {
 		});
 
 		it("Should add a valid token if admin", async function () {
-			await Treasury.setToken(cUSD.address, 1000, '0x', 123);
+			await Treasury.setToken(cUSD.address, toEther(1), LpStrategy.NONE, 0, '0x', '0x');
 
 			await expect(Deposit.addToken(cUSD.address))
 				.to.emit(Deposit, "TokenAdded")
@@ -323,8 +327,8 @@ describe.only("Deposit", () => {
 		});
 
 		it("Should add multiple valid tokens if admin", async function () {
-			await Treasury.setToken(cUSD.address, 1000, '0x', 123);
-			await Treasury.setToken(cEUR.address, 1000, '0x', 124);
+			await Treasury.setToken(cUSD.address, toEther(1), LpStrategy.NONE, 0, '0x', '0x');
+			await Treasury.setToken(cEUR.address, toEther(1), LpStrategy.NONE, 0, '0x', '0x');
 
 			await expect(Deposit.addToken(cUSD.address))
 				.to.emit(Deposit, "TokenAdded")
@@ -342,7 +346,7 @@ describe.only("Deposit", () => {
 		});
 
 		it("Should not add a valid token twice", async function () {
-			await Treasury.setToken(cUSD.address, 1000, '0x', 123);
+			await Treasury.setToken(cUSD.address, toEther(1), LpStrategy.NONE, 0, '0x', '0x');
 
 			await Deposit.addToken(cUSD.address);
 
@@ -355,7 +359,7 @@ describe.only("Deposit", () => {
 		});
 
 		it("Should not remove token if not admin", async function () {
-			await Treasury.setToken(cUSD.address, 1000, '0x', 123);
+			await Treasury.setToken(cUSD.address, toEther(1), LpStrategy.NONE, 0, '0x', '0x');
 
 			await Deposit.addToken(cUSD.address);
 
@@ -368,7 +372,7 @@ describe.only("Deposit", () => {
 		});
 
 		it("Should remove token if admin", async function () {
-			await Treasury.setToken(cUSD.address, 1000, '0x', 123);
+			await Treasury.setToken(cUSD.address, toEther(1), LpStrategy.NONE, 0, '0x', '0x');
 
 			await Deposit.addToken(cUSD.address);
 
@@ -388,7 +392,7 @@ describe.only("Deposit", () => {
 		beforeEach(async () => {
 			await deploy();
 
-			await Treasury.setToken(cUSD.address, 1000, '0x', 123);
+			await Treasury.setToken(cUSD.address, toEther(1), LpStrategy.NONE, 0, '0x', '0x');
 			await Deposit.addToken(cUSD.address);
 
 			await ethers.provider.send("hardhat_impersonateAccount", [

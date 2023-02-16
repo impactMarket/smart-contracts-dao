@@ -690,7 +690,7 @@ contract CommunityImplementation is
         uint256 _balance = token().balanceOf(address(this));
 
         if (_balance > 0) {
-            IUniswapRouter02 _uniswapRouter = _treasury.uniswapRouter();
+            IUniswapRouter02 _uniswapRouter = _treasury.lpSwap().uniswapRouter();
 
             token().approve(address(_uniswapRouter), _balance);
 
