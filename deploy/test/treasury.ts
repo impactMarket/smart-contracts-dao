@@ -9,7 +9,7 @@ import {
 	uniswapQuoterAddress,
 	uniswapRouterAddress,
 } from "../../test/utils/uniswap";
-import {LpStrategy} from "../../test/treasury/treasury.test";
+import { LpStrategy } from "../../test/treasury/treasury.test";
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
@@ -51,7 +51,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	await treasuryContract.updatePACT(PACT.address);
 	const cUSDAddress = getCUSDAddress();
 
-	await treasuryContract.setToken(cUSDAddress, toEther(1), LpStrategy.NONE, 0, '0x', '0x');
+	await treasuryContract.setToken(
+		cUSDAddress,
+		toEther(1),
+		LpStrategy.NONE,
+		0,
+		"0x",
+		"0x"
+	);
 };
 
 export default func;

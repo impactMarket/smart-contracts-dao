@@ -17,7 +17,7 @@ import { fromEther, toEther } from "../utils/helpers";
 import { JsonRpcSigner } from "@ethersproject/providers/src.ts/json-rpc-provider";
 import { BigNumber } from "@ethersproject/bignumber";
 import { createPool, getExchangePath } from "../utils/uniswap";
-import {LpStrategy} from "../treasury/treasury.test";
+import { LpStrategy } from "../treasury/treasury.test";
 
 should();
 
@@ -246,7 +246,7 @@ describe("Community", () => {
 			LpStrategy.NONE,
 			0,
 			getExchangePath(mUSD, cUSD),
-			'0x'
+			"0x"
 		);
 
 		await treasuryProxy.setToken(
@@ -255,7 +255,7 @@ describe("Community", () => {
 			LpStrategy.NONE,
 			0,
 			getExchangePath(cTKN, mUSD, cUSD),
-			'0x'
+			"0x"
 		);
 		await treasuryProxy.setToken(
 			cEUR.address,
@@ -263,7 +263,7 @@ describe("Community", () => {
 			LpStrategy.NONE,
 			0,
 			getExchangePath(cEUR, cUSD),
-			'0x'
+			"0x"
 		);
 	}
 

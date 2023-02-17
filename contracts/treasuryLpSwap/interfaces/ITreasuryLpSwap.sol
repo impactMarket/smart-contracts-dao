@@ -25,6 +25,6 @@ interface ITreasuryLpSwap {
         bytes memory _exchangePath
     ) external;
     function addToLp(IERC20 _token, uint256 _amount) external;
-    function collectAllFees(uint256 _uniswapNFTPositionManagerId) external returns (uint256 amount0, uint256 amount1);
+    function collectFees(uint256 _uniswapNFTPositionManagerId) external returns (uint256 amount0, uint256 amount1);
     function decreaseLiquidity(uint256 _uniswapNFTPositionManagerId, uint128 _liquidityAmount) external returns (uint256 amount0, uint256 amount1);
 }

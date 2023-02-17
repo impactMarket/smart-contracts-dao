@@ -9,8 +9,7 @@ const NFTPositionManagerABI =
 
 const SwapRouterABI =
 	require("../../util/abi/uniswap/periphery/SwapRouter.json").abi;
-const QuoterABI =
-	require("../../util/abi/uniswap/periphery/Quoter.json").abi;
+const QuoterABI = require("../../util/abi/uniswap/periphery/Quoter.json").abi;
 
 export const uniswapRouterAddress =
 	"0x5615CDAb10dc425a742d643d949a7F474C01abc4";
@@ -45,7 +44,9 @@ export async function createPool(
 		amount1 = amount0Copy;
 	}
 
-	await NFTPositionManager.connect(creator).createAndInitializePoolIfNecessary(
+	await NFTPositionManager.connect(
+		creator
+	).createAndInitializePoolIfNecessary(
 		token0.address,
 		token1.address,
 		10000,
@@ -64,22 +65,24 @@ export async function createPool(
 		amount1Desired: amount1,
 		amount0Min: 0, //don't let it 0 into production
 		amount1Min: 0, //don't let it 0 into production
-		recipient: creator.address,// ownerAddress ? ownerAddress : creator.address,
+		recipient: creator.address, // ownerAddress ? ownerAddress : creator.address,
 		deadline: 1773341392,
 	});
 
-	const tokenId = await NFTPositionManager.tokenByIndex((await NFTPositionManager.totalSupply()) - 1);
+	const tokenId = await NFTPositionManager.tokenByIndex(
+		(await NFTPositionManager.totalSupply()) - 1
+	);
 
 	if (ownerAddress) {
 		// await NFTPositionManager.connect(creator).approve();
-		await NFTPositionManager.connect(creator).transferFrom(creator.address, ownerAddress, tokenId);
+		await NFTPositionManager.connect(creator).transferFrom(
+			creator.address,
+			ownerAddress,
+			tokenId
+		);
 	}
 
-
-
 	// console.log('**********************************************************')
-
-
 
 	// // await NFTPositionManager.connect(creator).approve()
 	//
@@ -127,7 +130,6 @@ function encodePriceSqrt(reserve0: BigNumber, reserve1: BigNumber): BigNumber {
 	);
 }
 
-
 export async function increaseLiquidity(
 	owner: SignerWithAddress,
 	nftId: number,
@@ -144,8 +146,12 @@ export async function increaseLiquidity(
 	// console.log(fromEther(await token0.balanceOf(owner.address)));
 	// console.log(fromEther(await token1.balanceOf(owner.address)));
 
-	await token0.connect(owner).approve(NFTPositionManager.address, toEther('1000000000000000'));
-	await token1.connect(owner).approve(NFTPositionManager.address, toEther('1000000000000000'));
+	await token0
+		.connect(owner)
+		.approve(NFTPositionManager.address, toEther("1000000000000000"));
+	await token1
+		.connect(owner)
+		.approve(NFTPositionManager.address, toEther("1000000000000000"));
 	// await token0.connect(owner).approve('0xAfE208a311B21f13EF87E33A90049fC17A7acDEc', toEther('1000000000000000'));
 	// await token1.connect(owner).approve('0xAfE208a311B21f13EF87E33A90049fC17A7acDEc', toEther('1000000000000000'));
 	// await token0.connect(owner).approve('0x633987602DE5C4F337e3DbF265303A1080324204', toEther('1000000000000000'));
@@ -194,7 +200,7 @@ export async function increaseLiquidity(
 		amount1Desired: amount1,
 		amount0Min: 0,
 		amount1Min: 0,
-		deadline: 1773341392
+		deadline: 1773341392,
 	});
 }
 
@@ -202,32 +208,42 @@ export async function swap(
 	owner: SignerWithAddress,
 	token0: ethersTypes.Contract,
 	token1: ethersTypes.Contract,
-	amount: BigNumber,
+	amount: BigNumber
 ) {
 	const SwapRouter = await ethers.getContractAt(
 		SwapRouterABI,
 		uniswapRouterAddress
 	);
 
-	await token0.connect(owner).approve(SwapRouter.address, toEther('1000000000000000'));
-	await token1.connect(owner).approve(SwapRouter.address, toEther('1000000000000000'));
+	await token0
+		.connect(owner)
+		.approve(SwapRouter.address, toEther("10000000000"));
+
+	await token1
+		.connect(owner)
+		.approve(SwapRouter.address, toEther("10000000000"));
 
 	await SwapRouter.connect(owner).exactInput({
 		path: getExchangePath(token0, token1),
 		recipient: owner.address,
 		amountIn: amount,
-		amountOutMinimum: 0
+		amountOutMinimum: 0,
 	});
 }
 
 export async function getExactInput(
 	token0: ethersTypes.Contract,
 	token1: ethersTypes.Contract,
-	amount: BigNumber,
+	amount: BigNumber
 ): Promise<BigNumber> {
 	const Quoter = await ethers.getContractAt(QuoterABI, uniswapQuoterAddress);
 
-	return (await Quoter.callStatic.quoteExactInput(getExchangePath(token0, token1), amount)).amountOut;
+	return (
+		await Quoter.callStatic.quoteExactInput(
+			getExchangePath(token0, token1),
+			amount
+		)
+	).amountOut;
 }
 
 export async function position(tokenId: number) {

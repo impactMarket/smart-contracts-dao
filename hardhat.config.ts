@@ -34,6 +34,7 @@ export default {
       gas: 13000000,
       forking: {
         url: "https://forno.celo.org",
+        // url: "https://rpc.ankr.com/celo",
       },
       // forking: {
       //   url: "https://mainnet.infura.io/v3/814ad5575e7e46fab437380d19cf77bf",

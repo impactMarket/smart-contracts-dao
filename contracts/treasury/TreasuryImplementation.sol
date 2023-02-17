@@ -6,15 +6,15 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "./interfaces/TreasuryStorageV2.sol";
 
-import "hardhat/console.sol";
-
 contract TreasuryImplementation is
-OwnableUpgradeable,
-ReentrancyGuardUpgradeable,
-TreasuryStorageV2
+    OwnableUpgradeable,
+    ReentrancyGuardUpgradeable,
+    TreasuryStorageV2
 {
     using SafeERC20Upgradeable for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
+
+    address constant DEAD_ADDRESS = 0x000000000000000000000000000000000000dEaD;
 
     /**
      * @notice Triggered when CommunityAdmin has been updated
@@ -26,7 +26,6 @@ TreasuryStorageV2
         address indexed oldCommunityAdmin,
         address indexed newCommunityAdmin
     );
-
 
     /**
      * @notice Triggered when lpPercentage has been updated
@@ -174,9 +173,9 @@ TreasuryStorageV2
      * @param _newCommunityAdmin address of the new CommunityAdmin contract
      */
     function updateCommunityAdmin(ICommunityAdmin _newCommunityAdmin)
-    external
-    override
-    onlyOwnerOrImpactMarketCouncil
+        external
+        override
+        onlyOwnerOrImpactMarketCouncil
     {
         emit CommunityAdminUpdated(address(communityAdmin), address(_newCommunityAdmin));
         communityAdmin = _newCommunityAdmin;
@@ -196,14 +195,18 @@ TreasuryStorageV2
      *
      * @param _newLpSwap address of the new LpSwap contract
      */
-    function updateLpSwap(ITreasuryLpSwap _newLpSwap) external override onlyOwnerOrImpactMarketCouncil {
+    function updateLpSwap(ITreasuryLpSwap _newLpSwap)
+        external
+        override
+        onlyOwnerOrImpactMarketCouncil
+    {
         lpSwap = _newLpSwap;
     }
 
     function updateLpPercentage(uint256 _newLpPercentage)
-    external
-    override
-    onlyOwnerOrImpactMarketCouncil
+        external
+        override
+        onlyOwnerOrImpactMarketCouncil
     {
         emit LpPercentageUpdated(lpPercentage, _newLpPercentage);
 
@@ -256,7 +259,8 @@ TreasuryStorageV2
 
         if (_uniswapNFTPositionManagerId > 0) {
             require(
-                lpSwap.uniswapNFTPositionManager().ownerOf(_uniswapNFTPositionManagerId) == address(lpSwap),
+                lpSwap.uniswapNFTPositionManager().ownerOf(_uniswapNFTPositionManagerId) ==
+                    address(lpSwap),
                 "Treasury::setToken: invalid uniswapNFTPositionManagerId"
             );
             tokens[_tokenAddress].uniswapNFTPositionManagerId = _uniswapNFTPositionManagerId;
@@ -298,17 +302,17 @@ TreasuryStorageV2
     }
 
     function getConvertedAmount(address _tokenAddress, uint256 _amount)
-    external override returns (uint256){
-        require(
-            isToken(_tokenAddress),
-            "Treasury::getConvertedAmount: this is not a valid token"
-        );
+        external
+        override
+        returns (uint256)
+    {
+        require(isToken(_tokenAddress), "Treasury::getConvertedAmount: this is not a valid token");
 
         Token memory _token = tokens[_tokenAddress];
 
         uint256 _convertedAmount = _token.exchangePathToCUSD.length == 0
-        ? _amount
-        : lpSwap.uniswapQuoter().quoteExactInput(_token.exchangePathToCUSD, _amount);
+            ? _amount
+            : lpSwap.uniswapQuoter().quoteExactInput(_token.exchangePathToCUSD, _amount);
 
         return (_convertedAmount * _token.rate) / 1e18;
     }
@@ -331,12 +335,14 @@ TreasuryStorageV2
         IERC20(_tokenAddress).approve(address(lpSwap.uniswapRouter()), _amountIn);
 
         // Executes the swap.
-        uint256 _amountOut = lpSwap.uniswapRouter().exactInput(IUniswapRouter02.ExactInputParams({
-            path : _exchangePath,
-            recipient : address(this),
-            amountIn : _amountIn,
-            amountOutMinimum : _amountOutMin
-        }));
+        uint256 _amountOut = lpSwap.uniswapRouter().exactInput(
+            IUniswapRouter02.ExactInputParams({
+                path: _exchangePath,
+                recipient: address(this),
+                amountIn: _amountIn,
+                amountOutMinimum: _amountOutMin
+            })
+        );
 
         emit AmountConverted(_tokenAddress, _amountIn, _amountOutMin, _exchangePath, _amountOut);
     }
@@ -347,7 +353,11 @@ TreasuryStorageV2
      * @param _erc20Token address of the ERC20 token
      * @param _amount amount of the transaction
      */
-    function transferToTreasury(IERC20 _erc20Token, uint256 _amount) external override nonReentrant {
+    function transferToTreasury(IERC20 _erc20Token, uint256 _amount)
+        external
+        override
+        nonReentrant
+    {
         _erc20Token.safeTransferFrom(msg.sender, address(this), _amount);
 
         Token storage _token = tokens[address(_erc20Token)];
@@ -366,9 +376,63 @@ TreasuryStorageV2
         }
     }
 
-    function collectAllFees(uint256 _uniswapNFTPositionManagerId)
-        external override onlyOwnerOrImpactMarketCouncil {
+    function collectFees(uint256 _uniswapNFTPositionManagerId)
+        external
+        override
+        onlyOwnerOrImpactMarketCouncil
+    {
+        (, , address _token0Address, address _token1Address, , , , , , , , ) = lpSwap
+            .uniswapNFTPositionManager()
+            .positions(_uniswapNFTPositionManagerId);
 
-        (uint256 amount0, uint256 amount1) = lpSwap.collectAllFees(_uniswapNFTPositionManagerId);
+        require(
+            _token0Address == address(PACT) || _token1Address == address(PACT),
+            "Treasury::collectFees invalid uniswapNFTPositionManagerId"
+        );
+
+        (uint256 _amount0, uint256 _amount1) = lpSwap.collectFees(_uniswapNFTPositionManagerId);
+
+        IERC20 _erc20Token;
+        uint256 _pactAmount;
+        uint256 _tokenAmount;
+
+        if (_token0Address == address(PACT)) {
+            _erc20Token = IERC20(_token1Address);
+            _pactAmount = _amount0;
+            _tokenAmount = _amount1;
+        } else {
+            _erc20Token = IERC20(_token0Address);
+            _pactAmount = _amount1;
+            _tokenAmount = _amount0;
+        }
+
+        Token memory _token = tokens[address(_erc20Token)];
+
+        uint256 _pactToBurn;
+        if (_token.lpStrategy == LpStrategy.SecondaryCoin) {
+            _erc20Token.approve(address(lpSwap.uniswapRouter()), _tokenAmount);
+
+            lpSwap.uniswapRouter().exactInput(
+                IUniswapRouter02.ExactInputParams({
+                    path: _token.exchangePathToCUSD,
+                    recipient: address(this),
+                    amountIn: _tokenAmount / 2,
+                    amountOutMinimum: 0
+                })
+            );
+
+            _pactToBurn = lpSwap.uniswapRouter().exactInput(
+                IUniswapRouter02.ExactInputParams({
+                    path: _token.exchangePathToPACT,
+                    recipient: address(this),
+                    amountIn: _tokenAmount / 2,
+                    amountOutMinimum: 0
+                })
+            );
+        }
+
+        _pactToBurn += _pactAmount;
+
+        PACT.transfer(DEAD_ADDRESS, _pactToBurn);
     }
 }

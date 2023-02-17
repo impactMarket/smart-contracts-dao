@@ -9,7 +9,7 @@ import {
 	uniswapQuoterAddress,
 	uniswapRouterAddress,
 } from "../../test/utils/uniswap";
-import {LpStrategy} from "../../test/treasury/treasury.test";
+import { LpStrategy } from "../../test/treasury/treasury.test";
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
@@ -35,7 +35,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	const treasuryLpSwapProxyResult = await deploy("TreasuryLpSwapProxy", {
 		from: deployer.address,
-		args: [treasuryLpSwapImplementationResult.address, ImpactProxyAdmin.address],
+		args: [
+			treasuryLpSwapImplementationResult.address,
+			ImpactProxyAdmin.address,
+		],
 		log: true,
 		// gasLimit: 13000000,
 	});

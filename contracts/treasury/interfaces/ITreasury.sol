@@ -57,5 +57,5 @@ interface ITreasury {
         bytes memory _exchangePath
     ) external;
     function transferToTreasury(IERC20 _token, uint256 _amount) external;
-    function collectAllFees(uint256 _uniswapNFTPositionManagerId) external;
+    function collectFees(uint256 _uniswapNFTPositionManagerId) external;
 }

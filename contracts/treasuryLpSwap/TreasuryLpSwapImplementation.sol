@@ -6,12 +6,10 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "./interfaces/TreasuryLpSwapStorageV1.sol";
 
-import "hardhat/console.sol";
-
 contract TreasuryLpSwapImplementation is
-OwnableUpgradeable,
-ReentrancyGuardUpgradeable,
-TreasuryLpSwapStorageV1
+    OwnableUpgradeable,
+    ReentrancyGuardUpgradeable,
+    TreasuryLpSwapStorageV1
 {
     using SafeERC20Upgradeable for IERC20;
 
@@ -25,7 +23,7 @@ TreasuryLpSwapStorageV1
     event TransferERC20(address indexed token, address indexed to, uint256 amount);
 
     /**
-     * @notice Triggered when a token has been set
+     * @notice Triggered when a LP has been increased
      *
      * @param uniswapNFTPositionManagerId       Position manager tokenId
      * @param pactToAdd                         Amount of PACT that should have been added in LP
@@ -40,6 +38,32 @@ TreasuryLpSwapStorageV1
         uint256 pactSpent,
         uint256 tokenSpent
     );
+
+    /**
+     * @notice Triggered when a LP has been decreased
+     *
+     * @param uniswapNFTPositionManagerId           Position manager tokenId
+     * @param liquidityDecreased                    Liquidity amount that was decreased from LP
+     * @param liquidityLeft                         Liquidity amount that was left in LP
+     * @param pactDecreased                         Amount of PACT that was decreased from LP
+     * @param tokenDecreased                        Amount of token that was decreased from LP
+     */
+    event LiquidityDecreased(
+        uint256 uniswapNFTPositionManagerId,
+        uint256 liquidityDecreased,
+        uint256 liquidityLeft,
+        uint256 pactDecreased,
+        uint256 tokenDecreased
+    );
+
+    /**
+     * @notice Triggered when the fees of an LP has been decreased
+     *
+     * @param uniswapNFTPositionManagerId     Position manager tokenId
+     * @param pactFee                         pactFee
+     * @param tokenFee                        tokenFee
+     */
+    event FeesCollected(uint256 uniswapNFTPositionManagerId, uint256 pactFee, uint256 tokenFee);
 
     /**
      * @notice Triggered when a token has been set
@@ -63,7 +87,8 @@ TreasuryLpSwapStorageV1
      */
     modifier onlyOwnerOrImpactMarketCouncil() {
         require(
-            msg.sender == owner() || msg.sender == address(treasury.communityAdmin().impactMarketCouncil()),
+            msg.sender == owner() ||
+                msg.sender == address(treasury.communityAdmin().impactMarketCouncil()),
             "TreasuryLpSwap: caller is not the owner nor ImpactMarketCouncil"
         );
         _;
@@ -73,10 +98,7 @@ TreasuryLpSwapStorageV1
      * @notice Enforces sender to Treasury
      */
     modifier onlyTreasury() {
-        require(
-            msg.sender == address(treasury),
-            "TreasuryLpSwap: caller is not the treasury"
-        );
+        require(msg.sender == address(treasury), "TreasuryLpSwap: caller is not the treasury");
         _;
     }
 
@@ -108,9 +130,9 @@ TreasuryLpSwapStorageV1
      * @param _newTreasury address of the new Treasury contract
      */
     function updateTreasury(ITreasury _newTreasury)
-    external
-    override
-    onlyOwnerOrImpactMarketCouncil
+        external
+        override
+        onlyOwnerOrImpactMarketCouncil
     {
         treasury = _newTreasury;
     }
@@ -121,9 +143,9 @@ TreasuryLpSwapStorageV1
      * @param _newUniswapRouter address of the new UniswapRouter contract
      */
     function updateUniswapRouter(IUniswapRouter02 _newUniswapRouter)
-    external
-    override
-    onlyOwnerOrImpactMarketCouncil
+        external
+        override
+        onlyOwnerOrImpactMarketCouncil
     {
         uniswapRouter = _newUniswapRouter;
     }
@@ -134,9 +156,9 @@ TreasuryLpSwapStorageV1
      * @param _newUniswapQuoter address of the new UniswapQuoter contract
      */
     function updateUniswapQuoter(IQuoter _newUniswapQuoter)
-    external
-    override
-    onlyOwnerOrImpactMarketCouncil
+        external
+        override
+        onlyOwnerOrImpactMarketCouncil
     {
         uniswapQuoter = _newUniswapQuoter;
     }
@@ -188,12 +210,14 @@ TreasuryLpSwapStorageV1
         IERC20(_tokenAddress).approve(address(uniswapRouter), _amountIn);
 
         // Executes the swap.
-        uint256 _amountOut = uniswapRouter.exactInput(IUniswapRouter02.ExactInputParams({
-            path : _exchangePath,
-            recipient : address(this),
-            amountIn : _amountIn,
-            amountOutMinimum : _amountOutMin
-        }));
+        uint256 _amountOut = uniswapRouter.exactInput(
+            IUniswapRouter02.ExactInputParams({
+                path: _exchangePath,
+                recipient: address(this),
+                amountIn: _amountIn,
+                amountOutMinimum: _amountOutMin
+            })
+        );
 
         emit AmountConverted(_tokenAddress, _amountIn, _amountOutMin, _exchangePath, _amountOut);
     }
@@ -211,17 +235,20 @@ TreasuryLpSwapStorageV1
 
         _erc20Token.safeTransferFrom(msg.sender, address(this), _amount);
 
-        (,,uint256 _uniswapNFTPositionManagerId,,bytes memory _exchangePathToPACT) = treasury.tokens(address(_erc20Token));
+        (, , uint256 _uniswapNFTPositionManagerId, , bytes memory _exchangePathToPACT) = treasury
+            .tokens(address(_erc20Token));
 
         uint256 _tokenAmountToAdd = _amount / 2;
         _erc20Token.approve(address(uniswapRouter), _tokenAmountToAdd);
 
-        uint256 _pactAmountToAdd = uniswapRouter.exactInput(IUniswapRouter02.ExactInputParams({
-            path : _exchangePathToPACT,
-            recipient : address(this),
-            amountIn : _tokenAmountToAdd,
-            amountOutMinimum : 0
-        }));
+        uint256 _pactAmountToAdd = uniswapRouter.exactInput(
+            IUniswapRouter02.ExactInputParams({
+                path: _exchangePathToPACT,
+                recipient: address(this),
+                amountIn: _tokenAmountToAdd,
+                amountOutMinimum: 0
+            })
+        );
 
         uint256 _initialPACTBalance = treasury.PACT().balanceOf(address(this));
         uint256 _initialTokenBalance = _erc20Token.balanceOf(address(this));
@@ -240,14 +267,16 @@ TreasuryLpSwapStorageV1
         treasury.PACT().approve(address(uniswapNFTPositionManager), _pactAmountToAdd);
         _erc20Token.approve(address(uniswapNFTPositionManager), _tokenAmountToAdd);
 
-        uniswapNFTPositionManager.increaseLiquidity(INonfungiblePositionManager.IncreaseLiquidityParams({
-            tokenId: _uniswapNFTPositionManagerId,
-            amount0Desired: _amount0,
-            amount1Desired: _amount1,
-            amount0Min: 0,
-            amount1Min: 0,
-            deadline: block.timestamp
-        }));
+        uniswapNFTPositionManager.increaseLiquidity(
+            INonfungiblePositionManager.IncreaseLiquidityParams({
+                tokenId: _uniswapNFTPositionManagerId,
+                amount0Desired: _amount0,
+                amount1Desired: _amount1,
+                amount0Min: 0,
+                amount1Min: 0,
+                deadline: block.timestamp
+            })
+        );
 
         uint256 _pactSpent = _initialPACTBalance - treasury.PACT().balanceOf(address(this));
         uint256 _tokenSpent = _initialTokenBalance - _erc20Token.balanceOf(address(this));
@@ -261,26 +290,79 @@ TreasuryLpSwapStorageV1
         );
     }
 
-    function collectAllFees(uint256 _uniswapNFTPositionManagerId)
-        external override onlyTreasury returns (uint256 amount0, uint256 amount1) {
+    function collectFees(uint256 _uniswapNFTPositionManagerId)
+        external
+        override
+        onlyTreasury
+        returns (uint256 amount0, uint256 amount1)
+    {
+        (amount0, amount1) = uniswapNFTPositionManager.collect(
+            INonfungiblePositionManager.CollectParams({
+                tokenId: _uniswapNFTPositionManagerId,
+                recipient: address(treasury),
+                amount0Max: type(uint128).max,
+                amount1Max: type(uint128).max
+            })
+        );
 
-        (amount0, amount1) = uniswapNFTPositionManager.collect(INonfungiblePositionManager.CollectParams({
-            tokenId: _uniswapNFTPositionManagerId,
-            recipient: address(this), //address(treasury)
-            amount0Max: type(uint128).max,
-            amount1Max: type(uint128).max
-        }));
+        (, , address _token0Address, , , , , , , , , ) = uniswapNFTPositionManager.positions(
+            _uniswapNFTPositionManagerId
+        );
+
+        if (_token0Address == address(treasury.PACT())) {
+            emit FeesCollected(_uniswapNFTPositionManagerId, amount0, amount1);
+        } else {
+            emit FeesCollected(_uniswapNFTPositionManagerId, amount1, amount0);
+        }
     }
 
     function decreaseLiquidity(uint256 _uniswapNFTPositionManagerId, uint128 _liquidityAmount)
-        external override onlyOwnerOrImpactMarketCouncil returns (uint256 amount0, uint256 amount1) {
+        external
+        override
+        onlyOwnerOrImpactMarketCouncil
+        returns (uint256 amount0, uint256 amount1)
+    {
+        (amount0, amount1) = uniswapNFTPositionManager.decreaseLiquidity(
+            INonfungiblePositionManager.DecreaseLiquidityParams({
+                tokenId: _uniswapNFTPositionManagerId,
+                liquidity: _liquidityAmount,
+                amount0Min: 0,
+                amount1Min: 0,
+                deadline: block.timestamp
+            })
+        );
 
-        (amount0, amount1) = uniswapNFTPositionManager.decreaseLiquidity(INonfungiblePositionManager.DecreaseLiquidityParams({
-            tokenId: _uniswapNFTPositionManagerId,
-            liquidity: _liquidityAmount,
-            amount0Min: 0,
-            amount1Min: 0,
-            deadline: block.timestamp
-        }));
+        (
+            ,
+            ,
+            address _token0Address,
+            ,
+            ,
+            ,
+            ,
+            uint256 _liquidityLeft,
+            ,
+            ,
+            ,
+
+        ) = uniswapNFTPositionManager.positions(_uniswapNFTPositionManagerId);
+
+        if (_token0Address == address(treasury.PACT())) {
+            emit LiquidityDecreased(
+                _uniswapNFTPositionManagerId,
+                _liquidityAmount,
+                _liquidityLeft,
+                amount0,
+                amount1
+            );
+        } else {
+            emit LiquidityDecreased(
+                _uniswapNFTPositionManagerId,
+                _liquidityAmount,
+                _liquidityLeft,
+                amount1,
+                amount0
+            );
+        }
     }
 }
