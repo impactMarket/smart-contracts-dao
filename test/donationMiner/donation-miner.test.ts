@@ -20,7 +20,7 @@ import { LpStrategy } from "../treasury/treasury.test";
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 
-describe("DonationMiner", () => {
+describe.only("DonationMiner", () => {
 	const REWARD_PERIOD_SIZE = 20;
 	const CLAIM_DELAY = 5;
 	const AGAINST_PERIODS = 8;
@@ -222,6 +222,8 @@ describe("DonationMiner", () => {
 		START_BLOCK = (
 			await DonationMiner.rewardPeriods(1)
 		).startBlock.toNumber();
+
+		Treasury.updateDonationMiner(DonationMiner.address);
 	});
 
 	async function logRewardPeriods(DonationMiner: any) {
@@ -3495,6 +3497,8 @@ describe("DonationMiner", () => {
 				toEther(0.9),
 				LpStrategy.NONE,
 				0,
+				0,
+				0,
 				getExchangePath(mUSD, cUSD),
 				"0x"
 			);
@@ -3502,6 +3506,8 @@ describe("DonationMiner", () => {
 				cTKN.address,
 				toEther(0.5),
 				LpStrategy.NONE,
+				0,
+				0,
 				0,
 				getExchangePath(cTKN, mUSD, cUSD),
 				"0x"
@@ -3727,6 +3733,8 @@ describe("DonationMiner", () => {
 				toEther(0.9),
 				LpStrategy.NONE,
 				0,
+				0,
+				0,
 				getExchangePath(mUSD, cUSD),
 				"0x"
 			);
@@ -3734,6 +3742,8 @@ describe("DonationMiner", () => {
 				cTKN.address,
 				toEther(0.5),
 				LpStrategy.NONE,
+				0,
+				0,
 				0,
 				getExchangePath(cTKN, mUSD, cUSD),
 				"0x"
@@ -4636,6 +4646,8 @@ describe("DonationMiner", () => {
 				toEther(0.9),
 				LpStrategy.NONE,
 				0,
+				0,
+				0,
 				getExchangePath(mUSD, cUSD),
 				"0x"
 			);
@@ -4643,6 +4655,8 @@ describe("DonationMiner", () => {
 				cTKN.address,
 				toEther(0.5),
 				LpStrategy.NONE,
+				0,
+				0,
 				0,
 				getExchangePath(cTKN, mUSD, cUSD),
 				"0x"
@@ -4889,7 +4903,7 @@ describe("DonationMiner", () => {
 		});
 	});
 
-	describe("Donation Miner + Treasury + TReasuryLpSwap", () => {
+	describe("Donation Miner + Treasury + TreasuryLpSwap", () => {
 		let cUSDToMUSDTokenId: number;
 		let cUSDToPACTTokenId: number;
 		let mUSDToPACTTokenId: number;
@@ -4934,6 +4948,8 @@ describe("DonationMiner", () => {
 				cUSD.address,
 				toEther(1),
 				LpStrategy.MainCoin,
+				0,
+				0,
 				cUSDToPACTTokenId,
 				"0x",
 				getExchangePath(cUSD, PACT)
@@ -4943,6 +4959,8 @@ describe("DonationMiner", () => {
 				mUSD.address,
 				toEther(0.5),
 				LpStrategy.SecondaryCoin,
+				0,
+				0,
 				mUSDToPACTTokenId,
 				getExchangePath(mUSD, cUSD),
 				getExchangePath(mUSD, PACT)
@@ -4951,102 +4969,311 @@ describe("DonationMiner", () => {
 			await advanceToRewardPeriodN(1);
 		});
 
-		it("Should donate and add to LP main token", async function () {
-			const user1Donation = toEther("100");
+		it.only("Should not increase LP if lpPercentage is 0", async function () {
+			const user1Donation1 = toEther("100");
+			const user1Donation2 = toEther("50");
 
-			await cUSD.mint(user1.address, user1Donation);
+			await cUSD.mint(user1.address, user1Donation1.add(user1Donation2));
 
 			await cUSD
 				.connect(user1)
-				.approve(DonationMiner.address, user1Donation);
+				.approve(DonationMiner.address, user1Donation1.add(user1Donation2));
 
 			await expect(
 				DonationMiner.connect(user1).donate(
 					cUSD.address,
-					user1Donation,
+					user1Donation1,
+					user1.address
+				)
+			).to.be.fulfilled;
+
+			expect(await cUSD.balanceOf(Treasury.address)).to.be.equal(user1Donation1);
+
+			const user1ConvertedDonation1 =
+				await Treasury.callStatic.getConvertedAmount(
+					cUSD.address,
+					user1Donation1
+				);
+			expect(user1ConvertedDonation1).to.be.equal(user1Donation1);
+
+			expect(
+				(await DonationMiner.rewardPeriods(1)).donationsAmount
+			).to.be.equal(user1ConvertedDonation1);
+
+			const donation1 = await DonationMiner.donations(1);
+			expect(donation1.donor).to.equal(user1.address);
+			expect(donation1.target).to.equal(Treasury.address);
+			expect(donation1.rewardPeriod).to.equal(1);
+			expect(donation1.amount).to.equal(user1ConvertedDonation1);
+			expect(donation1.token).to.equal(cUSD.address);
+			expect(donation1.initialAmount).to.equal(user1Donation1);
+
+			await advanceToNextRewardPeriod();
+
+			await expect(
+				DonationMiner.connect(user1).donate(
+					cUSD.address,
+					user1Donation2,
+					user1.address
+				)
+			).to.be.fulfilled;
+
+			expect(await cUSD.balanceOf(Treasury.address)).to.be.equal(user1Donation1.add(user1Donation2));
+
+			const user1ConvertedDonation2 =
+				await Treasury.callStatic.getConvertedAmount(
+					cUSD.address,
+					user1Donation2
+				);
+			expect(user1ConvertedDonation2).to.be.equal(user1Donation2);
+
+			expect(
+				(await DonationMiner.rewardPeriods(2)).donationsAmount
+			).to.be.equal(user1ConvertedDonation2);
+
+			const donation2 = await DonationMiner.donations(2);
+			expect(donation2.donor).to.equal(user1.address);
+			expect(donation2.target).to.equal(Treasury.address);
+			expect(donation2.rewardPeriod).to.equal(2);
+			expect(donation2.amount).to.equal(user1ConvertedDonation2);
+			expect(donation2.token).to.equal(cUSD.address);
+			expect(donation2.initialAmount).to.equal(user1Donation2);
+		});
+
+		it.only("Should not increase LP if lpMinLimit is grater than the balance", async function () {
+			await Treasury.setToken(
+				cUSD.address,
+				toEther(1),
+				LpStrategy.MainCoin,
+				toEther(10),
+				toEther(151),
+				cUSDToPACTTokenId,
+				"0x",
+				getExchangePath(cUSD, PACT)
+			);
+
+			const user1Donation1 = toEther("100");
+			const user1Donation2 = toEther("50");
+
+			await cUSD.mint(user1.address, user1Donation1.add(user1Donation2));
+
+			await cUSD
+				.connect(user1)
+				.approve(DonationMiner.address, user1Donation1.add(user1Donation2));
+
+			await expect(
+				DonationMiner.connect(user1).donate(
+					cUSD.address,
+					user1Donation1,
+					user1.address
+				)
+			).to.be.fulfilled;
+
+			expect(await cUSD.balanceOf(Treasury.address)).to.be.equal(user1Donation1);
+
+			const user1ConvertedDonation1 =
+				await Treasury.callStatic.getConvertedAmount(
+					cUSD.address,
+					user1Donation1
+				);
+			expect(user1ConvertedDonation1).to.be.equal(user1Donation1);
+
+			expect(
+				(await DonationMiner.rewardPeriods(1)).donationsAmount
+			).to.be.equal(user1ConvertedDonation1);
+
+			const donation1 = await DonationMiner.donations(1);
+			expect(donation1.donor).to.equal(user1.address);
+			expect(donation1.target).to.equal(Treasury.address);
+			expect(donation1.rewardPeriod).to.equal(1);
+			expect(donation1.amount).to.equal(user1ConvertedDonation1);
+			expect(donation1.token).to.equal(cUSD.address);
+			expect(donation1.initialAmount).to.equal(user1Donation1);
+
+			await advanceToNextRewardPeriod();
+
+			await expect(
+				DonationMiner.connect(user1).donate(
+					cUSD.address,
+					user1Donation2,
+					user1.address
+				)
+			).to.be.fulfilled;
+
+			expect(await cUSD.balanceOf(Treasury.address)).to.be.equal(user1Donation1.add(user1Donation2));
+
+			const user1ConvertedDonation2 =
+				await Treasury.callStatic.getConvertedAmount(
+					cUSD.address,
+					user1Donation2
+				);
+			expect(user1ConvertedDonation2).to.be.equal(user1Donation2);
+
+			expect(
+				(await DonationMiner.rewardPeriods(2)).donationsAmount
+			).to.be.equal(user1ConvertedDonation2);
+
+			const donation2 = await DonationMiner.donations(2);
+			expect(donation2.donor).to.equal(user1.address);
+			expect(donation2.target).to.equal(Treasury.address);
+			expect(donation2.rewardPeriod).to.equal(2);
+			expect(donation2.amount).to.equal(user1ConvertedDonation2);
+			expect(donation2.token).to.equal(cUSD.address);
+			expect(donation2.initialAmount).to.equal(user1Donation2);
+		});
+
+		it.only("Should increase LP", async function () {
+			await Treasury.setToken(
+				cUSD.address,
+				toEther(1),
+				LpStrategy.MainCoin,
+				toEther(10),
+				toEther(149),
+				cUSDToPACTTokenId,
+				"0x",
+				getExchangePath(cUSD, PACT)
+			);
+
+			const user1Donation1 = toEther("100");
+			const user1Donation2 = toEther("50");
+
+			await cUSD.mint(user1.address, user1Donation1.add(user1Donation2));
+
+			await cUSD
+				.connect(user1)
+				.approve(DonationMiner.address, user1Donation1.add(user1Donation2));
+
+			await expect(
+				DonationMiner.connect(user1).donate(
+					cUSD.address,
+					user1Donation1,
+					user1.address
+				)
+			).to.be.fulfilled;
+
+			expect(await cUSD.balanceOf(Treasury.address)).to.be.equal(user1Donation1);
+
+			const user1ConvertedDonation1 =
+				await Treasury.callStatic.getConvertedAmount(
+					cUSD.address,
+					user1Donation1
+				);
+			expect(user1ConvertedDonation1).to.be.equal(user1Donation1);
+
+			expect(
+				(await DonationMiner.rewardPeriods(1)).donationsAmount
+			).to.be.equal(user1ConvertedDonation1);
+
+			const donation1 = await DonationMiner.donations(1);
+			expect(donation1.donor).to.equal(user1.address);
+			expect(donation1.target).to.equal(Treasury.address);
+			expect(donation1.rewardPeriod).to.equal(1);
+			expect(donation1.amount).to.equal(user1ConvertedDonation1);
+			expect(donation1.token).to.equal(cUSD.address);
+			expect(donation1.initialAmount).to.equal(user1Donation1);
+
+			await advanceToNextRewardPeriod();
+
+			await expect(
+				DonationMiner.connect(user1).donate(
+					cUSD.address,
+					user1Donation2,
 					user1.address
 				)
 			)
 				.to.emit(TreasuryLpSwap, "LiquidityIncreased")
 				.withArgs(
 					cUSDToPACTTokenId,
-					toEther("4.949975497621286774"),
-					toEther(5),
-					toEther("4.949975497621286774"),
-					toEther("4.950024502499999999")
+					toEther("7.424944869784341851"),
+					toEther(7.5),
+					toEther("7.424944869784341851"),
+					toEther("7.425055130625000000")
 				);
 
-			const user1ConvertedDonation =
+			expect(await cUSD.balanceOf(Treasury.address)).to.be.equal((user1Donation1.add(user1Donation2)).mul(90).div(100));
+
+			const user1ConvertedDonation2 =
 				await Treasury.callStatic.getConvertedAmount(
 					cUSD.address,
-					user1Donation
+					user1Donation2
 				);
-			expect(user1ConvertedDonation).to.be.equal(toEther(100));
+			expect(user1ConvertedDonation2).to.be.equal(user1Donation2);
 
 			expect(
-				(await DonationMiner.rewardPeriods(1)).donationsAmount
-			).to.be.equal(user1ConvertedDonation);
+				(await DonationMiner.rewardPeriods(2)).donationsAmount
+			).to.be.equal(user1ConvertedDonation2);
 
-			const donation1 = await DonationMiner.donations(1);
-			expect(donation1.donor).to.equal(user1.address);
-			expect(donation1.target).to.equal(Treasury.address);
-			expect(donation1.rewardPeriod).to.equal(1);
-			expect(donation1.amount).to.equal(user1ConvertedDonation);
-			expect(donation1.token).to.equal(cUSD.address);
-			expect(donation1.initialAmount).to.equal(user1Donation);
-
-			expect(await cUSD.balanceOf(Treasury.address)).to.be.equal(
-				user1Donation.mul(9).div(10)
-			);
+			const donation2 = await DonationMiner.donations(2);
+			expect(donation2.donor).to.equal(user1.address);
+			expect(donation2.target).to.equal(Treasury.address);
+			expect(donation2.rewardPeriod).to.equal(2);
+			expect(donation2.amount).to.equal(user1ConvertedDonation2);
+			expect(donation2.token).to.equal(cUSD.address);
+			expect(donation2.initialAmount).to.equal(user1Donation2);
 		});
 
-		it("Should donate and add to LP secondary token", async function () {
-			const user1Donation = toEther("100");
 
-			await mUSD.mint(user1.address, user1Donation);
+		it.only("Should not increase LP for each donation", async function () {
+			await Treasury.setToken(
+				cUSD.address,
+				toEther(1),
+				LpStrategy.MainCoin,
+				toEther(10),
+				toEther(0),
+				cUSDToPACTTokenId,
+				"0x",
+				getExchangePath(cUSD, PACT)
+			);
 
-			await mUSD
+			const user1Donation1 = toEther("100");
+			const user1Donation2 = toEther("50");
+			const user1Donation3 = toEther("25");
+
+			await cUSD.mint(user1.address, user1Donation1.add(user1Donation2).add(user1Donation3));
+
+			await cUSD
 				.connect(user1)
-				.approve(DonationMiner.address, user1Donation);
+				.approve(DonationMiner.address, user1Donation1.add(user1Donation2).add(user1Donation3));
 
 			await expect(
 				DonationMiner.connect(user1).donate(
-					mUSD.address,
-					user1Donation,
+					cUSD.address,
+					user1Donation1,
+					user1.address
+				)
+			).to.be.fulfilled;
+
+			expect(await cUSD.balanceOf(Treasury.address)).to.be.equal(user1Donation1);
+
+			await advanceToNextRewardPeriod();
+
+			await expect(
+				DonationMiner.connect(user1).donate(
+					cUSD.address,
+					user1Donation2,
 					user1.address
 				)
 			)
 				.to.emit(TreasuryLpSwap, "LiquidityIncreased")
 				.withArgs(
-					mUSDToPACTTokenId,
-					toEther("24.748774935640685786"),
-					toEther(50),
-					toEther("24.748774935640685786"),
-					toEther("49.502450250000000002")
+					cUSDToPACTTokenId,
+					toEther("7.424944869784341851"),
+					toEther(7.5),
+					toEther("7.424944869784341851"),
+					toEther("7.425055130625000000")
 				);
 
-			const user1ConvertedDonation =
-				await Treasury.callStatic.getConvertedAmount(
-					mUSD.address,
-					user1Donation
-				);
-			expect(user1ConvertedDonation).to.be.equal(
-				toEther("49.495099985101474953")
-			);
+			expect(await cUSD.balanceOf(Treasury.address)).to.be.equal((user1Donation1.add(user1Donation2)).mul(90).div(100));
 
-			expect(
-				(await DonationMiner.rewardPeriods(1)).donationsAmount
-			).to.be.equal(user1ConvertedDonation);
+			await expect(
+				DonationMiner.connect(user1).donate(
+					cUSD.address,
+					user1Donation3,
+					user1.address
+				)
+			).to.be.fulfilled;
 
-			const donation1 = await DonationMiner.donations(1);
-			expect(donation1.donor).to.equal(user1.address);
-			expect(donation1.target).to.equal(Treasury.address);
-			expect(donation1.rewardPeriod).to.equal(1);
-			expect(donation1.amount).to.equal(user1ConvertedDonation);
-			expect(donation1.token).to.equal(mUSD.address);
-			expect(donation1.initialAmount).to.equal(user1Donation);
-
-			expect(await mUSD.balanceOf(Treasury.address)).to.be.equal(0);
+			expect(await cUSD.balanceOf(Treasury.address)).to.be.equal((user1Donation1.add(user1Donation2)).mul(90).div(100).add(user1Donation3));
 		});
 	});
 });

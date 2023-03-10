@@ -245,6 +245,8 @@ describe("Community", () => {
 			toEther(0.9),
 			LpStrategy.NONE,
 			0,
+			0,
+			0,
 			getExchangePath(mUSD, cUSD),
 			"0x"
 		);
@@ -254,6 +256,8 @@ describe("Community", () => {
 			toEther(0.5),
 			LpStrategy.NONE,
 			0,
+			0,
+			0,
 			getExchangePath(cTKN, mUSD, cUSD),
 			"0x"
 		);
@@ -261,6 +265,8 @@ describe("Community", () => {
 			cEUR.address,
 			toEther(0.8),
 			LpStrategy.NONE,
+			0,
+			0,
 			0,
 			getExchangePath(cEUR, cUSD),
 			"0x"

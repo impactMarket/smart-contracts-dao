@@ -203,7 +203,7 @@ contract TreasuryLpSwapImplementation is
         );
 
         if (_exchangePath.length == 0) {
-            (, , , bytes memory _exchangePathToCUSD, ) = treasury.tokens(_tokenAddress);
+            (, , , , , bytes memory _exchangePathToCUSD, ) = treasury.tokens(_tokenAddress);
             _exchangePath = _exchangePathToCUSD;
         }
 
@@ -235,7 +235,7 @@ contract TreasuryLpSwapImplementation is
 
         _erc20Token.safeTransferFrom(msg.sender, address(this), _amount);
 
-        (, , uint256 _uniswapNFTPositionManagerId, , bytes memory _exchangePathToPACT) = treasury
+        (, , , , uint256 _uniswapNFTPositionManagerId, , bytes memory _exchangePathToPACT) = treasury
             .tokens(address(_erc20Token));
 
         uint256 _tokenAmountToAdd = _amount / 2;

@@ -309,6 +309,8 @@ describe("Deposit", () => {
 				toEther(0.5),
 				LpStrategy.NONE,
 				0,
+				0,
+				0,
 				"0x",
 				"0x"
 			);
@@ -326,6 +328,8 @@ describe("Deposit", () => {
 				cUSD.address,
 				toEther(1),
 				LpStrategy.NONE,
+				0,
+				0,
 				0,
 				"0x",
 				"0x"
@@ -346,6 +350,8 @@ describe("Deposit", () => {
 				toEther(1),
 				LpStrategy.NONE,
 				0,
+				0,
+				0,
 				"0x",
 				"0x"
 			);
@@ -353,6 +359,8 @@ describe("Deposit", () => {
 				cEUR.address,
 				toEther(1),
 				LpStrategy.NONE,
+				0,
+				0,
 				0,
 				"0x",
 				"0x"
@@ -379,6 +387,8 @@ describe("Deposit", () => {
 				toEther(1),
 				LpStrategy.NONE,
 				0,
+				0,
+				0,
 				"0x",
 				"0x"
 			);
@@ -399,6 +409,8 @@ describe("Deposit", () => {
 				toEther(1),
 				LpStrategy.NONE,
 				0,
+				0,
+				0,
 				"0x",
 				"0x"
 			);
@@ -418,6 +430,8 @@ describe("Deposit", () => {
 				cUSD.address,
 				toEther(1),
 				LpStrategy.NONE,
+				0,
+				0,
 				0,
 				"0x",
 				"0x"
@@ -445,6 +459,8 @@ describe("Deposit", () => {
 				cUSD.address,
 				toEther(1),
 				LpStrategy.NONE,
+				0,
+				0,
 				0,
 				"0x",
 				"0x"

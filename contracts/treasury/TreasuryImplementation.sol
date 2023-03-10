@@ -48,30 +48,8 @@ contract TreasuryImplementation is
      * @notice Triggered when a token has been set
      *
      * @param tokenAddress                      Address of the token
-     * @param oldRate                           Old token rate value
-     * @param oldLpStrategy                     Old lpStrategy
-     * @param oldUniswapNFTPositionManagerId    Old uniswapNFTPositionManagerId
-     * @param oldExchangePathToCUSD             Old token exchange path to cUSD
-     * @param oldExchangePathToPACT             Old token exchange path to PACT
-     * @param newRate                           New token rate value
-     * @param newLpStrategy                     New lpStrategy
-     * @param newUniswapNFTPositionManagerId    New uniswapNFTPositionManagerId
-     * @param newExchangePathToCUSD             New token exchange path to cUSD
-     * @param newExchangePathToPACT             New token exchange path to PACT
      */
-    event TokenSet(
-        address indexed tokenAddress,
-        uint256 oldRate,
-        LpStrategy oldLpStrategy,
-        uint256 oldUniswapNFTPositionManagerId,
-        bytes oldExchangePathToCUSD,
-        bytes oldExchangePathToPACT,
-        uint256 newRate,
-        LpStrategy newLpStrategy,
-        uint256 newUniswapNFTPositionManagerId,
-        bytes newExchangePathToCUSD,
-        bytes newExchangePathToPACT
-    );
+    event TokenSet(address indexed tokenAddress);
 
     /**
      * @notice Triggered when a token has been removed
@@ -115,6 +93,17 @@ contract TreasuryImplementation is
         require(
             msg.sender == owner() || msg.sender == address(communityAdmin.impactMarketCouncil()),
             "Treasury: caller is not the owner nor ImpactMarketCouncil"
+        );
+        _;
+    }
+
+    /**
+     * @notice Enforces sender to be owner or council or donationMiner
+     */
+    modifier onlyOwnerOrImpactMarketCouncilOrDonationMiner() {
+        require(
+            msg.sender == address(communityAdmin) || msg.sender == owner() || msg.sender == address(donationMiner),
+                "Treasury: caller is not the owner nor ImpactMarketCouncil nor donationMiner"
         );
         _;
     }
@@ -191,6 +180,15 @@ contract TreasuryImplementation is
     }
 
     /**
+     * @notice Updates the DonationMiner contract address
+     *
+     * @param _newDonationMiner address of the new DonationMiner contract
+     */
+    function updateDonationMiner(IDonationMiner _newDonationMiner) external override onlyOwnerOrImpactMarketCouncil {
+        donationMiner = _newDonationMiner;
+    }
+
+    /**
      * @notice Updates the LpSwap contract address
      *
      * @param _newLpSwap address of the new LpSwap contract
@@ -234,28 +232,20 @@ contract TreasuryImplementation is
         address _tokenAddress,
         uint256 _rate,
         LpStrategy _lpStrategy,
+        uint256 _lpPercentage,
+        uint256 _lpMinLimit,
         uint256 _uniswapNFTPositionManagerId,
         bytes memory _exchangePathToCUSD,
         bytes memory _exchangePathToPACT
     ) public override onlyOwnerOrImpactMarketCouncil {
         require(_rate > 0, "Treasury::setToken: Invalid rate");
 
-        emit TokenSet(
-            _tokenAddress,
-            tokens[_tokenAddress].rate,
-            tokens[_tokenAddress].lpStrategy,
-            tokens[_tokenAddress].uniswapNFTPositionManagerId,
-            tokens[_tokenAddress].exchangePathToCUSD,
-            tokens[_tokenAddress].exchangePathToPACT,
-            _rate,
-            _lpStrategy,
-            _uniswapNFTPositionManagerId,
-            _exchangePathToCUSD,
-            _exchangePathToPACT
-        );
+        emit TokenSet(_tokenAddress);
 
         tokens[_tokenAddress].rate = _rate;
         tokens[_tokenAddress].lpStrategy = _lpStrategy;
+        tokens[_tokenAddress].lpPercentage = _lpPercentage;
+        tokens[_tokenAddress].lpMinLimit = _lpMinLimit;
 
         if (_uniswapNFTPositionManagerId > 0) {
             require(
@@ -292,6 +282,8 @@ contract TreasuryImplementation is
 
         tokens[_tokenAddress].rate = 0;
         tokens[_tokenAddress].lpStrategy = LpStrategy.NONE;
+        tokens[_tokenAddress].lpPercentage = 0;
+        tokens[_tokenAddress].lpMinLimit = 0;
         tokens[_tokenAddress].uniswapNFTPositionManagerId = 0;
         delete tokens[_tokenAddress].exchangePathToCUSD;
         delete tokens[_tokenAddress].exchangePathToPACT;
@@ -347,32 +339,52 @@ contract TreasuryImplementation is
         emit AmountConverted(_tokenAddress, _amountIn, _amountOutMin, _exchangePath, _amountOut);
     }
 
-    /**
-     * @notice Transfers an amount of an ERC20 from the sender to this contract
-     *
-     * @param _erc20Token address of the ERC20 token
-     * @param _amount amount of the transaction
-     */
-    function transferToTreasury(IERC20 _erc20Token, uint256 _amount)
-        external
-        override
-        nonReentrant
-    {
-        _erc20Token.safeTransferFrom(msg.sender, address(this), _amount);
+//    /**
+//     * @notice Transfers an amount of an ERC20 from the sender to this contract
+//     *
+//     * @param _erc20Token address of the ERC20 token
+//     * @param _amount amount of the transaction
+//     */
+//    function transferToTreasury(IERC20 _erc20Token, uint256 _amount)
+//        external
+//        override
+//        nonReentrant
+//    {
+//        _erc20Token.safeTransferFrom(msg.sender, address(this), _amount);
+//
+//        Token storage _token = tokens[address(_erc20Token)];
+//
+//        uint256 _tokenAmountToUseInLp;
+//
+//        if (_token.lpStrategy == LpStrategy.MainCoin) {
+//            _tokenAmountToUseInLp = _amount / 10;
+//        } else if (_token.lpStrategy == LpStrategy.SecondaryCoin) {
+//            _tokenAmountToUseInLp = _amount;
+//        }
+//
+//        if (_tokenAmountToUseInLp > 0) {
+//            _erc20Token.approve(address(lpSwap), _tokenAmountToUseInLp);
+//            lpSwap.addToLp(_erc20Token, _tokenAmountToUseInLp);
+//        }
+//    }
 
-        Token storage _token = tokens[address(_erc20Token)];
+    function useFundsForLP() external override onlyOwnerOrImpactMarketCouncilOrDonationMiner {
+        uint256 _tokenLength = _tokenList.length();
 
-        uint256 _tokenAmountToUseInLp;
+        Token memory _token;
 
-        if (_token.lpStrategy == LpStrategy.MainCoin) {
-            _tokenAmountToUseInLp = _amount / 10;
-        } else if (_token.lpStrategy == LpStrategy.SecondaryCoin) {
-            _tokenAmountToUseInLp = _amount;
-        }
+        for (uint256 _index; _index < _tokenLength; _index++) {
+            _token = tokens[_tokenList.at(_index)];
+            if (_token.lpPercentage > 0) {
+                IERC20 _erc20Token = IERC20(_tokenList.at(_index));
+                uint256 _balance = _erc20Token.balanceOf(address(this));
 
-        if (_tokenAmountToUseInLp > 0) {
-            _erc20Token.approve(address(lpSwap), _tokenAmountToUseInLp);
-            lpSwap.addToLp(_erc20Token, _tokenAmountToUseInLp);
+                if (_balance > _token.lpMinLimit) {
+                    uint256 _tokenAmountToUseInLp = _balance * _token.lpPercentage / 100e18;
+                    _erc20Token.approve(address(lpSwap), _tokenAmountToUseInLp);
+                    lpSwap.addToLp(_erc20Token, _tokenAmountToUseInLp);
+                }
+            }
         }
     }
 

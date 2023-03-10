@@ -404,9 +404,7 @@ contract DonationMinerImplementation is
             "DonationMiner::donate: Invalid token"
         );
 
-        _token.safeTransferFrom(msg.sender, address(this), _amount);
-        _token.approve(address(treasury), _amount);
-        treasury.transferToTreasury(_token, _amount);
+        _token.safeTransferFrom(msg.sender, address(treasury), _amount);
 
         _addDonation(_delegateAddress, _token, _amount, address(treasury));
     }
@@ -795,6 +793,8 @@ contract DonationMinerImplementation is
             }
             _newPeriod.rewardAmount = _rewardAmount;
             _lastPeriod = _newPeriod;
+
+            treasury.useFundsForLP();
         }
     }
 

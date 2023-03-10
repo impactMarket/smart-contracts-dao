@@ -56,6 +56,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		toEther(1),
 		LpStrategy.NONE,
 		0,
+		0,
+		0,
 		"0x",
 		"0x"
 	);

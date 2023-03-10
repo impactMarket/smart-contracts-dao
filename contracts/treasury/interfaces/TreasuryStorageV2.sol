@@ -12,6 +12,7 @@ import "./TreasuryStorageV1.sol";
  * TreasuryStorageVX.
  */
 abstract contract TreasuryStorageV2 is TreasuryStorageV1 {
+    IDonationMiner public override donationMiner;
     ITreasuryLpSwap public override lpSwap;
     mapping(address => Token) public override tokens;
     EnumerableSet.AddressSet internal _tokenList;

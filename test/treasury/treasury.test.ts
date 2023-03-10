@@ -32,7 +32,7 @@ export enum LpStrategy {
 	SecondaryCoin = 2,
 }
 
-describe.only("Treasury", () => {
+describe("Treasury", () => {
 	//these tests work only on a celo mainnet fork network
 	let owner: SignerWithAddress;
 	let user1: SignerWithAddress;
@@ -303,6 +303,8 @@ describe.only("Treasury", () => {
 				toEther(0.9),
 				LpStrategy.NONE,
 				0,
+				0,
+				0,
 				exchangePath,
 				"0x"
 			);
@@ -337,29 +339,21 @@ describe.only("Treasury", () => {
 					mUSD.address,
 					toEther(1),
 					LpStrategy.SecondaryCoin,
+					123,
+					321,
 					0,
 					exchangePathToCUSD,
 					exchangePathToPACT
 				)
 			)
 				.to.emit(Treasury, "TokenSet")
-				.withArgs(
-					mUSD.address,
-					0,
-					LpStrategy.NONE,
-					0,
-					"0x",
-					"0x",
-					toEther(1),
-					LpStrategy.SecondaryCoin,
-					0,
-					exchangePathToCUSD,
-					exchangePathToPACT
-				);
+				.withArgs(mUSD.address);
 
 			const token = await Treasury.tokens(mUSD.address);
 			expect(token.rate).to.be.equal(toEther(1));
 			expect(token.lpStrategy).to.be.equal(LpStrategy.SecondaryCoin);
+			expect(token.lpPercentage).to.be.equal(123);
+			expect(token.lpMinLimit).to.be.equal(321);
 			expect(token.exchangePathToCUSD).to.be.equal(exchangePathToCUSD);
 			expect(token.exchangePathToPACT).to.be.equal(exchangePathToPACT);
 			expect(token.uniswapNFTPositionManagerId).to.be.equal(0);
@@ -379,29 +373,22 @@ describe.only("Treasury", () => {
 					mUSD.address,
 					toEther(1),
 					LpStrategy.SecondaryCoin,
+					123,
+					321,
 					0,
 					exchangePathToCUSD,
 					exchangePathToPACT
 				)
 			)
 				.to.emit(Treasury, "TokenSet")
-				.withArgs(
-					mUSD.address,
-					0,
-					LpStrategy.NONE,
-					0,
-					"0x",
-					"0x",
-					toEther(1),
-					LpStrategy.SecondaryCoin,
-					0,
-					exchangePathToCUSD,
-					exchangePathToPACT
-				);
+				.withArgs(mUSD.address,);
 
 			const token = await Treasury.tokens(mUSD.address);
 			expect(token.rate).to.be.equal(toEther(1));
 			expect(token.lpStrategy).to.be.equal(LpStrategy.SecondaryCoin);
+
+			expect(token.lpPercentage).to.be.equal(123);
+			expect(token.lpMinLimit).to.be.equal(321);
 			expect(token.exchangePathToCUSD).to.be.equal(exchangePathToCUSD);
 			expect(token.exchangePathToPACT).to.be.equal(exchangePathToPACT);
 			expect(token.uniswapNFTPositionManagerId).to.be.equal(0);
@@ -416,6 +403,8 @@ describe.only("Treasury", () => {
 					mUSD.address,
 					toEther(0.5),
 					LpStrategy.MainCoin,
+					0,
+					0,
 					0,
 					"0x",
 					"0x"
@@ -441,6 +430,8 @@ describe.only("Treasury", () => {
 					toEther(0.5),
 					LpStrategy.NONE,
 					0,
+					0,
+					0,
 					"0x",
 					"0x"
 				)
@@ -456,13 +447,13 @@ describe.only("Treasury", () => {
 		});
 
 		it("Should not set token without rate", async function () {
-			const exchangePath = getExchangePath(mUSD, cUSD);
-
 			await expect(
 				Treasury.setToken(
 					mUSD.address,
 					0,
 					LpStrategy.NONE,
+					0,
+					0,
 					0,
 					"0x",
 					"0x"
@@ -477,6 +468,8 @@ describe.only("Treasury", () => {
 					mUSD.address,
 					toEther(1),
 					LpStrategy.NONE,
+					0,
+					0,
 					0,
 					exchangePath,
 					"0x"
@@ -502,6 +495,8 @@ describe.only("Treasury", () => {
 					toEther(1),
 					LpStrategy.NONE,
 					0,
+					0,
+					0,
 					"0x",
 					exchangePath
 				)
@@ -522,6 +517,8 @@ describe.only("Treasury", () => {
 				mUSD.address,
 				toEther(0.5),
 				LpStrategy.NONE,
+				0,
+				0,
 				0,
 				"0x",
 				"0x"
@@ -545,6 +542,8 @@ describe.only("Treasury", () => {
 				mUSD.address,
 				toEther(0.5),
 				LpStrategy.MainCoin,
+				123,
+				321,
 				0,
 				getExchangePath(mUSD, cUSD),
 				getExchangePath(mUSD, PACT)
@@ -558,6 +557,8 @@ describe.only("Treasury", () => {
 			const token = await Treasury.tokens(mUSD.address);
 			expect(token.rate).to.be.equal(0);
 			expect(token.lpStrategy).to.be.equal(LpStrategy.NONE);
+			expect(token.lpPercentage).to.be.equal(0);
+			expect(token.lpMinLimit).to.be.equal(0);
 			expect(token.exchangePathToCUSD).to.be.equal("0x");
 			expect(token.exchangePathToPACT).to.be.equal("0x");
 			expect(token.uniswapNFTPositionManagerId).to.be.equal(0);
@@ -570,6 +571,8 @@ describe.only("Treasury", () => {
 				mUSD.address,
 				toEther(1),
 				LpStrategy.MainCoin,
+				0,
+				0,
 				0,
 				exchangePath,
 				"0x"
@@ -590,6 +593,8 @@ describe.only("Treasury", () => {
 				toEther(1),
 				LpStrategy.MainCoin,
 				0,
+				0,
+				0,
 				exchangePath,
 				"0x"
 			);
@@ -609,6 +614,8 @@ describe.only("Treasury", () => {
 				toEther(0.5),
 				LpStrategy.MainCoin,
 				0,
+				0,
+				0,
 				exchangePath,
 				"0x"
 			);
@@ -627,6 +634,8 @@ describe.only("Treasury", () => {
 				mUSD.address,
 				toEther(2),
 				LpStrategy.MainCoin,
+				0,
+				0,
 				0,
 				exchangePath,
 				"0x"
@@ -654,6 +663,8 @@ describe.only("Treasury", () => {
 				mUSD.address,
 				toEther(2),
 				LpStrategy.MainCoin,
+				0,
+				0,
 				0,
 				exchangePath,
 				"0x"
@@ -685,6 +696,8 @@ describe.only("Treasury", () => {
 				mUSD.address,
 				toEther(0.9),
 				LpStrategy.MainCoin,
+				0,
+				0,
 				0,
 				exchangePath,
 				"0x"
@@ -718,6 +731,8 @@ describe.only("Treasury", () => {
 				toEther(0.9),
 				LpStrategy.MainCoin,
 				0,
+				0,
+				0,
 				exchangePath,
 				"0x"
 			);
@@ -749,6 +764,8 @@ describe.only("Treasury", () => {
 				mUSD.address,
 				toEther(0.9),
 				LpStrategy.MainCoin,
+				0,
+				0,
 				0,
 				exchangePath,
 				"0x"
@@ -782,6 +799,8 @@ describe.only("Treasury", () => {
 				toEther(0.9),
 				LpStrategy.MainCoin,
 				0,
+				0,
+				0,
 				exchangePath,
 				"0x"
 			);
@@ -813,6 +832,8 @@ describe.only("Treasury", () => {
 				mUSD.address,
 				toEther(0.9),
 				LpStrategy.MainCoin,
+				0,
+				0,
 				0,
 				exchangePath,
 				"0x"
@@ -859,6 +880,8 @@ describe.only("Treasury", () => {
 				toEther(0.9),
 				LpStrategy.MainCoin,
 				0,
+				0,
+				0,
 				exchangePath1,
 				"0x"
 			);
@@ -866,6 +889,8 @@ describe.only("Treasury", () => {
 				cTKN.address,
 				toEther(0.5),
 				LpStrategy.MainCoin,
+				0,
+				0,
 				0,
 				exchangePath2,
 				"0x"
@@ -904,6 +929,8 @@ describe.only("Treasury", () => {
 				toEther(0.9),
 				LpStrategy.MainCoin,
 				0,
+				0,
+				0,
 				exchangePath1,
 				"0x"
 			);
@@ -911,6 +938,8 @@ describe.only("Treasury", () => {
 				cTKN.address,
 				toEther(0.5),
 				LpStrategy.MainCoin,
+				0,
+				0,
 				0,
 				exchangePath2,
 				"0x"
@@ -1029,25 +1058,15 @@ describe.only("Treasury", () => {
 					mUSD.address,
 					toEther(1),
 					LpStrategy.SecondaryCoin,
+					0,
+					0,
 					mUSDToPACTTokenId,
 					exchangePathToCUSD,
 					exchangePathToPACT
 				)
 			)
 				.to.emit(Treasury, "TokenSet")
-				.withArgs(
-					mUSD.address,
-					0,
-					LpStrategy.NONE,
-					0,
-					"0x",
-					"0x",
-					toEther(1),
-					LpStrategy.SecondaryCoin,
-					mUSDToPACTTokenId,
-					exchangePathToCUSD,
-					exchangePathToPACT
-				);
+				.withArgs(mUSD.address);
 
 			const token = await Treasury.tokens(mUSD.address);
 			expect(token.rate).to.be.equal(toEther(1));
@@ -1071,6 +1090,8 @@ describe.only("Treasury", () => {
 					mUSD.address,
 					toEther(1),
 					LpStrategy.SecondaryCoin,
+					0,
+					0,
 					123,
 					exchangePathToCUSD,
 					exchangePathToPACT
@@ -1080,38 +1101,38 @@ describe.only("Treasury", () => {
 			);
 		});
 
-		it("Should transferToTreasury without uniswapNFTPositionManagerId #1", async function () {
-			const initialTreasuryCUSDBalance = await cUSD.balanceOf(
-				Treasury.address
-			);
-
-			await cUSD.approve(Treasury.address, toEther(1));
-
-			await expect(Treasury.transferToTreasury(cUSD.address, toEther(1)))
-				.to.be.to.fulfilled;
-
-			expect(await cUSD.balanceOf(Treasury.address)).to.be.equal(
-				initialTreasuryCUSDBalance.add(toEther(1))
-			);
-		});
-
-		it("Should transferToTreasury without uniswapNFTPositionManagerId #2", async function () {
-			const initialTreasuryMUSDBalance = await mUSD.balanceOf(
-				Treasury.address
-			);
-
-			await mUSD.approve(Treasury.address, toEther(1));
-
-			await expect(Treasury.transferToTreasury(mUSD.address, toEther(1)))
-				.to.be.to.fulfilled;
-
-			expect(await mUSD.balanceOf(Treasury.address)).to.be.equal(
-				initialTreasuryMUSDBalance.add(toEther(1))
-			);
-		});
+		// it("Should transferToTreasury without uniswapNFTPositionManagerId #1", async function () {
+		// 	const initialTreasuryCUSDBalance = await cUSD.balanceOf(
+		// 		Treasury.address
+		// 	);
+		//
+		// 	await cUSD.approve(Treasury.address, toEther(1));
+		//
+		// 	await expect(Treasury.transferToTreasury(cUSD.address, toEther(1)))
+		// 		.to.be.to.fulfilled;
+		//
+		// 	expect(await cUSD.balanceOf(Treasury.address)).to.be.equal(
+		// 		initialTreasuryCUSDBalance.add(toEther(1))
+		// 	);
+		// });
+		//
+		// it("Should transferToTreasury without uniswapNFTPositionManagerId #2", async function () {
+		// 	const initialTreasuryMUSDBalance = await mUSD.balanceOf(
+		// 		Treasury.address
+		// 	);
+		//
+		// 	await mUSD.approve(Treasury.address, toEther(1));
+		//
+		// 	await expect(Treasury.transferToTreasury(mUSD.address, toEther(1)))
+		// 		.to.be.to.fulfilled;
+		//
+		// 	expect(await mUSD.balanceOf(Treasury.address)).to.be.equal(
+		// 		initialTreasuryMUSDBalance.add(toEther(1))
+		// 	);
+		// });
 	});
 
-	describe.only("Treasury + TreasuryLpSwap - increase lp", () => {
+	describe("Treasury + TreasuryLpSwap - increase lp", () => {
 		const initialUserBalance = toEther(1000000);
 
 		before(async function () {});
@@ -1124,6 +1145,8 @@ describe.only("Treasury", () => {
 				cUSD.address,
 				toEther(1),
 				LpStrategy.MainCoin,
+				0,
+				0,
 				cUSDToPACTTokenId,
 				"0x",
 				getExchangePath(cUSD, PACT)
@@ -1133,6 +1156,8 @@ describe.only("Treasury", () => {
 				mUSD.address,
 				toEther(1),
 				LpStrategy.SecondaryCoin,
+				0,
+				0,
 				mUSDToPACTTokenId,
 				getExchangePath(mUSD, cUSD),
 				getExchangePath(mUSD, PACT)
@@ -1142,72 +1167,68 @@ describe.only("Treasury", () => {
 			await mUSD.mint(user1.address, initialUserBalance);
 		});
 
-		it("Should transferToTreasury with uniswapNFTPositionManagerId (cUSD, small amount)", async function () {
-			await cUSD.approve(Treasury.address, toEther(10));
-
-			await expect(Treasury.transferToTreasury(cUSD.address, toEther(10)))
-				.to.emit(TreasuryLpSwap, "LiquidityIncreased")
-				.withArgs(
-					cUSDToPACTTokenId,
-					toEther("0.494999754975121287"),
-					toEther(0.5),
-					toEther("0.494999754975121287"),
-					toEther("0.495000245024999999")
-				);
-		});
-
-		it("Should transferToTreasury with uniswapNFTPositionManagerId (mUSD, small amount)", async function () {
-			await mUSD.approve(Treasury.address, toEther(10));
-
-			await expect(Treasury.transferToTreasury(mUSD.address, toEther(10)))
-				.to.emit(TreasuryLpSwap, "LiquidityIncreased")
-				.withArgs(
-					mUSDToPACTTokenId,
-					toEther("2.474987748810643387"),
-					toEther(5),
-					toEther("2.474987748810643387"),
-					toEther("4.950024502499999999")
-				);
-		});
-
-		it("Should transferToTreasury with uniswapNFTPositionManagerId (cUSD, big amount)", async function () {
-			await cUSD.approve(Treasury.address, toEther(100000));
-
-			await expect(
-				Treasury.transferToTreasury(cUSD.address, toEther(100000))
-			)
-				.to.emit(TreasuryLpSwap, "LiquidityIncreased")
-				.withArgs(
-					cUSDToPACTTokenId,
-					toEther("4925.618189959699487538"),
-					toEther(5000),
-					toEther("4925.618189959699487538"),
-					toEther("4974.502500000000000001")
-				);
-		});
-
-		it("Should transferToTreasury with uniswapNFTPositionManagerId (mUSD, big amount)", async function () {
-			await mUSD.approve(Treasury.address, toEther(100000));
-
-			await expect(
-				Treasury.transferToTreasury(mUSD.address, toEther(100000))
-			)
-				.to.emit(TreasuryLpSwap, "LiquidityIncreased")
-				.withArgs(
-					mUSDToPACTTokenId,
-					toEther("23582.658408766079085321"),
-					toEther(50000),
-					toEther("22697.348336885846636277"),
-					toEther("50000.000000000000000000")
-				);
-		});
+		// it("Should transferToTreasury with uniswapNFTPositionManagerId (cUSD, small amount)", async function () {
+		// 	await cUSD.approve(Treasury.address, toEther(10));
+		//
+		// 	await expect(Treasury.transferToTreasury(cUSD.address, toEther(10)))
+		// 		.to.emit(TreasuryLpSwap, "LiquidityIncreased")
+		// 		.withArgs(
+		// 			cUSDToPACTTokenId,
+		// 			toEther("0.494999754975121287"),
+		// 			toEther(0.5),
+		// 			toEther("0.494999754975121287"),
+		// 			toEther("0.495000245024999999")
+		// 		);
+		// });
+		//
+		// it("Should transferToTreasury with uniswapNFTPositionManagerId (mUSD, small amount)", async function () {
+		// 	await mUSD.approve(Treasury.address, toEther(10));
+		//
+		// 	await expect(Treasury.transferToTreasury(mUSD.address, toEther(10)))
+		// 		.to.emit(TreasuryLpSwap, "LiquidityIncreased")
+		// 		.withArgs(
+		// 			mUSDToPACTTokenId,
+		// 			toEther("2.474987748810643387"),
+		// 			toEther(5),
+		// 			toEther("2.474987748810643387"),
+		// 			toEther("4.950024502499999999")
+		// 		);
+		// });
+		//
+		// it("Should transferToTreasury with uniswapNFTPositionManagerId (cUSD, big amount)", async function () {
+		// 	await cUSD.approve(Treasury.address, toEther(100000));
+		//
+		// 	await expect(
+		// 		Treasury.transferToTreasury(cUSD.address, toEther(100000))
+		// 	)
+		// 		.to.emit(TreasuryLpSwap, "LiquidityIncreased")
+		// 		.withArgs(
+		// 			cUSDToPACTTokenId,
+		// 			toEther("4925.618189959699487538"),
+		// 			toEther(5000),
+		// 			toEther("4925.618189959699487538"),
+		// 			toEther("4974.502500000000000001")
+		// 		);
+		// });
+		//
+		// it("Should transferToTreasury with uniswapNFTPositionManagerId (mUSD, big amount)", async function () {
+		// 	await mUSD.approve(Treasury.address, toEther(100000));
+		//
+		// 	await expect(
+		// 		Treasury.transferToTreasury(mUSD.address, toEther(100000))
+		// 	)
+		// 		.to.emit(TreasuryLpSwap, "LiquidityIncreased")
+		// 		.withArgs(
+		// 			mUSDToPACTTokenId,
+		// 			toEther("23582.658408766079085321"),
+		// 			toEther(50000),
+		// 			toEther("22697.348336885846636277"),
+		// 			toEther("50000.000000000000000000")
+		// 		);
+		// });
 
 		it("Should not decreaseLiquidity if not owner", async function () {
 			await cUSD.approve(Treasury.address, toEther(1000));
-
-			await expect(
-				Treasury.transferToTreasury(cUSD.address, toEther(1000))
-			);
 
 			await expect(
 				TreasuryLpSwap.connect(user1).decreaseLiquidity(
