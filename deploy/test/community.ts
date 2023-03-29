@@ -17,7 +17,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// const PACTTimelock = await deployments.get("PACTTimelock"); //prod
 	// const ownerAddress = PACTTimelock.address; //prod
 	const ownerAddress = deployer.address; //dev
-	// const cUSDAddress = getCUSDAddress(); //prod
 	const cUSDAddress = getCUSDAddress();
 
 	const communityAdminImplementationResult = await deploy(
