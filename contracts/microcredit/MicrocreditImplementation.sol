@@ -19,21 +19,15 @@ contract MicrocreditImplementation is
 
     event LoanAdded(
         address indexed userAddress,
-        uint256 lonaId,
+        uint256 loanId,
         uint256 amount,
         uint256 period,
         uint256 dailyInterest
     );
 
-    event UserAddressChanged(
-        address indexed oldWalletAddress,
-        address indexed newWalletAddress
-    );
+    event UserAddressChanged(address indexed oldWalletAddress, address indexed newWalletAddress);
 
-    event LoanClaimed(
-        address indexed userAddress,
-        uint256 loanId
-    );
+    event LoanClaimed(address indexed userAddress, uint256 loanId);
 
     event RepaymentAdded(
         address indexed userAddress,
@@ -53,10 +47,7 @@ contract MicrocreditImplementation is
      * @param _cUSDAddress      The address of the cUSD token
      * @param _revenueAddress   The address that collects all the interest
      */
-    function initialize(
-        address _cUSDAddress,
-        address _revenueAddress
-    ) public initializer {
+    function initialize(address _cUSDAddress, address _revenueAddress) public initializer {
         __Ownable_init();
         __Pausable_init();
         __ReentrancyGuard_init();
@@ -81,8 +72,15 @@ contract MicrocreditImplementation is
      * @return loansLength           the number of the user's loans
      */
     function walletMetadata(address _userAddress)
-        external view override returns(uint256 userId, address movedTo, uint256 loansLength) {
-
+        external
+        view
+        override
+        returns (
+            uint256 userId,
+            address movedTo,
+            uint256 loansLength
+        )
+    {
         WalletMetadata memory _metadata = _walletMetadata[_userAddress];
 
         userId = _metadata.userId;
@@ -125,7 +123,10 @@ contract MicrocreditImplementation is
     }
 
     function userLoans(address _userAddress, uint256 _loanId)
-        external view override returns(
+        external
+        view
+        override
+        returns (
             uint256 amountBorrowed,
             uint256 period,
             uint256 dailyInterest,
@@ -135,7 +136,8 @@ contract MicrocreditImplementation is
             uint256 amountRepayed,
             uint256 repaymentsLength,
             uint256 lastComputedDate
-    ) {
+        )
+    {
         _checkUserLoan(_userAddress, _loanId);
 
         WalletMetadata memory _metadata = _walletMetadata[_userAddress];
@@ -153,9 +155,11 @@ contract MicrocreditImplementation is
         lastComputedDate = _getLastComputedDate(_loan);
     }
 
-    function userLoanRepayments(address _userAddress, uint256 _loanId, uint256 _repaymentId)
-        external view override returns( uint256 date, uint256 amount) {
-
+    function userLoanRepayments(
+        address _userAddress,
+        uint256 _loanId,
+        uint256 _repaymentId
+    ) external view override returns (uint256 date, uint256 amount) {
         _checkUserLoan(_userAddress, _loanId);
 
         WalletMetadata memory _metadata = _walletMetadata[_userAddress];
@@ -206,13 +210,22 @@ contract MicrocreditImplementation is
         uint256[] calldata _dailyInterests
     ) external override onlyManagers {
         uint256 _loansNumber = _userAddresses.length;
-        require(_loansNumber == _amounts.length, 'Microcredit: calldata information arity mismatch');
-        require(_loansNumber == _periods.length, 'Microcredit: calldata information arity mismatch');
-        require(_loansNumber == _dailyInterests.length, 'Microcredit: calldata information arity mismatch');
+        require(
+            _loansNumber == _amounts.length,
+            "Microcredit: calldata information arity mismatch"
+        );
+        require(
+            _loansNumber == _periods.length,
+            "Microcredit: calldata information arity mismatch"
+        );
+        require(
+            _loansNumber == _dailyInterests.length,
+            "Microcredit: calldata information arity mismatch"
+        );
 
         uint256 _index;
 
-        for(_index = 0; _index < _loansNumber; _index++) {
+        for (_index = 0; _index < _loansNumber; _index++) {
             _addLoan(
                 _userAddresses[_index],
                 _amounts[_index],
@@ -222,7 +235,11 @@ contract MicrocreditImplementation is
         }
     }
 
-    function changeUserAddress(address _oldWalletAddress, address _newWalletAddress) external override onlyManagers {
+    function changeUserAddress(address _oldWalletAddress, address _newWalletAddress)
+        external
+        override
+        onlyManagers
+    {
         WalletMetadata storage _oldWalletMetadata = _walletMetadata[_oldWalletAddress];
         require(
             _oldWalletMetadata.userId > 0 && _oldWalletMetadata.movedTo == address(0),
@@ -230,10 +247,7 @@ contract MicrocreditImplementation is
         );
 
         WalletMetadata storage _newWalletMetadata = _walletMetadata[_newWalletAddress];
-        require(
-            _newWalletMetadata.userId == 0,
-            "Microcredit: Target wallet address is invalid"
-        );
+        require(_newWalletMetadata.userId == 0, "Microcredit: Target wallet address is invalid");
 
         _oldWalletMetadata.movedTo = _newWalletAddress;
         _newWalletMetadata.userId = _oldWalletMetadata.userId;
@@ -243,7 +257,7 @@ contract MicrocreditImplementation is
         emit UserAddressChanged(_oldWalletAddress, _newWalletAddress);
     }
 
-    function claimLoan(uint256 _loanId) external nonReentrant override {
+    function claimLoan(uint256 _loanId) external override nonReentrant {
         _checkUserLoan(msg.sender, _loanId);
 
         WalletMetadata memory _metadata = _walletMetadata[msg.sender];
@@ -260,8 +274,7 @@ contract MicrocreditImplementation is
         emit LoanClaimed(msg.sender, _loanId);
     }
 
-
-    function repayLoan(uint256 _loanId, uint256 _repaymentAmount) external nonReentrant override {
+    function repayLoan(uint256 _loanId, uint256 _repaymentAmount) external override nonReentrant {
         require(_repaymentAmount > 0, "Microcredit: Invalid amount");
 
         _checkUserLoan(msg.sender, _loanId);
@@ -282,7 +295,10 @@ contract MicrocreditImplementation is
         uint256 _revenueAmount;
         uint256 _loanAmount;
 
-        if(_loan.amountRepayed + _repaymentAmount <= _loan.amountBorrowed || revenueAddress == address(0)) {
+        if (
+            _loan.amountRepayed + _repaymentAmount <= _loan.amountBorrowed ||
+            revenueAddress == address(0)
+        ) {
             //all repaymentAmount should go to microcredit address
             cUSD.safeTransferFrom(msg.sender, address(this), _repaymentAmount);
         } else if (_loan.amountRepayed >= _loan.amountBorrowed) {
@@ -333,13 +349,14 @@ contract MicrocreditImplementation is
         require(_user.loans.length > _loanId, "Microcredit: Loan doesn't exist");
     }
 
-    function _getLastComputedDate(Loan memory _loan) internal view returns(uint256) {
-        return _loan.repayments.length > 0 ?
-            _loan.repayments[_loan.repayments.length - 1].date :
-            _loan.startDate;
+    function _getLastComputedDate(Loan memory _loan) internal view returns (uint256) {
+        return
+            _loan.repayments.length > 0
+                ? _loan.repayments[_loan.repayments.length - 1].date
+                : _loan.startDate;
     }
 
-    function _calculateCurrentDebt(Loan memory _loan) internal view returns(uint256) {
+    function _calculateCurrentDebt(Loan memory _loan) internal view returns (uint256) {
         if (_loan.lastComputedDebt == 0) {
             return 0;
         }
@@ -351,7 +368,7 @@ contract MicrocreditImplementation is
         uint256 _currentDebt = _loan.lastComputedDebt;
 
         while (_days > 0) {
-            _currentDebt = _currentDebt * (1e18 + _loan.dailyInterest / 100) / 1e18;
+            _currentDebt = (_currentDebt * (1e18 + _loan.dailyInterest / 100)) / 1e18;
             _days--;
         }
 

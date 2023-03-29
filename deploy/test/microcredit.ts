@@ -3,7 +3,7 @@ import { DeployFunction } from "hardhat-deploy/types";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { toEther } from "../../test/utils/helpers";
 import { generateMerkleTree } from "../../script/merkleTree/generateMerkleTree";
-import {getCUSDAddress} from "./cUSD";
+import { getCUSDAddress } from "./cUSD";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// @ts-ignore
@@ -34,12 +34,18 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		}
 	);
 
-	const microcreditRevenueProxyResult = await deploy("MicrocreditRevenueProxy", {
-		from: deployer.address,
-		args: [microcreditRevenueImplementationResult.address, CouncilProxyAdminResult.address],
-		log: true,
-		// gasLimit: 13000000,
-	});
+	const microcreditRevenueProxyResult = await deploy(
+		"MicrocreditRevenueProxy",
+		{
+			from: deployer.address,
+			args: [
+				microcreditRevenueImplementationResult.address,
+				CouncilProxyAdminResult.address,
+			],
+			log: true,
+			// gasLimit: 13000000,
+		}
+	);
 
 	const microcreditRevenueContract = await ethers.getContractAt(
 		"MicrocreditRevenueImplementation",
@@ -48,8 +54,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	await microcreditRevenueContract.initialize();
 	await microcreditRevenueContract.transferOwnership(ownerAddress);
-
-
 
 	// deploy microcredit
 	const microcreditImplementationResult = await deploy(
@@ -64,7 +68,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	const microcreditProxyResult = await deploy("MicrocreditProxy", {
 		from: deployer.address,
-		args: [microcreditImplementationResult.address, CouncilProxyAdminResult.address],
+		args: [
+			microcreditImplementationResult.address,
+			CouncilProxyAdminResult.address,
+		],
 		log: true,
 		// gasLimit: 13000000,
 	});

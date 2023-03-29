@@ -318,7 +318,7 @@ contract DepositImplementation is
         _token.totalAmount -= _amount;
         _depositor.amount -= _amount;
         _depositor.scaledBalance -= _withdrawScaledBalanceShare;
-        
+
         emit Withdraw(msg.sender, _tokenAddress, _amount, _interest);
     }
 
