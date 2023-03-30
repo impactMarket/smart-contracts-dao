@@ -22,6 +22,7 @@ interface IMicrocredit {
         uint256 amountBorrowed;
         uint256 period;                   // the number of seconds after a loan should be fully repaid
         uint256 dailyInterest;
+        uint256 claimDeadline;
         uint256 startDate;                // the timestamp the user claimed the amountBorrowed
         uint256 lastComputedDebt;
         uint256 amountRepayed;
@@ -37,6 +38,7 @@ interface IMicrocredit {
         uint256 amountBorrowed,
         uint256 period,
         uint256 dailyInterest,
+        uint256 claimDeadline,
         uint256 startDate,
         uint256 lastComputedDebt,
         uint256 currentDebt,
@@ -57,13 +59,15 @@ interface IMicrocredit {
         address userAddress,
         uint256 amount,
         uint256 period,
-        uint256 dailyInterest
+        uint256 dailyInterest,
+        uint256 claimDeadline
     ) external;
     function addLoans(
-        address[] calldata _userAddresses,
-        uint256[] calldata _amounts,
-        uint256[] calldata _periods,
-        uint256[] calldata _dailyInterests
+        address[] calldata userAddresses,
+        uint256[] calldata amounts,
+        uint256[] calldata periods,
+        uint256[] calldata dailyInterests,
+        uint256[] calldata claimDeadlines
     ) external;
     function changeUserAddress(address oldWalletAddress, address newWalletAddress) external;
     function claimLoan(uint256 loanId) external;

@@ -22,7 +22,8 @@ contract MicrocreditImplementation is
         uint256 loanId,
         uint256 amount,
         uint256 period,
-        uint256 dailyInterest
+        uint256 dailyInterest,
+        uint256 claimDeadline
     );
 
     event UserAddressChanged(address indexed oldWalletAddress, address indexed newWalletAddress);
@@ -130,6 +131,7 @@ contract MicrocreditImplementation is
             uint256 amountBorrowed,
             uint256 period,
             uint256 dailyInterest,
+            uint256 claimDeadline,
             uint256 startDate,
             uint256 currentDebt,
             uint256 lastComputedDebt,
@@ -147,6 +149,7 @@ contract MicrocreditImplementation is
         amountBorrowed = _loan.amountBorrowed;
         period = _loan.period;
         dailyInterest = _loan.dailyInterest;
+        claimDeadline = _loan.claimDeadline;
         startDate = _loan.startDate;
         lastComputedDebt = _loan.lastComputedDebt;
         currentDebt = _calculateCurrentDebt(_loan);
@@ -198,16 +201,18 @@ contract MicrocreditImplementation is
         address _userAddress,
         uint256 _amount,
         uint256 _period,
-        uint256 _dailyInterest
+        uint256 _dailyInterest,
+        uint256 _claimDeadline
     ) external override onlyManagers {
-        _addLoan(_userAddress, _amount, _period, _dailyInterest);
+        _addLoan(_userAddress, _amount, _period, _dailyInterest, _claimDeadline);
     }
 
     function addLoans(
         address[] calldata _userAddresses,
         uint256[] calldata _amounts,
         uint256[] calldata _periods,
-        uint256[] calldata _dailyInterests
+        uint256[] calldata _dailyInterests,
+        uint256[] calldata _claimDeadlines
     ) external override onlyManagers {
         uint256 _loansNumber = _userAddresses.length;
         require(
@@ -222,6 +227,10 @@ contract MicrocreditImplementation is
             _loansNumber == _dailyInterests.length,
             "Microcredit: calldata information arity mismatch"
         );
+        require(
+            _loansNumber == _claimDeadlines.length,
+            "Microcredit: calldata information arity mismatch"
+        );
 
         uint256 _index;
 
@@ -230,7 +239,8 @@ contract MicrocreditImplementation is
                 _userAddresses[_index],
                 _amounts[_index],
                 _periods[_index],
-                _dailyInterests[_index]
+                _dailyInterests[_index],
+                _claimDeadlines[_index]
             );
         }
     }
@@ -265,6 +275,7 @@ contract MicrocreditImplementation is
         Loan storage _loan = _user.loans[_loanId];
 
         require(_loan.startDate == 0, "Microcredit: Loan already claimed");
+        require(_loan.claimDeadline >= block.timestamp, "Microcredit: Loan expired");
 
         _loan.startDate = block.timestamp;
         _loan.lastComputedDebt = _loan.amountBorrowed;
@@ -379,8 +390,12 @@ contract MicrocreditImplementation is
         address _userAddress,
         uint256 _amount,
         uint256 _period,
-        uint256 _dailyInterest
+        uint256 _dailyInterest,
+        uint256 _claimDeadline
     ) internal {
+        require(_claimDeadline > block.timestamp, "Microcredit: invalid claimDeadline");
+
+
         WalletMetadata storage _metadata = _walletMetadata[_userAddress];
         require(_metadata.movedTo == address(0), "Microcredit: The user has been moved");
 
@@ -391,12 +406,25 @@ contract MicrocreditImplementation is
         }
 
         User storage _user = _users[_metadata.userId];
+
+        uint256 _loansLength = _user.loans.length;
+
+        if (_loansLength > 0) {
+            Loan memory _previousLoan = _user.loans[_loansLength -1];
+            require(
+                (_previousLoan.startDate > 0 && _previousLoan.lastComputedDebt == 0) // loan claimed and fully paid
+                || (_previousLoan.startDate == 0 && _previousLoan.claimDeadline < block.timestamp), //loan unclaimed and expired
+                "Microcredit: The user already has an active loan");
+        }
+
+
         Loan storage _loan = _user.loans.push();
 
         _loan.amountBorrowed = _amount;
         _loan.period = _period;
         _loan.dailyInterest = _dailyInterest;
+        _loan.claimDeadline = _claimDeadline;
 
-        emit LoanAdded(_userAddress, _user.loans.length - 1, _amount, _period, _dailyInterest);
+        emit LoanAdded(_userAddress, _user.loans.length - 1, _amount, _period, _dailyInterest, _claimDeadline);
     }
 }
