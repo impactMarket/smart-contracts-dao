@@ -395,7 +395,6 @@ contract MicrocreditImplementation is
     ) internal {
         require(_claimDeadline > block.timestamp, "Microcredit: invalid claimDeadline");
 
-
         WalletMetadata storage _metadata = _walletMetadata[_userAddress];
         require(_metadata.movedTo == address(0), "Microcredit: The user has been moved");
 
@@ -410,13 +409,13 @@ contract MicrocreditImplementation is
         uint256 _loansLength = _user.loans.length;
 
         if (_loansLength > 0) {
-            Loan memory _previousLoan = _user.loans[_loansLength -1];
+            Loan memory _previousLoan = _user.loans[_loansLength - 1];
             require(
-                (_previousLoan.startDate > 0 && _previousLoan.lastComputedDebt == 0) // loan claimed and fully paid
-                || (_previousLoan.startDate == 0 && _previousLoan.claimDeadline < block.timestamp), //loan unclaimed and expired
-                "Microcredit: The user already has an active loan");
+                (_previousLoan.startDate > 0 && _previousLoan.lastComputedDebt == 0) || // loan claimed and fully paid
+                    (_previousLoan.startDate == 0 && _previousLoan.claimDeadline < block.timestamp), //loan unclaimed and expired
+                "Microcredit: The user already has an active loan"
+            );
         }
-
 
         Loan storage _loan = _user.loans.push();
 
@@ -425,6 +424,13 @@ contract MicrocreditImplementation is
         _loan.dailyInterest = _dailyInterest;
         _loan.claimDeadline = _claimDeadline;
 
-        emit LoanAdded(_userAddress, _user.loans.length - 1, _amount, _period, _dailyInterest, _claimDeadline);
+        emit LoanAdded(
+            _userAddress,
+            _user.loans.length - 1,
+            _amount,
+            _period,
+            _dailyInterest,
+            _claimDeadline
+        );
     }
 }
