@@ -222,26 +222,51 @@ describe.only("Microcredit", () => {
 
 		it("Should not addLoan if not manager", async function () {
 			await Microcredit.connect(user1)
-				.addLoan(user1.address, toEther(100), sixMonth, toEther(0.2), 2000000000)
+				.addLoan(
+					user1.address,
+					toEther(100),
+					sixMonth,
+					toEther(0.2),
+					2000000000
+				)
 				.should.be.rejectedWith("Microcredit: caller is not a manager");
 		});
 
 		it("Should not addLoan if claimDeadline in the past", async function () {
 			const claimDeadline = (await getCurrentBlockTimestamp()) - 1;
 			await Microcredit.connect(manager1)
-				.addLoan(user1.address, toEther(100), sixMonth, toEther(0.2), claimDeadline)
+				.addLoan(
+					user1.address,
+					toEther(100),
+					sixMonth,
+					toEther(0.2),
+					claimDeadline
+				)
 				.should.be.rejectedWith("Microcredit: invalid claimDeadline");
 		});
 
 		it("Should not addLoan if the user has been moved", async function () {
-			await Microcredit.connect(manager1)
-				.addLoan(user1.address, toEther(100), sixMonth, toEther(0.2), 2000000000)
+			await Microcredit.connect(manager1).addLoan(
+				user1.address,
+				toEther(100),
+				sixMonth,
+				toEther(0.2),
+				2000000000
+			);
+
+			await Microcredit.connect(manager1).changeUserAddress(
+				user1.address,
+				user2.address
+			);
 
 			await Microcredit.connect(manager1)
-				.changeUserAddress(user1.address, user2.address);
-
-			await Microcredit.connect(manager1)
-				.addLoan(user1.address, toEther(100), sixMonth, toEther(0.2), 2000000000)
+				.addLoan(
+					user1.address,
+					toEther(100),
+					sixMonth,
+					toEther(0.2),
+					2000000000
+				)
 				.should.be.rejectedWith("Microcredit: The user has been moved");
 		});
 
@@ -249,7 +274,7 @@ describe.only("Microcredit", () => {
 			const amount = toEther(100);
 			const period = sixMonth;
 			const dailyInterest = toEther(0.2);
-			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
 
 			let walletMetadata = await Microcredit.walletMetadata(
 				user1.address
@@ -259,9 +284,22 @@ describe.only("Microcredit", () => {
 			walletMetadata.loansLength.should.eq(0);
 
 			await Microcredit.connect(manager1)
-				.addLoan(user1.address, amount, period, dailyInterest, claimDeadline)
+				.addLoan(
+					user1.address,
+					amount,
+					period,
+					dailyInterest,
+					claimDeadline
+				)
 				.should.emit(Microcredit, "LoanAdded")
-				.withArgs(user1.address, 0, amount, period, dailyInterest, claimDeadline);
+				.withArgs(
+					user1.address,
+					0,
+					amount,
+					period,
+					dailyInterest,
+					claimDeadline
+				);
 
 			walletMetadata = await Microcredit.walletMetadata(user1.address);
 			walletMetadata.userId.should.eq(1);
@@ -292,20 +330,41 @@ describe.only("Microcredit", () => {
 			const amount1 = toEther(100);
 			const period1 = sixMonth;
 			const dailyInterest1 = toEther(0.2);
-			const claimDeadline1 = (await getCurrentBlockTimestamp()) + 1000
+			const claimDeadline1 = (await getCurrentBlockTimestamp()) + 1000;
 
 			const amount2 = toEther(200);
 			const period2 = oneMonth;
 			const dailyInterest2 = toEther(0.3);
-			const claimDeadline2 = (await getCurrentBlockTimestamp()) + 1000
+			const claimDeadline2 = (await getCurrentBlockTimestamp()) + 1000;
 
 			await Microcredit.connect(manager1)
-				.addLoan(user1.address, amount1, period1, dailyInterest1, claimDeadline1)
+				.addLoan(
+					user1.address,
+					amount1,
+					period1,
+					dailyInterest1,
+					claimDeadline1
+				)
 				.should.emit(Microcredit, "LoanAdded")
-				.withArgs(user1.address, 0, amount1, period1, dailyInterest1, claimDeadline1);
+				.withArgs(
+					user1.address,
+					0,
+					amount1,
+					period1,
+					dailyInterest1,
+					claimDeadline1
+				);
 			await Microcredit.connect(manager1)
-				.addLoan(user1.address, amount2, period2, dailyInterest2, claimDeadline2)
-				.should.be.rejectedWith("Microcredit: The user already has an active loan");
+				.addLoan(
+					user1.address,
+					amount2,
+					period2,
+					dailyInterest2,
+					claimDeadline2
+				)
+				.should.be.rejectedWith(
+					"Microcredit: The user already has an active loan"
+				);
 
 			let walletMetadata1 = await Microcredit.walletMetadata(
 				user1.address
@@ -338,32 +397,53 @@ describe.only("Microcredit", () => {
 			const amount1 = toEther(100);
 			const period1 = sixMonth;
 			const dailyInterest1 = toEther(0.2);
-			const claimDeadline1 = (await getCurrentBlockTimestamp()) + 1000
+			const claimDeadline1 = (await getCurrentBlockTimestamp()) + 1000;
 
 			const amount2 = toEther(200);
 			const period2 = oneMonth;
 			const dailyInterest2 = toEther(0.3);
-			const claimDeadline2 = (await getCurrentBlockTimestamp()) + 1000
+			const claimDeadline2 = (await getCurrentBlockTimestamp()) + 1000;
 
 			await Microcredit.connect(manager1)
-				.addLoan(user1.address, amount1, period1, dailyInterest1, claimDeadline1)
+				.addLoan(
+					user1.address,
+					amount1,
+					period1,
+					dailyInterest1,
+					claimDeadline1
+				)
 				.should.emit(Microcredit, "LoanAdded")
-				.withArgs(user1.address, 0, amount1, period1, dailyInterest1, claimDeadline1);
+				.withArgs(
+					user1.address,
+					0,
+					amount1,
+					period1,
+					dailyInterest1,
+					claimDeadline1
+				);
 
 			await Microcredit.connect(user1).claimLoan(0);
-			await cUSD
-				.connect(user1)
-				.approve(
-					Microcredit.address,
-					amount1
-				);
+			await cUSD.connect(user1).approve(Microcredit.address, amount1);
 
 			await Microcredit.connect(user1).repayLoan(0, amount1);
 
 			await Microcredit.connect(manager1)
-				.addLoan(user1.address, amount2, period2, dailyInterest2, claimDeadline2)
+				.addLoan(
+					user1.address,
+					amount2,
+					period2,
+					dailyInterest2,
+					claimDeadline2
+				)
 				.should.emit(Microcredit, "LoanAdded")
-				.withArgs(user1.address, 1, amount2, period2, dailyInterest2, claimDeadline2);
+				.withArgs(
+					user1.address,
+					1,
+					amount2,
+					period2,
+					dailyInterest2,
+					claimDeadline2
+				);
 
 			let walletMetadata1 = await Microcredit.walletMetadata(
 				user1.address
@@ -402,24 +482,50 @@ describe.only("Microcredit", () => {
 			const amount1 = toEther(100);
 			const period1 = sixMonth;
 			const dailyInterest1 = toEther(0.2);
-			const claimDeadline1 = (await getCurrentBlockTimestamp()) + 1000
+			const claimDeadline1 = (await getCurrentBlockTimestamp()) + 1000;
 
 			const amount2 = toEther(200);
 			const period2 = oneMonth;
 			const dailyInterest2 = toEther(0.3);
-			const claimDeadline2 = (await getCurrentBlockTimestamp()) + 3000
+			const claimDeadline2 = (await getCurrentBlockTimestamp()) + 3000;
 
 			await Microcredit.connect(manager1)
-				.addLoan(user1.address, amount1, period1, dailyInterest1, claimDeadline1)
+				.addLoan(
+					user1.address,
+					amount1,
+					period1,
+					dailyInterest1,
+					claimDeadline1
+				)
 				.should.emit(Microcredit, "LoanAdded")
-				.withArgs(user1.address, 0, amount1, period1, dailyInterest1, claimDeadline1);
+				.withArgs(
+					user1.address,
+					0,
+					amount1,
+					period1,
+					dailyInterest1,
+					claimDeadline1
+				);
 
 			await advanceNSecondsAndBlock(2000);
 
 			await Microcredit.connect(manager1)
-				.addLoan(user1.address, amount2, period2, dailyInterest2, claimDeadline2)
+				.addLoan(
+					user1.address,
+					amount2,
+					period2,
+					dailyInterest2,
+					claimDeadline2
+				)
 				.should.emit(Microcredit, "LoanAdded")
-				.withArgs(user1.address, 1, amount2, period2, dailyInterest2, claimDeadline2);
+				.withArgs(
+					user1.address,
+					1,
+					amount2,
+					period2,
+					dailyInterest2,
+					claimDeadline2
+				);
 
 			let walletMetadata1 = await Microcredit.walletMetadata(
 				user1.address
@@ -460,38 +566,55 @@ describe.only("Microcredit", () => {
 			);
 		});
 
-
 		it("should not addLoan if previous loan has been claimed", async function () {
 			const amount1 = toEther(100);
 			const period1 = sixMonth;
 			const dailyInterest1 = toEther(0.2);
-			const claimDeadline1 = (await getCurrentBlockTimestamp()) + 1000
+			const claimDeadline1 = (await getCurrentBlockTimestamp()) + 1000;
 
 			const amount2 = toEther(200);
 			const period2 = oneMonth;
 			const dailyInterest2 = toEther(0.3);
-			const claimDeadline2 = (await getCurrentBlockTimestamp()) + 3000
+			const claimDeadline2 = (await getCurrentBlockTimestamp()) + 3000;
 
 			await Microcredit.connect(manager1)
-				.addLoan(user1.address, amount1, period1, dailyInterest1, claimDeadline1)
+				.addLoan(
+					user1.address,
+					amount1,
+					period1,
+					dailyInterest1,
+					claimDeadline1
+				)
 				.should.emit(Microcredit, "LoanAdded")
-				.withArgs(user1.address, 0, amount1, period1, dailyInterest1, claimDeadline1);
+				.withArgs(
+					user1.address,
+					0,
+					amount1,
+					period1,
+					dailyInterest1,
+					claimDeadline1
+				);
 
 			await Microcredit.connect(user1).claimLoan(0);
 			await cUSD
 				.connect(user1)
-				.approve(
-					Microcredit.address,
-					amount1.div(2)
-				);
+				.approve(Microcredit.address, amount1.div(2));
 
 			await Microcredit.connect(user1).repayLoan(0, amount1.div(2));
 
 			await advanceNSecondsAndBlock(2000);
 
 			await Microcredit.connect(manager1)
-				.addLoan(user1.address, amount2, period2, dailyInterest2, claimDeadline2)
-				.should.be.rejectedWith("Microcredit: The user already has an active loan");
+				.addLoan(
+					user1.address,
+					amount2,
+					period2,
+					dailyInterest2,
+					claimDeadline2
+				)
+				.should.be.rejectedWith(
+					"Microcredit: The user already has an active loan"
+				);
 
 			let walletMetadata1 = await Microcredit.walletMetadata(
 				user1.address
@@ -508,12 +631,12 @@ describe.only("Microcredit", () => {
 			const amount1 = toEther(100);
 			const period1 = sixMonth;
 			const dailyInterest1 = toEther(0.2);
-			const claimDeadline1 = (await getCurrentBlockTimestamp()) + 1000
+			const claimDeadline1 = (await getCurrentBlockTimestamp()) + 1000;
 
 			const amount2 = toEther(200);
 			const period2 = oneMonth;
 			const dailyInterest2 = toEther(0.3);
-			const claimDeadline2 = (await getCurrentBlockTimestamp()) + 1000
+			const claimDeadline2 = (await getCurrentBlockTimestamp()) + 1000;
 
 			await Microcredit.connect(manager1).addLoan(
 				user1.address,
@@ -593,7 +716,7 @@ describe.only("Microcredit", () => {
 			const amount = toEther(100);
 			const period = sixMonth;
 			const dailyInterest = toEther(0.2);
-			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
 
 			let walletMetadata = await Microcredit.walletMetadata(
 				user1.address
@@ -603,9 +726,22 @@ describe.only("Microcredit", () => {
 			walletMetadata.loansLength.should.eq(0);
 
 			await Microcredit.connect(manager1)
-				.addLoans([user1.address], [amount], [period], [dailyInterest], [claimDeadline])
+				.addLoans(
+					[user1.address],
+					[amount],
+					[period],
+					[dailyInterest],
+					[claimDeadline]
+				)
 				.should.emit(Microcredit, "LoanAdded")
-				.withArgs(user1.address, 0, amount, period, dailyInterest, claimDeadline);
+				.withArgs(
+					user1.address,
+					0,
+					amount,
+					period,
+					dailyInterest,
+					claimDeadline
+				);
 
 			walletMetadata = await Microcredit.walletMetadata(user1.address);
 			walletMetadata.userId.should.eq(1);
@@ -635,12 +771,12 @@ describe.only("Microcredit", () => {
 			const amount1 = toEther(100);
 			const period1 = sixMonth;
 			const dailyInterest1 = toEther(0.2);
-			const claimDeadline1 = (await getCurrentBlockTimestamp()) + 1000
+			const claimDeadline1 = (await getCurrentBlockTimestamp()) + 1000;
 
 			const amount2 = toEther(200);
 			const period2 = oneMonth;
 			const dailyInterest2 = toEther(0.3);
-			const claimDeadline2 = (await getCurrentBlockTimestamp()) + 1000
+			const claimDeadline2 = (await getCurrentBlockTimestamp()) + 1000;
 
 			await Microcredit.connect(manager1)
 				.addLoans(
@@ -650,7 +786,9 @@ describe.only("Microcredit", () => {
 					[dailyInterest1, dailyInterest2],
 					[claimDeadline1, claimDeadline2]
 				)
-				.should.be.rejectedWith("Microcredit: The user already has an active loan");
+				.should.be.rejectedWith(
+					"Microcredit: The user already has an active loan"
+				);
 
 			let walletMetadata1 = await Microcredit.walletMetadata(
 				user1.address
@@ -664,12 +802,12 @@ describe.only("Microcredit", () => {
 			const amount1 = toEther(100);
 			const period1 = sixMonth;
 			const dailyInterest1 = toEther(0.2);
-			const claimDeadline1 = (await getCurrentBlockTimestamp()) + 1000
+			const claimDeadline1 = (await getCurrentBlockTimestamp()) + 1000;
 
 			const amount2 = toEther(200);
 			const period2 = oneMonth;
 			const dailyInterest2 = toEther(0.3);
-			const claimDeadline2 = (await getCurrentBlockTimestamp()) + 2000
+			const claimDeadline2 = (await getCurrentBlockTimestamp()) + 2000;
 
 			await Microcredit.connect(manager1)
 				.addLoans(
@@ -680,9 +818,23 @@ describe.only("Microcredit", () => {
 					[claimDeadline1, claimDeadline2]
 				)
 				.should.emit(Microcredit, "LoanAdded")
-				.withArgs(user1.address, 0, amount1, period1, dailyInterest1, claimDeadline1)
+				.withArgs(
+					user1.address,
+					0,
+					amount1,
+					period1,
+					dailyInterest1,
+					claimDeadline1
+				)
 				.emit(Microcredit, "LoanAdded")
-				.withArgs(user2.address, 0, amount2, period2, dailyInterest2, claimDeadline2);
+				.withArgs(
+					user2.address,
+					0,
+					amount2,
+					period2,
+					dailyInterest2,
+					claimDeadline2
+				);
 
 			let walletMetadata1 = await Microcredit.walletMetadata(
 				user1.address
@@ -735,7 +887,7 @@ describe.only("Microcredit", () => {
 			const amount = toEther(100);
 			const period = sixMonth;
 			const dailyInterest = toEther(0.2);
-			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
 
 			await Microcredit.connect(manager1).addLoan(
 				user1.address,
@@ -744,7 +896,7 @@ describe.only("Microcredit", () => {
 				dailyInterest,
 				claimDeadline
 			).should.be.fulfilled;
-			
+
 			await Microcredit.connect(user1)
 				.claimLoan(0)
 				.should.emit(Microcredit, "LoanClaimed")
@@ -776,7 +928,7 @@ describe.only("Microcredit", () => {
 			const amount = toEther(100);
 			const period = sixMonth;
 			const dailyInterest = toEther(0.2);
-			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
 
 			await Microcredit.connect(manager1).addLoan(
 				user2.address,
@@ -820,7 +972,7 @@ describe.only("Microcredit", () => {
 			const amount = toEther(100);
 			const period = sixMonth;
 			const dailyInterest = toEther(0.2);
-			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
 
 			await Microcredit.connect(manager1).addLoan(
 				user1.address,
@@ -842,7 +994,7 @@ describe.only("Microcredit", () => {
 			const amount = toEther(100);
 			const period = sixMonth;
 			const dailyInterest = toEther(0.2);
-			const claimDeadline = await getCurrentBlockTimestamp() + 5;
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 5;
 
 			await Microcredit.connect(manager1).addLoan(
 				user1.address,
@@ -863,7 +1015,7 @@ describe.only("Microcredit", () => {
 			const amount = toEther(100);
 			const period = sixMonth;
 			const dailyInterest = toEther(0);
-			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
 			const repaymentAmount1 = toEther(10);
 
 			await Microcredit.connect(manager1).addLoan(
@@ -923,7 +1075,7 @@ describe.only("Microcredit", () => {
 			const amount = toEther(100);
 			const period = sixMonth;
 			const dailyInterest = toEther(0);
-			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
 
 			const repaymentAmount1 = toEther(10);
 			const repaymentAmount2 = toEther(20);
@@ -1002,7 +1154,7 @@ describe.only("Microcredit", () => {
 			const amount = toEther(100);
 			const period = sixMonth;
 			const dailyInterest = toEther(0);
-			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
 
 			const repaymentAmount1 = toEther(10);
 			const repaymentAmount2 = toEther(20);
@@ -1154,7 +1306,7 @@ describe.only("Microcredit", () => {
 			const amount = toEther(100);
 			const period = sixMonth;
 			const dailyInterest = toEther(0);
-			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
 
 			await Microcredit.connect(manager1).addLoan(
 				user1.address,
@@ -1179,7 +1331,7 @@ describe.only("Microcredit", () => {
 			const amount = toEther(100);
 			const period = sixMonth;
 			const dailyInterest = toEther(0);
-			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
 
 			await Microcredit.connect(manager1).addLoan(
 				user1.address,
@@ -1213,7 +1365,7 @@ describe.only("Microcredit", () => {
 			const amount = toEther(100);
 			const period = sixMonth;
 			const dailyInterest = toEther(0);
-			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
 
 			await Microcredit.connect(manager1).addLoan(
 				user1.address,
@@ -1275,7 +1427,7 @@ describe.only("Microcredit", () => {
 			const amount = toEther(100);
 			const period = sixMonth;
 			const dailyInterest = toEther(0.2);
-			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
 
 			await Microcredit.connect(manager1).addLoan(
 				user1.address,
@@ -1337,7 +1489,7 @@ describe.only("Microcredit", () => {
 			const amount = toEther(2000);
 			const period = sixMonth;
 			const dailyInterest = toEther(0.2);
-			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
 
 			await Microcredit.connect(manager1).addLoan(
 				user1.address,
@@ -1378,7 +1530,7 @@ describe.only("Microcredit", () => {
 			const amount = toEther(100);
 			const period = sixMonth;
 			const dailyInterest = toEther(0.2);
-			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
 
 			await Microcredit.connect(manager1).addLoan(
 				user1.address,
@@ -1437,7 +1589,7 @@ describe.only("Microcredit", () => {
 			const amount = toEther(100);
 			const period = sixMonth;
 			const dailyInterest = toEther(0.2);
-			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
 
 			await Microcredit.connect(manager1).addLoan(
 				user1.address,
@@ -1496,7 +1648,7 @@ describe.only("Microcredit", () => {
 			const amount = toEther(100);
 			const period = sixMonth;
 			const dailyInterest = toEther(0.2);
-			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
 
 			await Microcredit.connect(manager1).addLoan(
 				user1.address,
@@ -1555,7 +1707,7 @@ describe.only("Microcredit", () => {
 			const amount = toEther(100);
 			const period = sixMonth;
 			const dailyInterest = toEther(0.2);
-			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
 
 			await Microcredit.connect(manager1).addLoan(
 				user1.address,
@@ -1614,7 +1766,7 @@ describe.only("Microcredit", () => {
 			const amount = toEther(100);
 			const period = sixMonth;
 			const dailyInterest = toEther(0.2);
-			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
 
 			await Microcredit.connect(manager1).addLoan(
 				user1.address,
@@ -1673,7 +1825,7 @@ describe.only("Microcredit", () => {
 			const amount = toEther(100);
 			const period = sixMonth;
 			const dailyInterest = toEther(0.2);
-			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
 
 			await Microcredit.connect(manager1).addLoan(
 				user1.address,
@@ -1736,7 +1888,7 @@ describe.only("Microcredit", () => {
 			const amount = toEther(100);
 			const period = sixMonth;
 			const dailyInterest = toEther(0.2);
-			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
 
 			await Microcredit.connect(manager1).addLoan(
 				user1.address,
@@ -1771,7 +1923,7 @@ describe.only("Microcredit", () => {
 			const amount = toEther(100);
 			const period = sixMonth;
 			const dailyInterest = toEther(0.2);
-			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
 
 			await Microcredit.connect(manager1).addLoan(
 				user1.address,
@@ -1796,7 +1948,7 @@ describe.only("Microcredit", () => {
 			const amount = toEther(100);
 			const period = sixMonth;
 			const dailyInterest = toEther(0.2);
-			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
 
 			await Microcredit.connect(manager1).addLoan(
 				user1.address,
@@ -1815,7 +1967,7 @@ describe.only("Microcredit", () => {
 			const amount = toEther(100);
 			const period = sixMonth;
 			const dailyInterest = toEther(0.2);
-			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
 
 			await Microcredit.connect(manager1).addLoan(
 				user1.address,
@@ -1913,7 +2065,7 @@ describe.only("Microcredit", () => {
 			const amount = toEther(100);
 			const period = sixMonth;
 			const dailyInterest = toEther(0.2);
-			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
 
 			await Microcredit.connect(manager1).addLoan(
 				user1.address,
@@ -2043,7 +2195,7 @@ describe.only("Microcredit", () => {
 			const amount = toEther(100);
 			const period = sixMonth;
 			const dailyInterest = toEther(0.2);
-			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
 
 			await Microcredit.connect(manager1).addLoan(
 				user1.address,
@@ -2105,7 +2257,7 @@ describe.only("Microcredit", () => {
 			const amount = toEther(100);
 			const period = sixMonth;
 			const dailyInterest = toEther(0.2);
-			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
 
 			await Microcredit.connect(manager1).addLoan(
 				user1.address,
@@ -2234,7 +2386,7 @@ describe.only("Microcredit", () => {
 			const amount = toEther(100);
 			const period = sixMonth;
 			const dailyInterest = toEther(0.2);
-			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
 
 			await Microcredit.connect(manager1).addLoan(
 				user1.address,
