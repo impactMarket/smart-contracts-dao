@@ -82,6 +82,7 @@ contract TreasuryLpSwapImplementation is
         uint256 amountsOut
     );
 
+    //todo: remove this modifier after deployment and testing
     /**
      * @notice Enforces sender to DAO or impactMarketCouncil
      */
@@ -191,6 +192,14 @@ contract TreasuryLpSwapImplementation is
         emit TransferERC20(address(_token), _to, _amount);
     }
 
+    /**
+     * @notice Converts an amount of a token to another token
+     *
+     * @param _tokenAddress address of the token to convert
+     * @param _amountIn amount of the token to convert
+     * @param _amountOutMin minimum amount of the token to receive
+     * @param _exchangePath exchange path - if empty, it will use the default exchange path
+    */
     function convertAmount(
         address _tokenAddress,
         uint256 _amountIn,
@@ -235,8 +244,15 @@ contract TreasuryLpSwapImplementation is
 
         _erc20Token.safeTransferFrom(msg.sender, address(this), _amount);
 
-        (, , , , uint256 _uniswapNFTPositionManagerId, , bytes memory _exchangePathToPACT) = treasury
-            .tokens(address(_erc20Token));
+        (
+            ,
+            ,
+            ,
+            ,
+            uint256 _uniswapNFTPositionManagerId,
+            ,
+            bytes memory _exchangePathToPACT
+        ) = treasury.tokens(address(_erc20Token));
 
         uint256 _tokenAmountToAdd = _amount / 2;
         _erc20Token.approve(address(uniswapRouter), _tokenAmountToAdd);
@@ -290,6 +306,11 @@ contract TreasuryLpSwapImplementation is
         );
     }
 
+    /**
+     * @notice Collects fees from lp
+     *
+     * @param _uniswapNFTPositionManagerId id of the lp
+     */
     function collectFees(uint256 _uniswapNFTPositionManagerId)
         external
         override

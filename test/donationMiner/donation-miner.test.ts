@@ -4969,7 +4969,7 @@ describe.only("DonationMiner", () => {
 			await advanceToRewardPeriodN(1);
 		});
 
-		it.only("Should not increase LP if lpPercentage is 0", async function () {
+		it("Should not increase LP if lpPercentage is 0", async function () {
 			const user1Donation1 = toEther("100");
 			const user1Donation2 = toEther("50");
 
@@ -4977,7 +4977,10 @@ describe.only("DonationMiner", () => {
 
 			await cUSD
 				.connect(user1)
-				.approve(DonationMiner.address, user1Donation1.add(user1Donation2));
+				.approve(
+					DonationMiner.address,
+					user1Donation1.add(user1Donation2)
+				);
 
 			await expect(
 				DonationMiner.connect(user1).donate(
@@ -4987,7 +4990,9 @@ describe.only("DonationMiner", () => {
 				)
 			).to.be.fulfilled;
 
-			expect(await cUSD.balanceOf(Treasury.address)).to.be.equal(user1Donation1);
+			expect(await cUSD.balanceOf(Treasury.address)).to.be.equal(
+				user1Donation1
+			);
 
 			const user1ConvertedDonation1 =
 				await Treasury.callStatic.getConvertedAmount(
@@ -5018,7 +5023,9 @@ describe.only("DonationMiner", () => {
 				)
 			).to.be.fulfilled;
 
-			expect(await cUSD.balanceOf(Treasury.address)).to.be.equal(user1Donation1.add(user1Donation2));
+			expect(await cUSD.balanceOf(Treasury.address)).to.be.equal(
+				user1Donation1.add(user1Donation2)
+			);
 
 			const user1ConvertedDonation2 =
 				await Treasury.callStatic.getConvertedAmount(
@@ -5059,7 +5066,10 @@ describe.only("DonationMiner", () => {
 
 			await cUSD
 				.connect(user1)
-				.approve(DonationMiner.address, user1Donation1.add(user1Donation2));
+				.approve(
+					DonationMiner.address,
+					user1Donation1.add(user1Donation2)
+				);
 
 			await expect(
 				DonationMiner.connect(user1).donate(
@@ -5069,7 +5079,9 @@ describe.only("DonationMiner", () => {
 				)
 			).to.be.fulfilled;
 
-			expect(await cUSD.balanceOf(Treasury.address)).to.be.equal(user1Donation1);
+			expect(await cUSD.balanceOf(Treasury.address)).to.be.equal(
+				user1Donation1
+			);
 
 			const user1ConvertedDonation1 =
 				await Treasury.callStatic.getConvertedAmount(
@@ -5100,7 +5112,9 @@ describe.only("DonationMiner", () => {
 				)
 			).to.be.fulfilled;
 
-			expect(await cUSD.balanceOf(Treasury.address)).to.be.equal(user1Donation1.add(user1Donation2));
+			expect(await cUSD.balanceOf(Treasury.address)).to.be.equal(
+				user1Donation1.add(user1Donation2)
+			);
 
 			const user1ConvertedDonation2 =
 				await Treasury.callStatic.getConvertedAmount(
@@ -5141,7 +5155,10 @@ describe.only("DonationMiner", () => {
 
 			await cUSD
 				.connect(user1)
-				.approve(DonationMiner.address, user1Donation1.add(user1Donation2));
+				.approve(
+					DonationMiner.address,
+					user1Donation1.add(user1Donation2)
+				);
 
 			await expect(
 				DonationMiner.connect(user1).donate(
@@ -5151,7 +5168,9 @@ describe.only("DonationMiner", () => {
 				)
 			).to.be.fulfilled;
 
-			expect(await cUSD.balanceOf(Treasury.address)).to.be.equal(user1Donation1);
+			expect(await cUSD.balanceOf(Treasury.address)).to.be.equal(
+				user1Donation1
+			);
 
 			const user1ConvertedDonation1 =
 				await Treasury.callStatic.getConvertedAmount(
@@ -5190,7 +5209,9 @@ describe.only("DonationMiner", () => {
 					toEther("7.425055130625000000")
 				);
 
-			expect(await cUSD.balanceOf(Treasury.address)).to.be.equal((user1Donation1.add(user1Donation2)).mul(90).div(100));
+			expect(await cUSD.balanceOf(Treasury.address)).to.be.equal(
+				user1Donation1.add(user1Donation2).mul(90).div(100)
+			);
 
 			const user1ConvertedDonation2 =
 				await Treasury.callStatic.getConvertedAmount(
@@ -5212,7 +5233,6 @@ describe.only("DonationMiner", () => {
 			expect(donation2.initialAmount).to.equal(user1Donation2);
 		});
 
-
 		it.only("Should not increase LP for each donation", async function () {
 			await Treasury.setToken(
 				cUSD.address,
@@ -5229,11 +5249,17 @@ describe.only("DonationMiner", () => {
 			const user1Donation2 = toEther("50");
 			const user1Donation3 = toEther("25");
 
-			await cUSD.mint(user1.address, user1Donation1.add(user1Donation2).add(user1Donation3));
+			await cUSD.mint(
+				user1.address,
+				user1Donation1.add(user1Donation2).add(user1Donation3)
+			);
 
 			await cUSD
 				.connect(user1)
-				.approve(DonationMiner.address, user1Donation1.add(user1Donation2).add(user1Donation3));
+				.approve(
+					DonationMiner.address,
+					user1Donation1.add(user1Donation2).add(user1Donation3)
+				);
 
 			await expect(
 				DonationMiner.connect(user1).donate(
@@ -5243,7 +5269,9 @@ describe.only("DonationMiner", () => {
 				)
 			).to.be.fulfilled;
 
-			expect(await cUSD.balanceOf(Treasury.address)).to.be.equal(user1Donation1);
+			expect(await cUSD.balanceOf(Treasury.address)).to.be.equal(
+				user1Donation1
+			);
 
 			await advanceToNextRewardPeriod();
 
@@ -5263,7 +5291,9 @@ describe.only("DonationMiner", () => {
 					toEther("7.425055130625000000")
 				);
 
-			expect(await cUSD.balanceOf(Treasury.address)).to.be.equal((user1Donation1.add(user1Donation2)).mul(90).div(100));
+			expect(await cUSD.balanceOf(Treasury.address)).to.be.equal(
+				user1Donation1.add(user1Donation2).mul(90).div(100)
+			);
 
 			await expect(
 				DonationMiner.connect(user1).donate(
@@ -5273,7 +5303,13 @@ describe.only("DonationMiner", () => {
 				)
 			).to.be.fulfilled;
 
-			expect(await cUSD.balanceOf(Treasury.address)).to.be.equal((user1Donation1.add(user1Donation2)).mul(90).div(100).add(user1Donation3));
+			expect(await cUSD.balanceOf(Treasury.address)).to.be.equal(
+				user1Donation1
+					.add(user1Donation2)
+					.mul(90)
+					.div(100)
+					.add(user1Donation3)
+			);
 		});
 	});
 });

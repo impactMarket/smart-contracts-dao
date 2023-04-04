@@ -86,6 +86,7 @@ contract TreasuryImplementation is
         _;
     }
 
+    //todo: remove this modifier after deployment and testing
     /**
      * @notice Enforces sender to DAO or impactMarketCouncil
      */
@@ -100,10 +101,11 @@ contract TreasuryImplementation is
     /**
      * @notice Enforces sender to be owner or council or donationMiner
      */
-    modifier onlyOwnerOrImpactMarketCouncilOrDonationMiner() {
+    modifier onlyOwnerOrDonationMiner() {
         require(
-            msg.sender == address(communityAdmin) || msg.sender == owner() || msg.sender == address(donationMiner),
-                "Treasury: caller is not the owner nor ImpactMarketCouncil nor donationMiner"
+                msg.sender == owner() ||
+                msg.sender == address(donationMiner),
+            "Treasury: caller is not the owner nor donationMiner"
         );
         _;
     }
@@ -184,7 +186,11 @@ contract TreasuryImplementation is
      *
      * @param _newDonationMiner address of the new DonationMiner contract
      */
-    function updateDonationMiner(IDonationMiner _newDonationMiner) external override onlyOwnerOrImpactMarketCouncil {
+    function updateDonationMiner(IDonationMiner _newDonationMiner)
+        external
+        override
+        onlyOwnerOrImpactMarketCouncil
+    {
         donationMiner = _newDonationMiner;
     }
 
@@ -201,6 +207,11 @@ contract TreasuryImplementation is
         lpSwap = _newLpSwap;
     }
 
+    /**
+     * @notice Updates the LpPercentage
+     *
+     * @param _newLpPercentage address of the new LpPercentage
+     */
     function updateLpPercentage(uint256 _newLpPercentage)
         external
         override
@@ -228,6 +239,18 @@ contract TreasuryImplementation is
         emit TransferERC20(address(_token), _to, _amount);
     }
 
+    /**
+     * @notice Used to set a new token
+     *
+     * @param _tokenAddress address of the token
+     * @param _rate rate of the token in CUSD
+     * @param _lpStrategy strategy to use for splitting the LP fees between treasury and buyback
+     * @param _lpPercentage percentage of the funds to be used for LP
+     * @param _lpMinLimit minimum amount of funds that need to be in the treasury (and not to be used for LP)
+     * @param _uniswapNFTPositionManagerId id of the NFT position manager
+     * @param _exchangePathToCUSD uniswap path to exchange the token to CUSD
+     * @param _exchangePathToPACT uniswap path to exchange the token to PACT
+     **/
     function setToken(
         address _tokenAddress,
         uint256 _rate,
@@ -277,6 +300,11 @@ contract TreasuryImplementation is
         _tokenList.add(_tokenAddress);
     }
 
+    /**
+     * @notice Used to remove a token
+     *
+     * @param _tokenAddress address of the token
+     **/
     function removeToken(address _tokenAddress) external override onlyOwnerOrImpactMarketCouncil {
         require(_tokenList.contains(_tokenAddress), "Treasury::removeToken: this is not a token");
 
@@ -293,6 +321,9 @@ contract TreasuryImplementation is
         emit TokenRemoved(_tokenAddress);
     }
 
+    /**
+     * @notice Gets the amount of cUSDs that can be obtained from a converting the given amount of a token
+     **/
     function getConvertedAmount(address _tokenAddress, uint256 _amount)
         external
         override
@@ -309,6 +340,14 @@ contract TreasuryImplementation is
         return (_convertedAmount * _token.rate) / 1e18;
     }
 
+    /**
+     * @notice Converts an amount of a token to cUSDs
+     *
+     * @param _tokenAddress is the address of the token to convert
+     * @param _amountIn is the amount of the token to convert
+     * @param _amountOutMin is used to prevent the transaction from failing if the price of the token changes - 0 for no check
+     * @param _exchangePath is the path to use for the swap - empty for the default path
+     **/
     function convertAmount(
         address _tokenAddress,
         uint256 _amountIn,
@@ -339,36 +378,12 @@ contract TreasuryImplementation is
         emit AmountConverted(_tokenAddress, _amountIn, _amountOutMin, _exchangePath, _amountOut);
     }
 
-//    /**
-//     * @notice Transfers an amount of an ERC20 from the sender to this contract
-//     *
-//     * @param _erc20Token address of the ERC20 token
-//     * @param _amount amount of the transaction
-//     */
-//    function transferToTreasury(IERC20 _erc20Token, uint256 _amount)
-//        external
-//        override
-//        nonReentrant
-//    {
-//        _erc20Token.safeTransferFrom(msg.sender, address(this), _amount);
-//
-//        Token storage _token = tokens[address(_erc20Token)];
-//
-//        uint256 _tokenAmountToUseInLp;
-//
-//        if (_token.lpStrategy == LpStrategy.MainCoin) {
-//            _tokenAmountToUseInLp = _amount / 10;
-//        } else if (_token.lpStrategy == LpStrategy.SecondaryCoin) {
-//            _tokenAmountToUseInLp = _amount;
-//        }
-//
-//        if (_tokenAmountToUseInLp > 0) {
-//            _erc20Token.approve(address(lpSwap), _tokenAmountToUseInLp);
-//            lpSwap.addToLp(_erc20Token, _tokenAmountToUseInLp);
-//        }
-//    }
-
-    function useFundsForLP() external override onlyOwnerOrImpactMarketCouncilOrDonationMiner {
+    /**
+     * @notice Uses part of the funds of a token to add liquidity to the Uniswap pool
+     * it is used by the DonationMiner when creating a new epoch
+     * it can also been used by the DAO when there are too many funds in the treasury
+     **/
+    function useFundsForLP() external override onlyOwnerOrDonationMiner {
         uint256 _tokenLength = _tokenList.length();
 
         Token memory _token;
@@ -380,7 +395,7 @@ contract TreasuryImplementation is
                 uint256 _balance = _erc20Token.balanceOf(address(this));
 
                 if (_balance > _token.lpMinLimit) {
-                    uint256 _tokenAmountToUseInLp = _balance * _token.lpPercentage / 100e18;
+                    uint256 _tokenAmountToUseInLp = (_balance * _token.lpPercentage) / 100e18;
                     _erc20Token.approve(address(lpSwap), _tokenAmountToUseInLp);
                     lpSwap.addToLp(_erc20Token, _tokenAmountToUseInLp);
                 }
@@ -388,6 +403,11 @@ contract TreasuryImplementation is
         }
     }
 
+    /**
+     * @notice Collects the fees of a Uniswap NFT position
+     *
+     * @param _uniswapNFTPositionManagerId is the id of the Uniswap NFT position
+     **/
     function collectFees(uint256 _uniswapNFTPositionManagerId)
         external
         override
@@ -420,8 +440,11 @@ contract TreasuryImplementation is
 
         Token memory _token = tokens[address(_erc20Token)];
 
-        uint256 _pactToBurn;
-        if (_token.lpStrategy == LpStrategy.SecondaryCoin) {
+        if (_token.lpStrategy == LpStrategy.MainCoin) {
+            PACT.transfer(DEAD_ADDRESS, _pactAmount);
+        } else if (_token.lpStrategy == LpStrategy.SecondaryCoin) {
+            uint256 _pactToBurn;
+
             _erc20Token.approve(address(lpSwap.uniswapRouter()), _tokenAmount);
 
             lpSwap.uniswapRouter().exactInput(
@@ -441,10 +464,10 @@ contract TreasuryImplementation is
                     amountOutMinimum: 0
                 })
             );
+
+            PACT.transfer(DEAD_ADDRESS, _pactToBurn + _pactAmount);
+        } else {
+            return;
         }
-
-        _pactToBurn += _pactAmount;
-
-        PACT.transfer(DEAD_ADDRESS, _pactToBurn);
     }
 }

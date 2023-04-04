@@ -7,20 +7,22 @@ import "../../treasuryLpSwap/interfaces/ITreasuryLpSwap.sol";
 import "../../donationMiner/interfaces/IDonationMiner.sol";
 
 interface ITreasury {
-    enum LpStrategy {
-        NONE, //all funds remains into treasury
-        MainCoin,
-        SecondaryCoin
+    enum LpStrategy {     //strategy to use for splitting the LP fees between treasury and buyback
+        NONE,             //all funds remains into treasury
+        MainCoin,         //for UBI coins (like cUSD): UBI coin fees are kept in treasury, PACT fees are used for buyback
+        SecondaryCoin     //for non UBI coins (like cEUR): half of the fees are swapped to PACT and used for buyback,
+                          // half of the fees are swapped to cUSD and kept in treasury
+                          // (PACT fees are used for buyback)
     }
 
     struct Token {
-        uint256 rate;
-        LpStrategy lpStrategy;
-        uint256 lpPercentage;
-        uint256 lpMinLimit;
-        uint256 uniswapNFTPositionManagerId;
-        bytes exchangePathToCUSD;
-        bytes exchangePathToPACT;
+        uint256 rate;                          //rate of the token in CUSD
+        LpStrategy lpStrategy;                 //strategy to use for splitting the LP fees between treasury and buyback
+        uint256 lpPercentage;                  //percentage of the funds to be used for LP
+        uint256 lpMinLimit;                    //minimum amount of funds that need to be in the treasury (and not to be used for LP)
+        uint256 uniswapNFTPositionManagerId;   //id of the NFT position manager
+        bytes exchangePathToCUSD;              //uniswap path to exchange the token to CUSD
+        bytes exchangePathToPACT;              //uniswap path to exchange the token to PACT
     }
 
     function getVersion() external pure returns(uint256);
@@ -65,7 +67,6 @@ interface ITreasury {
         uint256 _amountOutMin,
         bytes memory _exchangePath
     ) external;
-//    function transferToTreasury(IERC20 _token, uint256 _amount) external;
     function useFundsForLP() external;
     function collectFees(uint256 _uniswapNFTPositionManagerId) external;
 }

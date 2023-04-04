@@ -32,7 +32,7 @@ export enum LpStrategy {
 	SecondaryCoin = 2,
 }
 
-describe("Treasury", () => {
+describe.only("Treasury", () => {
 	//these tests work only on a celo mainnet fork network
 	let owner: SignerWithAddress;
 	let user1: SignerWithAddress;
@@ -381,7 +381,7 @@ describe("Treasury", () => {
 				)
 			)
 				.to.emit(Treasury, "TokenSet")
-				.withArgs(mUSD.address,);
+				.withArgs(mUSD.address);
 
 			const token = await Treasury.tokens(mUSD.address);
 			expect(token.rate).to.be.equal(toEther(1));
