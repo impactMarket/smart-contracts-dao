@@ -72,8 +72,8 @@ interface ICommunity {
         returns (uint256[] memory claimedAmounts);
     function decreaseStep() external view returns(uint);
     function beneficiaryListAt(uint256 _index) external view returns (address);
-    function impactMarketAddress() external pure returns (address);
     function beneficiaryListLength() external view returns (uint256);
+    function impactMarketAddress() external pure returns (address);
     function minTranche() external view returns(uint256);
     function maxTranche() external view returns(uint256);
     function lastFundRequest() external view returns(uint256);

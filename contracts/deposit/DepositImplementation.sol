@@ -319,20 +319,6 @@ contract DepositImplementation is
         _depositor.amount -= _amount;
         _depositor.scaledBalance -= _withdrawScaledBalanceShare;
 
-        //        uint256 _afterScaledBalance = aToken.scaledBalanceOf(address(this));
-        //        uint256 _diffScaledBalance = _beforeScaledBalance - _afterScaledBalance;
-        //        uint256 _interest = _diffScaledBalance * aToken.balanceOf(address(this)) / _afterScaledBalance;
-        //
-        //        console.log('_beforeScaledBalance: ', _beforeScaledBalance);
-        //        console.log('_afterScaledBalance: ', _afterScaledBalance);
-        //        console.log('_diffScaledBalance1: ', _diffScaledBalance);
-        //        console.log('_diffScaledBalance2: ', _withdrawScaledBalanceShare);
-        //        console.log('balance: ', aToken.balanceOf(address(this)));
-        //        console.log('_interest1: ', _interest);
-        //        console.log('_interest2: ', (_diffScaledBalance *  lendingPool.getReserveNormalizedIncome(_tokenAddress) + 1e27/2) / 1e27);
-        //        console.log('lendingPool.getReserveNormalizedIncome(address(aToken): ', lendingPool.getReserveNormalizedIncome(_tokenAddress));
-        //        console.log('_withdrawBalanceShare: ', _withdrawBalanceShare);
-
         emit Withdraw(msg.sender, _tokenAddress, _amount, _interest);
     }
 

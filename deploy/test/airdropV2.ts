@@ -58,5 +58,5 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 };
 
 export default func;
-func.dependencies = ["ImpactProxyAdminTest", "TokenTest"];
+func.dependencies = ["ImpactProxyAdminTest", "PactTest"];
 func.tags = ["AirdropV2Test"];

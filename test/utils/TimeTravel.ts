@@ -65,6 +65,11 @@ export async function advanceNSeconds(n: number) {
 	});
 }
 
+export async function advanceNSecondsAndBlock(n: number) {
+	await advanceNSeconds(n);
+	await advanceBlock();
+}
+
 export async function getBlockNumber() {
 	return Number(await network.provider.send("eth_blockNumber", []));
 }

@@ -69,6 +69,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// await ImpactProxyAdmin.transferOwnership(timelockAddress);
 };
 
-func.dependencies = ["TokenTest", "StakingTokenTest", "ImpactProxyAdminTest"];
+func.dependencies = ["PactTest", "StakingPactTest", "ImpactProxyAdminTest"];
 func.tags = ["GovernanceTest", "Test"];
 export default func;
