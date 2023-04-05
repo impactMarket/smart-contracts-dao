@@ -98,6 +98,17 @@ DepositProxy `0x11cB7F0E3a3A06Fe07173c33657CD1c599f7a783`
 
 
 
+### microcredit
+CouncilProxyAdmin: `0x109106C3C20be1320a2677AC14D62E4309f39280`
+MicrocreditImplementation: `0x4EBa12Df53243d6fb337Cac564d3e7b39d926e3c`
+MicrocreditProxy: `0x17566573AFb68D2bFA2A94B83598E375DF9cF44E`
+
+
+
+
+
+
+
 
 
 
