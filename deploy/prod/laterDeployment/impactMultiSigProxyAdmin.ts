@@ -10,7 +10,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const accounts: SignerWithAddress[] = await ethers.getSigners();
 	const deployer = accounts[0];
 
-	const CouncilProxyAdminResult = await deploy("CouncilProxyAdmin", {
+	await deploy("ImpactMultiSigProxyAdmin", {
 		from: deployer.address,
 		args: [],
 		log: true,
@@ -18,4 +18,4 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 };
 
 export default func;
-func.tags = ["CouncilProxyAdminProd"];
+func.tags = ["ImpactMultiSigProxyAdminProd"];

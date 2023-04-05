@@ -15,7 +15,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	const ownerAddress = accounts[1].address; //dev
 
-	const CouncilProxyAdminResult = await deploy("CouncilProxyAdmin", {
+	const ImpactMultiSigProxyAdminResult = await deploy("ImpactMultiSigProxyAdmin", {
 		from: deployer.address,
 		args: [],
 		log: true,
@@ -40,7 +40,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 			from: deployer.address,
 			args: [
 				microcreditRevenueImplementationResult.address,
-				CouncilProxyAdminResult.address,
+				ImpactMultiSigProxyAdminResult.address,
 			],
 			log: true,
 			// gasLimit: 13000000,
@@ -70,7 +70,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		from: deployer.address,
 		args: [
 			microcreditImplementationResult.address,
-			CouncilProxyAdminResult.address,
+			ImpactMultiSigProxyAdminResult.address,
 		],
 		log: true,
 		// gasLimit: 13000000,
