@@ -15,11 +15,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	const ownerAddress = accounts[1].address; //dev
 
-	const ImpactMultiSigProxyAdminResult = await deploy("ImpactMultiSigProxyAdmin", {
-		from: deployer.address,
-		args: [],
-		log: true,
-	});
+	const ImpactMultiSigProxyAdminResult = await deploy(
+		"ImpactMultiSigProxyAdmin",
+		{
+			from: deployer.address,
+			args: [],
+			log: true,
+		}
+	);
 
 	const cUSDAddress = getCUSDAddress();
 
