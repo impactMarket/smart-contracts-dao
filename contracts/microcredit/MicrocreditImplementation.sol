@@ -155,7 +155,7 @@ contract MicrocreditImplementation is
         currentDebt = _calculateCurrentDebt(_loan);
         amountRepayed = _loan.amountRepayed;
         repaymentsLength = _loan.repayments.length;
-        lastComputedDate = _getLastComputedDate(_loan);
+        lastComputedDate = _loan.lastComputedDate;
     }
 
     function userLoanRepayments(
@@ -278,7 +278,9 @@ contract MicrocreditImplementation is
         require(_loan.claimDeadline >= block.timestamp, "Microcredit: Loan expired");
 
         _loan.startDate = block.timestamp;
-        _loan.lastComputedDebt = _loan.amountBorrowed;
+
+        _loan.lastComputedDebt = (_loan.amountBorrowed * (1e18 + _loan.dailyInterest / 100)) / 1e18;
+        _loan.lastComputedDate = block.timestamp;
 
         cUSD.safeTransfer(msg.sender, _loan.amountBorrowed);
 
@@ -329,6 +331,10 @@ contract MicrocreditImplementation is
         _loan.lastComputedDebt = _currentDebt - _repaymentAmount;
         _loan.amountRepayed += _repaymentAmount;
 
+        uint256 _days = (block.timestamp - _loan.lastComputedDate) / 86400; //86400 = 1 day in seconds
+
+        _loan.lastComputedDate = _loan.lastComputedDate + _days * 86400;
+
         emit RepaymentAdded(msg.sender, _loanId, _repaymentAmount, _loan.lastComputedDebt);
     }
 
@@ -360,21 +366,12 @@ contract MicrocreditImplementation is
         require(_user.loans.length > _loanId, "Microcredit: Loan doesn't exist");
     }
 
-    function _getLastComputedDate(Loan memory _loan) internal view returns (uint256) {
-        return
-            _loan.repayments.length > 0
-                ? _loan.repayments[_loan.repayments.length - 1].date
-                : _loan.startDate;
-    }
-
     function _calculateCurrentDebt(Loan memory _loan) internal view returns (uint256) {
         if (_loan.lastComputedDebt == 0) {
             return 0;
         }
 
-        uint256 _lastPaymentDate = _getLastComputedDate(_loan);
-
-        uint256 _days = (block.timestamp - _lastPaymentDate) / 86400; //86400 = 1 day in seconds
+        uint256 _days = (block.timestamp - _loan.lastComputedDate) / 86400; //86400 = 1 day in seconds
 
         uint256 _currentDebt = _loan.lastComputedDebt;
 

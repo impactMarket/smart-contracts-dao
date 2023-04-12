@@ -62,4 +62,4 @@ $ yarn test
 | `/microcredit/MicrocreditRevenueProxy.sol`                            | Contract that receive all intrest from the microcredit contract              | 0xa75D14c212df85F24ead896747cb1688C1F889D7 |
 | `/microcredit/MicrocreditRevenueImplementation.sol`                   | Implementation for MicrocreditRevenueProxy                                   | 0x8622f364a3513f1544e15102571f1D59FfA1943f |
 | `/microcredit/MicrocreditProxy.sol`                                   | Proxy for the microcredit pilot                                              | 0xEa4D67c757a6f50974E7fd7B5b1cc7e7910b80Bb |
-| `/microcredit/MicrocreditImplementation.sol`                          | Implementation for MicrocreditProxy                                          | 0x02355305EF2282735737DEDD7F8BDbB661bAB4A8 |
+| `/microcredit/MicrocreditImplementation.sol`                          | Implementation for MicrocreditProxy                                          | 0xcB18703a14307D82d424187dc2491CA62af25d95 |
