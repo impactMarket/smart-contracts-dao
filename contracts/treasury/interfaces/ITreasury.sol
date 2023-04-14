@@ -28,12 +28,10 @@ interface ITreasury {
     function getVersion() external pure returns(uint256);
     function communityAdmin() external view returns(ICommunityAdmin);
     function lpSwap() external view returns(ITreasuryLpSwap);
-    function lpPercentage() external view returns(uint256);
     function PACT() external view returns (IERC20);
     function donationMiner() external view returns (IDonationMiner);
     function updateCommunityAdmin(ICommunityAdmin _communityAdmin) external;
     function updateLpSwap(ITreasuryLpSwap _lpSwap) external;
-    function updateLpPercentage(uint256 _newLpPercentage) external;
     function updatePACT(IERC20 _newPACT) external;
     function updateDonationMiner(IDonationMiner _newDonationMiner) external;
     function transfer(IERC20 _token, address _to, uint256 _amount) external;

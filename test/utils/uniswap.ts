@@ -117,6 +117,16 @@ export function getExchangePath(
 	}
 }
 
+export function getExchangePathProd(
+	token0Address: string,
+	token1Address: string,
+) {
+	return ethers.utils.solidityPack(
+		["address", "uint24", "address"],
+		[token0Address, 10000, token1Address]
+	);
+}
+
 // returns the sqrt price as a 64x96
 bn.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 });
 function encodePriceSqrt(reserve0: BigNumber, reserve1: BigNumber): BigNumber {

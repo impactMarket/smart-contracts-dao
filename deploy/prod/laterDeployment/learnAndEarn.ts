@@ -60,4 +60,4 @@ async function deployLearnAndEarn() {
 }
 
 export default func;
-func.tags = ["Release6LearnAndEarn"];
+func.tags = ["LearnAndEarn"];

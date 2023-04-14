@@ -17,5 +17,4 @@ abstract contract TreasuryStorageV2 is TreasuryStorageV1 {
     mapping(address => Token) public override tokens;
     EnumerableSet.AddressSet internal _tokenList;
     IERC20 public override PACT;
-    uint256 public override lpPercentage;
 }

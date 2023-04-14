@@ -141,4 +141,4 @@ async function createUpgradeDonationMinerProposal() {
 }
 
 export default func;
-func.tags = ["Release4Staking"];
+func.tags = ["Staking"];

@@ -28,14 +28,6 @@ contract TreasuryImplementation is
     );
 
     /**
-     * @notice Triggered when lpPercentage has been updated
-     *
-     * @param oldLpPercentage   Old lpPercentage address
-     * @param newLpPercentage   New lpPercentage address
-     */
-    event LpPercentageUpdated(uint256 oldLpPercentage, uint256 newLpPercentage);
-
-    /**
      * @notice Triggered when an amount of an ERC20 has been transferred from this contract to an address
      *
      * @param token               ERC20 token address
@@ -204,21 +196,6 @@ contract TreasuryImplementation is
         onlyOwnerOrImpactMarketCouncil
     {
         lpSwap = _newLpSwap;
-    }
-
-    /**
-     * @notice Updates the LpPercentage
-     *
-     * @param _newLpPercentage address of the new LpPercentage
-     */
-    function updateLpPercentage(uint256 _newLpPercentage)
-        external
-        override
-        onlyOwnerOrImpactMarketCouncil
-    {
-        emit LpPercentageUpdated(lpPercentage, _newLpPercentage);
-
-        lpPercentage = _newLpPercentage;
     }
 
     /**

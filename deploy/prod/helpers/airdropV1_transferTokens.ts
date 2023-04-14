@@ -53,4 +53,4 @@ async function createCallProposal() {
 }
 
 export default func;
-func.tags = ["AirdropV1.transferERC20"];
+func.tags = ["AirdropV1_transferERC20"];

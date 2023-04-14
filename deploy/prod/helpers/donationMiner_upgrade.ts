@@ -79,4 +79,4 @@ async function createUpgradeImplementation() {
 }
 
 export default func;
-func.tags = ["UpgradeDonationMiner"];
+func.tags = ["DonationMiner_upgrade"];

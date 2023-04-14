@@ -212,22 +212,6 @@ describe.only("Treasury", () => {
 			).to.be.equal(TreasuryImplementation.address);
 		});
 
-		it("Should not update lpPercentage if not owner", async function () {
-			await expect(
-				Treasury.connect(user1).updateLpPercentage(toEther(10))
-			).to.be.rejectedWith(
-				"Treasury: caller is not the owner nor ImpactMarketCouncil"
-			);
-			expect(await Treasury.lpPercentage()).to.be.equal(0);
-		});
-
-		it("Should update lpPercentage if owner", async function () {
-			await expect(Treasury.updateLpPercentage(toEther(10)))
-				.to.emit(Treasury, "LpPercentageUpdated")
-				.withArgs(0, toEther(10));
-			expect(await Treasury.lpPercentage()).to.be.equal(toEther(10));
-		});
-
 		it("Should not update PACT if not owner", async function () {
 			await expect(
 				Treasury.connect(user1).updatePACT(FAKE_ADDRESS)

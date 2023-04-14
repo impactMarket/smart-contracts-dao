@@ -4,12 +4,6 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { deployments, ethers } from "hardhat";
 import { getCUSDAddress } from "./cUSD";
 import { toEther } from "../../test/utils/helpers";
-import {
-	uniswapNFTPositionManagerAddress,
-	uniswapQuoterAddress,
-	uniswapRouterAddress,
-} from "../../test/utils/uniswap";
-import { LpStrategy } from "../../test/treasury/treasury.test";
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
@@ -54,7 +48,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	await treasuryContract.setToken(
 		cUSDAddress,
 		toEther(1),
-		LpStrategy.NONE,
+		0,
 		0,
 		0,
 		0,
