@@ -15,7 +15,7 @@ const expect = chai.expect;
 
 describe("Staking", () => {
 	const COOLDOWN = 100;
-	const DONATION_MINER_FIRST_BLOCK = 130;
+	let DONATION_MINER_FIRST_BLOCK = 0;
 
 	let owner: SignerWithAddress;
 	let user1: SignerWithAddress;
@@ -82,6 +82,10 @@ describe("Staking", () => {
 		await PACT.transfer(user5.address, toEther("5000000"));
 
 		await SPACT.transferOwnership(Staking.address);
+
+		DONATION_MINER_FIRST_BLOCK = (
+			await DonationMiner.rewardPeriods(1)
+		).startBlock.toNumber();
 	});
 
 	async function checkDonationMinerRewardPeriod(
@@ -320,7 +324,9 @@ describe("Staking", () => {
 
 			let unstake = await Staking.stakeholderUnstakeAt(user1.address, 0);
 			expect(unstake.amount).to.be.equal(toEther(60));
-			expect(unstake.cooldownBlock).to.be.equal(233);
+			expect(unstake.cooldownBlock).to.be.equal(
+				DONATION_MINER_FIRST_BLOCK + 103
+			);
 		});
 
 		it("should not unstake if not enough funds #2", async function () {
@@ -743,19 +749,27 @@ describe("Staking", () => {
 
 			let unstake = await Staking.stakeholderUnstakeAt(user1.address, 0);
 			expect(unstake.amount).to.be.equal(toEther(80));
-			expect(unstake.cooldownBlock).to.be.equal(342);
+			expect(unstake.cooldownBlock).to.be.equal(
+				DONATION_MINER_FIRST_BLOCK + 212
+			);
 
 			unstake = await Staking.stakeholderUnstakeAt(user2.address, 2);
 			expect(unstake.amount).to.be.equal(toEther(20));
-			expect(unstake.cooldownBlock).to.be.equal(347);
+			expect(unstake.cooldownBlock).to.be.equal(
+				DONATION_MINER_FIRST_BLOCK + 217
+			);
 
 			unstake = await Staking.stakeholderUnstakeAt(user2.address, 4);
 			expect(unstake.amount).to.be.equal(toEther(40));
-			expect(unstake.cooldownBlock).to.be.equal(349);
+			expect(unstake.cooldownBlock).to.be.equal(
+				DONATION_MINER_FIRST_BLOCK + 219
+			);
 
 			unstake = await Staking.stakeholderUnstakeAt(user3.address, 1);
 			expect(unstake.amount).to.be.equal(toEther(70));
-			expect(unstake.cooldownBlock).to.be.equal(340);
+			expect(unstake.cooldownBlock).to.be.equal(
+				DONATION_MINER_FIRST_BLOCK + 210
+			);
 		});
 	});
 });

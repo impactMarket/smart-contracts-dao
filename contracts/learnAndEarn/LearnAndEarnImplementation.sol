@@ -46,7 +46,7 @@ contract LearnAndEarnImplementation is
     event RewardClaimed(address indexed beneficiary, uint256 indexed levelId);
 
     /**
-     * @notice Enforces sender to be a valid community
+     * @notice Enforces sender to DAO or impactMarketCouncil
      */
     modifier onlyOwnerOrImpactMarketCouncil() {
         require(

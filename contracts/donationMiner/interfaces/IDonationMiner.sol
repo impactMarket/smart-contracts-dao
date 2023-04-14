@@ -3,6 +3,7 @@ pragma solidity 0.8.4;
 
 import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "../../community/interfaces/ICommunityAdmin.sol";
+import "../../community/interfaces/ICommunity.sol";
 import "../../treasury/interfaces/ITreasury.sol";
 import "../../staking/interfaces/IStaking.sol";
 

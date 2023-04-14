@@ -14,6 +14,8 @@ contract TreasuryImplementation is
     using SafeERC20Upgradeable for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
+    address constant DEAD_ADDRESS = 0x000000000000000000000000000000000000dEaD;
+
     /**
      * @notice Triggered when CommunityAdmin has been updated
      *
@@ -26,12 +28,12 @@ contract TreasuryImplementation is
     );
 
     /**
-     * @notice Triggered when UniswapRouter has been updated
+     * @notice Triggered when lpPercentage has been updated
      *
-     * @param oldUniswapRouter   Old uniswapRouter address
-     * @param newUniswapRouter   New uniswapRouter address
+     * @param oldLpPercentage   Old lpPercentage address
+     * @param newLpPercentage   New lpPercentage address
      */
-    event UniswapRouterUpdated(address indexed oldUniswapRouter, address indexed newUniswapRouter);
+    event LpPercentageUpdated(uint256 oldLpPercentage, uint256 newLpPercentage);
 
     /**
      * @notice Triggered when an amount of an ERC20 has been transferred from this contract to an address
@@ -45,19 +47,9 @@ contract TreasuryImplementation is
     /**
      * @notice Triggered when a token has been set
      *
-     * @param tokenAddress        Address of the token
-     * @param oldRate            Old token rate value
-     * @param oldExchangePath    Old token exchange path
-     * @param newRate            New token rate value
-     * @param newExchangePath    New token exchange path
+     * @param tokenAddress                      Address of the token
      */
-    event TokenSet(
-        address indexed tokenAddress,
-        uint256 oldRate,
-        address[] oldExchangePath,
-        uint256 newRate,
-        address[] newExchangePath
-    );
+    event TokenSet(address indexed tokenAddress);
 
     /**
      * @notice Triggered when a token has been removed
@@ -73,23 +65,15 @@ contract TreasuryImplementation is
      * @param amountIn               Amount changed
      * @param amountOutMin           Minimum amount out
      * @param exchangePath           Exchange path
-     * @param approximateAmountsOut  Approximate value of the final amount out
+     * @param amountsOut             Value of the final amount out
      */
     event AmountConverted(
         address indexed tokenAddress,
         uint256 amountIn,
         uint256 amountOutMin,
-        address[] exchangePath,
-        uint256 approximateAmountsOut
+        bytes exchangePath,
+        uint256 amountsOut
     );
-
-    /**
-     * @notice Enforces sender to be communityAdmin
-     */
-    modifier onlyCommunityAdmin() {
-        require(msg.sender == address(communityAdmin), "Treasury: NOT_COMMUNITY_ADMIN");
-        _;
-    }
 
     /**
      * @notice Enforces sender to be communityAdmin or owner
@@ -98,6 +82,29 @@ contract TreasuryImplementation is
         require(
             msg.sender == address(communityAdmin) || msg.sender == owner(),
             "Treasury: NOT_COMMUNITY_ADMIN AND NOT_OWNER"
+        );
+        _;
+    }
+
+    //todo: remove this modifier after deployment and testing
+    /**
+     * @notice Enforces sender to DAO or impactMarketCouncil
+     */
+    modifier onlyOwnerOrImpactMarketCouncil() {
+        require(
+            msg.sender == owner() || msg.sender == address(communityAdmin.impactMarketCouncil()),
+            "Treasury: caller is not the owner nor ImpactMarketCouncil"
+        );
+        _;
+    }
+
+    /**
+     * @notice Enforces sender to be owner or council or donationMiner
+     */
+    modifier onlyOwnerOrDonationMiner() {
+        require(
+            msg.sender == owner() || msg.sender == address(donationMiner),
+            "Treasury: caller is not the owner nor donationMiner"
         );
         _;
     }
@@ -127,7 +134,7 @@ contract TreasuryImplementation is
      * @param _tokenAddress token address to be checked
      * @return bool true if the tokenAddress is an accepted token
      */
-    function isToken(address _tokenAddress) external view override returns (bool) {
+    function isToken(address _tokenAddress) public view override returns (bool) {
         return _tokenList.contains(_tokenAddress);
     }
 
@@ -151,39 +158,67 @@ contract TreasuryImplementation is
     }
 
     /**
-     * @notice Returns the details of a token
-     *
-     * @param _tokenAddress address of the token
-     * @return rate of the token
-     * @return exchangePath of the token
-     */
-    function tokens(address _tokenAddress)
-        external
-        view
-        override
-        returns (uint256 rate, address[] memory exchangePath)
-    {
-        return (_tokens[_tokenAddress].rate, _tokens[_tokenAddress].exchangePath);
-    }
-
-    /**
      * @notice Updates the CommunityAdmin contract address
      *
      * @param _newCommunityAdmin address of the new CommunityAdmin contract
      */
-    function updateCommunityAdmin(ICommunityAdmin _newCommunityAdmin) external override onlyOwner {
+    function updateCommunityAdmin(ICommunityAdmin _newCommunityAdmin)
+        external
+        override
+        onlyOwnerOrImpactMarketCouncil
+    {
         emit CommunityAdminUpdated(address(communityAdmin), address(_newCommunityAdmin));
         communityAdmin = _newCommunityAdmin;
     }
 
     /**
-     * @notice Updates the UniswapRouter contract address
+     * @notice Updates the PACT contract address
      *
-     * @param _newUniswapRouter address of the new UniswapRouter contract
+     * @param _newPACT address of the new PACT contract
      */
-    function updateUniswapRouter(IUniswapV2Router _newUniswapRouter) external override onlyOwner {
-        emit UniswapRouterUpdated(address(uniswapRouter), address(_newUniswapRouter));
-        uniswapRouter = _newUniswapRouter;
+    function updatePACT(IERC20 _newPACT) external override onlyOwnerOrImpactMarketCouncil {
+        PACT = _newPACT;
+    }
+
+    /**
+     * @notice Updates the DonationMiner contract address
+     *
+     * @param _newDonationMiner address of the new DonationMiner contract
+     */
+    function updateDonationMiner(IDonationMiner _newDonationMiner)
+        external
+        override
+        onlyOwnerOrImpactMarketCouncil
+    {
+        donationMiner = _newDonationMiner;
+    }
+
+    /**
+     * @notice Updates the LpSwap contract address
+     *
+     * @param _newLpSwap address of the new LpSwap contract
+     */
+    function updateLpSwap(ITreasuryLpSwap _newLpSwap)
+        external
+        override
+        onlyOwnerOrImpactMarketCouncil
+    {
+        lpSwap = _newLpSwap;
+    }
+
+    /**
+     * @notice Updates the LpPercentage
+     *
+     * @param _newLpPercentage address of the new LpPercentage
+     */
+    function updateLpPercentage(uint256 _newLpPercentage)
+        external
+        override
+        onlyOwnerOrImpactMarketCouncil
+    {
+        emit LpPercentageUpdated(lpPercentage, _newLpPercentage);
+
+        lpPercentage = _newLpPercentage;
     }
 
     /**
@@ -198,117 +233,240 @@ contract TreasuryImplementation is
         address _to,
         uint256 _amount
     ) external override onlyCommunityAdminOrOwner nonReentrant {
-        IERC20Upgradeable(address(_token)).safeTransfer(_to, _amount);
+        _token.safeTransfer(_to, _amount);
 
         emit TransferERC20(address(_token), _to, _amount);
     }
 
+    /**
+     * @notice Used to set a new token
+     *
+     * @param _tokenAddress address of the token
+     * @param _rate rate of the token in CUSD
+     * @param _lpStrategy strategy to use for splitting the LP fees between treasury and buyback
+     * @param _lpPercentage percentage of the funds to be used for LP
+     * @param _lpMinLimit minimum amount of funds that need to be in the treasury (and not to be used for LP)
+     * @param _uniswapNFTPositionManagerId id of the NFT position manager
+     * @param _exchangePathToCUSD uniswap path to exchange the token to CUSD
+     * @param _exchangePathToPACT uniswap path to exchange the token to PACT
+     **/
     function setToken(
         address _tokenAddress,
         uint256 _rate,
-        address[] calldata _exchangePath
-    ) external override onlyOwner {
-        require(_rate > 0, "Treasury::setToken: invalid rate");
+        LpStrategy _lpStrategy,
+        uint256 _lpPercentage,
+        uint256 _lpMinLimit,
+        uint256 _uniswapNFTPositionManagerId,
+        bytes memory _exchangePathToCUSD,
+        bytes memory _exchangePathToPACT
+    ) public override onlyOwnerOrImpactMarketCouncil {
+        require(_rate > 0, "Treasury::setToken: Invalid rate");
 
-        if (_exchangePath.length > 0) {
+        emit TokenSet(_tokenAddress);
+
+        tokens[_tokenAddress].rate = _rate;
+        tokens[_tokenAddress].lpStrategy = _lpStrategy;
+        tokens[_tokenAddress].lpPercentage = _lpPercentage;
+        tokens[_tokenAddress].lpMinLimit = _lpMinLimit;
+
+        if (_uniswapNFTPositionManagerId > 0) {
             require(
-                _exchangePath.length > 1 && _exchangePath[0] == _tokenAddress,
-                "Treasury::setToken: invalid exchangePath"
+                lpSwap.uniswapNFTPositionManager().ownerOf(_uniswapNFTPositionManagerId) ==
+                    address(lpSwap),
+                "Treasury::setToken: invalid uniswapNFTPositionManagerId"
             );
-
-            uint256[] memory _amounts = uniswapRouter.getAmountsOut(1e18, _exchangePath);
-            require(_amounts[_amounts.length - 1] > 0, "Treasury::setToken: invalid exchangePath");
+            tokens[_tokenAddress].uniswapNFTPositionManagerId = _uniswapNFTPositionManagerId;
         }
 
-        emit TokenSet(
-            _tokenAddress,
-            _tokens[_tokenAddress].rate,
-            _tokens[_tokenAddress].exchangePath,
-            _rate,
-            _exchangePath
-        );
+        if (_exchangePathToCUSD.length > 0) {
+            require(
+                lpSwap.uniswapQuoter().quoteExactInput(_exchangePathToCUSD, 1e18) > 0,
+                "Treasury::setToken: invalid exchangePathToCUSD"
+            );
 
-        _tokens[_tokenAddress].rate = _rate;
-        _tokens[_tokenAddress].exchangePath = _exchangePath;
+            tokens[_tokenAddress].exchangePathToCUSD = _exchangePathToCUSD;
+        }
+
+        if (_exchangePathToPACT.length > 0) {
+            require(
+                lpSwap.uniswapQuoter().quoteExactInput(_exchangePathToPACT, 1e18) > 0,
+                "Treasury::setToken: invalid exchangePathToPACT"
+            );
+
+            tokens[_tokenAddress].exchangePathToPACT = _exchangePathToPACT;
+        }
 
         _tokenList.add(_tokenAddress);
     }
 
-    function removeToken(address _tokenAddress) external override onlyOwner {
+    /**
+     * @notice Used to remove a token
+     *
+     * @param _tokenAddress address of the token
+     **/
+    function removeToken(address _tokenAddress) external override onlyOwnerOrImpactMarketCouncil {
         require(_tokenList.contains(_tokenAddress), "Treasury::removeToken: this is not a token");
 
-        _tokens[_tokenAddress].rate = 0;
-        delete _tokens[_tokenAddress].exchangePath;
+        tokens[_tokenAddress].rate = 0;
+        tokens[_tokenAddress].lpStrategy = LpStrategy.NONE;
+        tokens[_tokenAddress].lpPercentage = 0;
+        tokens[_tokenAddress].lpMinLimit = 0;
+        tokens[_tokenAddress].uniswapNFTPositionManagerId = 0;
+        delete tokens[_tokenAddress].exchangePathToCUSD;
+        delete tokens[_tokenAddress].exchangePathToPACT;
 
         _tokenList.remove(_tokenAddress);
 
         emit TokenRemoved(_tokenAddress);
     }
 
+    /**
+     * @notice Gets the amount of cUSDs that can be obtained from a converting the given amount of a token
+     **/
     function getConvertedAmount(address _tokenAddress, uint256 _amount)
         external
-        view
         override
         returns (uint256)
     {
-        require(
-            _tokenList.contains(_tokenAddress),
-            "Treasury::getConvertedAmount: this is not a valid token"
-        );
+        require(isToken(_tokenAddress), "Treasury::getConvertedAmount: this is not a valid token");
 
-        Token memory _token = _tokens[_tokenAddress];
+        Token memory _token = tokens[_tokenAddress];
 
-        uint256 _convertedAmount;
-        if (_token.exchangePath.length == 0) {
-            _convertedAmount = _amount;
-        } else {
-            uint256[] memory _amountsOut = uniswapRouter.getAmountsOut(
-                _amount,
-                _token.exchangePath
-            );
-            _convertedAmount = _amountsOut[_amountsOut.length - 1];
-        }
+        uint256 _convertedAmount = _token.exchangePathToCUSD.length == 0
+            ? _amount
+            : lpSwap.uniswapQuoter().quoteExactInput(_token.exchangePathToCUSD, _amount);
 
         return (_convertedAmount * _token.rate) / 1e18;
     }
 
+    /**
+     * @notice Converts an amount of a token to cUSDs
+     *
+     * @param _tokenAddress is the address of the token to convert
+     * @param _amountIn is the amount of the token to convert
+     * @param _amountOutMin is used to prevent the transaction from failing if the price of the token changes - 0 for no check
+     * @param _exchangePath is the path to use for the swap - empty for the default path
+     **/
     function convertAmount(
         address _tokenAddress,
         uint256 _amountIn,
         uint256 _amountOutMin,
-        address[] memory _exchangePath,
-        uint256 _deadline
-    ) external override onlyOwner {
+        bytes memory _exchangePath
+    ) external override onlyOwnerOrImpactMarketCouncil {
         require(
             _tokenList.contains(_tokenAddress),
             "Treasury::convertAmount: this is not a valid token"
         );
 
         if (_exchangePath.length == 0) {
-            _exchangePath = _tokens[_tokenAddress].exchangePath;
+            _exchangePath = tokens[_tokenAddress].exchangePathToCUSD;
         }
 
-        if (_deadline == 0) {
-            _deadline = block.timestamp + 3600;
+        IERC20(_tokenAddress).approve(address(lpSwap.uniswapRouter()), _amountIn);
+
+        // Executes the swap.
+        uint256 _amountOut = lpSwap.uniswapRouter().exactInput(
+            IUniswapRouter02.ExactInputParams({
+                path: _exchangePath,
+                recipient: address(this),
+                amountIn: _amountIn,
+                amountOutMinimum: _amountOutMin
+            })
+        );
+
+        emit AmountConverted(_tokenAddress, _amountIn, _amountOutMin, _exchangePath, _amountOut);
+    }
+
+    /**
+     * @notice Uses part of the funds of a token to add liquidity to the Uniswap pool
+     * it is used by the DonationMiner when creating a new epoch
+     * it can also been used by the DAO when there are too many funds in the treasury
+     **/
+    function useFundsForLP() external override onlyOwnerOrDonationMiner {
+        uint256 _tokenLength = _tokenList.length();
+
+        Token memory _token;
+
+        for (uint256 _index; _index < _tokenLength; _index++) {
+            _token = tokens[_tokenList.at(_index)];
+            if (_token.lpPercentage > 0) {
+                IERC20 _erc20Token = IERC20(_tokenList.at(_index));
+                uint256 _balance = _erc20Token.balanceOf(address(this));
+
+                if (_balance > _token.lpMinLimit) {
+                    uint256 _tokenAmountToUseInLp = (_balance * _token.lpPercentage) / 100e18;
+                    _erc20Token.approve(address(lpSwap), _tokenAmountToUseInLp);
+                    lpSwap.addToLp(_erc20Token, _tokenAmountToUseInLp);
+                }
+            }
+        }
+    }
+
+    /**
+     * @notice Collects the fees of a Uniswap NFT position
+     *
+     * @param _uniswapNFTPositionManagerId is the id of the Uniswap NFT position
+     **/
+    function collectFees(uint256 _uniswapNFTPositionManagerId)
+        external
+        override
+        onlyOwnerOrImpactMarketCouncil
+    {
+        (, , address _token0Address, address _token1Address, , , , , , , , ) = lpSwap
+            .uniswapNFTPositionManager()
+            .positions(_uniswapNFTPositionManagerId);
+
+        require(
+            _token0Address == address(PACT) || _token1Address == address(PACT),
+            "Treasury::collectFees invalid uniswapNFTPositionManagerId"
+        );
+
+        (uint256 _amount0, uint256 _amount1) = lpSwap.collectFees(_uniswapNFTPositionManagerId);
+
+        IERC20 _erc20Token;
+        uint256 _pactAmount;
+        uint256 _tokenAmount;
+
+        if (_token0Address == address(PACT)) {
+            _erc20Token = IERC20(_token1Address);
+            _pactAmount = _amount0;
+            _tokenAmount = _amount1;
+        } else {
+            _erc20Token = IERC20(_token0Address);
+            _pactAmount = _amount1;
+            _tokenAmount = _amount0;
         }
 
-        uint256[] memory _amountsOut = uniswapRouter.getAmountsOut(_amountIn, _exchangePath);
+        Token memory _token = tokens[address(_erc20Token)];
 
-        IERC20(_tokenAddress).approve(address(uniswapRouter), _amountIn);
-        uniswapRouter.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-            _amountIn,
-            _amountOutMin,
-            _exchangePath,
-            address(this),
-            _deadline
-        );
+        if (_token.lpStrategy == LpStrategy.MainCoin) {
+            PACT.transfer(DEAD_ADDRESS, _pactAmount);
+        } else if (_token.lpStrategy == LpStrategy.SecondaryCoin) {
+            uint256 _pactToBurn;
 
-        emit AmountConverted(
-            _tokenAddress,
-            _amountIn,
-            _amountOutMin,
-            _exchangePath,
-            _amountsOut[_amountsOut.length - 1]
-        );
+            _erc20Token.approve(address(lpSwap.uniswapRouter()), _tokenAmount);
+
+            lpSwap.uniswapRouter().exactInput(
+                IUniswapRouter02.ExactInputParams({
+                    path: _token.exchangePathToCUSD,
+                    recipient: address(this),
+                    amountIn: _tokenAmount / 2,
+                    amountOutMinimum: 0
+                })
+            );
+
+            _pactToBurn = lpSwap.uniswapRouter().exactInput(
+                IUniswapRouter02.ExactInputParams({
+                    path: _token.exchangePathToPACT,
+                    recipient: address(this),
+                    amountIn: _tokenAmount / 2,
+                    amountOutMinimum: 0
+                })
+            );
+
+            PACT.transfer(DEAD_ADDRESS, _pactToBurn + _pactAmount);
+        } else {
+            return;
+        }
     }
 }

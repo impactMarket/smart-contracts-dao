@@ -1,9 +1,9 @@
 //SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.4;
 
-import "@ubeswap/governance/contracts/voting/VotingToken.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IMintableToken.sol";
+import "./VotingToken.sol";
 
 contract SPACTToken is IMintableToken, VotingToken, Ownable {
     /**

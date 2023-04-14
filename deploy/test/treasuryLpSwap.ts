@@ -23,8 +23,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	const ImpactProxyAdmin = await deployments.get("ImpactProxyAdmin");
 
-	const treasuryImplementationResult = await deploy(
-		"TreasuryImplementation",
+	const treasuryLpSwapImplementationResult = await deploy(
+		"TreasuryLpSwapImplementation",
 		{
 			from: deployer.address,
 			args: [],
@@ -33,36 +33,38 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		}
 	);
 
-	const treasuryProxyResult = await deploy("TreasuryProxy", {
+	const treasuryLpSwapProxyResult = await deploy("TreasuryLpSwapProxy", {
 		from: deployer.address,
-		args: [treasuryImplementationResult.address, ImpactProxyAdmin.address],
+		args: [
+			treasuryLpSwapImplementationResult.address,
+			ImpactProxyAdmin.address,
+		],
 		log: true,
 		// gasLimit: 13000000,
 	});
 
+	const treasuryLpSwapContract = await ethers.getContractAt(
+		"TreasuryLpSwapImplementation",
+		treasuryLpSwapProxyResult.address
+	);
+
 	const treasuryContract = await ethers.getContractAt(
 		"TreasuryImplementation",
-		treasuryProxyResult.address
+		(
+			await deployments.get("TreasuryProxy")
+		).address
 	);
 
-	const PACT = await deployments.get("PACTToken");
-
-	await treasuryContract.initialize(ZERO_ADDRESS);
-	await treasuryContract.updatePACT(PACT.address);
-	const cUSDAddress = getCUSDAddress();
-
-	await treasuryContract.setToken(
-		cUSDAddress,
-		toEther(1),
-		LpStrategy.NONE,
-		0,
-		0,
-		0,
-		"0x",
-		"0x"
+	await treasuryLpSwapContract.initialize(
+		treasuryContract.address,
+		uniswapRouterAddress,
+		uniswapQuoterAddress,
+		uniswapNFTPositionManagerAddress
 	);
+
+	await treasuryContract.updateLpSwap(treasuryLpSwapContract.address);
 };
 
 export default func;
-func.dependencies = ["ImpactProxyAdminTest", "cUSDTest"];
-func.tags = ["TreasuryTest", "Test"];
+func.dependencies = ["TreasuryTest"];
+func.tags = ["TreasuryLpSwapTest", "Test"];

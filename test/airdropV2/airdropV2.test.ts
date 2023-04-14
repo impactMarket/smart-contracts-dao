@@ -177,7 +177,7 @@ xdescribe("AirdropV2", () => {
 		});
 	});
 
-	describe("Airdrop  - basic", () => {
+	describe("Airdrop - claim", () => {
 		const initialBalance = toEther(1000000);
 
 		before(async function () {

@@ -61,7 +61,7 @@ interface ICommunityAdmin {
     function updateCommunityToken(
         ICommunity _community,
         IERC20 _newToken,
-        address[] memory _exchangePath,
+        bytes memory _exchangePath,
         uint256 _claimAmount,
         uint256 _maxClaim,
         uint256 _decreaseStep,

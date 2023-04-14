@@ -652,7 +652,7 @@ contract CommunityImplementation is
      */
     function updateToken(
         IERC20 _newToken,
-        address[] calldata _exchangePath,
+        bytes calldata _exchangePath,
         uint256 _originalClaimAmount,
         uint256 _maxTotalClaim,
         uint256 _decreaseStep,
@@ -676,14 +676,7 @@ contract CommunityImplementation is
             "Community::updateToken: Invalid token"
         );
 
-        require(
-            _exchangePath.length > 1 &&
-                _exchangePath[0] == address(token()) &&
-                _exchangePath[_exchangePath.length - 1] == address(_newToken),
-            "Community::updateToken: invalid exchangePath"
-        );
-
-        //for communities deployed before this functionality, we need to add the current token before changing
+        //for communities deployed before this functionality, we need to add the current token before changing it
         if (tokenUpdates.length == 0) {
             tokenUpdates.push(TokenUpdates(address(token()), 1e18, 0));
             _tokenList.add(address(token()));
@@ -697,16 +690,19 @@ contract CommunityImplementation is
         uint256 _balance = token().balanceOf(address(this));
 
         if (_balance > 0) {
-            IUniswapV2Router _uniswap = _treasury.uniswapRouter();
+            IUniswapRouter02 _uniswapRouter = _treasury.lpSwap().uniswapRouter();
 
-            token().approve(address(_uniswap), _balance);
-            _uniswap.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-                _balance,
-                0,
-                _exchangePath,
-                address(this),
-                block.timestamp + 3600
-            );
+            token().approve(address(_uniswapRouter), _balance);
+
+            IUniswapRouter02.ExactInputParams memory params = IUniswapRouter02.ExactInputParams({
+                path: _exchangePath,
+                recipient: address(this),
+                amountIn: _balance,
+                amountOutMinimum: 0
+            });
+
+            // Executes the swap.
+            uint256 amountOut = _uniswapRouter.exactInput(params);
         }
 
         emit TokenUpdated(address(_token), address(_newToken));

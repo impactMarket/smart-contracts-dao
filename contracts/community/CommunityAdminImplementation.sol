@@ -160,7 +160,7 @@ contract CommunityAdminImplementation is
     }
 
     /**
-     * @notice Enforces sender to be a valid community
+     * @notice Enforces sender to DAO or impactMarketCouncil
      */
     modifier onlyOwnerOrImpactMarketCouncil() {
         require(
@@ -649,7 +649,7 @@ contract CommunityAdminImplementation is
     function updateCommunityToken(
         ICommunity _community,
         IERC20 _newToken,
-        address[] memory _exchangePath,
+        bytes memory _exchangePath,
         uint256 _originalClaimAmount,
         uint256 _maxTotalClaim,
         uint256 _decreaseStep,

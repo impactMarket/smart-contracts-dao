@@ -32,8 +32,12 @@ export default {
       timeout: 100000,
       gasPrice: "auto",
       gas: 13000000,
+      forking: {
+        url: "https://forno.celo.org",
+        // url: "https://rpc.ankr.com/celo",
+      },
       // forking: {
-      //   url: "https://forno.celo.org",
+      //   url: "https://mainnet.infura.io/v3/814ad5575e7e46fab437380d19cf77bf",
       // },
     },
     alfajores: {
@@ -72,6 +76,15 @@ export default {
         version: "0.6.12",
         settings: {},
       },
+      {
+        version: "0.7.6",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200
+          }
+        }
+      }
     ],
   },
   namedAccounts: {

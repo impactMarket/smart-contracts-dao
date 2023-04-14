@@ -404,7 +404,7 @@ contract DonationMinerImplementation is
             "DonationMiner::donate: Invalid token"
         );
 
-        IERC20Upgradeable(address(_token)).safeTransferFrom(msg.sender, address(treasury), _amount);
+        _token.safeTransferFrom(msg.sender, address(treasury), _amount);
 
         _addDonation(_delegateAddress, _token, _amount, address(treasury));
     }
@@ -793,6 +793,8 @@ contract DonationMinerImplementation is
             }
             _newPeriod.rewardAmount = _rewardAmount;
             _lastPeriod = _newPeriod;
+
+            treasury.useFundsForLP();
         }
     }
 

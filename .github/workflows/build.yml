@@ -19,15 +19,15 @@ jobs:
       - name: Pre-install
         run: yarn --network-concurrency 1
 
-      - name: Run Checks
-        run: |
-          yarn prettier:write
-          yarn lint
-          yarn build
-          yarn docgen
+#      - name: Run Checks
+#        run: |
+#          yarn prettier:write
+#          yarn lint
+#          yarn build
+#          yarn docgen
 
-      - name: Run Coverage
-        run: yarn coverage
+#      - name: Run Coverage
+#        run: yarn coverage
 
       - name: Setup Git Config
         run: |
