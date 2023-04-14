@@ -199,7 +199,7 @@ contract TreasuryLpSwapImplementation is
      * @param _amountIn amount of the token to convert
      * @param _amountOutMin minimum amount of the token to receive
      * @param _exchangePath exchange path - if empty, it will use the default exchange path
-    */
+     */
     function convertAmount(
         address _tokenAddress,
         uint256 _amountIn,

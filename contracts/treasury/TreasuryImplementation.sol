@@ -103,8 +103,7 @@ contract TreasuryImplementation is
      */
     modifier onlyOwnerOrDonationMiner() {
         require(
-                msg.sender == owner() ||
-                msg.sender == address(donationMiner),
+            msg.sender == owner() || msg.sender == address(donationMiner),
             "Treasury: caller is not the owner nor donationMiner"
         );
         _;
