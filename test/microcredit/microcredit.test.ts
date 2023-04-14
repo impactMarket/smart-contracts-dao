@@ -11,7 +11,8 @@ import {
 } from "../utils/TimeTravel";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import * as ethersTypes from "ethers";
-import { toEther } from "../utils/helpers";
+import { fromEther, toEther } from "../utils/helpers";
+import { BigNumber } from "@ethersproject/bignumber";
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -70,6 +71,20 @@ describe.only("Microcredit", () => {
 		await cUSD.mint(user1.address, initialUser1Balance);
 		await cUSD.mint(user2.address, initialUser2Balance);
 	});
+
+	function getDebtOnDayX(
+		amount: BigNumber,
+		dailyInterest: BigNumber,
+		nrOfDays: number
+	): BigNumber {
+		while (nrOfDays >= 0) {
+			amount = amount.add(
+				amount.mul(dailyInterest).div(100).div(toEther(1))
+			);
+			nrOfDays--;
+		}
+		return amount;
+	}
 
 	describe("Microcredit - basic", () => {
 		before(async function () {});
@@ -404,6 +419,8 @@ describe.only("Microcredit", () => {
 			const dailyInterest2 = toEther(0.3);
 			const claimDeadline2 = (await getCurrentBlockTimestamp()) + 1000;
 
+			const expectedDebt1 = getDebtOnDayX(amount1, dailyInterest1, 0);
+
 			await Microcredit.connect(manager1)
 				.addLoan(
 					user1.address,
@@ -423,9 +440,11 @@ describe.only("Microcredit", () => {
 				);
 
 			await Microcredit.connect(user1).claimLoan(0);
-			await cUSD.connect(user1).approve(Microcredit.address, amount1);
+			await cUSD
+				.connect(user1)
+				.approve(Microcredit.address, expectedDebt1);
 
-			await Microcredit.connect(user1).repayLoan(0, amount1);
+			await Microcredit.connect(user1).repayLoan(0, expectedDebt1);
 
 			await Microcredit.connect(manager1)
 				.addLoan(
@@ -474,7 +493,7 @@ describe.only("Microcredit", () => {
 			loan2.lastComputedDate.should.eq(0);
 
 			(await cUSD.balanceOf(Microcredit.address)).should.eq(
-				initialMicrocreditBalance
+				initialMicrocreditBalance.add(expectedDebt1.sub(amount1))
 			);
 		});
 
@@ -910,8 +929,10 @@ describe.only("Microcredit", () => {
 			loan.dailyInterest.should.eq(dailyInterest);
 			loan.claimDeadline.should.eq(claimDeadline);
 			loan.startDate.should.eq(statDate);
-			loan.lastComputedDebt.should.eq(amount);
-			loan.currentDebt.should.eq(amount);
+			loan.lastComputedDebt.should.eq(
+				getDebtOnDayX(amount, dailyInterest, 0)
+			);
+			loan.currentDebt.should.eq(getDebtOnDayX(amount, dailyInterest, 0));
 			loan.amountRepayed.should.eq(0);
 			loan.repaymentsLength.should.eq(0);
 			loan.lastComputedDate.should.eq(statDate);
@@ -954,8 +975,10 @@ describe.only("Microcredit", () => {
 			loan.dailyInterest.should.eq(dailyInterest);
 			loan.claimDeadline.should.eq(claimDeadline);
 			loan.startDate.should.eq(statDate);
-			loan.lastComputedDebt.should.eq(amount);
-			loan.currentDebt.should.eq(amount);
+			loan.lastComputedDebt.should.eq(
+				getDebtOnDayX(amount, dailyInterest, 0)
+			);
+			loan.currentDebt.should.eq(getDebtOnDayX(amount, dailyInterest, 0));
 			loan.amountRepayed.should.eq(0);
 			loan.repaymentsLength.should.eq(0);
 			loan.lastComputedDate.should.eq(statDate);
@@ -1053,7 +1076,7 @@ describe.only("Microcredit", () => {
 			loan.currentDebt.should.eq(amount.sub(repaymentAmount1));
 			loan.amountRepayed.should.eq(repaymentAmount1);
 			loan.repaymentsLength.should.eq(1);
-			loan.lastComputedDate.should.eq(repaymentDate);
+			loan.lastComputedDate.should.eq(statDate);
 
 			let repayment = await Microcredit.userLoanRepayments(
 				user1.address,
@@ -1120,7 +1143,7 @@ describe.only("Microcredit", () => {
 				repaymentAmount1.add(repaymentAmount2)
 			);
 			loan.repaymentsLength.should.eq(2);
-			loan.lastComputedDate.should.eq(repaymentDate2);
+			loan.lastComputedDate.should.eq(statDate);
 
 			let repayment1 = await Microcredit.userLoanRepayments(
 				user1.address,
@@ -1187,7 +1210,7 @@ describe.only("Microcredit", () => {
 			loan.currentDebt.should.eq(amount.sub(repaymentAmount1));
 			loan.amountRepayed.should.eq(repaymentAmount1);
 			loan.repaymentsLength.should.eq(1);
-			loan.lastComputedDate.should.eq(repaymentDate);
+			loan.lastComputedDate.should.eq(statDate);
 
 			let repayment = await Microcredit.userLoanRepayments(
 				user1.address,
@@ -1242,7 +1265,7 @@ describe.only("Microcredit", () => {
 			loan.currentDebt.should.eq(amount.sub(repaymentAmount1));
 			loan.amountRepayed.should.eq(repaymentAmount1);
 			loan.repaymentsLength.should.eq(1);
-			loan.lastComputedDate.should.eq(repaymentDate);
+			loan.lastComputedDate.should.eq(statDate);
 
 			await Microcredit.userLoanRepayments(
 				user1.address,
@@ -1283,7 +1306,7 @@ describe.only("Microcredit", () => {
 				repaymentAmount1.add(repaymentAmount2)
 			);
 			loan.repaymentsLength.should.eq(2);
-			loan.lastComputedDate.should.eq(repayment2);
+			loan.lastComputedDate.should.eq(statDate);
 
 			repayment = await Microcredit.userLoanRepayments(
 				user2.address,
@@ -1449,8 +1472,10 @@ describe.only("Microcredit", () => {
 			loan.dailyInterest.should.eq(dailyInterest);
 			loan.claimDeadline.should.eq(claimDeadline);
 			loan.startDate.should.eq(statDate);
-			loan.lastComputedDebt.should.eq(amount);
-			loan.currentDebt.should.eq(amount);
+			loan.lastComputedDebt.should.eq(
+				getDebtOnDayX(amount, dailyInterest, 0)
+			);
+			loan.currentDebt.should.eq(getDebtOnDayX(amount, dailyInterest, 0));
 			loan.amountRepayed.should.eq(0);
 			loan.repaymentsLength.should.eq(0);
 			loan.lastComputedDate.should.eq(statDate);
@@ -1462,27 +1487,33 @@ describe.only("Microcredit", () => {
 			loan.dailyInterest.should.eq(dailyInterest);
 			loan.claimDeadline.should.eq(claimDeadline);
 			loan.startDate.should.eq(statDate);
-			loan.lastComputedDebt.should.eq(amount);
-			loan.currentDebt.should.eq(toEther("100.2"));
+			loan.lastComputedDebt.should.eq(
+				getDebtOnDayX(amount, dailyInterest, 0)
+			);
+			loan.currentDebt.should.eq(getDebtOnDayX(amount, dailyInterest, 1));
 			loan.amountRepayed.should.eq(0);
 			loan.repaymentsLength.should.eq(0);
 			loan.lastComputedDate.should.eq(statDate);
 
 			await advanceNSecondsAndBlock(3600 * 24);
 			loan = await Microcredit.userLoans(user1.address, 0);
-			loan.currentDebt.should.eq(toEther("100.4004"));
+			loan.currentDebt.should.eq(getDebtOnDayX(amount, dailyInterest, 2));
 
 			await advanceNSecondsAndBlock(3600 * 24);
 			loan = await Microcredit.userLoans(user1.address, 0);
-			loan.currentDebt.should.eq(toEther("100.6012008"));
+			loan.currentDebt.should.eq(getDebtOnDayX(amount, dailyInterest, 3));
 
 			await advanceNSecondsAndBlock(3600 * 24 * 27);
 			loan = await Microcredit.userLoans(user1.address, 0);
-			loan.currentDebt.should.eq(toEther("106.177292307845568797"));
+			loan.currentDebt.should.eq(
+				getDebtOnDayX(amount, dailyInterest, 30)
+			);
 
 			await advanceNSecondsAndBlock(3600 * 24 * 150);
 			loan = await Microcredit.userLoans(user1.address, 0);
-			loan.currentDebt.should.eq(toEther("143.281419556037096897"));
+			loan.currentDebt.should.eq(
+				getDebtOnDayX(amount, dailyInterest, 180)
+			);
 		});
 
 		it("should calculate currentDebt #2", async function () {
@@ -1507,23 +1538,27 @@ describe.only("Microcredit", () => {
 
 			await advanceNSecondsAndBlock(3600 * 24);
 			loan = await Microcredit.userLoans(user1.address, 0);
-			loan.currentDebt.should.eq(toEther("2004"));
+			loan.currentDebt.should.eq(getDebtOnDayX(amount, dailyInterest, 1));
 
 			await advanceNSecondsAndBlock(3600 * 24);
 			loan = await Microcredit.userLoans(user1.address, 0);
-			loan.currentDebt.should.eq(toEther("2008.008"));
+			loan.currentDebt.should.eq(getDebtOnDayX(amount, dailyInterest, 2));
 
 			await advanceNSecondsAndBlock(3600 * 24);
 			loan = await Microcredit.userLoans(user1.address, 0);
-			loan.currentDebt.should.eq(toEther("2012.024016"));
+			loan.currentDebt.should.eq(getDebtOnDayX(amount, dailyInterest, 3));
 
 			await advanceNSecondsAndBlock(3600 * 24 * 27);
 			loan = await Microcredit.userLoans(user1.address, 0);
-			loan.currentDebt.should.eq(toEther("2123.545846156911376201"));
+			loan.currentDebt.should.eq(
+				getDebtOnDayX(amount, dailyInterest, 30)
+			);
 
 			await advanceNSecondsAndBlock(3600 * 24 * 150);
 			loan = await Microcredit.userLoans(user1.address, 0);
-			loan.currentDebt.should.eq(toEther("2865.628391120741939846"));
+			loan.currentDebt.should.eq(
+				getDebtOnDayX(amount, dailyInterest, 180)
+			);
 		});
 
 		it("should repayLoan after 1 day", async function () {
@@ -1542,9 +1577,9 @@ describe.only("Microcredit", () => {
 			await Microcredit.connect(user1).claimLoan(0).should.be.fulfilled;
 			const statDate = await getCurrentBlockTimestamp();
 
-			await advanceNSecondsAndBlock(3600 * 24);
+			await advanceNSecondsAndBlock(3600 * 25);
 
-			const expectedCurrentDebt = toEther("100.2");
+			const expectedCurrentDebt = getDebtOnDayX(amount, dailyInterest, 1);
 
 			let loan = await Microcredit.userLoans(user1.address, 0);
 			loan.currentDebt.should.eq(expectedCurrentDebt);
@@ -1567,7 +1602,7 @@ describe.only("Microcredit", () => {
 			loan.currentDebt.should.eq(0);
 			loan.amountRepayed.should.eq(expectedCurrentDebt);
 			loan.repaymentsLength.should.eq(1);
-			loan.lastComputedDate.should.eq(repaymentDate1);
+			loan.lastComputedDate.should.eq(statDate + 3600 * 24);
 
 			let repayment1 = await Microcredit.userLoanRepayments(
 				user1.address,
@@ -1601,9 +1636,9 @@ describe.only("Microcredit", () => {
 			await Microcredit.connect(user1).claimLoan(0).should.be.fulfilled;
 			const statDate = await getCurrentBlockTimestamp();
 
-			await advanceNSecondsAndBlock(3600 * 24 * 2);
+			await advanceNSecondsAndBlock(3600 * 24 * 2 + 100);
 
-			const expectedCurrentDebt = toEther("100.4004");
+			const expectedCurrentDebt = getDebtOnDayX(amount, dailyInterest, 2);
 
 			let loan = await Microcredit.userLoans(user1.address, 0);
 			loan.currentDebt.should.eq(expectedCurrentDebt);
@@ -1626,7 +1661,7 @@ describe.only("Microcredit", () => {
 			loan.currentDebt.should.eq(0);
 			loan.amountRepayed.should.eq(expectedCurrentDebt);
 			loan.repaymentsLength.should.eq(1);
-			loan.lastComputedDate.should.eq(repaymentDate1);
+			loan.lastComputedDate.should.eq(statDate + 3600 * 24 * 2);
 
 			let repayment1 = await Microcredit.userLoanRepayments(
 				user1.address,
@@ -1660,9 +1695,9 @@ describe.only("Microcredit", () => {
 			await Microcredit.connect(user1).claimLoan(0).should.be.fulfilled;
 			const statDate = await getCurrentBlockTimestamp();
 
-			await advanceNSecondsAndBlock(3600 * 24 * 3);
+			await advanceNSecondsAndBlock(3600 * 24 * 3 + 1000);
 
-			const expectedCurrentDebt = toEther("100.6012008");
+			const expectedCurrentDebt = getDebtOnDayX(amount, dailyInterest, 3);
 
 			let loan = await Microcredit.userLoans(user1.address, 0);
 			loan.currentDebt.should.eq(expectedCurrentDebt);
@@ -1685,7 +1720,7 @@ describe.only("Microcredit", () => {
 			loan.currentDebt.should.eq(0);
 			loan.amountRepayed.should.eq(expectedCurrentDebt);
 			loan.repaymentsLength.should.eq(1);
-			loan.lastComputedDate.should.eq(repaymentDate1);
+			loan.lastComputedDate.should.eq(statDate + 3600 * 24 * 3);
 
 			let repayment1 = await Microcredit.userLoanRepayments(
 				user1.address,
@@ -1719,9 +1754,13 @@ describe.only("Microcredit", () => {
 			await Microcredit.connect(user1).claimLoan(0).should.be.fulfilled;
 			const statDate = await getCurrentBlockTimestamp();
 
-			await advanceNSecondsAndBlock(3600 * 24 * 30);
+			await advanceNSecondsAndBlock(3600 * 24 * 30 + 1000);
 
-			const expectedCurrentDebt = toEther("106.177292307845568797");
+			const expectedCurrentDebt = getDebtOnDayX(
+				amount,
+				dailyInterest,
+				30
+			);
 
 			let loan = await Microcredit.userLoans(user1.address, 0);
 			loan.currentDebt.should.eq(expectedCurrentDebt);
@@ -1744,7 +1783,7 @@ describe.only("Microcredit", () => {
 			loan.currentDebt.should.eq(0);
 			loan.amountRepayed.should.eq(expectedCurrentDebt);
 			loan.repaymentsLength.should.eq(1);
-			loan.lastComputedDate.should.eq(repaymentDate1);
+			loan.lastComputedDate.should.eq(statDate + 3600 * 24 * 30);
 
 			let repayment1 = await Microcredit.userLoanRepayments(
 				user1.address,
@@ -1778,9 +1817,13 @@ describe.only("Microcredit", () => {
 			await Microcredit.connect(user1).claimLoan(0).should.be.fulfilled;
 			const statDate = await getCurrentBlockTimestamp();
 
-			await advanceNSecondsAndBlock(3600 * 24 * 180);
+			await advanceNSecondsAndBlock(3600 * 24 * 180 + 1000);
 
-			const expectedCurrentDebt = toEther("143.281419556037096897");
+			const expectedCurrentDebt = getDebtOnDayX(
+				amount,
+				dailyInterest,
+				180
+			);
 
 			let loan = await Microcredit.userLoans(user1.address, 0);
 			loan.currentDebt.should.eq(expectedCurrentDebt);
@@ -1803,7 +1846,7 @@ describe.only("Microcredit", () => {
 			loan.currentDebt.should.eq(0);
 			loan.amountRepayed.should.eq(expectedCurrentDebt);
 			loan.repaymentsLength.should.eq(1);
-			loan.lastComputedDate.should.eq(repaymentDate1);
+			loan.lastComputedDate.should.eq(statDate + 3600 * 24 * 180);
 
 			let repayment1 = await Microcredit.userLoanRepayments(
 				user1.address,
@@ -1837,9 +1880,9 @@ describe.only("Microcredit", () => {
 			await Microcredit.connect(user1).claimLoan(0).should.be.fulfilled;
 			const statDate = await getCurrentBlockTimestamp();
 
-			await advanceNSecondsAndBlock(3600 * 24);
+			await advanceNSecondsAndBlock(3600 * 25);
 
-			const expectedCurrentDebt = toEther("100.2");
+			const expectedCurrentDebt = getDebtOnDayX(amount, dailyInterest, 1);
 			const repaymentAmount = toEther("200");
 
 			let loan = await Microcredit.userLoans(user1.address, 0);
@@ -1866,7 +1909,7 @@ describe.only("Microcredit", () => {
 			loan.currentDebt.should.eq(0);
 			loan.amountRepayed.should.eq(expectedCurrentDebt);
 			loan.repaymentsLength.should.eq(1);
-			loan.lastComputedDate.should.eq(repaymentDate1);
+			loan.lastComputedDate.should.eq(statDate + 3600 * 24);
 
 			let repayment1 = await Microcredit.userLoanRepayments(
 				user1.address,
@@ -1901,7 +1944,7 @@ describe.only("Microcredit", () => {
 
 			await advanceNSecondsAndBlock(3600 * 24);
 
-			const expectedCurrentDebt = toEther("100.2");
+			const expectedCurrentDebt = getDebtOnDayX(amount, dailyInterest, 1);
 
 			let loan = await Microcredit.userLoans(user1.address, 0);
 			loan.currentDebt.should.eq(expectedCurrentDebt);
@@ -1979,11 +2022,11 @@ describe.only("Microcredit", () => {
 			await Microcredit.connect(user1).claimLoan(0).should.be.fulfilled;
 			const statDate = await getCurrentBlockTimestamp();
 
-			const expectedCurrentDebt = toEther("100.2");
+			const expectedCurrentDebt = getDebtOnDayX(amount, dailyInterest, 1);
 			const repaymentAmount1 = expectedCurrentDebt.div(3);
 			const repaymentAmount2 = expectedCurrentDebt.sub(repaymentAmount1);
 
-			await advanceNSecondsAndBlock(3600 * 24);
+			await advanceNSecondsAndBlock(3600 * 25);
 
 			let loan = await Microcredit.userLoans(user1.address, 0);
 			loan.currentDebt.should.eq(expectedCurrentDebt);
@@ -2013,7 +2056,7 @@ describe.only("Microcredit", () => {
 			);
 			loan.amountRepayed.should.eq(repaymentAmount1);
 			loan.repaymentsLength.should.eq(1);
-			loan.lastComputedDate.should.eq(repaymentDate1);
+			loan.lastComputedDate.should.eq(statDate + 3600 * 24);
 
 			await Microcredit.connect(user1).repayLoan(0, repaymentAmount2)
 				.should.be.fulfilled;
@@ -2031,7 +2074,7 @@ describe.only("Microcredit", () => {
 				repaymentAmount1.add(repaymentAmount2)
 			);
 			loan.repaymentsLength.should.eq(2);
-			loan.lastComputedDate.should.eq(repaymentDate2);
+			loan.lastComputedDate.should.eq(statDate + 3600 * 24);
 
 			let repayment1 = await Microcredit.userLoanRepayments(
 				user1.address,
@@ -2077,11 +2120,15 @@ describe.only("Microcredit", () => {
 			await Microcredit.connect(user1).claimLoan(0).should.be.fulfilled;
 			const statDate = await getCurrentBlockTimestamp();
 
-			const expectedCurrentDebt1 = toEther("100.2");
+			const expectedCurrentDebt1 = getDebtOnDayX(
+				amount,
+				dailyInterest,
+				1
+			);
 			const repaymentAmount1 = expectedCurrentDebt1.div(5);
 			const repaymentAmount2 = expectedCurrentDebt1.sub(repaymentAmount1);
 
-			await advanceNSecondsAndBlock(3600 * 24);
+			await advanceNSecondsAndBlock(3600 * 25);
 
 			let loan = await Microcredit.userLoans(user1.address, 0);
 			loan.currentDebt.should.eq(expectedCurrentDebt1);
@@ -2111,11 +2158,15 @@ describe.only("Microcredit", () => {
 			);
 			loan.amountRepayed.should.eq(repaymentAmount1);
 			loan.repaymentsLength.should.eq(1);
-			loan.lastComputedDate.should.eq(repaymentDate1);
+			loan.lastComputedDate.should.eq(statDate + 3600 * 24);
 
-			await advanceNSecondsAndBlock(3600 * 24);
+			await advanceNSecondsAndBlock(3600 * 25);
 
-			const expectedCurrentDebt2 = toEther("80.320320000000000000");
+			const expectedCurrentDebt2 = getDebtOnDayX(
+				expectedCurrentDebt1.sub(repaymentAmount1),
+				dailyInterest,
+				0
+			);
 
 			loan = await Microcredit.userLoans(user1.address, 0);
 			loan.amountBorrowed.should.eq(amount);
@@ -2129,7 +2180,7 @@ describe.only("Microcredit", () => {
 			loan.currentDebt.should.eq(expectedCurrentDebt2);
 			loan.amountRepayed.should.eq(repaymentAmount1);
 			loan.repaymentsLength.should.eq(1);
-			loan.lastComputedDate.should.eq(repaymentDate1);
+			loan.lastComputedDate.should.eq(statDate + 3600 * 24);
 
 			await Microcredit.connect(user1).repayLoan(0, repaymentAmount2)
 				.should.be.fulfilled;
@@ -2151,7 +2202,135 @@ describe.only("Microcredit", () => {
 				repaymentAmount1.add(repaymentAmount2)
 			);
 			loan.repaymentsLength.should.eq(2);
-			loan.lastComputedDate.should.eq(repaymentDate2);
+			loan.lastComputedDate.should.eq(statDate + 3600 * 24 * 2);
+
+			let repayment1 = await Microcredit.userLoanRepayments(
+				user1.address,
+				0,
+				0
+			);
+			repayment1.amount.should.eq(repaymentAmount1);
+			repayment1.date.should.eq(repaymentDate1);
+
+			let repayment2 = await Microcredit.userLoanRepayments(
+				user1.address,
+				0,
+				1
+			);
+			repayment2.amount.should.eq(repaymentAmount2);
+			repayment2.date.should.eq(repaymentDate2);
+
+			(await cUSD.balanceOf(user1.address)).should.eq(
+				initialUser1Balance
+					.add(amount)
+					.sub(repaymentAmount1.add(repaymentAmount2))
+			);
+			(await cUSD.balanceOf(Microcredit.address)).should.eq(
+				initialMicrocreditBalance
+					.sub(amount)
+					.add(repaymentAmount1.add(repaymentAmount2))
+			);
+		});
+
+		it("should add interest after 23h repayment", async function () {
+			const amount = toEther(100);
+			const period = sixMonth;
+			const dailyInterest = toEther(0.2);
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
+
+			await Microcredit.connect(manager1).addLoan(
+				user1.address,
+				amount,
+				period,
+				dailyInterest,
+				claimDeadline
+			).should.be.fulfilled;
+			await Microcredit.connect(user1).claimLoan(0).should.be.fulfilled;
+			const statDate = await getCurrentBlockTimestamp();
+
+			const expectedCurrentDebt1 = getDebtOnDayX(
+				amount,
+				dailyInterest,
+				0
+			);
+			const repaymentAmount1 = toEther("10");
+			const repaymentAmount2 = toEther("20");
+
+			await advanceNSecondsAndBlock(3600 * 23);
+
+			let loan = await Microcredit.userLoans(user1.address, 0);
+			loan.currentDebt.should.eq(expectedCurrentDebt1);
+
+			await cUSD
+				.connect(user1)
+				.approve(
+					Microcredit.address,
+					repaymentAmount1.add(repaymentAmount2)
+				);
+
+			await Microcredit.connect(user1).repayLoan(0, repaymentAmount1)
+				.should.be.fulfilled;
+			const repaymentDate1 = await getCurrentBlockTimestamp();
+
+			loan = await Microcredit.userLoans(user1.address, 0);
+			loan.amountBorrowed.should.eq(amount);
+			loan.period.should.eq(period);
+			loan.dailyInterest.should.eq(dailyInterest);
+			loan.claimDeadline.should.eq(claimDeadline);
+			loan.startDate.should.eq(statDate);
+			loan.lastComputedDebt.should.eq(
+				expectedCurrentDebt1.sub(repaymentAmount1)
+			);
+			loan.currentDebt.should.eq(
+				expectedCurrentDebt1.sub(repaymentAmount1)
+			);
+			loan.amountRepayed.should.eq(repaymentAmount1);
+			loan.repaymentsLength.should.eq(1);
+			loan.lastComputedDate.should.eq(statDate);
+
+			await advanceNSecondsAndBlock(3600 * 2);
+
+			const expectedCurrentDebt2 = getDebtOnDayX(
+				expectedCurrentDebt1.sub(repaymentAmount1),
+				dailyInterest,
+				0
+			);
+
+			loan = await Microcredit.userLoans(user1.address, 0);
+			loan.amountBorrowed.should.eq(amount);
+			loan.period.should.eq(period);
+			loan.dailyInterest.should.eq(dailyInterest);
+			loan.claimDeadline.should.eq(claimDeadline);
+			loan.startDate.should.eq(statDate);
+			loan.lastComputedDebt.should.eq(
+				expectedCurrentDebt1.sub(repaymentAmount1)
+			);
+			loan.currentDebt.should.eq(expectedCurrentDebt2);
+			loan.amountRepayed.should.eq(repaymentAmount1);
+			loan.repaymentsLength.should.eq(1);
+			loan.lastComputedDate.should.eq(statDate);
+
+			await Microcredit.connect(user1).repayLoan(0, repaymentAmount2)
+				.should.be.fulfilled;
+			const repaymentDate2 = await getCurrentBlockTimestamp();
+
+			loan = await Microcredit.userLoans(user1.address, 0);
+			loan.amountBorrowed.should.eq(amount);
+			loan.period.should.eq(period);
+			loan.dailyInterest.should.eq(dailyInterest);
+			loan.claimDeadline.should.eq(claimDeadline);
+			loan.startDate.should.eq(statDate);
+			loan.lastComputedDebt.should.eq(
+				expectedCurrentDebt2.sub(repaymentAmount2)
+			);
+			loan.currentDebt.should.eq(
+				expectedCurrentDebt2.sub(repaymentAmount2)
+			);
+			loan.amountRepayed.should.eq(
+				repaymentAmount1.add(repaymentAmount2)
+			);
+			loan.repaymentsLength.should.eq(2);
+			loan.lastComputedDate.should.eq(statDate + 3600 * 24);
 
 			let repayment1 = await Microcredit.userLoanRepayments(
 				user1.address,
@@ -2207,9 +2386,13 @@ describe.only("Microcredit", () => {
 			await Microcredit.connect(user1).claimLoan(0).should.be.fulfilled;
 			const statDate = await getCurrentBlockTimestamp();
 
-			await advanceNSecondsAndBlock(3600 * 24 * 180);
+			await advanceNSecondsAndBlock(3600 * 24 * 180 + 1000);
 
-			const expectedCurrentDebt = toEther("143.281419556037096897");
+			const expectedCurrentDebt = getDebtOnDayX(
+				amount,
+				dailyInterest,
+				180
+			);
 
 			let loan = await Microcredit.userLoans(user1.address, 0);
 			loan.currentDebt.should.eq(expectedCurrentDebt);
@@ -2232,7 +2415,7 @@ describe.only("Microcredit", () => {
 			loan.currentDebt.should.eq(0);
 			loan.amountRepayed.should.eq(expectedCurrentDebt);
 			loan.repaymentsLength.should.eq(1);
-			loan.lastComputedDate.should.eq(repaymentDate1);
+			loan.lastComputedDate.should.eq(statDate + 3600 * 24 * 180);
 
 			let repayment1 = await Microcredit.userLoanRepayments(
 				user1.address,
@@ -2269,9 +2452,13 @@ describe.only("Microcredit", () => {
 			await Microcredit.connect(user1).claimLoan(0).should.be.fulfilled;
 			const statDate = await getCurrentBlockTimestamp();
 
-			await advanceNSecondsAndBlock(3600 * 24 * 180);
+			await advanceNSecondsAndBlock(3600 * 24 * 180 + 1000);
 
-			const expectedCurrentDebt = toEther("143.281419556037096897");
+			const expectedCurrentDebt = getDebtOnDayX(
+				amount,
+				dailyInterest,
+				180
+			);
 
 			let loan = await Microcredit.userLoans(user1.address, 0);
 			loan.currentDebt.should.eq(expectedCurrentDebt);
@@ -2287,11 +2474,13 @@ describe.only("Microcredit", () => {
 			loan.dailyInterest.should.eq(dailyInterest);
 			loan.claimDeadline.should.eq(claimDeadline);
 			loan.startDate.should.eq(statDate);
-			loan.lastComputedDebt.should.eq(toEther("103.281419556037096897"));
-			loan.currentDebt.should.eq(toEther("103.281419556037096897"));
+			loan.lastComputedDebt.should.eq(
+				expectedCurrentDebt.sub(toEther(40))
+			);
+			loan.currentDebt.should.eq(expectedCurrentDebt.sub(toEther(40)));
 			loan.amountRepayed.should.eq(toEther(40));
 			loan.repaymentsLength.should.eq(1);
-			loan.lastComputedDate.should.eq(repaymentDate1);
+			loan.lastComputedDate.should.eq(statDate + 3600 * 24 * 180);
 
 			let repayment1 = await Microcredit.userLoanRepayments(
 				user1.address,
@@ -2320,11 +2509,15 @@ describe.only("Microcredit", () => {
 			loan.dailyInterest.should.eq(dailyInterest);
 			loan.claimDeadline.should.eq(claimDeadline);
 			loan.startDate.should.eq(statDate);
-			loan.lastComputedDebt.should.eq(toEther("43.281419556037096897"));
-			loan.currentDebt.should.eq(toEther("43.281419556037096897"));
+			loan.lastComputedDebt.should.eq(
+				expectedCurrentDebt.sub(toEther(40)).sub(toEther(60))
+			);
+			loan.currentDebt.should.eq(
+				expectedCurrentDebt.sub(toEther(40)).sub(toEther(60))
+			);
 			loan.amountRepayed.should.eq(toEther(100));
 			loan.repaymentsLength.should.eq(2);
-			loan.lastComputedDate.should.eq(repaymentDate2);
+			loan.lastComputedDate.should.eq(statDate + 3600 * 24 * 180);
 
 			let repayment2 = await Microcredit.userLoanRepayments(
 				user1.address,
@@ -2344,10 +2537,13 @@ describe.only("Microcredit", () => {
 
 			await cUSD
 				.connect(user1)
-				.approve(Microcredit.address, toEther("43.281419556037096897"));
+				.approve(
+					Microcredit.address,
+					expectedCurrentDebt.sub(toEther(40)).sub(toEther(60))
+				);
 			await Microcredit.connect(user1).repayLoan(
 				0,
-				toEther("43.281419556037096897")
+				expectedCurrentDebt.sub(toEther(40)).sub(toEther(60))
 			).should.be.fulfilled;
 			const repaymentDate3 = await getCurrentBlockTimestamp();
 
@@ -2359,16 +2555,18 @@ describe.only("Microcredit", () => {
 			loan.startDate.should.eq(statDate);
 			loan.lastComputedDebt.should.eq(0);
 			loan.currentDebt.should.eq(0);
-			loan.amountRepayed.should.eq(toEther("143.281419556037096897"));
+			loan.amountRepayed.should.eq(expectedCurrentDebt);
 			loan.repaymentsLength.should.eq(3);
-			loan.lastComputedDate.should.eq(repaymentDate3);
+			loan.lastComputedDate.should.eq(statDate + 3600 * 24 * 180);
 
 			let repayment3 = await Microcredit.userLoanRepayments(
 				user1.address,
 				0,
 				2
 			);
-			repayment3.amount.should.eq(toEther("43.281419556037096897"));
+			repayment3.amount.should.eq(
+				expectedCurrentDebt.sub(toEther(40)).sub(toEther(60))
+			);
 			repayment3.date.should.eq(repaymentDate3);
 
 			(await cUSD.balanceOf(user1.address)).should.eq(
@@ -2378,7 +2576,7 @@ describe.only("Microcredit", () => {
 				initialMicrocreditBalance
 			);
 			(await cUSD.balanceOf(MicrocreditRevenue.address)).should.eq(
-				toEther("43.281419556037096897")
+				expectedCurrentDebt.sub(amount)
 			);
 		});
 
@@ -2398,9 +2596,13 @@ describe.only("Microcredit", () => {
 			await Microcredit.connect(user1).claimLoan(0).should.be.fulfilled;
 			const statDate = await getCurrentBlockTimestamp();
 
-			await advanceNSecondsAndBlock(3600 * 24 * 180);
+			await advanceNSecondsAndBlock(3600 * 24 * 180 + 1000);
 
-			const expectedCurrentDebt = toEther("143.281419556037096897");
+			const expectedCurrentDebt = getDebtOnDayX(
+				amount,
+				dailyInterest,
+				180
+			);
 
 			let loan = await Microcredit.userLoans(user1.address, 0);
 			loan.currentDebt.should.eq(expectedCurrentDebt);
@@ -2416,11 +2618,13 @@ describe.only("Microcredit", () => {
 			loan.dailyInterest.should.eq(dailyInterest);
 			loan.claimDeadline.should.eq(claimDeadline);
 			loan.startDate.should.eq(statDate);
-			loan.lastComputedDebt.should.eq(toEther("103.281419556037096897"));
-			loan.currentDebt.should.eq(toEther("103.281419556037096897"));
+			loan.lastComputedDebt.should.eq(
+				expectedCurrentDebt.sub(toEther(40))
+			);
+			loan.currentDebt.should.eq(expectedCurrentDebt.sub(toEther(40)));
 			loan.amountRepayed.should.eq(toEther(40));
 			loan.repaymentsLength.should.eq(1);
-			loan.lastComputedDate.should.eq(repaymentDate1);
+			loan.lastComputedDate.should.eq(statDate + 3600 * 24 * 180);
 
 			let repayment1 = await Microcredit.userLoanRepayments(
 				user1.address,
@@ -2449,11 +2653,15 @@ describe.only("Microcredit", () => {
 			loan.dailyInterest.should.eq(dailyInterest);
 			loan.claimDeadline.should.eq(claimDeadline);
 			loan.startDate.should.eq(statDate);
-			loan.lastComputedDebt.should.eq(toEther("33.281419556037096897"));
-			loan.currentDebt.should.eq(toEther("33.281419556037096897"));
+			loan.lastComputedDebt.should.eq(
+				expectedCurrentDebt.sub(toEther(40)).sub(toEther(70))
+			);
+			loan.currentDebt.should.eq(
+				expectedCurrentDebt.sub(toEther(40)).sub(toEther(70))
+			);
 			loan.amountRepayed.should.eq(toEther(110));
 			loan.repaymentsLength.should.eq(2);
-			loan.lastComputedDate.should.eq(repaymentDate2);
+			loan.lastComputedDate.should.eq(statDate + 3600 * 24 * 180);
 
 			let repayment2 = await Microcredit.userLoanRepayments(
 				user1.address,
@@ -2475,10 +2683,13 @@ describe.only("Microcredit", () => {
 
 			await cUSD
 				.connect(user1)
-				.approve(Microcredit.address, toEther("33.281419556037096897"));
+				.approve(
+					Microcredit.address,
+					expectedCurrentDebt.sub(toEther(40)).sub(toEther(70))
+				);
 			await Microcredit.connect(user1).repayLoan(
 				0,
-				toEther("33.281419556037096897")
+				expectedCurrentDebt.sub(toEther(40)).sub(toEther(70))
 			).should.be.fulfilled;
 			const repaymentDate3 = await getCurrentBlockTimestamp();
 
@@ -2490,16 +2701,18 @@ describe.only("Microcredit", () => {
 			loan.startDate.should.eq(statDate);
 			loan.lastComputedDebt.should.eq(0);
 			loan.currentDebt.should.eq(0);
-			loan.amountRepayed.should.eq(toEther("143.281419556037096897"));
+			loan.amountRepayed.should.eq(expectedCurrentDebt);
 			loan.repaymentsLength.should.eq(3);
-			loan.lastComputedDate.should.eq(repaymentDate3);
+			loan.lastComputedDate.should.eq(statDate + 3600 * 24 * 180);
 
 			let repayment3 = await Microcredit.userLoanRepayments(
 				user1.address,
 				0,
 				2
 			);
-			repayment3.amount.should.eq(toEther("33.281419556037096897"));
+			repayment3.amount.should.eq(
+				expectedCurrentDebt.sub(toEther(40)).sub(toEther(70))
+			);
 			repayment3.date.should.eq(repaymentDate3);
 
 			(await cUSD.balanceOf(user1.address)).should.eq(
@@ -2509,7 +2722,7 @@ describe.only("Microcredit", () => {
 				initialMicrocreditBalance
 			);
 			(await cUSD.balanceOf(MicrocreditRevenue.address)).should.eq(
-				toEther("43.281419556037096897")
+				expectedCurrentDebt.sub(amount)
 			);
 		});
 	});

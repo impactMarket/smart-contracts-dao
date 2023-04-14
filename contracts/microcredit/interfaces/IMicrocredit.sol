@@ -27,6 +27,7 @@ interface IMicrocredit {
         uint256 lastComputedDebt;
         uint256 amountRepayed;
         Repayment[] repayments;
+        uint256 lastComputedDate;
     }
 
     function getVersion() external pure returns(uint256);
