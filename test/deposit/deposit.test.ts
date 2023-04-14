@@ -22,7 +22,7 @@ const MTokenABI = require("../../integrations/moola/abi/MToken.json");
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 
-describe.only("Deposit", () => {
+describe("Deposit", () => {
 	const LENDING_POOL_ADDRESS = "0x970b12522CA9b4054807a2c5B736149a5BE6f670"; //mainnet
 	const CELO_ADDRESS = "0x471EcE3750Da237f93B8E339c536989b8978a438"; //mainnet
 	const CUSD_ADDRESS = "0x765DE816845861e75A25fCA122bb6898B8B1282a"; //mainnet
