@@ -119,7 +119,7 @@ export function getExchangePath(
 
 export function getExchangePathProd(
 	token0Address: string,
-	token1Address: string,
+	token1Address: string
 ) {
 	return ethers.utils.solidityPack(
 		["address", "uint24", "address"],

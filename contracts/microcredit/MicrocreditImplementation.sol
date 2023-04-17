@@ -17,6 +17,14 @@ contract MicrocreditImplementation is
     using SafeERC20Upgradeable for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
+    event ManagerAdded(
+        address indexed managerAddress
+    );
+
+    event ManagerRemoved(
+        address indexed managerAddress
+    );
+
     event LoanAdded(
         address indexed userAddress,
         uint256 loanId,
@@ -185,6 +193,7 @@ contract MicrocreditImplementation is
 
         for (_index = 0; _index < _length; _index++) {
             _managerList.add(_managerAddresses[_index]);
+            emit ManagerAdded(_managerAddresses[_index]);
         }
     }
 
@@ -194,6 +203,7 @@ contract MicrocreditImplementation is
 
         for (_index = 0; _index < _length; _index++) {
             _managerList.remove(_managerAddresses[_index]);
+            emit ManagerRemoved(_managerAddresses[_index]);
         }
     }
 

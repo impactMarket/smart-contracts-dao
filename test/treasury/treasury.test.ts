@@ -32,7 +32,7 @@ export enum LpStrategy {
 	SecondaryCoin = 2,
 }
 
-describe.only("Treasury", () => {
+describe("Treasury", () => {
 	//these tests work only on a celo mainnet fork network
 	let owner: SignerWithAddress;
 	let user1: SignerWithAddress;

@@ -20,7 +20,7 @@ import { LpStrategy } from "../treasury/treasury.test";
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 
-describe.only("DonationMiner", () => {
+describe("DonationMiner", () => {
 	const REWARD_PERIOD_SIZE = 20;
 	const CLAIM_DELAY = 5;
 	const AGAINST_PERIODS = 8;
@@ -5047,7 +5047,7 @@ describe.only("DonationMiner", () => {
 			expect(donation2.initialAmount).to.equal(user1Donation2);
 		});
 
-		it.only("Should not increase LP if lpMinLimit is grater than the balance", async function () {
+		it("Should not increase LP if lpMinLimit is grater than the balance", async function () {
 			await Treasury.setToken(
 				cUSD.address,
 				toEther(1),
@@ -5136,7 +5136,7 @@ describe.only("DonationMiner", () => {
 			expect(donation2.initialAmount).to.equal(user1Donation2);
 		});
 
-		it.only("Should increase LP", async function () {
+		it("Should increase LP", async function () {
 			await Treasury.setToken(
 				cUSD.address,
 				toEther(1),
@@ -5233,7 +5233,7 @@ describe.only("DonationMiner", () => {
 			expect(donation2.initialAmount).to.equal(user1Donation2);
 		});
 
-		it.only("Should not increase LP for each donation", async function () {
+		it("Should not increase LP for each donation", async function () {
 			await Treasury.setToken(
 				cUSD.address,
 				toEther(1),

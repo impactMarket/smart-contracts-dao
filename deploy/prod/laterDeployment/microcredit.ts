@@ -54,7 +54,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 
 	// deploy microcredit
-	await new Promise((resolve) => setTimeout(resolve, 6000));
+	// await new Promise((resolve) => setTimeout(resolve, 6000));
 	const microcreditImplementationResult = await deploy(
 		"MicrocreditImplementation",
 		{
