@@ -17,13 +17,9 @@ contract MicrocreditImplementation is
     using SafeERC20Upgradeable for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    event ManagerAdded(
-        address indexed managerAddress
-    );
+    event ManagerAdded(address indexed managerAddress);
 
-    event ManagerRemoved(
-        address indexed managerAddress
-    );
+    event ManagerRemoved(address indexed managerAddress);
 
     event LoanAdded(
         address indexed userAddress,
