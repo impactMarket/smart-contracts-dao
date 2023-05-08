@@ -30,6 +30,8 @@ contract MicrocreditImplementation is
         uint256 claimDeadline
     );
 
+    event LoanCanceled(address indexed userAddress, uint256 loanId);
+
     event UserAddressChanged(address indexed oldWalletAddress, address indexed newWalletAddress);
 
     event LoanClaimed(address indexed userAddress, uint256 loanId);
@@ -251,6 +253,23 @@ contract MicrocreditImplementation is
         }
     }
 
+    function cancelLoans(address[] calldata _userAddresses, uint256[] calldata _loansIds)
+        external
+        override
+        onlyManagers
+    {
+        require(
+            _userAddresses.length == _loansIds.length,
+            "Microcredit: calldata information arity mismatch"
+        );
+
+        uint256 _index;
+
+        for (_index = 0; _index < _userAddresses.length; _index++) {
+            _cancelLoan(_userAddresses[_index], _loansIds[_index]);
+        }
+    }
+
     function changeUserAddress(address _oldWalletAddress, address _newWalletAddress)
         external
         override
@@ -281,6 +300,7 @@ contract MicrocreditImplementation is
         Loan storage _loan = _user.loans[_loanId];
 
         require(_loan.startDate == 0, "Microcredit: Loan already claimed");
+        require(_loan.claimDeadline != 0, "Microcredit: Loan canceled");
         require(_loan.claimDeadline >= block.timestamp, "Microcredit: Loan expired");
 
         _loan.startDate = block.timestamp;
@@ -415,7 +435,9 @@ contract MicrocreditImplementation is
             Loan memory _previousLoan = _user.loans[_loansLength - 1];
             require(
                 (_previousLoan.startDate > 0 && _previousLoan.lastComputedDebt == 0) || // loan claimed and fully paid
-                    (_previousLoan.startDate == 0 && _previousLoan.claimDeadline < block.timestamp), //loan unclaimed and expired
+                    (_previousLoan.startDate == 0 &&
+                        _previousLoan.claimDeadline < block.timestamp) || //loan unclaimed and expired
+                    (_previousLoan.claimDeadline == 0), //loan canceled
                 "Microcredit: The user already has an active loan"
             );
         }
@@ -435,5 +457,20 @@ contract MicrocreditImplementation is
             _dailyInterest,
             _claimDeadline
         );
+    }
+
+    function _cancelLoan(address _userAddress, uint256 _loanId) internal {
+        _checkUserLoan(_userAddress, _loanId);
+
+        WalletMetadata memory _metadata = _walletMetadata[_userAddress];
+        User storage _user = _users[_metadata.userId];
+        Loan storage _loan = _user.loans[_loanId];
+
+        require(_loan.startDate == 0, "Microcredit: Loan already claimed");
+        require(_loan.claimDeadline != 0, "Microcredit: Loan already canceled");
+
+        _loan.claimDeadline = 0; //set claimDeadline to 0 to prevent claiming (cancel the loan)
+
+        emit LoanCanceled(_userAddress, _loanId);
     }
 }

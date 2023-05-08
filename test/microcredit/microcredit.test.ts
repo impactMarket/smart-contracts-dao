@@ -2367,6 +2367,351 @@ describe.only("Microcredit", () => {
 					.add(repaymentAmount1.add(repaymentAmount2))
 			);
 		});
+
+		it("should cancel loan if manager", async function () {
+			const amount = toEther(100);
+			const period = sixMonth;
+			const dailyInterest = toEther(0.2);
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
+
+			await Microcredit.connect(manager1).addLoan(
+				user1.address,
+				amount,
+				period,
+				dailyInterest,
+				claimDeadline
+			).should.be.fulfilled;
+
+			let walletMetadata = await Microcredit.walletMetadata(
+				user1.address
+			);
+			walletMetadata.userId.should.eq(1);
+			walletMetadata.movedTo.should.eq(ethers.constants.AddressZero);
+			walletMetadata.loansLength.should.eq(1);
+
+			(await Microcredit.walletListLength()).should.eq(1);
+			(await Microcredit.walletListAt(0)).should.eq(user1.address);
+
+			let loan = await Microcredit.userLoans(user1.address, 0);
+			loan.amountBorrowed.should.eq(amount);
+			loan.period.should.eq(period);
+			loan.dailyInterest.should.eq(dailyInterest);
+			loan.claimDeadline.should.eq(claimDeadline);
+			loan.startDate.should.eq(0);
+			loan.lastComputedDebt.should.eq(0);
+			loan.currentDebt.should.eq(0);
+			loan.amountRepayed.should.eq(0);
+			loan.repaymentsLength.should.eq(0);
+			loan.lastComputedDate.should.eq(0);
+
+			await Microcredit.connect(manager1)
+				.cancelLoans([user1.address], [0])
+				.should.emit(Microcredit, "LoanCanceled")
+				.withArgs(user1.address, 0);
+
+			loan = await Microcredit.userLoans(user1.address, 0);
+			loan.amountBorrowed.should.eq(amount);
+			loan.period.should.eq(period);
+			loan.dailyInterest.should.eq(dailyInterest);
+			loan.claimDeadline.should.eq(0);
+			loan.startDate.should.eq(0);
+			loan.lastComputedDebt.should.eq(0);
+			loan.currentDebt.should.eq(0);
+			loan.amountRepayed.should.eq(0);
+			loan.repaymentsLength.should.eq(0);
+			loan.lastComputedDate.should.eq(0);
+		});
+
+		it("should cancel loans if manager", async function () {
+			const amount = toEther(100);
+			const period = sixMonth;
+			const dailyInterest = toEther(0.2);
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
+
+			await Microcredit.connect(manager1).addLoan(
+				user1.address,
+				amount,
+				period,
+				dailyInterest,
+				claimDeadline
+			).should.be.fulfilled;
+
+			await Microcredit.connect(manager1).addLoan(
+				user2.address,
+				amount,
+				period,
+				dailyInterest,
+				claimDeadline
+			).should.be.fulfilled;
+
+			await Microcredit.connect(manager1)
+				.cancelLoans([user1.address, user2.address], [0, 0])
+				.should.emit(Microcredit, "LoanCanceled")
+				.withArgs(user2.address, 0);
+
+			let loan1 = await Microcredit.userLoans(user1.address, 0);
+			loan1.claimDeadline.should.eq(0);
+
+			let loan2 = await Microcredit.userLoans(user2.address, 0);
+			loan2.claimDeadline.should.eq(0);
+		});
+
+		it("should not cancel loan if not manager", async function () {
+			const amount = toEther(100);
+			const period = sixMonth;
+			const dailyInterest = toEther(0.2);
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
+
+			await Microcredit.connect(manager1).addLoan(
+				user1.address,
+				amount,
+				period,
+				dailyInterest,
+				claimDeadline
+			).should.be.fulfilled;
+
+			await Microcredit.connect(user1)
+				.cancelLoans([user1.address], [0])
+				.should.be.rejectedWith(
+					Microcredit,
+					"Microcredit: caller is not a manager"
+				);
+		});
+
+		it("should cancel loan if user has been moved", async function () {
+			const amount = toEther(100);
+			const period = sixMonth;
+			const dailyInterest = toEther(0.2);
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
+
+			await Microcredit.connect(manager1).addLoan(
+				user1.address,
+				amount,
+				period,
+				dailyInterest,
+				claimDeadline
+			).should.be.fulfilled;
+
+			let walletMetadata = await Microcredit.walletMetadata(
+				user1.address
+			);
+			walletMetadata.userId.should.eq(1);
+			walletMetadata.movedTo.should.eq(ethers.constants.AddressZero);
+			walletMetadata.loansLength.should.eq(1);
+
+			(await Microcredit.walletListLength()).should.eq(1);
+			(await Microcredit.walletListAt(0)).should.eq(user1.address);
+
+			let loan = await Microcredit.userLoans(user1.address, 0);
+			loan.amountBorrowed.should.eq(amount);
+			loan.period.should.eq(period);
+			loan.dailyInterest.should.eq(dailyInterest);
+			loan.claimDeadline.should.eq(claimDeadline);
+			loan.startDate.should.eq(0);
+			loan.lastComputedDebt.should.eq(0);
+			loan.currentDebt.should.eq(0);
+			loan.amountRepayed.should.eq(0);
+			loan.repaymentsLength.should.eq(0);
+			loan.lastComputedDate.should.eq(0);
+
+			await Microcredit.connect(manager1).changeUserAddress(
+				user1.address,
+				user2.address
+			).should.be.fulfilled;
+
+			await Microcredit.connect(manager1)
+				.cancelLoans([user2.address], [0])
+				.should.emit(Microcredit, "LoanCanceled")
+				.withArgs(user2.address, 0);
+
+			loan = await Microcredit.userLoans(user2.address, 0);
+			loan.amountBorrowed.should.eq(amount);
+			loan.period.should.eq(period);
+			loan.dailyInterest.should.eq(dailyInterest);
+			loan.claimDeadline.should.eq(0);
+			loan.startDate.should.eq(0);
+			loan.lastComputedDebt.should.eq(0);
+			loan.currentDebt.should.eq(0);
+			loan.amountRepayed.should.eq(0);
+			loan.repaymentsLength.should.eq(0);
+			loan.lastComputedDate.should.eq(0);
+		});
+
+		it("should not cancel loan if invalid wallet address", async function () {
+			const amount = toEther(100);
+			const period = sixMonth;
+			const dailyInterest = toEther(0.2);
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
+
+			await Microcredit.connect(manager1)
+				.cancelLoans([user1.address], [0])
+				.should.be.rejectedWith(
+					Microcredit,
+					"Microcredit: Invalid wallet address"
+				);
+
+			await Microcredit.connect(manager1).addLoan(
+				user1.address,
+				amount,
+				period,
+				dailyInterest,
+				claimDeadline
+			).should.be.fulfilled;
+
+			await Microcredit.connect(manager1).changeUserAddress(
+				user1.address,
+				user2.address
+			).should.be.fulfilled;
+
+			await Microcredit.connect(manager1)
+				.cancelLoans([user1.address], [0])
+				.should.be.rejectedWith(
+					Microcredit,
+					"Microcredit: Invalid wallet address"
+				);
+		});
+
+		it("should not cancel loan if invalid loan id", async function () {
+			const amount = toEther(100);
+			const period = sixMonth;
+			const dailyInterest = toEther(0.2);
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
+
+			await Microcredit.connect(manager1).addLoan(
+				user1.address,
+				amount,
+				period,
+				dailyInterest,
+				claimDeadline
+			).should.be.fulfilled;
+
+			await Microcredit.connect(manager1)
+				.cancelLoans([user1.address], [1])
+				.should.be.rejectedWith(
+					Microcredit,
+					"Microcredit: Loan doesn't exist"
+				);
+		});
+
+		it("should not cancel loan if loan has been claimed", async function () {
+			const amount = toEther(100);
+			const period = sixMonth;
+			const dailyInterest = toEther(0.2);
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
+
+			await Microcredit.connect(manager1).addLoan(
+				user1.address,
+				amount,
+				period,
+				dailyInterest,
+				claimDeadline
+			).should.be.fulfilled;
+
+			await Microcredit.connect(user1).claimLoan(0).should.be.fulfilled;
+
+			await Microcredit.connect(manager1)
+				.cancelLoans([user1.address], [0])
+				.should.be.rejectedWith(
+					Microcredit,
+					"Microcredit: Loan already claimed"
+				);
+		});
+
+		it("should not cancel loan if loan has been canceled", async function () {
+			const amount = toEther(100);
+			const period = sixMonth;
+			const dailyInterest = toEther(0.2);
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
+
+			await Microcredit.connect(manager1).addLoan(
+				user1.address,
+				amount,
+				period,
+				dailyInterest,
+				claimDeadline
+			).should.be.fulfilled;
+
+			await Microcredit.connect(manager1).cancelLoans(
+				[user1.address],
+				[0]
+			).should.be.fulfilled;
+
+			await Microcredit.connect(manager1)
+				.cancelLoans([user1.address], [0])
+				.should.be.rejectedWith(
+					Microcredit,
+					"Microcredit: Loan already canceled"
+				);
+		});
+
+		it("should not claimLoan if loan has been canceled", async function () {
+			const amount = toEther(100);
+			const period = sixMonth;
+			const dailyInterest = toEther(0.2);
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 5;
+
+			await Microcredit.connect(manager1).addLoan(
+				user1.address,
+				amount,
+				period,
+				dailyInterest,
+				claimDeadline
+			).should.be.fulfilled;
+
+			await Microcredit.connect(manager1).cancelLoans(
+				[user1.address],
+				[0]
+			).should.be.fulfilled;
+
+			await Microcredit.connect(user1)
+				.claimLoan(0)
+				.should.be.rejectedWith("Microcredit: Loan canceled");
+		});
+
+		it("should add loan if previous loan has been canceled", async function () {
+			const amount = toEther(100);
+			const period = sixMonth;
+			const dailyInterest = toEther(0.2);
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 5;
+
+			const amount2 = toEther(300);
+			const period2 = sixMonth * 2;
+			const dailyInterest2 = toEther(0.3);
+			const claimDeadline2 = (await getCurrentBlockTimestamp()) + 10;
+
+			await Microcredit.connect(manager1).addLoan(
+				user1.address,
+				amount,
+				period,
+				dailyInterest,
+				claimDeadline
+			).should.be.fulfilled;
+
+			await Microcredit.connect(manager1).cancelLoans(
+				[user1.address],
+				[0]
+			).should.be.fulfilled;
+
+			await Microcredit.connect(manager1).addLoan(
+				user1.address,
+				amount2,
+				period2,
+				dailyInterest2,
+				claimDeadline2
+			).should.be.fulfilled;
+
+			let loan2 = await Microcredit.userLoans(user1.address, 1);
+			loan2.amountBorrowed.should.eq(amount2);
+			loan2.period.should.eq(period2);
+			loan2.dailyInterest.should.eq(dailyInterest2);
+			loan2.claimDeadline.should.eq(claimDeadline2);
+			loan2.startDate.should.eq(0);
+			loan2.lastComputedDebt.should.eq(0);
+			loan2.currentDebt.should.eq(0);
+			loan2.amountRepayed.should.eq(0);
+			loan2.repaymentsLength.should.eq(0);
+			loan2.lastComputedDate.should.eq(0);
+		});
 	});
 
 	describe("Microcredit - loan functionalities (revenue address != 0)", () => {
