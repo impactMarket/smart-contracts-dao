@@ -1,5 +1,5 @@
 // @ts-ignore
-import chai from "chai";
+import chai, { should } from "chai";
 // @ts-ignore
 import chaiAsPromised from "chai-as-promised";
 
@@ -15,7 +15,7 @@ import { fromEther, toEther } from "../utils/helpers";
 import { BigNumber } from "@ethersproject/bignumber";
 
 chai.use(chaiAsPromised);
-const expect = chai.expect;
+should();
 
 describe("Microcredit", () => {
 	let deployer: SignerWithAddress;

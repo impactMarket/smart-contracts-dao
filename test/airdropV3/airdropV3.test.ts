@@ -5,23 +5,20 @@ import chaiAsPromised from "chai-as-promised";
 
 // @ts-ignore
 import { deployments, ethers, getNamedAccounts, network } from "hardhat";
-import {
-	advanceNSeconds,
-	getCurrentBlockTimestamp,
-} from "../utils/TimeTravel";
+import { advanceNSeconds, getCurrentBlockTimestamp } from "../utils/TimeTravel";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import * as ethersTypes from "ethers";
-import { fromEther, toEther } from "../utils/helpers";
+import { toEther } from "../utils/helpers";
 import { BigNumber } from "@ethersproject/bignumber";
+import { should } from "chai";
 
-const MTokenABI = require("../../integrations/moola/abi/MToken.json");
-
+should();
 chai.use(chaiAsPromised);
-const expect = chai.expect;
 
-describe.only("AirdropV3", () => {
-	const socialConnectAddress = '0x70F9314aF173c246669cFb0EEe79F9Cfd9C34ee3';
-	const socialConnectIssuerAddress = '0xe3475047EF9F9231CD6fAe02B3cBc5148E8eB2c8';
+describe("AirdropV3", () => {
+	const socialConnectAddress = "0x70F9314aF173c246669cFb0EEe79F9Cfd9C34ee3";
+	const socialConnectIssuerAddress =
+		"0xe3475047EF9F9231CD6fAe02B3cBc5148E8eB2c8";
 
 	const startTime = 0;
 	const trancheAmount = toEther(100);
@@ -68,7 +65,7 @@ describe.only("AirdropV3", () => {
 		);
 	});
 
-	describe.only("Airdrop  - basic", () => {
+	describe("Airdrop  - basic", () => {
 		before(async function () {
 			[
 				owner,
@@ -92,7 +89,9 @@ describe.only("AirdropV3", () => {
 			(await AirdropV3.getVersion()).should.eq(1);
 			(await AirdropV3.PACT()).should.eq(PACT.address);
 			(await AirdropV3.socialConnect()).should.eq(socialConnectAddress);
-			(await AirdropV3.socialConnectIssuer()).should.eq(socialConnectIssuerAddress);
+			(await AirdropV3.socialConnectIssuer()).should.eq(
+				socialConnectIssuerAddress
+			);
 			(await AirdropV3.startTime()).should.eq(startTime);
 			(await AirdropV3.trancheAmount()).should.eq(trancheAmount);
 			(await AirdropV3.totalAmount()).should.eq(totalAmount);
@@ -186,9 +185,7 @@ describe.only("AirdropV3", () => {
 				beneficiary.address
 			);
 
-			await AirdropV3.claim(
-				beneficiary.address
-			)
+			await AirdropV3.claim(beneficiary.address)
 				.should.emit(AirdropV3, "Claimed")
 				.withArgs(beneficiary.address, trancheAmount);
 
@@ -230,32 +227,28 @@ describe.only("AirdropV3", () => {
 
 		it("should not claim before startTime", async function () {
 			await AirdropV3.updateStartTime(1999999999);
-			await AirdropV3.claim(
-				beneficiary1.address
-			).should.be.rejectedWith("AirdropV3Implementation::claim: Not yet");
+			await AirdropV3.claim(beneficiary1.address).should.be.rejectedWith(
+				"AirdropV3Implementation::claim: Not yet"
+			);
 		});
 
 		it("should not claim if not valid beneficiary", async function () {
-			await AirdropV3.claim(
-				owner.address
-			).should.be.rejectedWith(
+			await AirdropV3.claim(owner.address).should.be.rejectedWith(
 				"AirdropV3Implementation::claim: Incorrect proof"
 			);
 		});
 
 		it("should not claim with another proof", async function () {
-			await AirdropV3.claim(
-				beneficiary1.address
-			).should.be.rejectedWith(
+			await AirdropV3.claim(beneficiary1.address).should.be.rejectedWith(
 				"AirdropV3Implementation::claim: Incorrect proof"
 			);
 		});
 
 		it("should not claim again before cooldown", async function () {
 			await claimAndCheck(beneficiary1, trancheAmount);
-			await AirdropV3.claim(
-				beneficiary1.address
-			).should.be.rejectedWith("AirdropV3Implementation::claim: Not yet");
+			await AirdropV3.claim(beneficiary1.address).should.be.rejectedWith(
+				"AirdropV3Implementation::claim: Not yet"
+			);
 		});
 
 		it("should claim again after cooldown", async function () {
@@ -315,9 +308,7 @@ describe.only("AirdropV3", () => {
 				await advanceNSeconds(cooldown);
 			}
 
-			await AirdropV3.claim(
-				beneficiary1.address
-			).should.be.rejectedWith(
+			await AirdropV3.claim(beneficiary1.address).should.be.rejectedWith(
 				"AirdropV3Implementation::claim: Beneficiary's claimed all amount"
 			);
 		});

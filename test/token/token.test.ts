@@ -1,5 +1,5 @@
 // @ts-ignore
-import chai from "chai";
+import chai, { should } from "chai";
 // @ts-ignore
 import chaiAsPromised from "chai-as-promised";
 // @ts-ignore
@@ -17,8 +17,8 @@ import { formatEther, parseEther } from "@ethersproject/units";
 import { advanceBlockNTimes, getBlockNumber } from "../utils/TimeTravel";
 
 chai.use(chaiAsPromised);
-
 const expect = chai.expect;
+should();
 
 //users
 let owner: SignerWithAddress;

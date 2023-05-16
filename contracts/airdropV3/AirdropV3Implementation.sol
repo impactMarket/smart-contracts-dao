@@ -113,7 +113,8 @@ contract AirdropV3Implementation is
             address[] memory _issuers;
             _issuers[0] = socialConnectIssuer;
 
-            (uint256[] memory countsPerIssuer, bytes32[] memory identifiers) = socialConnect.lookupIdentifiers(msg.sender, _issuers);
+            (uint256[] memory countsPerIssuer, bytes32[] memory identifiers) = socialConnect
+                .lookupIdentifiers(msg.sender, _issuers);
             require(
                 countsPerIssuer.length > 0,
                 "AirdropV3::claim: Invalid SocialConnect verification"

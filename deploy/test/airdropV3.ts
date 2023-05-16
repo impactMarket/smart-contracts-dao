@@ -3,9 +3,10 @@ import { DeployFunction } from "hardhat-deploy/types";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { toEther } from "../../test/utils/helpers";
 
-const socialConnectAddress = '0x70F9314aF173c246669cFb0EEe79F9Cfd9C34ee3';
+const socialConnectAddress = "0x70F9314aF173c246669cFb0EEe79F9Cfd9C34ee3";
 // const socialConnectAddress = '0x0aD5b1d0C25ecF6266Dd951403723B2687d6aff2';
-const socialConnectIssuerAddress = '0xe3475047EF9F9231CD6fAe02B3cBc5148E8eB2c8';
+
+const socialConnectIssuerAddress = "0xe3475047EF9F9231CD6fAe02B3cBc5148E8eB2c8";
 // const socialConnectIssuerAddress = '0x388612590F8cC6577F19c9b61811475Aa432CB44'; prod
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {

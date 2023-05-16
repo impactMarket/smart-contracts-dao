@@ -1,5 +1,5 @@
 // @ts-ignore
-import chai from "chai";
+import chai, { should } from "chai";
 // @ts-ignore
 import chaiAsPromised from "chai-as-promised";
 
@@ -10,6 +10,7 @@ import * as ethersTypes from "ethers";
 import { toEther } from "../utils/helpers";
 
 chai.use(chaiAsPromised);
+should();
 
 describe("MicrocreditRevenue", () => {
 	let deployer: SignerWithAddress;

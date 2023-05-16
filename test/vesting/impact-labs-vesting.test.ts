@@ -1,5 +1,5 @@
 // @ts-ignore
-import chai from "chai";
+import chai, { should } from "chai";
 // @ts-ignore
 import chaiAsPromised from "chai-as-promised";
 // @ts-ignore
@@ -12,6 +12,7 @@ import { BigNumber } from "@ethersproject/bignumber";
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
+should();
 
 const REWARD_PERIOD_SIZE = 20;
 const INITIAL_REWARD = parseEther("100000001");

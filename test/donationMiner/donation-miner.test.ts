@@ -1,5 +1,5 @@
 // @ts-ignore
-import chai from "chai";
+import chai, { should } from "chai";
 // @ts-ignore
 import chaiAsPromised from "chai-as-promised";
 // @ts-ignore
@@ -19,6 +19,7 @@ import { LpStrategy } from "../treasury/treasury.test";
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
+should();
 
 describe("DonationMiner", () => {
 	const REWARD_PERIOD_SIZE = 20;
