@@ -43,6 +43,17 @@ contract MicrocreditImplementation is
         uint256 currentDebt
     );
 
+    /**
+    * @notice Triggered when a borrower's manager has been changed
+    *
+    * @param borrowerAddress   The address of the borrower
+    * @param managerAddress    The address of the new manager
+    */
+    event ManagerChanged(
+        address indexed borrowerAddress,
+        address indexed managerAddress
+    );
+
     modifier onlyManagers() {
         require(_managerList.contains(msg.sender), "Microcredit: caller is not a manager");
         _;
@@ -185,6 +196,11 @@ contract MicrocreditImplementation is
         revenueAddress = _newRevenueAddress;
     }
 
+    /**
+     * @notice Adds managers
+     *
+     * @param _managerAddresses      addresses of the managers
+     */
     function addManagers(address[] calldata _managerAddresses) external override onlyOwner {
         uint256 _length = _managerAddresses.length;
         uint256 _index;
@@ -195,6 +211,11 @@ contract MicrocreditImplementation is
         }
     }
 
+    /**
+     * @notice Removes managers
+     *
+     * @param _managerAddresses     addresses of the managers
+     */
     function removeManagers(address[] calldata _managerAddresses) external override onlyOwner {
         uint256 _length = _managerAddresses.length;
         uint256 _index;
@@ -205,6 +226,15 @@ contract MicrocreditImplementation is
         }
     }
 
+    /**
+     * @notice Adds a loan
+     *
+     * @param _userAddress           address of the user
+     * @param _amount                amount of the loan
+     * @param _period                period of the loan
+     * @param _dailyInterest         daily interest of the loan
+     * @param _claimDeadline         claim deadline of the loan
+     */
     function addLoan(
         address _userAddress,
         uint256 _amount,
@@ -215,6 +245,15 @@ contract MicrocreditImplementation is
         _addLoan(_userAddress, _amount, _period, _dailyInterest, _claimDeadline);
     }
 
+    /**
+     * @notice Adds multiples loans
+     *
+     * @param _userAddresses          addresses of the user
+     * @param _amounts                amounts of the loan
+     * @param _periods                periods of the loan
+     * @param _dailyInterests         daily interests of the loan
+     * @param _claimDeadlines         claim deadlines of the loan
+     */
     function addLoans(
         address[] calldata _userAddresses,
         uint256[] calldata _amounts,
@@ -253,6 +292,12 @@ contract MicrocreditImplementation is
         }
     }
 
+    /**
+     * @notice Cancel a loan
+     *
+     * @param _userAddresses    User addresses
+     * @param _loansIds Loan ids
+     */
     function cancelLoans(address[] calldata _userAddresses, uint256[] calldata _loansIds)
         external
         override
@@ -270,6 +315,12 @@ contract MicrocreditImplementation is
         }
     }
 
+    /**
+     * @notice Change user address
+     *
+     * @param _oldWalletAddress Old wallet address
+     * @param _newWalletAddress New wallet address
+     */
     function changeUserAddress(address _oldWalletAddress, address _newWalletAddress)
         external
         override
@@ -292,6 +343,11 @@ contract MicrocreditImplementation is
         emit UserAddressChanged(_oldWalletAddress, _newWalletAddress);
     }
 
+    /**
+     * @notice Claim a loan
+     *
+     * @param _loanId Loan ID
+     */
     function claimLoan(uint256 _loanId) external override nonReentrant {
         _checkUserLoan(msg.sender, _loanId);
 
@@ -313,6 +369,12 @@ contract MicrocreditImplementation is
         emit LoanClaimed(msg.sender, _loanId);
     }
 
+    /**
+    * @notice Repay a loan
+    *
+    * @param _loanId Loan ID
+    * @param _repaymentAmount Repayment amount
+    */
     function repayLoan(uint256 _loanId, uint256 _repaymentAmount) external override nonReentrant {
         require(_repaymentAmount > 0, "Microcredit: Invalid amount");
 
@@ -362,6 +424,23 @@ contract MicrocreditImplementation is
         _loan.lastComputedDate = _loan.lastComputedDate + _days * 86400;
 
         emit RepaymentAdded(msg.sender, _loanId, _repaymentAmount, _loan.lastComputedDebt);
+    }
+
+    /**
+     * @notice Changes the borrowers manager address
+     * @dev This method doesn't change anything on the contract state, it just emits events to be used by the off-chain system
+     *
+     * @param _borrowerAddresses address of the borrowers
+     * @param _managerAddress address of the new manager
+     */
+    function changeManager(address[] memory _borrowerAddresses, address _managerAddress) external override onlyManagers {
+        uint256 _index;
+        require(_managerList.contains(_managerAddress), "Microcredit: invalid manager address");
+
+        for(_index = 0; _index < _borrowerAddresses.length; _index++) {
+            require(_walletList.contains(_borrowerAddresses[_index]), "Microcredit: invalid borrower address");
+            emit ManagerChanged(_borrowerAddresses[_index], _managerAddress);
+        }
     }
 
     /**
