@@ -417,7 +417,7 @@ contract TreasuryImplementation is
         Token memory _token = tokens[address(_erc20Token)];
 
         if (_token.lpStrategy == LpStrategy.MainCoin) {
-            PACT.transfer(DEAD_ADDRESS, _pactAmount);
+//            PACT.transfer(DEAD_ADDRESS, _pactAmount);
         } else if (_token.lpStrategy == LpStrategy.SecondaryCoin) {
             uint256 _pactToBurn;
 
@@ -441,7 +441,7 @@ contract TreasuryImplementation is
                 })
             );
 
-            PACT.transfer(DEAD_ADDRESS, _pactToBurn + _pactAmount);
+//            PACT.transfer(DEAD_ADDRESS, _pactToBurn + _pactAmount);
         } else {
             return;
         }
