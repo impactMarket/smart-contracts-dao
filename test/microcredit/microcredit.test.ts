@@ -3079,4 +3079,103 @@ describe("Microcredit", () => {
 			);
 		});
 	});
+
+	describe.only("Microcredit - loan functionalities (revenue address != 0)", () => {
+		before(async function () {
+		});
+
+		beforeEach(async () => {
+			await deploy();
+
+			await Microcredit.connect(owner).addManagers([manager1.address]);
+		});
+
+		it("Should not changeManager if not manager", async function () {
+			await Microcredit.connect(user2)
+				.changeManager(
+					[user1.address],
+					manager1.address
+				)
+				.should.be.rejectedWith("Microcredit: caller is not a manager")
+		});
+
+		it("Should not changeManager if new manager is not valid", async function () {
+			await Microcredit.connect(manager1)
+				.changeManager(
+					[user1.address],
+					user2.address
+				)
+				.should.be.rejectedWith("Microcredit: invalid manager address")
+		});
+
+		it("Should not changeManager if invalid borrower", async function () {
+			await Microcredit.connect(manager1)
+				.addLoan(
+					user1.address,
+					toEther(100),
+					sixMonth,
+					toEther(0.2),
+					2000000000
+				)
+				.should.be.fulfilled
+
+			await Microcredit.connect(manager1)
+				.changeManager(
+					[user1.address, user2.address],
+					manager1.address
+				)
+				.should.be.rejectedWith("Microcredit: invalid borrower address")
+		});
+
+		it("Should changeManager", async function () {
+			await Microcredit.connect(manager1)
+				.addLoan(
+					user1.address,
+					toEther(100),
+					sixMonth,
+					toEther(0.2),
+					2000000000
+				)
+				.should.be.fulfilled
+
+			await Microcredit.connect(manager1)
+				.changeManager(
+					[user1.address],
+					manager1.address
+				)
+				.should.emit(Microcredit, "ManagerChanged")
+				.withArgs(user1.address, manager1.address)
+		});
+
+		it("Should changeManager for multiple borrowers", async function () {
+			await Microcredit.connect(manager1)
+				.addLoan(
+					user1.address,
+					toEther(100),
+					sixMonth,
+					toEther(0.2),
+					2000000000
+				)
+				.should.be.fulfilled
+
+			await Microcredit.connect(manager1)
+				.addLoan(
+					user2.address,
+					toEther(100),
+					sixMonth,
+					toEther(0.2),
+					2000000000
+				)
+				.should.be.fulfilled
+
+			await Microcredit.connect(manager1)
+				.changeManager(
+					[user1.address, user2.address],
+					manager1.address
+				)
+				.should.emit(Microcredit, "ManagerChanged")
+				.withArgs(user1.address, manager1.address)
+				.withArgs(user2.address, manager1.address)
+		});
+	});
 });
