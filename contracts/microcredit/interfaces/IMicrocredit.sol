@@ -70,8 +70,13 @@ interface IMicrocredit {
         uint256[] calldata dailyInterests,
         uint256[] calldata claimDeadlines
     ) external;
+    function cancelLoans(
+        address[] calldata userAddresses,
+        uint256[] calldata loansIds
+    ) external;
     function changeUserAddress(address oldWalletAddress, address newWalletAddress) external;
     function claimLoan(uint256 loanId) external;
     function repayLoan(uint256 loanId, uint256 repaymentAmount) external;
+    function changeManager(address[] memory borrowerAddresses, address managerAddress) external;
     function transferERC20(IERC20 _token, address _to, uint256 _amount) external;
 }
