@@ -196,14 +196,11 @@ contract LearnAndEarnImplementation is
             levels[_levelId].state == LevelState.Valid,
             "LearnAndLearn::updateLevel: Invalid level id"
         );
-        
-        require(
-            levels[_levelId].balance == 0,
-            "LearnAndLearn::updateLevel: This level has funds"
-        );
+
+        require(levels[_levelId].balance == 0, "LearnAndLearn::updateLevel: This level has funds");
 
         levels[_levelId].token = _token;
-        
+
         emit LevelUpdated(_levelId);
     }
 

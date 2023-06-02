@@ -12,7 +12,7 @@ import { BigNumber } from "@ethersproject/bignumber";
 
 chai.use(chaiAsPromised);
 
-describe("LearnAndEarn", () => {
+describe.only("LearnAndEarn", () => {
 	const FAKE_ADDRESS = "0x000000000000000000000000000000000000dEaD";
 
 	let owner: SignerWithAddress;
@@ -596,8 +596,7 @@ describe("LearnAndEarn", () => {
 	});
 
 	describe("LearnAndEarn - updateLevel", () => {
-		before(async function () {
-		});
+		before(async function () {});
 
 		beforeEach(async () => {
 			await deploy();
@@ -618,8 +617,9 @@ describe("LearnAndEarn", () => {
 
 			await LearnAndEarn.connect(owner).addLevel(1, cUSD.address);
 
-			await LearnAndEarn.connect(owner).updateLevel(1, PACT.address)
-				.should.emit(LearnAndEarn, 'LevelUpdated')
+			await LearnAndEarn.connect(owner)
+				.updateLevel(1, PACT.address)
+				.should.emit(LearnAndEarn, "LevelUpdated")
 				.withArgs(1);
 
 			let level1 = await LearnAndEarn.levels(1);
@@ -642,8 +642,9 @@ describe("LearnAndEarn", () => {
 			await LearnAndEarn.connect(owner).addLevel(2, cUSD.address);
 			await LearnAndEarn.connect(owner).addLevel(3, cUSD.address);
 
-			await LearnAndEarn.connect(owner).updateLevel(2, PACT.address)
-				.should.emit(LearnAndEarn, 'LevelUpdated')
+			await LearnAndEarn.connect(owner)
+				.updateLevel(2, PACT.address)
+				.should.emit(LearnAndEarn, "LevelUpdated")
 				.withArgs(2);
 
 			let level2 = await LearnAndEarn.levels(2);
@@ -663,36 +664,45 @@ describe("LearnAndEarn", () => {
 
 			await LearnAndEarn.connect(user1).fundLevel(1, 100);
 
-			await LearnAndEarn.connect(owner).updateLevel(1, PACT.address)
-				.should.be.rejectedWith('LearnAndLearn::updateLevel: This level has funds');
+			await LearnAndEarn.connect(owner)
+				.updateLevel(1, PACT.address)
+				.should.be.rejectedWith(
+					"LearnAndLearn::updateLevel: This level has funds"
+				);
 		});
 
 		it("Should not updateLevel if level does not exist", async function () {
 			await LearnAndEarn.connect(owner).addLevel(1, cUSD.address);
 
-			await LearnAndEarn.connect(owner).updateLevel(2, PACT.address)
-				.should.be.rejectedWith('LearnAndLearn::updateLevel: Invalid level id');
+			await LearnAndEarn.connect(owner)
+				.updateLevel(2, PACT.address)
+				.should.be.rejectedWith(
+					"LearnAndLearn::updateLevel: Invalid level id"
+				);
 		});
 
 		it("Should not updateLevel if level is paused", async function () {
-
 			await LearnAndEarn.connect(owner).addLevel(1, cUSD.address);
 			await LearnAndEarn.connect(owner).pauseLevel(1);
 
-			await LearnAndEarn.connect(owner).updateLevel(1, PACT.address)
-				.should.be.rejectedWith('LearnAndLearn::updateLevel: Invalid level id');
+			await LearnAndEarn.connect(owner)
+				.updateLevel(1, PACT.address)
+				.should.be.rejectedWith(
+					"LearnAndLearn::updateLevel: Invalid level id"
+				);
 		});
 
 		it("Should not updateLevel if level is canceled", async function () {
 			await LearnAndEarn.connect(owner).addLevel(1, cUSD.address);
 			await LearnAndEarn.connect(owner).cancelLevel(1, user1.address);
 
-			await LearnAndEarn.connect(owner).updateLevel(1, PACT.address)
-				.should.be.rejectedWith('LearnAndLearn::updateLevel: Invalid level id');
+			await LearnAndEarn.connect(owner)
+				.updateLevel(1, PACT.address)
+				.should.be.rejectedWith(
+					"LearnAndLearn::updateLevel: Invalid level id"
+				);
 		});
 	});
-
-
 
 	describe("LearnAndEarn - Claim", () => {
 		const level1InitialBalance = toEther(1001);
