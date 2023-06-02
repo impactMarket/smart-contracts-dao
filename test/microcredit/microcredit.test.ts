@@ -3080,7 +3080,7 @@ describe("Microcredit", () => {
 		});
 	});
 
-	describe.only("Microcredit - loan functionalities (revenue address != 0)", () => {
+	describe("Microcredit - loan functionalities (revenue address != 0)", () => {
 		before(async function () {
 		});
 

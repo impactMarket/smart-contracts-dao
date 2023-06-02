@@ -32,9 +32,9 @@ export default {
       timeout: 100000,
       gasPrice: "auto",
       gas: 13000000,
-      forking: {
-        url: "https://forno.celo.org"
-      },
+      // forking: {
+      //   url: "https://forno.celo.org"
+      // },
     },
     alfajores: {
       chainId: 44787,

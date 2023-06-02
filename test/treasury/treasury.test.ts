@@ -32,7 +32,7 @@ export enum LpStrategy {
 	SecondaryCoin = 2,
 }
 
-describe.only("Treasury", () => {
+describe("Treasury", () => {
 	//these tests work only on a celo mainnet fork network
 	let owner: SignerWithAddress;
 	let user1: SignerWithAddress;
@@ -1334,7 +1334,7 @@ describe.only("Treasury", () => {
 			expect(await PACT.balanceOf(FAKE_ADDRESS)).to.be.eq(0);
 		});
 
-		it.only("Should collectFees cUSD", async function () {
+		it("Should collectFees cUSD", async function () {
 			const treasuryInitialCUSDBalance = await cUSD.balanceOf(Treasury.address);
 			const treasuryInitialPACTBalance = await PACT.balanceOf(Treasury.address);
 
@@ -1360,7 +1360,7 @@ describe.only("Treasury", () => {
 		});
 
 
-		it.only("Should collectFees cUSD #2", async function () {
+		it("Should collectFees cUSD #2", async function () {
 			const treasuryInitialCUSDBalance = await cUSD.balanceOf(Treasury.address);
 			const treasuryInitialPACTBalance = await PACT.balanceOf(Treasury.address);
 
@@ -1386,7 +1386,7 @@ describe.only("Treasury", () => {
 			expect(await PACT.balanceOf(FAKE_ADDRESS)).to.be.eq(0);
 		});
 
-		it.only("Should collectFees other token", async function () {
+		it("Should collectFees other token", async function () {
 			const treasuryInitialCUSDBalance = await cUSD.balanceOf(Treasury.address);
 			const treasuryInitialPACTBalance = await PACT.balanceOf(Treasury.address);
 
