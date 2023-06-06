@@ -620,7 +620,7 @@ describe.only("LearnAndEarn", () => {
 			await LearnAndEarn.connect(owner)
 				.updateLevel(1, PACT.address)
 				.should.emit(LearnAndEarn, "LevelUpdated")
-				.withArgs(1);
+				.withArgs(1, PACT.address);
 
 			let level1 = await LearnAndEarn.levels(1);
 			level1.balance.should.be.equal(0);
@@ -645,7 +645,7 @@ describe.only("LearnAndEarn", () => {
 			await LearnAndEarn.connect(owner)
 				.updateLevel(2, PACT.address)
 				.should.emit(LearnAndEarn, "LevelUpdated")
-				.withArgs(2);
+				.withArgs(2, PACT.address);
 
 			let level2 = await LearnAndEarn.levels(2);
 			level2.balance.should.be.equal(0);

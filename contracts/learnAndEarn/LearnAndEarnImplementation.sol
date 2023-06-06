@@ -41,8 +41,9 @@ contract LearnAndEarnImplementation is
      * @notice Triggered when a level has been updated
      *
      * @param levelId           Id of the level
+     * @param newTokenAddress   New token address
      */
-    event LevelUpdated(uint256 indexed levelId);
+    event LevelUpdated(uint256 indexed levelId, address newTokenAddress);
 
     /**
      * @notice Triggered when a reward has been claimed
@@ -201,7 +202,7 @@ contract LearnAndEarnImplementation is
 
         levels[_levelId].token = _token;
 
-        emit LevelUpdated(_levelId);
+        emit LevelUpdated(_levelId, address(_token));
     }
 
     /**
