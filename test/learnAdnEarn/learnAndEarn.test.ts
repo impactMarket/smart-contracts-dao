@@ -12,7 +12,7 @@ import { BigNumber } from "@ethersproject/bignumber";
 
 chai.use(chaiAsPromised);
 
-describe("LearnAndEarn", () => {
+describe.only("LearnAndEarn", () => {
 	const FAKE_ADDRESS = "0x000000000000000000000000000000000000dEaD";
 
 	let owner: SignerWithAddress;
@@ -592,6 +592,115 @@ describe("LearnAndEarn", () => {
 
 			const level = await LearnAndEarn.levels(1);
 			level.state.should.be.equal(LevelState.Canceled);
+		});
+	});
+
+	describe("LearnAndEarn - updateLevel", () => {
+		before(async function () {});
+
+		beforeEach(async () => {
+			await deploy();
+
+			await cUSD
+				.connect(user1)
+				.approve(LearnAndEarn.address, toEther(100000000));
+
+			await PACT.connect(user1).approve(
+				LearnAndEarn.address,
+				toEther(100000000)
+			);
+		});
+
+		it("Should change level token #1", async function () {
+			(await cUSD.balanceOf(LearnAndEarn.address)).should.be.equal(0);
+			(await PACT.balanceOf(LearnAndEarn.address)).should.be.equal(0);
+
+			await LearnAndEarn.connect(owner).addLevel(1, cUSD.address);
+
+			await LearnAndEarn.connect(owner)
+				.updateLevel(1, PACT.address)
+				.should.emit(LearnAndEarn, "LevelUpdated")
+				.withArgs(1, PACT.address);
+
+			let level1 = await LearnAndEarn.levels(1);
+			level1.balance.should.be.equal(0);
+			level1.state.should.be.equal(LevelState.Valid);
+			level1.token.should.be.equal(PACT.address);
+
+			await LearnAndEarn.connect(user1).fundLevel(1, 100);
+
+			(await LearnAndEarn.levels(1)).balance.should.be.equal(100);
+			(await cUSD.balanceOf(LearnAndEarn.address)).should.be.equal(0);
+			(await PACT.balanceOf(LearnAndEarn.address)).should.be.equal(100);
+		});
+
+		it("Should change level token #2", async function () {
+			(await cUSD.balanceOf(LearnAndEarn.address)).should.be.equal(0);
+			(await PACT.balanceOf(LearnAndEarn.address)).should.be.equal(0);
+
+			await LearnAndEarn.connect(owner).addLevel(1, cUSD.address);
+			await LearnAndEarn.connect(owner).addLevel(2, cUSD.address);
+			await LearnAndEarn.connect(owner).addLevel(3, cUSD.address);
+
+			await LearnAndEarn.connect(owner)
+				.updateLevel(2, PACT.address)
+				.should.emit(LearnAndEarn, "LevelUpdated")
+				.withArgs(2, PACT.address);
+
+			let level2 = await LearnAndEarn.levels(2);
+			level2.balance.should.be.equal(0);
+			level2.state.should.be.equal(LevelState.Valid);
+			level2.token.should.be.equal(PACT.address);
+
+			await LearnAndEarn.connect(user1).fundLevel(2, 100);
+
+			(await LearnAndEarn.levels(2)).balance.should.be.equal(100);
+			(await cUSD.balanceOf(LearnAndEarn.address)).should.be.equal(0);
+			(await PACT.balanceOf(LearnAndEarn.address)).should.be.equal(100);
+		});
+
+		it("Should not updateLevel if level has balance", async function () {
+			await LearnAndEarn.connect(owner).addLevel(1, cUSD.address);
+
+			await LearnAndEarn.connect(user1).fundLevel(1, 100);
+
+			await LearnAndEarn.connect(owner)
+				.updateLevel(1, PACT.address)
+				.should.be.rejectedWith(
+					"LearnAndLearn::updateLevel: This level has funds"
+				);
+		});
+
+		it("Should not updateLevel if level does not exist", async function () {
+			await LearnAndEarn.connect(owner).addLevel(1, cUSD.address);
+
+			await LearnAndEarn.connect(owner)
+				.updateLevel(2, PACT.address)
+				.should.be.rejectedWith(
+					"LearnAndLearn::updateLevel: Invalid level id"
+				);
+		});
+
+		it("Should not updateLevel if level is paused", async function () {
+			await LearnAndEarn.connect(owner).addLevel(1, cUSD.address);
+			await LearnAndEarn.connect(owner).pauseLevel(1);
+
+			await LearnAndEarn.connect(owner)
+				.updateLevel(1, PACT.address)
+				.should.be.rejectedWith(
+					"LearnAndLearn::updateLevel: Invalid level id"
+				);
+		});
+
+		it("Should not updateLevel if level is canceled", async function () {
+			await LearnAndEarn.connect(owner).addLevel(1, cUSD.address);
+			await LearnAndEarn.connect(owner).cancelLevel(1, user1.address);
+
+			await LearnAndEarn.connect(owner)
+				.updateLevel(1, PACT.address)
+				.should.be.rejectedWith(
+					"LearnAndLearn::updateLevel: Invalid level id"
+				);
 		});
 	});
 

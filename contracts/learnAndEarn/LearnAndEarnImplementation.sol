@@ -38,6 +38,14 @@ contract LearnAndEarnImplementation is
     event LevelStateChanged(uint256 indexed levelId, LevelState indexed state);
 
     /**
+     * @notice Triggered when a level has been updated
+     *
+     * @param levelId           Id of the level
+     * @param newTokenAddress   New token address
+     */
+    event LevelUpdated(uint256 indexed levelId, address newTokenAddress);
+
+    /**
      * @notice Triggered when a reward has been claimed
      *
      * @param beneficiary    address of the beneficiary to be rewarded
@@ -172,6 +180,29 @@ contract LearnAndEarnImplementation is
         _levelList.add(_levelId);
 
         emit LevelStateChanged(_levelId, LevelState.Valid);
+    }
+
+    /**
+     * @notice Updates a level
+     *
+     * @param _levelId    the id of the level
+     * @param _token      the token used for reward
+     */
+    function updateLevel(uint256 _levelId, IERC20 _token)
+        external
+        override
+        onlyOwnerOrImpactMarketCouncil
+    {
+        require(
+            levels[_levelId].state == LevelState.Valid,
+            "LearnAndLearn::updateLevel: Invalid level id"
+        );
+
+        require(levels[_levelId].balance == 0, "LearnAndLearn::updateLevel: This level has funds");
+
+        levels[_levelId].token = _token;
+
+        emit LevelUpdated(_levelId, address(_token));
     }
 
     /**

@@ -32,7 +32,7 @@ export enum LpStrategy {
 	SecondaryCoin = 2,
 }
 
-describe.only("Treasury", () => {
+describe("Treasury", () => {
 	//these tests work only on a celo mainnet fork network
 	let owner: SignerWithAddress;
 	let user1: SignerWithAddress;
@@ -1334,9 +1334,13 @@ describe.only("Treasury", () => {
 			expect(await PACT.balanceOf(FAKE_ADDRESS)).to.be.eq(0);
 		});
 
-		it.only("Should collectFees cUSD", async function () {
-			const treasuryInitialCUSDBalance = await cUSD.balanceOf(Treasury.address);
-			const treasuryInitialPACTBalance = await PACT.balanceOf(Treasury.address);
+		it("Should collectFees cUSD", async function () {
+			const treasuryInitialCUSDBalance = await cUSD.balanceOf(
+				Treasury.address
+			);
+			const treasuryInitialPACTBalance = await PACT.balanceOf(
+				Treasury.address
+			);
 
 			await swap(owner, PACT, cUSD, toEther(100));
 
@@ -1352,17 +1356,21 @@ describe.only("Treasury", () => {
 				treasuryInitialPACTBalance.add(toEther("0.999999999999999999"))
 			);
 			expect(await cUSD.balanceOf(Treasury.address)).to.be.eq(
-				treasuryInitialCUSDBalance.add(toEther(0)));
+				treasuryInitialCUSDBalance.add(toEther(0))
+			);
 
 			expect(await PACT.balanceOf(TreasuryLpSwap.address)).to.be.eq(0);
 			expect(await cUSD.balanceOf(TreasuryLpSwap.address)).to.be.eq(0);
 			expect(await PACT.balanceOf(FAKE_ADDRESS)).to.be.eq(0);
 		});
 
-
-		it.only("Should collectFees cUSD #2", async function () {
-			const treasuryInitialCUSDBalance = await cUSD.balanceOf(Treasury.address);
-			const treasuryInitialPACTBalance = await PACT.balanceOf(Treasury.address);
+		it("Should collectFees cUSD #2", async function () {
+			const treasuryInitialCUSDBalance = await cUSD.balanceOf(
+				Treasury.address
+			);
+			const treasuryInitialPACTBalance = await PACT.balanceOf(
+				Treasury.address
+			);
 
 			await swap(owner, PACT, cUSD, toEther(50));
 			await swap(owner, cUSD, PACT, toEther(100));
@@ -1372,23 +1380,28 @@ describe.only("Treasury", () => {
 				.withArgs(
 					cUSDToPACTTokenId,
 					toEther("0.499999999999999999"),
-					toEther("1"),
+					toEther("1")
 				);
 
 			expect(await PACT.balanceOf(Treasury.address)).to.be.eq(
 				treasuryInitialPACTBalance.add(toEther("0.499999999999999999"))
 			);
 			expect(await cUSD.balanceOf(Treasury.address)).to.be.eq(
-				treasuryInitialCUSDBalance.add(toEther("1")));
+				treasuryInitialCUSDBalance.add(toEther("1"))
+			);
 
 			expect(await PACT.balanceOf(TreasuryLpSwap.address)).to.be.eq(0);
 			expect(await cUSD.balanceOf(TreasuryLpSwap.address)).to.be.eq(0);
 			expect(await PACT.balanceOf(FAKE_ADDRESS)).to.be.eq(0);
 		});
 
-		it.only("Should collectFees other token", async function () {
-			const treasuryInitialCUSDBalance = await cUSD.balanceOf(Treasury.address);
-			const treasuryInitialPACTBalance = await PACT.balanceOf(Treasury.address);
+		it("Should collectFees other token", async function () {
+			const treasuryInitialCUSDBalance = await cUSD.balanceOf(
+				Treasury.address
+			);
+			const treasuryInitialPACTBalance = await PACT.balanceOf(
+				Treasury.address
+			);
 
 			await swap(owner, PACT, mUSD, toEther(100));
 			await swap(owner, mUSD, PACT, toEther(50));
@@ -1405,7 +1418,8 @@ describe.only("Treasury", () => {
 				treasuryInitialPACTBalance.add(toEther("1.123786721591364695"))
 			);
 			expect(await cUSD.balanceOf(Treasury.address)).to.be.eq(
-				treasuryInitialCUSDBalance.add(toEther("0.247499938743765159")));
+				treasuryInitialCUSDBalance.add(toEther("0.247499938743765159"))
+			);
 
 			expect(await PACT.balanceOf(TreasuryLpSwap.address)).to.be.eq(0);
 			expect(await cUSD.balanceOf(TreasuryLpSwap.address)).to.be.eq(0);
