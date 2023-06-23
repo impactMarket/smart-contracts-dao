@@ -44,15 +44,12 @@ contract MicrocreditImplementation is
     );
 
     /**
-    * @notice Triggered when a borrower's manager has been changed
-    *
-    * @param borrowerAddress   The address of the borrower
-    * @param managerAddress    The address of the new manager
-    */
-    event ManagerChanged(
-        address indexed borrowerAddress,
-        address indexed managerAddress
-    );
+     * @notice Triggered when a borrower's manager has been changed
+     *
+     * @param borrowerAddress   The address of the borrower
+     * @param managerAddress    The address of the new manager
+     */
+    event ManagerChanged(address indexed borrowerAddress, address indexed managerAddress);
 
     modifier onlyManagers() {
         require(_managerList.contains(msg.sender), "Microcredit: caller is not a manager");
@@ -370,11 +367,11 @@ contract MicrocreditImplementation is
     }
 
     /**
-    * @notice Repay a loan
-    *
-    * @param _loanId Loan ID
-    * @param _repaymentAmount Repayment amount
-    */
+     * @notice Repay a loan
+     *
+     * @param _loanId Loan ID
+     * @param _repaymentAmount Repayment amount
+     */
     function repayLoan(uint256 _loanId, uint256 _repaymentAmount) external override nonReentrant {
         require(_repaymentAmount > 0, "Microcredit: Invalid amount");
 
@@ -433,12 +430,19 @@ contract MicrocreditImplementation is
      * @param _borrowerAddresses address of the borrowers
      * @param _managerAddress address of the new manager
      */
-    function changeManager(address[] memory _borrowerAddresses, address _managerAddress) external override onlyManagers {
+    function changeManager(address[] memory _borrowerAddresses, address _managerAddress)
+        external
+        override
+        onlyManagers
+    {
         uint256 _index;
         require(_managerList.contains(_managerAddress), "Microcredit: invalid manager address");
 
-        for(_index = 0; _index < _borrowerAddresses.length; _index++) {
-            require(_walletList.contains(_borrowerAddresses[_index]), "Microcredit: invalid borrower address");
+        for (_index = 0; _index < _borrowerAddresses.length; _index++) {
+            require(
+                _walletList.contains(_borrowerAddresses[_index]),
+                "Microcredit: invalid borrower address"
+            );
             emit ManagerChanged(_borrowerAddresses[_index], _managerAddress);
         }
     }

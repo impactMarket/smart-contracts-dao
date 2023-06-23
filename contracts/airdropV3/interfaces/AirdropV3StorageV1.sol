@@ -10,14 +10,11 @@ import "./IAirdropV3.sol";
  * AirdropV3StorageVx.
  */
 abstract contract AirdropV3StorageV1 is IAirdropV3 {
-    IERC20 public override PACT;
+    IDonationMiner public override donationMiner;
     ISocialConnect public override socialConnect;
     address public override socialConnectIssuer;
 
-    uint256 public override startTime;
-    uint256 public override trancheAmount;
-    uint256 public override totalAmount;
-    uint256 public override cooldown;
+    uint256 public override amount;
 
     mapping(address => Beneficiary) public beneficiaries;
 }

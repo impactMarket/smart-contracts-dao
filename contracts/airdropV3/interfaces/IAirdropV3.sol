@@ -1,30 +1,24 @@
 //SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.4;
 
-import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "../../externalInterfaces/socialConnect/ISocialConnect.sol";
+import "../../community/interfaces/ICommunity.sol";
+import "../../donationMiner/interfaces/IDonationMiner.sol";
+import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 
 interface IAirdropV3 {
     struct Beneficiary {
-        uint256 claimedAmount;
-        uint256 lastClaimTime;
+        uint256 amount;
     }
 
     function getVersion() external pure returns(uint256);
-    function PACT() external view returns(IERC20);
+    function donationMiner() external view returns(IDonationMiner);
+    function VIRTUAL_TOKEN_ADDRESS() external view returns(address);
     function socialConnect() external view returns(ISocialConnect);
     function socialConnectIssuer() external view returns(address);
-    function startTime() external view returns(uint256);
-    function trancheAmount() external view returns(uint256);
-    function totalAmount() external view returns(uint256);
-    function cooldown() external view returns(uint256);
+    function amount() external view returns(uint256);
 
-    function updateStartTime(uint256 _newStartTime) external;
-    function updateTrancheAmount(uint256 _newTrancheAmount) external;
-    function updateTotalAmount(uint256 _newTotalAmount) external;
-    function updateCooldown(uint256 _newCooldown) external;
+    function updateAmount(uint256 newTrancheAmount) external;
 
-    function claim(
-        address _beneficiaryAddress
-    ) external;
+    function register(address[] memory beneficiaryAddresses, address[] memory communityAddresses) external;
 }

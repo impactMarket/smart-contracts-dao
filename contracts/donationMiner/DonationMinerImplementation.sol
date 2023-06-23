@@ -6,15 +6,17 @@ import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
-import "./interfaces/DonationMinerStorageV4.sol";
+import "./interfaces/DonationMinerStorageV5.sol";
 
 contract DonationMinerImplementation is
     Initializable,
     OwnableUpgradeable,
     PausableUpgradeable,
     ReentrancyGuardUpgradeable,
-    DonationMinerStorageV4
+    DonationMinerStorageV5
 {
+    address internal constant AIRDROP_V3_TOKEN_ADDRESS = 0x00000000000000000000000000000000000000A3;
+
     using SafeERC20Upgradeable for IERC20;
 
     /**
@@ -169,6 +171,14 @@ contract DonationMinerImplementation is
      */
     modifier onlyStaking() {
         require(msg.sender == address(staking), "DonationMiner: NOT_STAKING");
+        _;
+    }
+
+    /**
+     * @notice Enforces sender to be Staking contract
+     */
+    modifier onlyAirdropV3() {
+        require(msg.sender == address(airdropV3), "DonationMiner: NOT_AIRDROP_V3");
         _;
     }
 
@@ -388,6 +398,15 @@ contract DonationMinerImplementation is
     }
 
     /**
+     * @notice Updates AirdropV3 address
+     *
+     * @param _newAirdropV3 address of new AirdropV3 contract
+     */
+    function updateAirdropV3(IAirdropV3 _newAirdropV3) external override onlyOwner {
+        airdropV3 = _newAirdropV3;
+    }
+
+    /**
      * @notice Transfers cUSD tokens to the treasury contract
      *
      * @param _token address of the token
@@ -437,6 +456,23 @@ contract DonationMinerImplementation is
 
         _community.donate(msg.sender, _amount);
         _addDonation(_delegateAddress, _token, _amount, address(_community));
+    }
+
+    /**
+     * @notice Transfers cUSD tokens to the treasury contract
+     *
+     * @param _token address of the token
+     * @param _amount Amount of cUSD tokens to deposit.
+     * @param _delegateAddress the address that will claim the reward for the donation
+     */
+    function donateVirtual(
+        IERC20 _token,
+        uint256 _amount,
+        address _delegateAddress
+    ) external override whenNotPaused onlyAirdropV3 {
+        require(address(_token) == AIRDROP_V3_TOKEN_ADDRESS, "DonationMiner: Invalid token");
+
+        _addDonation(_delegateAddress, _token, _amount, address(treasury));
     }
 
     /**
@@ -822,12 +858,14 @@ contract DonationMinerImplementation is
         _donation.token = _token;
         _donation.initialAmount = _initialAmount;
 
-        if (_target == address(treasury)) {
-            _donation.amount = (_token == cUSD)
-                ? _initialAmount
-                : treasury.getConvertedAmount(address(_token), _initialAmount);
+        if (_token == cUSD || address(_token) == AIRDROP_V3_TOKEN_ADDRESS) {
+            _donation.amount = _initialAmount;
         } else {
-            _donation.amount = _initialAmount / communityDonationRatio;
+            _donation.amount = treasury.getConvertedAmount(address(_token), _initialAmount);
+        }
+
+        if (_target != address(treasury)) {
+            _donation.amount = _donation.amount / communityDonationRatio;
         }
 
         updateRewardPeriodAmounts(rewardPeriodCount, _delegateAddress, _donation.amount);

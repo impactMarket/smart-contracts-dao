@@ -3,11 +3,13 @@ import { DeployFunction } from "hardhat-deploy/types";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { toEther } from "../../test/utils/helpers";
 
-const socialConnectAddress = "0x70F9314aF173c246669cFb0EEe79F9Cfd9C34ee3";
-// const socialConnectAddress = '0x0aD5b1d0C25ecF6266Dd951403723B2687d6aff2';
+//alfajores
+// const socialConnectAddress = "0x70F9314aF173c246669cFb0EEe79F9Cfd9C34ee3";
+// const socialConnectIssuerAddress = "0xe3475047EF9F9231CD6fAe02B3cBc5148E8eB2c8";
 
-const socialConnectIssuerAddress = "0xe3475047EF9F9231CD6fAe02B3cBc5148E8eB2c8";
-// const socialConnectIssuerAddress = '0x388612590F8cC6577F19c9b61811475Aa432CB44'; prod
+//mainnet
+const socialConnectAddress = "0x0aD5b1d0C25ecF6266Dd951403723B2687d6aff2";
+const socialConnectIssuerAddress = "0x388612590F8cC6577F19c9b61811475Aa432CB44";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// @ts-ignore
@@ -21,7 +23,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const ownerAddress = deployer.address; //dev
 
 	const ImpactProxyAdmin = await deployments.get("ImpactProxyAdmin");
-	const PACT = await deployments.get("PACTToken");
+	const DonationMiner = await ethers.getContractAt(
+		"DonationMinerImplementation",
+		(
+			await deployments.get("DonationMinerProxy")
+		).address
+	);
 
 	const airdropV3ImplementationResult = await deploy(
 		"AirdropV3Implementation",
@@ -45,24 +52,19 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		airdropV3ProxyResult.address
 	);
 
-	const startTime = 0;
-	const trancheAmount = toEther(100);
-	const totalAmount = toEther(1000);
-	const cooldown = 3600;
+	const amount = toEther(1);
 
 	await airdropV3Contract.initialize(
-		PACT.address,
+		DonationMiner.address,
 		socialConnectAddress,
 		socialConnectIssuerAddress,
-		startTime,
-		trancheAmount,
-		totalAmount,
-		cooldown
+		amount
 	);
 
 	await airdropV3Contract.transferOwnership(ownerAddress);
+	await DonationMiner.updateAirdropV3(airdropV3Contract.address);
 };
 
 export default func;
-func.dependencies = ["ImpactProxyAdminTest", "PactTest"];
-func.tags = ["AirdropV3Test"];
+func.dependencies = ["ImpactProxyAdminTest", "DonationMinerTest"];
+func.tags = ["AirdropV3Test", "Test"];

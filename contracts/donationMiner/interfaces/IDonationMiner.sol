@@ -6,6 +6,7 @@ import "../../community/interfaces/ICommunityAdmin.sol";
 import "../../community/interfaces/ICommunity.sol";
 import "../../treasury/interfaces/ITreasury.sol";
 import "../../staking/interfaces/IStaking.sol";
+import "../../airdropV3/interfaces/IAirdropV3.sol";
 
 interface IDonationMiner {
     struct RewardPeriod {
@@ -58,6 +59,7 @@ interface IDonationMiner {
     function PACT() external view returns (IERC20);
     function treasury() external view returns (ITreasury);
     function staking() external view returns (IStaking);
+    function airdropV3() external view returns (IAirdropV3);
     function rewardPeriodSize() external view returns (uint256);
     function decayNumerator() external view returns (uint256);
     function decayDenominator() external view returns (uint256);
@@ -106,8 +108,10 @@ interface IDonationMiner {
     function updateAgainstPeriods(uint256 _newAgainstPeriods) external;
     function updateTreasury(ITreasury _newTreasury) external;
     function updateStaking(IStaking _newStaking) external;
+    function updateAirdropV3(IAirdropV3 _newAirdropV3) external;
     function donate(IERC20 _token, uint256 _amount, address _delegateAddress) external;
     function donateToCommunity(ICommunity _community, IERC20 _token, uint256 _amount, address _delegateAddress) external;
+    function donateVirtual(IERC20 _token, uint256 _amount, address _delegateAddress) external;
     function claimRewards() external;
     function claimRewardsPartial(uint256 _lastPeriodNumber) external;
     function stakeRewards() external;

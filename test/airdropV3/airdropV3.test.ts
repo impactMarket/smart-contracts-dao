@@ -11,37 +11,57 @@ import * as ethersTypes from "ethers";
 import { toEther } from "../utils/helpers";
 import { BigNumber } from "@ethersproject/bignumber";
 import { should } from "chai";
+import {
+	createDefaultCommunity,
+	createDefaultCommunityAdmin,
+} from "../community/helpers";
 
 should();
 chai.use(chaiAsPromised);
 
-describe("AirdropV3", () => {
-	const socialConnectAddress = "0x70F9314aF173c246669cFb0EEe79F9Cfd9C34ee3";
-	const socialConnectIssuerAddress =
-		"0xe3475047EF9F9231CD6fAe02B3cBc5148E8eB2c8";
+describe.only("AirdropV3", () => {
+	const socialConnectAddress = "0x0aD5b1d0C25ecF6266Dd951403723B2687d6aff2";
+	const socialConnectIssuerAddress = "0x388612590F8cC6577F19c9b61811475Aa432CB44";
 
-	const startTime = 0;
-	const trancheAmount = toEther(100);
-	const totalAmount = toEther(1000);
-	const cooldown = 3600;
+	const AIRDROP_V3_TOKEN_ADDRESS =
+		"0x00000000000000000000000000000000000000A3";
+
+	const amount = toEther(1);
 
 	let owner: SignerWithAddress;
-	let beneficiary1: SignerWithAddress;
-	let beneficiary2: SignerWithAddress;
-	let beneficiary3: SignerWithAddress;
-	let beneficiary4: SignerWithAddress;
-	let beneficiary5: SignerWithAddress;
-	let beneficiary6: SignerWithAddress;
-	let beneficiary7: SignerWithAddress;
-	let beneficiary8: SignerWithAddress;
-	let beneficiary9: SignerWithAddress;
+	let ambassadorsEntity1: SignerWithAddress;
+	let ambassador1: SignerWithAddress;
+	let manager1: SignerWithAddress;
+	let manager2: SignerWithAddress;
+	let user1: SignerWithAddress;
+	let unverifiedBeneficiary1: SignerWithAddress;
+	let unverifiedBeneficiary2: SignerWithAddress;
+	let verifiedBeneficiary1Address =
+		"0xfCF17Df692AF83b8D59e96C0ab2b0Cc142cE6Ab2";
+	let verifiedBeneficiary2Address =
+		"0x06677920912dFa402F6400Afb4c16b8347fe2a17";
+	let verifiedBeneficiary3Address =
+		"0x3CCb60883b01420F39390CD67FDd85fC5632adE1";
 
 	let ImpactProxyAdmin: ethersTypes.Contract;
 	let PACT: ethersTypes.Contract;
 	let AirdropV3: ethersTypes.Contract;
+	let DonationMiner: ethersTypes.Contract;
+	let Treasury: ethersTypes.Contract;
 
 	const deploy = deployments.createFixture(async () => {
-		await deployments.fixture("AirdropV3Test", { fallbackToGlobal: false });
+		await deployments.fixture("Test", { fallbackToGlobal: false });
+
+		[
+			owner,
+			ambassadorsEntity1,
+			ambassador1,
+			manager1,
+			manager2,
+			user1,
+			unverifiedBeneficiary1,
+			unverifiedBeneficiary2,
+		] = await ethers.getSigners();
 
 		ImpactProxyAdmin = await ethers.getContractAt(
 			"ImpactProxyAdmin",
@@ -63,22 +83,25 @@ describe("AirdropV3", () => {
 				await deployments.get("AirdropV3Proxy")
 			).address
 		);
+
+		DonationMiner = await ethers.getContractAt(
+			"DonationMinerImplementation",
+			(
+				await deployments.get("DonationMinerProxy")
+			).address
+		);
+
+		Treasury = await ethers.getContractAt(
+			"TreasuryImplementation",
+			(
+				await deployments.get("TreasuryProxy")
+			).address
+		);
 	});
 
 	describe("Airdrop  - basic", () => {
 		before(async function () {
-			[
-				owner,
-				beneficiary1,
-				beneficiary2,
-				beneficiary3,
-				beneficiary4,
-				beneficiary5,
-				beneficiary6,
-				beneficiary7,
-				beneficiary8,
-				beneficiary9,
-			] = await ethers.getSigners();
+			[owner] = await ethers.getSigners();
 		});
 
 		beforeEach(async () => {
@@ -87,230 +110,194 @@ describe("AirdropV3", () => {
 
 		it("should have correct values", async function () {
 			(await AirdropV3.getVersion()).should.eq(1);
-			(await AirdropV3.PACT()).should.eq(PACT.address);
+			(await AirdropV3.donationMiner()).should.eq(DonationMiner.address);
 			(await AirdropV3.socialConnect()).should.eq(socialConnectAddress);
 			(await AirdropV3.socialConnectIssuer()).should.eq(
 				socialConnectIssuerAddress
 			);
-			(await AirdropV3.startTime()).should.eq(startTime);
-			(await AirdropV3.trancheAmount()).should.eq(trancheAmount);
-			(await AirdropV3.totalAmount()).should.eq(totalAmount);
-			(await AirdropV3.cooldown()).should.eq(cooldown);
+			(await AirdropV3.amount()).should.eq(amount);
 		});
 
-		it("Should update startTime if admin", async function () {
-			await AirdropV3.updateStartTime(1);
-			(await AirdropV3.startTime()).should.eq(1);
+		it("Should update amount if admin", async function () {
+			await AirdropV3.updateAmount(1);
+			(await AirdropV3.amount()).should.eq(1);
 		});
 
-		it("Should not update startTime if not admin", async function () {
-			await AirdropV3.connect(beneficiary1)
-				.updateStartTime(1)
+		it("Should not update amount if not admin", async function () {
+			await AirdropV3.connect(user1)
+				.updateAmount(1)
 				.should.be.rejectedWith("Ownable: caller is not the owner");
-			(await AirdropV3.startTime()).should.eq(startTime);
-		});
-
-		it("Should update trancheAmount if admin", async function () {
-			await AirdropV3.updateTrancheAmount(1);
-			(await AirdropV3.trancheAmount()).should.eq(1);
-		});
-
-		it("Should not update trancheAmount if not admin", async function () {
-			await AirdropV3.connect(beneficiary1)
-				.updateTrancheAmount(1)
-				.should.be.rejectedWith("Ownable: caller is not the owner");
-			(await AirdropV3.trancheAmount()).should.eq(trancheAmount);
-		});
-
-		it("Should update totalAmount if admin", async function () {
-			await AirdropV3.updateTotalAmount(1);
-			(await AirdropV3.totalAmount()).should.eq(1);
-		});
-
-		it("Should not update totalAmount if not admin", async function () {
-			await AirdropV3.connect(beneficiary1)
-				.updateTotalAmount(1)
-				.should.be.rejectedWith("Ownable: caller is not the owner");
-			(await AirdropV3.totalAmount()).should.eq(totalAmount);
-		});
-
-		it("Should update cooldown if admin", async function () {
-			await AirdropV3.updateCooldown(1);
-			(await AirdropV3.cooldown()).should.eq(1);
-		});
-
-		it("Should not update cooldown if not admin", async function () {
-			await AirdropV3.connect(beneficiary1)
-				.updateCooldown(1)
-				.should.be.rejectedWith("Ownable: caller is not the owner");
-			(await AirdropV3.cooldown()).should.eq(cooldown);
+			(await AirdropV3.amount()).should.eq(amount);
 		});
 	});
 
-	describe("Airdrop - claim", () => {
-		const initialBalance = toEther(1000000);
-
-		before(async function () {
-			[
-				owner,
-				beneficiary1,
-				beneficiary2,
-				beneficiary3,
-				beneficiary4,
-				beneficiary5,
-				beneficiary6,
-				beneficiary7,
-				beneficiary8,
-				beneficiary9,
-			] = await ethers.getSigners();
-		});
+	describe("Airdrop - register", () => {
+		let CommunityAdmin: ethersTypes.Contract;
+		let CommunityA: ethersTypes.Contract;
+		let CommunityB: ethersTypes.Contract;
 
 		beforeEach(async () => {
 			await deploy();
-			await AirdropV3.updateStartTime(0);
-			await PACT.transfer(AirdropV3.address, initialBalance);
-		});
 
-		async function claimAndCheck(
-			beneficiary: SignerWithAddress,
-			trancheAmount: BigNumber
-		) {
-			const beneficiaryBalanceBefore = await PACT.balanceOf(
-				beneficiary.address
+			CommunityAdmin = await createDefaultCommunityAdmin(
+				ambassadorsEntity1,
+				ambassador1
 			);
-			const airdropV3BalanceBefore = await PACT.balanceOf(
-				AirdropV3.address
+			CommunityA = await createDefaultCommunity(
+				CommunityAdmin,
+				manager1,
+				ambassador1
 			);
-			const beneficiaryBefore = await AirdropV3.beneficiaries(
-				beneficiary.address
+			CommunityB = await createDefaultCommunity(
+				CommunityAdmin,
+				manager2,
+				ambassador1
 			);
 
-			await AirdropV3.claim(beneficiary.address)
-				.should.emit(AirdropV3, "Claimed")
-				.withArgs(beneficiary.address, trancheAmount);
-
-			const beneficiaryBalanceAfter = await PACT.balanceOf(
-				beneficiary.address
+			await CommunityA.connect(manager1).addBeneficiary(
+				unverifiedBeneficiary1.address
 			);
-			const airdropV3BalanceAfter = await PACT.balanceOf(
-				AirdropV3.address
+			await CommunityA.connect(manager1).addBeneficiary(
+				verifiedBeneficiary1Address
 			);
-			const beneficiaryAfter = await AirdropV3.beneficiaries(
-				beneficiary.address
+			await CommunityA.connect(manager1).addBeneficiary(
+				verifiedBeneficiary2Address
 			);
-
-			beneficiaryAfter.claimedAmount.should.eq(
-				beneficiaryBefore.claimedAmount.add(trancheAmount)
+			await CommunityB.connect(manager2).addBeneficiary(
+				verifiedBeneficiary2Address
 			);
-			beneficiaryAfter.lastClaimTime.should.eq(
-				await getCurrentBlockTimestamp()
+			await CommunityB.connect(manager2).addBeneficiary(
+				verifiedBeneficiary3Address
 			);
-			beneficiaryBalanceAfter.should.eq(
-				beneficiaryBalanceBefore.add(trancheAmount)
-			);
-			airdropV3BalanceAfter.should.eq(
-				airdropV3BalanceBefore.sub(trancheAmount)
-			);
-		}
-
-		it("should claim #1", async function () {
-			await claimAndCheck(beneficiary1, trancheAmount);
-		});
-
-		it("should claim #2", async function () {
-			await claimAndCheck(beneficiary1, trancheAmount);
-			await claimAndCheck(beneficiary2, trancheAmount);
-			await claimAndCheck(beneficiary3, trancheAmount);
-			await claimAndCheck(beneficiary4, trancheAmount);
-			await claimAndCheck(beneficiary5, trancheAmount);
-		});
-
-		it("should not claim before startTime", async function () {
-			await AirdropV3.updateStartTime(1999999999);
-			await AirdropV3.claim(beneficiary1.address).should.be.rejectedWith(
-				"AirdropV3Implementation::claim: Not yet"
+			await CommunityB.connect(manager2).addBeneficiary(
+				unverifiedBeneficiary2.address
 			);
 		});
 
-		it("should not claim if not valid beneficiary", async function () {
-			await AirdropV3.claim(owner.address).should.be.rejectedWith(
-				"AirdropV3Implementation::claim: Incorrect proof"
-			);
+		it("should register one beneficiary", async function () {
+			await AirdropV3.connect(user1)
+				.register([verifiedBeneficiary1Address], [CommunityA.address])
+				.should.emit(AirdropV3, "Registered")
+				.withArgs(
+					verifiedBeneficiary1Address,
+					CommunityA.address,
+					amount
+				);
+
+			const donation1 = await DonationMiner.donations(1);
+			donation1.donor.should.equal(verifiedBeneficiary1Address);
+			donation1.target.should.equal(Treasury.address);
+			donation1.rewardPeriod.should.equal(1);
+			donation1.amount.should.equal(amount);
+			donation1.token.should.equal(AIRDROP_V3_TOKEN_ADDRESS);
+			donation1.initialAmount.should.equal(amount);
 		});
 
-		it("should not claim with another proof", async function () {
-			await AirdropV3.claim(beneficiary1.address).should.be.rejectedWith(
-				"AirdropV3Implementation::claim: Incorrect proof"
-			);
+		it("should register multiple beneficiaries", async function () {
+			await AirdropV3.connect(user1)
+				.register(
+					[
+						verifiedBeneficiary1Address,
+						verifiedBeneficiary2Address,
+						verifiedBeneficiary3Address,
+					],
+					[CommunityA.address, CommunityA.address, CommunityB.address]
+				)
+				.should.emit(AirdropV3, "Registered")
+				.withArgs(
+					verifiedBeneficiary1Address,
+					CommunityA.address,
+					amount
+				)
+				.withArgs(
+					verifiedBeneficiary2Address,
+					CommunityA.address,
+					amount
+				)
+				.withArgs(
+					verifiedBeneficiary3Address,
+					CommunityB.address,
+					amount
+				);
+
+			const donation1 = await DonationMiner.donations(1);
+			donation1.donor.should.equal(verifiedBeneficiary1Address);
+			donation1.target.should.equal(Treasury.address);
+			donation1.rewardPeriod.should.equal(1);
+			donation1.amount.should.equal(amount);
+			donation1.token.should.equal(AIRDROP_V3_TOKEN_ADDRESS);
+			donation1.initialAmount.should.equal(amount);
+
+			const donation2 = await DonationMiner.donations(2);
+			donation2.donor.should.equal(verifiedBeneficiary2Address);
+			donation2.target.should.equal(Treasury.address);
+			donation2.rewardPeriod.should.equal(1);
+			donation2.amount.should.equal(amount);
+			donation2.token.should.equal(AIRDROP_V3_TOKEN_ADDRESS);
+			donation2.initialAmount.should.equal(amount);
+
+			const donation3 = await DonationMiner.donations(3);
+			donation3.donor.should.equal(verifiedBeneficiary3Address);
+			donation3.target.should.equal(Treasury.address);
+			donation3.rewardPeriod.should.equal(1);
+			donation3.amount.should.equal(amount);
+			donation3.token.should.equal(AIRDROP_V3_TOKEN_ADDRESS);
+			donation3.initialAmount.should.equal(amount);
 		});
 
-		it("should not claim again before cooldown", async function () {
-			await claimAndCheck(beneficiary1, trancheAmount);
-			await AirdropV3.claim(beneficiary1.address).should.be.rejectedWith(
-				"AirdropV3Implementation::claim: Not yet"
-			);
+		it("should not register if beneficiaries.length != communities.length", async function () {
+			await AirdropV3.connect(user1)
+				.register(
+					[verifiedBeneficiary1Address, verifiedBeneficiary2Address],
+					[CommunityA.address]
+				)
+				.should.be.rejectedWith("AirdropV3: Invalid data");
 		});
 
-		it("should claim again after cooldown", async function () {
-			await claimAndCheck(beneficiary1, trancheAmount);
-			await advanceNSeconds(cooldown);
-			await claimAndCheck(beneficiary1, trancheAmount);
+		it("should not register same beneficiary multiple times", async function () {
+			await AirdropV3.connect(user1)
+				.register([verifiedBeneficiary1Address], [CommunityA.address])
+				.should.emit(AirdropV3, "Registered")
+				.withArgs(
+					verifiedBeneficiary1Address,
+					CommunityA.address,
+					amount
+				);
+
+			await AirdropV3.connect(user1)
+				.register([verifiedBeneficiary1Address], [CommunityA.address])
+				.should.be.rejectedWith(
+					"AirdropV3: Beneficiary already registered"
+				);
 		});
 
-		it("should claim total amount #1", async function () {
-			const numberOfClaims = Math.ceil(
-				Number(totalAmount.div(trancheAmount))
+		it("should not register if the community is not valid", async function () {
+			await CommunityAdmin.connect(owner).removeCommunity(
+				CommunityA.address
 			);
 
-			for (
-				let claimIndex = 0;
-				claimIndex < numberOfClaims;
-				claimIndex++
-			) {
-				await claimAndCheck(beneficiary1, trancheAmount);
-				await advanceNSeconds(cooldown);
-			}
+			await AirdropV3.connect(user1)
+				.register([verifiedBeneficiary1Address], [CommunityA.address])
+				.should.be.rejectedWith("AirdropV3: Invalid community");
 		});
 
-		it("should claim total amount #2", async function () {
-			const totalAmount = toEther(99);
-			const trancheAmount = toEther(10);
-
-			await AirdropV3.updateTotalAmount(totalAmount);
-			await AirdropV3.updateTrancheAmount(trancheAmount);
-
-			for (let claimIndex = 0; claimIndex < 9; claimIndex++) {
-				await claimAndCheck(beneficiary1, trancheAmount);
-				await advanceNSeconds(cooldown);
-			}
-
-			await claimAndCheck(beneficiary1, toEther(9));
-
-			const beneficiaryAfter = await AirdropV3.beneficiaries(
-				beneficiary1.address
-			);
-
-			beneficiaryAfter.claimedAmount.should.eq(totalAmount);
-			(await PACT.balanceOf(beneficiary1.address)).should.eq(totalAmount);
+		it("should not register if the beneficiary is not part of that community", async function () {
+			await AirdropV3.connect(user1)
+				.register([verifiedBeneficiary1Address], [CommunityB.address])
+				.should.be.rejectedWith(
+					"AirdropV3: Invalid beneficiary - community pair"
+				);
 		});
 
-		it("should not claim more than total amount", async function () {
-			const numberOfClaims = Math.ceil(
-				Number(totalAmount.div(trancheAmount))
-			);
-
-			for (
-				let claimIndex = 0;
-				claimIndex < numberOfClaims;
-				claimIndex++
-			) {
-				await claimAndCheck(beneficiary1, trancheAmount);
-				await advanceNSeconds(cooldown);
-			}
-
-			await AirdropV3.claim(beneficiary1.address).should.be.rejectedWith(
-				"AirdropV3Implementation::claim: Beneficiary's claimed all amount"
-			);
+		it("should not register if the beneficiary has not been verified", async function () {
+			await AirdropV3.connect(user1)
+				.register(
+					[unverifiedBeneficiary1.address],
+					[CommunityA.address]
+				)
+				.should.be.rejectedWith(
+					"AirdropV3: User has not been verified"
+				);
 		});
 	});
 });

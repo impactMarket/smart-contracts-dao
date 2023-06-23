@@ -13,7 +13,7 @@ import {
 chai.use(chaiAsPromised);
 should();
 
-describe.only("ReferralLink", () => {
+describe("ReferralLink", () => {
 	const FAKE_ADDRESS = "0x000000000000000000000000000000000000dEaD";
 
 	let owner: SignerWithAddress;
@@ -551,7 +551,7 @@ describe.only("ReferralLink", () => {
 		});
 	});
 
-	describe.only("ReferralLink - Claim", () => {
+	describe("ReferralLink - Claim", () => {
 		//these tests work only on a celo mainnet fork network
 		const campaign0InitialBalance = toEther(1001);
 		const campaign1InitialBalance = toEther(1002);
