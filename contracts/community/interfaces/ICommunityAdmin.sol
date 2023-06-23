@@ -93,6 +93,7 @@ interface ICommunityAdmin {
     ) external;
     function removeCommunity(ICommunity _community) external;
     function fundCommunity() external returns(uint256);
+    function transferToBeneficiary(IERC20 _token, address beneficiary, uint256 amount) external;
     function calculateCommunityTrancheAmount(ICommunity _community) external view returns (uint256);
     function transfer(IERC20 _token, address _to, uint256 _amount) external;
     function transferFromCommunity(

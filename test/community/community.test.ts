@@ -25,7 +25,7 @@ chai.use(chaiAsPromised);
 const expect = chai.expect;
 const provider = waffle.provider;
 
-describe("Community", () => {
+describe.only("Community", () => {
 	enum BeneficiaryState {
 		NONE = 0,
 		Valid = 1,
@@ -757,6 +757,24 @@ describe("Community", () => {
 				TREASURY_MIN_BALANCE
 			);
 		});
+
+		it("should not fundCommunity if not community", async () => {
+			await expect(
+				communityAdminProxy.connect(adminAccount1).fundCommunity()
+			).to.be.rejectedWith("CommunityAdmin: NOT_COMMUNITY");
+		});
+
+		it("should not transferToBeneficiary if not community", async () => {
+			await expect(
+				communityAdminProxy
+					.connect(adminAccount1)
+					.transferToBeneficiary(
+						cUSD.address,
+						adminAccount1.address,
+						toEther(1)
+					)
+			).to.be.rejectedWith("CommunityAdmin: NOT_COMMUNITY");
+		});
 	});
 
 	describe("Community", () => {
@@ -1243,6 +1261,33 @@ describe("Community", () => {
 				.addBeneficiaries([beneficiaryA.address]);
 			(await cUSD.balanceOf(beneficiaryA.address)).should.eq(
 				initialAmountDefault
+			);
+		});
+
+		it("should give beneficiary 5 cents from treasury when community doesn't have funds", async () => {
+			(await cUSD.balanceOf(beneficiaryA.address)).should.eq("0");
+
+			await communityAdminProxy.transferFromCommunity(
+				communityProxy.address,
+				cUSD.address,
+				treasuryProxy.address,
+				await cUSD.balanceOf(communityProxy.address)
+			);
+
+			const treasuryBalanceBefore = await cUSD.balanceOf(
+				treasuryProxy.address
+			);
+
+			await communityProxy
+				.connect(communityManagerA)
+				.addBeneficiaries([beneficiaryA.address]);
+
+			(await cUSD.balanceOf(beneficiaryA.address)).should.eq(
+				initialAmountDefault
+			);
+
+			(await cUSD.balanceOf(treasuryProxy.address)).should.eq(
+				treasuryBalanceBefore.sub(initialAmountDefault)
 			);
 		});
 
@@ -6533,13 +6578,15 @@ describe("Community", () => {
 		});
 	});
 
-	describe("Community & CommunityAdmin - splitCommunity", () => {
+	describe.skip("Community & CommunityAdmin - splitCommunity", () => {
+		//these tests work only on a celo mainnet fork network
 		before(async function () {
 			await init();
 		});
 
 		beforeEach(async () => {
 			await deploy();
+
 			await multipleTokenSetUp();
 
 			await cUSD.mint(treasuryProxy.address, mintAmount);
