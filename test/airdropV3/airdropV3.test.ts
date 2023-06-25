@@ -19,9 +19,10 @@ import {
 should();
 chai.use(chaiAsPromised);
 
-describe.only("AirdropV3", () => {
+describe("AirdropV3", () => {
 	const socialConnectAddress = "0x0aD5b1d0C25ecF6266Dd951403723B2687d6aff2";
-	const socialConnectIssuerAddress = "0x388612590F8cC6577F19c9b61811475Aa432CB44";
+	const socialConnectIssuerAddress =
+		"0x388612590F8cC6577F19c9b61811475Aa432CB44";
 
 	const AIRDROP_V3_TOKEN_ADDRESS =
 		"0x00000000000000000000000000000000000000A3";

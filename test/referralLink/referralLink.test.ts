@@ -13,7 +13,7 @@ import {
 chai.use(chaiAsPromised);
 should();
 
-describe("ReferralLink", () => {
+describe.only("ReferralLink", () => {
 	const FAKE_ADDRESS = "0x000000000000000000000000000000000000dEaD";
 
 	let owner: SignerWithAddress;
@@ -568,6 +568,11 @@ describe("ReferralLink", () => {
 		const campaign5Reward = toEther(15);
 		const campaign6Reward = toEther(16);
 
+		let sender1InitialBalance: BigNumber;
+		let receiver1InitialBalance: BigNumber;
+		let receiver2InitialBalance: BigNumber;
+		let receiver3InitialBalance: BigNumber;
+
 		const referralLinkInitialBalanceCUSD = campaign0InitialBalance
 			.add(campaign1InitialBalance)
 			.add(campaign2InitialBalance);
@@ -664,6 +669,11 @@ describe("ReferralLink", () => {
 				5,
 				campaign5InitialBalance
 			);
+
+			sender1InitialBalance = await cUSD.balanceOf(sender1.address);
+			receiver1InitialBalance = await cUSD.balanceOf(receiver1Address);
+			receiver2InitialBalance = await cUSD.balanceOf(receiver2Address);
+			receiver3InitialBalance = await cUSD.balanceOf(receiver3Address);
 		});
 
 		it("Should reject when calling claim with less campaignIds", async function () {
@@ -845,8 +855,6 @@ describe("ReferralLink", () => {
 				receiver1Address
 			);
 
-			const sender1InitialBalance = await cUSD.balanceOf(sender1.address);
-
 			await ReferralLink.connect(user2)
 				.claimReward(
 					sender1.address,
@@ -866,15 +874,19 @@ describe("ReferralLink", () => {
 
 			const campaign1 = await ReferralLink.campaigns(1);
 			campaign1.balance.should.be.equal(
-				campaign0InitialBalance.sub(campaign0Reward)
+				campaign1InitialBalance.sub(campaign1Reward.mul(2))
 			);
 
 			(await cUSD.balanceOf(sender1.address)).should.eq(
 				sender1InitialBalance.add(campaign1Reward)
 			);
 
+			(await cUSD.balanceOf(receiver1Address)).should.eq(
+				receiver1InitialBalance.add(campaign1Reward)
+			);
+
 			(await cUSD.balanceOf(ReferralLink.address)).should.eq(
-				referralLinkInitialBalanceCUSD.sub(campaign1Reward)
+				referralLinkInitialBalanceCUSD.sub(campaign1Reward.mul(2))
 			);
 		});
 
@@ -892,8 +904,6 @@ describe("ReferralLink", () => {
 				1,
 				receiver2Address
 			);
-
-			const sender1InitialBalance = await cUSD.balanceOf(sender1.address);
 
 			await ReferralLink.connect(user2)
 				.claimReward(
@@ -928,22 +938,30 @@ describe("ReferralLink", () => {
 
 			const campaign0 = await ReferralLink.campaigns(0);
 			campaign0.balance.should.be.equal(
-				campaign0InitialBalance.sub(campaign0Reward)
+				campaign0InitialBalance.sub(campaign0Reward.mul(2))
 			);
 
 			const campaign1 = await ReferralLink.campaigns(1);
 			campaign1.balance.should.be.equal(
-				campaign1InitialBalance.sub(campaign1Reward)
+				campaign1InitialBalance.sub(campaign1Reward.mul(2))
 			);
 
 			(await cUSD.balanceOf(sender1.address)).should.eq(
 				sender1InitialBalance.add(campaign0Reward).add(campaign1Reward)
 			);
 
+			(await cUSD.balanceOf(receiver1Address)).should.eq(
+				receiver1InitialBalance.add(campaign0Reward)
+			);
+
+			(await cUSD.balanceOf(receiver2Address)).should.eq(
+				receiver2InitialBalance.add(campaign1Reward)
+			);
+
 			(await cUSD.balanceOf(ReferralLink.address)).should.eq(
 				referralLinkInitialBalanceCUSD
-					.sub(campaign0Reward)
-					.sub(campaign1Reward)
+					.sub(campaign0Reward.mul(2))
+					.sub(campaign1Reward.mul(2))
 			);
 		});
 
@@ -986,18 +1004,30 @@ describe("ReferralLink", () => {
 
 			const campaign1 = await ReferralLink.campaigns(1);
 			campaign1.balance.should.be.equal(
-				campaign1InitialBalance.sub(campaign1Reward)
+				campaign1InitialBalance.sub(campaign1Reward.mul(2))
 			);
 
 			const campaign2 = await ReferralLink.campaigns(2);
 			campaign2.balance.should.be.equal(
-				campaign2InitialBalance.sub(campaign2Reward)
+				campaign2InitialBalance.sub(campaign2Reward.mul(2))
+			);
+
+			(await cUSD.balanceOf(sender1.address)).should.eq(
+				sender1InitialBalance.add(campaign1Reward.add(campaign2Reward))
+			);
+
+			(await cUSD.balanceOf(receiver1Address)).should.eq(
+				receiver1InitialBalance.add(campaign1Reward)
+			);
+
+			(await cUSD.balanceOf(receiver2Address)).should.eq(
+				receiver2InitialBalance.add(campaign2Reward)
 			);
 
 			(await cUSD.balanceOf(ReferralLink.address)).should.eq(
 				referralLinkInitialBalanceCUSD
-					.sub(campaign1Reward)
-					.sub(campaign2Reward)
+					.sub(campaign1Reward.mul(2))
+					.sub(campaign2Reward.mul(2))
 			);
 		});
 
@@ -1040,20 +1070,36 @@ describe("ReferralLink", () => {
 
 			const campaign1 = await ReferralLink.campaigns(1);
 			campaign1.balance.should.be.equal(
-				campaign1InitialBalance.sub(campaign1Reward)
+				campaign1InitialBalance.sub(campaign1Reward.mul(2))
 			);
 
 			const campaign11 = await ReferralLink.campaigns(3);
 			campaign11.balance.should.be.equal(
-				campaign3InitialBalance.sub(campaign3Reward)
+				campaign3InitialBalance.sub(campaign3Reward.mul(2))
+			);
+
+			(await cUSD.balanceOf(sender1.address)).should.eq(
+				sender1InitialBalance.add(campaign1Reward)
+			);
+
+			(await PACT.balanceOf(sender1.address)).should.eq(
+				campaign3Reward
+			);
+
+			(await cUSD.balanceOf(receiver1Address)).should.eq(
+				receiver1InitialBalance.add(campaign1Reward)
+			);
+
+			(await PACT.balanceOf(receiver2Address)).should.eq(
+				receiver2InitialBalance.add(campaign3Reward)
 			);
 
 			(await cUSD.balanceOf(ReferralLink.address)).should.eq(
-				referralLinkInitialBalanceCUSD.sub(campaign1Reward)
+				referralLinkInitialBalanceCUSD.sub(campaign1Reward.mul(2))
 			);
 
 			(await PACT.balanceOf(ReferralLink.address)).should.eq(
-				referralLinkInitialBalancePACT.sub(campaign3Reward)
+				referralLinkInitialBalancePACT.sub(campaign3Reward.mul(2))
 			);
 		});
 
@@ -1078,8 +1124,6 @@ describe("ReferralLink", () => {
 				1,
 				receiver3Address
 			);
-
-			const sender1InitialBalance = await cUSD.balanceOf(sender1.address);
 
 			await ReferralLink.connect(user2)
 				.claimReward(
@@ -1114,7 +1158,7 @@ describe("ReferralLink", () => {
 
 			const campaign1 = await ReferralLink.campaigns(1);
 			campaign1.balance.should.be.equal(
-				campaign1InitialBalance.sub(campaign1Reward.mul(3))
+				campaign1InitialBalance.sub(campaign1Reward.mul(3).mul(2))
 			);
 
 			(await cUSD.balanceOf(sender1.address)).should.eq(
@@ -1124,8 +1168,20 @@ describe("ReferralLink", () => {
 				sender1InitialBalance.add(campaign1Reward.mul(2))
 			);
 
+			(await cUSD.balanceOf(receiver2Address)).should.eq(
+				receiver2InitialBalance.add(campaign1Reward)
+			);
+
+			(await cUSD.balanceOf(receiver1Address)).should.eq(
+				receiver1InitialBalance.add(campaign1Reward)
+			);
+
+			(await cUSD.balanceOf(receiver3Address)).should.eq(
+				receiver3InitialBalance.add(campaign1Reward)
+			);
+
 			(await cUSD.balanceOf(ReferralLink.address)).should.eq(
-				referralLinkInitialBalanceCUSD.sub(campaign1Reward.mul(3))
+				referralLinkInitialBalanceCUSD.sub(campaign1Reward.mul(3).mul(2))
 			);
 		});
 
@@ -1214,6 +1270,24 @@ describe("ReferralLink", () => {
 				)
 				.should.emit(ReferralLink, "RewardClaimed")
 				.withArgs(sender1.address, 1, receiver3Address);
+
+
+
+			(await cUSD.balanceOf(sender1.address)).should.eq(
+				sender1InitialBalance.add(campaign0Reward.mul(2).add(campaign1Reward))
+			);
+
+			(await cUSD.balanceOf(receiver1Address)).should.eq(
+				receiver1InitialBalance.add(campaign0Reward)
+			);
+
+			(await cUSD.balanceOf(receiver2Address)).should.eq(
+				receiver2InitialBalance.add(campaign0Reward)
+			);
+
+			(await cUSD.balanceOf(receiver3Address)).should.eq(
+				receiver3InitialBalance.add(campaign1Reward)
+			);
 		});
 
 		it("Should not claim rewards if this user already exists #sameCampaign, #sameSender", async function () {

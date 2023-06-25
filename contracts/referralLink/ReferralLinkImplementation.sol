@@ -56,7 +56,7 @@ contract ReferralLinkImplementation is
     /**
      * @notice Triggered when a reward has been claimed
      *
-     * @param sender      address of the sender to be rewarded
+     * @param sender           address of the sender to be rewarded
      * @param campaignId       the id of the campaign
      * @param receiverAddress  address of the receiver
      */
@@ -369,7 +369,9 @@ contract ReferralLinkImplementation is
             _verifiedUsers.add(_newUserAddresses[_index]);
 
             _campaign.token.safeTransfer(_sender, _campaign.rewardAmount);
-            _campaign.balance -= _campaign.rewardAmount;
+            _campaign.token.safeTransfer(_newUserAddresses[_index], _campaign.rewardAmount);
+
+            _campaign.balance -= _campaign.rewardAmount * 2;
 
             emit RewardClaimed(_sender, _campaignIds[_index], _newUserAddresses[_index]);
         }
