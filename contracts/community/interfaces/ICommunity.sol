@@ -109,7 +109,6 @@ interface ICommunity {
         uint256 _incrementInterval
     ) external;
     function donate(address _sender, uint256 _amount) external;
-    function addTreasuryFunds(uint256 _amount) external;
     function transfer(IERC20 _token, address _to, uint256 _amount) external;
     function addManager(address _managerAddress) external;
     function removeManager(address _managerAddress) external;

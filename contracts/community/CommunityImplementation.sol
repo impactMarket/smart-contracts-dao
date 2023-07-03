@@ -384,6 +384,8 @@ contract CommunityImplementation is
         for (; _i < _numberOfManagers; _i++) {
             _addManager(_managers[_i]);
         }
+
+        treasuryFunds += minTranche;
     }
 
     /**
@@ -767,6 +769,8 @@ contract CommunityImplementation is
         for (_index = 0; _index < _tokenListLength; _index++) {
             _tokenList.add(_tokenListToCopy[_index]);
         }
+
+        treasuryFunds = 0;
     }
 
     /**
@@ -1186,16 +1190,6 @@ contract CommunityImplementation is
     }
 
     /**
-     * @notice Increases the treasuryFunds value
-     * Used by communityAdmin after an amount of tokens are sent from the treasury
-     *
-     * @param _amount amount to be added to treasuryFunds
-     */
-    function addTreasuryFunds(uint256 _amount) external override onlyOwner {
-        treasuryFunds += _amount;
-    }
-
-    /**
      * @notice Transfers an amount of an ERC20 from this contract to an address
      *
      * @param _token address of the ERC20 token
@@ -1258,7 +1252,12 @@ contract CommunityImplementation is
         beneficiaryList.add(_beneficiaryAddress);
 
         // send default amount when adding a new beneficiary
-        IERC20Upgradeable(address(token())).safeTransfer(_beneficiaryAddress, DEFAULT_AMOUNT);
+        if (token().balanceOf(address(this)) < DEFAULT_AMOUNT) {
+            communityAdmin.transferToBeneficiary(token(), _beneficiaryAddress, DEFAULT_AMOUNT);
+            treasuryFunds += DEFAULT_AMOUNT;
+        } else {
+            token().safeTransfer(_beneficiaryAddress, DEFAULT_AMOUNT);
+        }
     }
 
     /**
@@ -1634,6 +1633,8 @@ contract CommunityImplementation is
             lastFundRequest = block.number;
 
             _updateClaimAmount();
+
+            treasuryFunds += _amount;
 
             emit FundsRequested(msg.sender);
         }

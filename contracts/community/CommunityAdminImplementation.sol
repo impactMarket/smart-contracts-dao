@@ -563,6 +563,20 @@ contract CommunityAdminImplementation is
     }
 
     /**
+     * @dev Transfers community tokens from the treasury to a community
+     *
+     * @param _beneficiary   address of the beneficiary
+     * @param _amount        amount to be transferred from treasury to community
+     */
+    function transferToBeneficiary(
+        IERC20 _token,
+        address _beneficiary,
+        uint256 _amount
+    ) external override onlyCommunities nonReentrant {
+        treasury.transfer(_token, _beneficiary, _amount);
+    }
+
+    /**
      * @notice Transfers an amount of an ERC20 from this contract to an address
      *
      * @param _token address of the ERC20 token
@@ -580,7 +594,7 @@ contract CommunityAdminImplementation is
     }
 
     /**
-     * @notice Transfers an amount of an ERC20 from  community to an address
+     * @notice Transfers an amount of an ERC20 from community to an address
      *
      * @param _community address of the community
      * @param _token address of the ERC20 token
@@ -754,7 +768,6 @@ contract CommunityAdminImplementation is
 
         if (_token.balanceOf(address(treasury)) >= _amount) {
             treasury.transfer(_token, address(_community), _amount);
-            _community.addTreasuryFunds(_amount);
 
             emit CommunityFunded(address(_community), _amount);
         }
