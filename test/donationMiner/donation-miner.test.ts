@@ -1,5 +1,5 @@
 // @ts-ignore
-import chai from "chai";
+import chai, { should } from "chai";
 // @ts-ignore
 import chaiAsPromised from "chai-as-promised";
 // @ts-ignore
@@ -19,6 +19,7 @@ import { LpStrategy } from "../treasury/treasury.test";
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
+should();
 
 describe("DonationMiner", () => {
 	const REWARD_PERIOD_SIZE = 20;
@@ -40,6 +41,7 @@ describe("DonationMiner", () => {
 	let user9: SignerWithAddress;
 	let entity: SignerWithAddress;
 	let ambassador: SignerWithAddress;
+	let airdropV3: SignerWithAddress;
 
 	let ImpactProxyAdmin: ethersTypes.Contract;
 	let DonationMiner: ethersTypes.Contract;
@@ -50,6 +52,7 @@ describe("DonationMiner", () => {
 	let cUSD: ethersTypes.Contract;
 	let Treasury: ethersTypes.Contract;
 	let TreasuryLpSwap: ethersTypes.Contract;
+	let AirdropV3: ethersTypes.Contract;
 	let Staking: ethersTypes.Contract;
 	let mUSD: ethersTypes.Contract;
 	let cTKN: ethersTypes.Contract;
@@ -137,6 +140,7 @@ describe("DonationMiner", () => {
 			user9,
 			entity,
 			ambassador,
+			airdropV3,
 		] = await ethers.getSigners();
 
 		ImpactProxyAdmin = await ethers.getContractAt(
@@ -224,6 +228,8 @@ describe("DonationMiner", () => {
 		).startBlock.toNumber();
 
 		Treasury.updateDonationMiner(DonationMiner.address);
+
+		await DonationMiner.updateAirdropV3(airdropV3.address);
 	});
 
 	async function logRewardPeriods(DonationMiner: any) {
@@ -3640,6 +3646,15 @@ describe("DonationMiner", () => {
 			);
 			const user1Donation = toEther("100");
 
+			const user1ConvertedDonation =
+				await Treasury.callStatic.getConvertedAmount(
+					mUSD.address,
+					user1Donation
+				);
+			expect(user1ConvertedDonation).to.be.equal(
+				toEther("89.108820026730908555")
+			);
+
 			await mUSD.mint(user1.address, toEther("1000000"));
 
 			const communityInitialBalance = await mUSD.balanceOf(
@@ -3672,7 +3687,7 @@ describe("DonationMiner", () => {
 				.to.be.greaterThanOrEqual(START_BLOCK)
 				.lessThanOrEqual(START_BLOCK + REWARD_PERIOD_SIZE - 1);
 			expect(donation1.amount).to.equal(
-				user1Donation.div(COMMUNITY_DONATION_RATIO)
+				user1ConvertedDonation.div(COMMUNITY_DONATION_RATIO)
 			);
 			expect(donation1.token).to.equal(mUSD.address);
 			expect(donation1.initialAmount).to.equal(user1Donation);
@@ -5309,6 +5324,157 @@ describe("DonationMiner", () => {
 					.mul(90)
 					.div(100)
 					.add(user1Donation3)
+			);
+		});
+	});
+
+	describe("Donation Miner + AirdropV3", () => {
+		const AIRDROP_V3_TOKEN_ADDRESS =
+			"0x00000000000000000000000000000000000000A3";
+
+		before(async function () {});
+
+		beforeEach(async () => {
+			await deploy();
+
+			await advanceToRewardPeriodN(1);
+		});
+
+		it("Should not donateVirtual if not airdropV3", async function () {
+			await expect(
+				DonationMiner.connect(user1).donateVirtual(
+					PACT.address,
+					100,
+					user1.address
+				)
+			).to.be.rejectedWith("DonationMiner: NOT_AIRDROP_V3");
+		});
+
+		it("Should not donateVirtual invalid token (PACT)", async function () {
+			await expect(
+				DonationMiner.connect(airdropV3).donateVirtual(
+					PACT.address,
+					100,
+					user1.address
+				)
+			).to.be.rejectedWith("DonationMiner: Invalid token");
+		});
+
+		it("Should not donateVirtual invalid token (cUSD)", async function () {
+			await expect(
+				DonationMiner.connect(airdropV3).donateVirtual(
+					cUSD.address,
+					100,
+					user1.address
+				)
+			).to.be.rejectedWith("DonationMiner: Invalid token");
+		});
+
+		it("Should donateVirtual", async function () {
+			const user1VirtualDonationAmount = toEther("100");
+			const user1ExpectedReward = toEther("4320000");
+
+			await expect(
+				DonationMiner.connect(airdropV3).donateVirtual(
+					AIRDROP_V3_TOKEN_ADDRESS,
+					user1VirtualDonationAmount,
+					user1.address
+				)
+			)
+				.to.emit(DonationMiner, "DonationAdded")
+				.withArgs(
+					1,
+					user1.address,
+					user1VirtualDonationAmount,
+					AIRDROP_V3_TOKEN_ADDRESS,
+					user1VirtualDonationAmount,
+					Treasury.address
+				);
+
+			expect(
+				(await DonationMiner.rewardPeriods(1)).donationsAmount
+			).to.be.equal(user1VirtualDonationAmount);
+
+			const donation1 = await DonationMiner.donations(1);
+			expect(donation1.donor).to.equal(user1.address);
+			expect(donation1.target).to.equal(Treasury.address);
+			expect(donation1.rewardPeriod).to.equal(1);
+			expect(donation1.amount).to.equal(user1VirtualDonationAmount);
+			expect(donation1.token).to.equal(AIRDROP_V3_TOKEN_ADDRESS);
+			expect(donation1.initialAmount).to.equal(
+				user1VirtualDonationAmount
+			);
+
+			await advanceToRewardPeriodN(2);
+
+			await DonationMiner.connect(user1).claimRewards();
+
+			expect(await PACT.balanceOf(user1.address)).to.equal(
+				user1ExpectedReward
+			);
+		});
+
+		it("Should donateVirtual multiple donation types", async function () {
+			const user1VirtualDonationAmount = toEther("100");
+			const user1ExpectedReward = toEther("4320000").div(2);
+
+			const user2DonationAmount = toEther("100");
+			const user2ExpectedReward = toEther("4320000").div(2);
+
+			await expect(
+				DonationMiner.connect(airdropV3).donateVirtual(
+					AIRDROP_V3_TOKEN_ADDRESS,
+					user1VirtualDonationAmount,
+					user1.address
+				)
+			)
+				.to.emit(DonationMiner, "DonationAdded")
+				.withArgs(
+					1,
+					user1.address,
+					user1VirtualDonationAmount,
+					AIRDROP_V3_TOKEN_ADDRESS,
+					user1VirtualDonationAmount,
+					Treasury.address
+				);
+
+			await cUSD
+				.connect(owner)
+				.approve(DonationMiner.address, user2DonationAmount);
+
+			await expect(
+				DonationMiner.connect(owner).donate(
+					cUSD.address,
+					user2DonationAmount,
+					user2.address
+				)
+			)
+				.to.emit(DonationMiner, "DonationAdded")
+				.withArgs(
+					2,
+					user2.address,
+					user2DonationAmount,
+					cUSD.address,
+					user2DonationAmount,
+					Treasury.address
+				);
+
+			expect(
+				(await DonationMiner.rewardPeriods(1)).donationsAmount
+			).to.be.equal(user1VirtualDonationAmount.add(user2DonationAmount));
+
+			await advanceToRewardPeriodN(2);
+
+			await DonationMiner.connect(user1).claimRewards();
+
+			await DonationMiner.connect(user2).claimRewards();
+
+			expect(await PACT.balanceOf(user1.address)).to.equal(
+				user1ExpectedReward
+			);
+
+			expect(await PACT.balanceOf(user2.address)).to.equal(
+				user2ExpectedReward
 			);
 		});
 	});

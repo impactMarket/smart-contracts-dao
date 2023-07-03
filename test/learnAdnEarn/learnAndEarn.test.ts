@@ -1,4 +1,4 @@
-import chai from "chai";
+import chai, { should } from "chai";
 import chaiAsPromised from "chai-as-promised";
 import { deployments, ethers } from "hardhat";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
@@ -11,6 +11,7 @@ import { toEther } from "../utils/helpers";
 import { BigNumber } from "@ethersproject/bignumber";
 
 chai.use(chaiAsPromised);
+should();
 
 describe("LearnAndEarn", () => {
 	const FAKE_ADDRESS = "0x000000000000000000000000000000000000dEaD";

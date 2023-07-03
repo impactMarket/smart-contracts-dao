@@ -1,5 +1,5 @@
 // @ts-ignore
-import chai from "chai";
+import chai, { should } from "chai";
 // @ts-ignore
 import chaiAsPromised from "chai-as-promised";
 // @ts-ignore
@@ -14,8 +14,8 @@ import {
 } from "../utils/helpers";
 
 chai.use(chaiAsPromised);
-
 const expect = chai.expect;
+should();
 
 describe("ImpactMarketCouncil", function () {
 	const FAKE_ADDRESS = "0x000000000000000000000000000000000000dEaD";

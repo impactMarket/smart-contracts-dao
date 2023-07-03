@@ -1,5 +1,5 @@
 // @ts-ignore
-import chai from "chai";
+import chai, { should } from "chai";
 // @ts-ignore
 import chaiAsPromised from "chai-as-promised";
 // @ts-ignore
@@ -25,6 +25,7 @@ const NFTPositionManagerABI =
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
+should();
 
 export enum LpStrategy {
 	NONE = 0,

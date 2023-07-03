@@ -1,5 +1,5 @@
 // @ts-ignore
-import chai from "chai";
+import chai, { should } from "chai";
 // @ts-ignore
 import chaiAsPromised from "chai-as-promised";
 // @ts-ignore
@@ -22,8 +22,8 @@ import { formatEther, parseEther } from "@ethersproject/units";
 import { createAndExecuteProposal, governanceParams } from "../utils/helpers";
 
 chai.use(chaiAsPromised);
-
 const expect = chai.expect;
+should();
 
 describe("Governance", function () {
 	// Contracts

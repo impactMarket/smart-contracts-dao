@@ -1,5 +1,5 @@
 // @ts-ignore
-import chai from "chai";
+import chai, { should } from "chai";
 // @ts-ignore
 import chaiAsPromised from "chai-as-promised";
 
@@ -22,6 +22,7 @@ const MTokenABI = require("../../integrations/moola/abi/MToken.json");
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
+should();
 
 describe("Deposit", () => {
 	//these tests work only on a celo mainnet fork network

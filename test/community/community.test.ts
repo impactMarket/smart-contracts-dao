@@ -19,11 +19,10 @@ import { BigNumber } from "@ethersproject/bignumber";
 import { createPool, getExchangePath } from "../utils/uniswap";
 import { LpStrategy } from "../treasury/treasury.test";
 
-should();
-
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 const provider = waffle.provider;
+should();
 
 describe.only("Community", () => {
 	enum BeneficiaryState {
