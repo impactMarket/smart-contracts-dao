@@ -13,6 +13,11 @@ interface IMicrocredit {
         Loan[] loans;
     }
 
+    struct Manager {
+        uint256 currentLentAmountLimit;
+        uint256 currentLentAmount;
+    }
+
     struct Repayment {
         uint256 date;
         uint256 amount;
@@ -28,6 +33,7 @@ interface IMicrocredit {
         uint256 amountRepayed;
         Repayment[] repayments;
         uint256 lastComputedDate;
+        address managerAddress;
     }
 
     function getVersion() external pure returns(uint256);
@@ -45,7 +51,8 @@ interface IMicrocredit {
         uint256 currentDebt,
         uint256 amountRepayed,
         uint256 repaymentsLength,
-        uint256 lastComputedDate
+        uint256 lastComputedDate,
+        address managerAddress
     );
     function userLoanRepayments(address userAddress, uint256 loanId, uint256 repaymentId)
         external view returns( uint256 date, uint256 amount);
@@ -53,8 +60,12 @@ interface IMicrocredit {
     function walletListLength() external view returns (uint256);
     function managerListAt(uint256 index) external view returns (address);
     function managerListLength() external view returns (uint256);
+    function managers(address managerAddress) external view returns (
+        uint256 currentLentAmountLimit,
+        uint256 currentLentAmount
+    );
     function updateRevenueAddress(address newRevenueAddress) external;
-    function addManagers(address[] calldata managerAddresses) external;
+    function addManagers(address[] calldata managerAddresses, uint256[] calldata currentLentAmountLimit) external;
     function removeManagers(address[] calldata managerAddresses) external;
     function addLoan(
         address userAddress,
