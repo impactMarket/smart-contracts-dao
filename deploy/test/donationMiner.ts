@@ -71,6 +71,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		parseEther("4000000000")
 	);
 
+	const treasuryContract = await ethers.getContractAt(
+		"TreasuryImplementation",
+		Treasury.address
+	);
+
+	await treasuryContract.updateDonationMiner(donationMinerContract.address);
+	await treasuryContract.transferOwnership(ownerAddress);
+
 	await donationMinerContract.transferOwnership(ownerAddress);
 };
 

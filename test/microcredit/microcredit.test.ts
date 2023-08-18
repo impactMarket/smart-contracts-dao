@@ -17,7 +17,7 @@ import { BigNumber } from "@ethersproject/bignumber";
 chai.use(chaiAsPromised);
 should();
 
-describe("Microcredit", () => {
+describe.only("Microcredit", () => {
 	let deployer: SignerWithAddress;
 	let owner: SignerWithAddress;
 	let manager1: SignerWithAddress;
@@ -30,6 +30,7 @@ describe("Microcredit", () => {
 	let cUSD: ethersTypes.Contract;
 	let Microcredit: ethersTypes.Contract;
 	let MicrocreditRevenue: ethersTypes.Contract;
+	let DonationMiner: ethersTypes.Contract;
 
 	const oneMonth = 3600 * 24 * 30;
 	const sixMonth = oneMonth * 6;
@@ -67,6 +68,13 @@ describe("Microcredit", () => {
 			).address
 		);
 
+		DonationMiner = await ethers.getContractAt(
+			"DonationMinerImplementation",
+			(
+				await deployments.get("DonationMinerProxy")
+			).address
+		);
+
 		await cUSD.mint(Microcredit.address, initialMicrocreditBalance);
 		await cUSD.mint(user1.address, initialUser1Balance);
 		await cUSD.mint(user2.address, initialUser2Balance);
@@ -100,6 +108,9 @@ describe("Microcredit", () => {
 			(await Microcredit.revenueAddress()).should.eq(
 				MicrocreditRevenue.address
 			);
+			(await Microcredit.donationMiner()).should.eq(
+				DonationMiner.address
+			);
 
 			await Microcredit.userLoans(
 				user1.address,
@@ -125,37 +136,55 @@ describe("Microcredit", () => {
 		it("Should addManagers if owner #1", async function () {
 			(await Microcredit.managerListLength()).should.eq(0);
 			await Microcredit.connect(owner)
-				.addManagers([manager1.address])
+				.addManagers([manager1.address], [toEther(1000)])
 				.should.emit(Microcredit, "ManagerAdded")
-				.withArgs(manager1.address);
+				.withArgs(manager1.address, toEther(1000));
 
 			(await Microcredit.managerListLength()).should.eq(1);
 			(await Microcredit.managerListAt(0)).should.eq(manager1.address);
+
+			const managerData1 = await Microcredit.managers(manager1.address);
+			managerData1.currentLentAmountLimit.should.eq(toEther(1000));
+			managerData1.currentLentAmount.should.eq(toEther(0));
 		});
 
 		it("Should addManagers if owner #2", async function () {
 			(await Microcredit.managerListLength()).should.eq(0);
 			await Microcredit.connect(owner)
-				.addManagers([manager1.address, manager2.address])
+				.addManagers(
+					[manager1.address, manager2.address],
+					[toEther(1000), toEther(2000)]
+				)
 				.should.emit(Microcredit, "ManagerAdded")
-				.withArgs(manager1.address)
+				.withArgs(manager1.address, toEther(1000))
 				.emit(Microcredit, "ManagerAdded")
-				.withArgs(manager2.address);
+				.withArgs(manager2.address, toEther(2000));
 
 			(await Microcredit.managerListLength()).should.eq(2);
 			(await Microcredit.managerListAt(0)).should.eq(manager1.address);
 			(await Microcredit.managerListAt(1)).should.eq(manager2.address);
+
+			const managerData1 = await Microcredit.managers(manager1.address);
+			managerData1.currentLentAmountLimit.should.eq(toEther(1000));
+			managerData1.currentLentAmount.should.eq(toEther(0));
+
+			const managerData2 = await Microcredit.managers(manager2.address);
+			managerData2.currentLentAmountLimit.should.eq(toEther(2000));
+			managerData2.currentLentAmount.should.eq(toEther(0));
 		});
 
 		it("Should not addManagers if not owner", async function () {
 			await Microcredit.connect(user1)
-				.addManagers([manager1.address])
+				.addManagers([manager1.address], [toEther(1000)])
 				.should.be.rejectedWith("Ownable: caller is not the owner");
 		});
 
 		it("Should removeManagers if owner #1", async function () {
-			await Microcredit.connect(owner).addManagers([manager1.address])
-				.should.be.fulfilled;
+			await Microcredit.connect(owner).addManagers(
+				[manager1.address],
+				[toEther(1000)]
+			).should.be.fulfilled;
+
 			await Microcredit.connect(owner)
 				.removeManagers([manager1.address])
 				.should.emit(Microcredit, "ManagerRemoved")
@@ -165,10 +194,10 @@ describe("Microcredit", () => {
 		});
 
 		it("Should removeManagers if owner #2", async function () {
-			await Microcredit.connect(owner).addManagers([
-				manager1.address,
-				manager2.address,
-			]).should.be.fulfilled;
+			await Microcredit.connect(owner).addManagers(
+				[manager1.address, manager2.address],
+				[toEther(1000), toEther(2000)]
+			).should.be.fulfilled;
 			await Microcredit.connect(owner)
 				.removeManagers([manager1.address, manager2.address])
 				.should.emit(Microcredit, "ManagerRemoved")
@@ -180,10 +209,10 @@ describe("Microcredit", () => {
 		});
 
 		it("Should removeManagers if owner #3", async function () {
-			await Microcredit.connect(owner).addManagers([
-				manager1.address,
-				manager2.address,
-			]).should.be.fulfilled;
+			await Microcredit.connect(owner).addManagers(
+				[manager1.address, manager2.address],
+				[toEther(1000), toEther(2000)]
+			).should.be.fulfilled;
 			await Microcredit.connect(owner).removeManagers([manager2.address])
 				.should.be.fulfilled;
 
@@ -192,10 +221,10 @@ describe("Microcredit", () => {
 		});
 
 		it("Should removeManagers if owner #4", async function () {
-			await Microcredit.connect(owner).addManagers([
-				manager1.address,
-				manager2.address,
-			]).should.be.fulfilled;
+			await Microcredit.connect(owner).addManagers(
+				[manager1.address, manager2.address],
+				[toEther(1000), toEther(2000)]
+			).should.be.fulfilled;
 			await Microcredit.connect(owner).removeManagers([manager1.address])
 				.should.be.fulfilled;
 
@@ -234,13 +263,19 @@ describe("Microcredit", () => {
 	describe("Microcredit - loan functionalities (revenue address = 0)", () => {
 		before(async function () {});
 
+		const manager1currentLentAmountLimit = toEther(3000);
+		const manager2currentLentAmountLimit = toEther(1000);
+
 		beforeEach(async () => {
 			await deploy();
 
 			await Microcredit.connect(owner).updateRevenueAddress(
 				ethers.constants.AddressZero
 			);
-			await Microcredit.connect(owner).addManagers([manager1.address]);
+			await Microcredit.connect(owner).addManagers(
+				[manager1.address, manager2.address],
+				[manager1currentLentAmountLimit, manager2currentLentAmountLimit]
+			);
 		});
 
 		it("Should not addLoan if not manager", async function () {
@@ -266,31 +301,6 @@ describe("Microcredit", () => {
 					claimDeadline
 				)
 				.should.be.rejectedWith("Microcredit: invalid claimDeadline");
-		});
-
-		it("Should not addLoan if the user has been moved", async function () {
-			await Microcredit.connect(manager1).addLoan(
-				user1.address,
-				toEther(100),
-				sixMonth,
-				toEther(0.2),
-				2000000000
-			);
-
-			await Microcredit.connect(manager1).changeUserAddress(
-				user1.address,
-				user2.address
-			);
-
-			await Microcredit.connect(manager1)
-				.addLoan(
-					user1.address,
-					toEther(100),
-					sixMonth,
-					toEther(0.2),
-					2000000000
-				)
-				.should.be.rejectedWith("Microcredit: The user has been moved");
 		});
 
 		it("should addLoan if manager", async function () {
@@ -343,10 +353,42 @@ describe("Microcredit", () => {
 			loan.amountRepayed.should.eq(0);
 			loan.repaymentsLength.should.eq(0);
 			loan.lastComputedDate.should.eq(0);
+			loan.managerAddress.should.eq(manager1.address);
+
+			const managerData1 = await Microcredit.managers(manager1.address);
+			managerData1.currentLentAmountLimit.should.eq(
+				manager1currentLentAmountLimit
+			);
+			managerData1.currentLentAmount.should.eq(amount);
 
 			(await cUSD.balanceOf(Microcredit.address)).should.eq(
 				initialMicrocreditBalance
 			);
+		});
+
+		it("Should not addLoan if the user has been moved", async function () {
+			await Microcredit.connect(manager1).addLoan(
+				user1.address,
+				toEther(100),
+				sixMonth,
+				toEther(0.2),
+				2000000000
+			);
+
+			await Microcredit.connect(manager1).changeUserAddress(
+				user1.address,
+				user2.address
+			);
+
+			await Microcredit.connect(manager1)
+				.addLoan(
+					user1.address,
+					toEther(100),
+					sixMonth,
+					toEther(0.2),
+					2000000000
+				)
+				.should.be.rejectedWith("Microcredit: The user has been moved");
 		});
 
 		it("should not addLoan for a user with an active loan", async function () {
@@ -414,6 +456,75 @@ describe("Microcredit", () => {
 			(await cUSD.balanceOf(Microcredit.address)).should.eq(
 				initialMicrocreditBalance
 			);
+		});
+
+		it("should not addLoan if manager don't have enough funds #1", async function () {
+			const amount1 = manager1currentLentAmountLimit.add(1);
+			const period1 = sixMonth;
+			const dailyInterest1 = toEther(0.2);
+			const claimDeadline1 = (await getCurrentBlockTimestamp()) + 1000;
+
+			await Microcredit.connect(manager1)
+				.addLoan(
+					user1.address,
+					amount1,
+					period1,
+					dailyInterest1,
+					claimDeadline1
+				)
+				.should.be.rejectedWith(
+					"Microcredit: Manager don't have enough funds to borrow this amount"
+				);
+		});
+
+		it("should not addLoan if manager don't have enough funds #2", async function () {
+			const amount1 = manager1currentLentAmountLimit;
+			const period1 = sixMonth;
+			const dailyInterest1 = toEther(0.2);
+			const claimDeadline1 = (await getCurrentBlockTimestamp()) + 1000;
+
+			const amount2 = toEther(1);
+			const period2 = oneMonth;
+			const dailyInterest2 = toEther(0.3);
+			const claimDeadline2 = (await getCurrentBlockTimestamp()) + 1000;
+
+			await Microcredit.connect(manager1)
+				.addLoan(
+					user1.address,
+					amount1,
+					period1,
+					dailyInterest1,
+					claimDeadline1
+				)
+				.should.emit(Microcredit, "LoanAdded")
+				.withArgs(
+					user1.address,
+					0,
+					amount1,
+					period1,
+					dailyInterest1,
+					claimDeadline1
+				);
+
+			const managerData1 = await Microcredit.managers(manager1.address);
+			managerData1.currentLentAmountLimit.should.eq(
+				manager1currentLentAmountLimit
+			);
+			managerData1.currentLentAmount.should.eq(
+				manager1currentLentAmountLimit
+			);
+
+			await Microcredit.connect(manager1)
+				.addLoan(
+					user1.address,
+					amount2,
+					period2,
+					dailyInterest2,
+					claimDeadline2
+				)
+				.should.be.rejectedWith(
+					"Microcredit: Manager don't have enough funds to borrow this amount"
+				);
 		});
 
 		it("should addLoan after fully paid previous loan", async function () {
@@ -722,6 +833,12 @@ describe("Microcredit", () => {
 			loan2.repaymentsLength.should.eq(0);
 			loan2.lastComputedDate.should.eq(0);
 
+			const managerData1 = await Microcredit.managers(manager1.address);
+			managerData1.currentLentAmountLimit.should.eq(
+				manager1currentLentAmountLimit
+			);
+			managerData1.currentLentAmount.should.eq(amount1.add(amount2));
+
 			(await cUSD.balanceOf(Microcredit.address)).should.eq(
 				initialMicrocreditBalance
 			);
@@ -739,7 +856,7 @@ describe("Microcredit", () => {
 				.should.be.rejectedWith("Microcredit: caller is not a manager");
 		});
 
-		it("should addLoans if manager", async function () {
+		it("should addLoans if manager #2", async function () {
 			const amount = toEther(100);
 			const period = sixMonth;
 			const dailyInterest = toEther(0.2);
@@ -788,6 +905,12 @@ describe("Microcredit", () => {
 			loan.amountRepayed.should.eq(0);
 			loan.repaymentsLength.should.eq(0);
 			loan.lastComputedDate.should.eq(0);
+
+			const managerData1 = await Microcredit.managers(manager1.address);
+			managerData1.currentLentAmountLimit.should.eq(
+				manager1currentLentAmountLimit
+			);
+			managerData1.currentLentAmount.should.eq(amount);
 
 			(await cUSD.balanceOf(Microcredit.address)).should.eq(
 				initialMicrocreditBalance
@@ -905,6 +1028,12 @@ describe("Microcredit", () => {
 			loan2.repaymentsLength.should.eq(0);
 			loan2.lastComputedDate.should.eq(0);
 
+			const managerData1 = await Microcredit.managers(manager1.address);
+			managerData1.currentLentAmountLimit.should.eq(
+				manager1currentLentAmountLimit
+			);
+			managerData1.currentLentAmount.should.eq(amount1.add(amount2));
+
 			(await cUSD.balanceOf(Microcredit.address)).should.eq(
 				initialMicrocreditBalance
 			);
@@ -944,6 +1073,12 @@ describe("Microcredit", () => {
 			loan.amountRepayed.should.eq(0);
 			loan.repaymentsLength.should.eq(0);
 			loan.lastComputedDate.should.eq(statDate);
+
+			const managerData1 = await Microcredit.managers(manager1.address);
+			managerData1.currentLentAmountLimit.should.eq(
+				manager1currentLentAmountLimit
+			);
+			managerData1.currentLentAmount.should.eq(amount);
 
 			(await cUSD.balanceOf(user1.address)).should.eq(
 				initialUser1Balance.add(amount)
@@ -990,6 +1125,12 @@ describe("Microcredit", () => {
 			loan.amountRepayed.should.eq(0);
 			loan.repaymentsLength.should.eq(0);
 			loan.lastComputedDate.should.eq(statDate);
+
+			const managerData1 = await Microcredit.managers(manager1.address);
+			managerData1.currentLentAmountLimit.should.eq(
+				manager1currentLentAmountLimit
+			);
+			managerData1.currentLentAmount.should.eq(amount.add(amount));
 
 			(await cUSD.balanceOf(user1.address)).should.eq(
 				initialUser1Balance.add(amount)
@@ -1059,6 +1200,12 @@ describe("Microcredit", () => {
 			await Microcredit.connect(user1).claimLoan(0).should.be.fulfilled;
 			const statDate = await getCurrentBlockTimestamp();
 
+			const managerData1 = await Microcredit.managers(manager1.address);
+			managerData1.currentLentAmountLimit.should.eq(
+				manager1currentLentAmountLimit
+			);
+			managerData1.currentLentAmount.should.eq(amount);
+
 			await cUSD
 				.connect(user1)
 				.approve(Microcredit.address, repaymentAmount1);
@@ -1094,6 +1241,13 @@ describe("Microcredit", () => {
 			repayment.amount.should.eq(repaymentAmount1);
 			repayment.date.should.eq(repaymentDate);
 
+			const managerData1After = await Microcredit.managers(
+				manager1.address
+			);
+			managerData1After.currentLentAmount.should.eq(
+				amount.sub(repaymentAmount1)
+			);
+
 			(await cUSD.balanceOf(user1.address)).should.eq(
 				initialUser1Balance.add(amount).sub(repaymentAmount1)
 			);
@@ -1121,6 +1275,9 @@ describe("Microcredit", () => {
 			await Microcredit.connect(user1).claimLoan(0).should.be.fulfilled;
 			const statDate = await getCurrentBlockTimestamp();
 
+			const managerData1 = await Microcredit.managers(manager1.address);
+			managerData1.currentLentAmount.should.eq(amount);
+
 			await cUSD
 				.connect(user1)
 				.approve(
@@ -1131,6 +1288,14 @@ describe("Microcredit", () => {
 			await Microcredit.connect(user1).repayLoan(0, repaymentAmount1)
 				.should.be.fulfilled;
 			const repaymentDate1 = await getCurrentBlockTimestamp();
+
+			const managerData1After1 = await Microcredit.managers(
+				manager1.address
+			);
+			managerData1After1.currentLentAmount.should.eq(
+				amount.sub(repaymentAmount1)
+			);
+
 			await Microcredit.connect(user1).repayLoan(0, repaymentAmount2)
 				.should.be.fulfilled;
 			const repaymentDate2 = await getCurrentBlockTimestamp();
@@ -1168,6 +1333,13 @@ describe("Microcredit", () => {
 			);
 			repayment2.amount.should.eq(repaymentAmount2);
 			repayment2.date.should.eq(repaymentDate2);
+
+			const managerData1After = await Microcredit.managers(
+				manager1.address
+			);
+			managerData1After.currentLentAmount.should.eq(
+				amount.sub(repaymentAmount1).sub(repaymentAmount2)
+			);
 
 			(await cUSD.balanceOf(user1.address)).should.eq(
 				initialUser1Balance
@@ -1620,6 +1792,9 @@ describe("Microcredit", () => {
 			repayment1.amount.should.eq(expectedCurrentDebt);
 			repayment1.date.should.eq(repaymentDate1);
 
+			const managerData1 = await Microcredit.managers(manager1.address);
+			managerData1.currentLentAmount.should.eq(0);
+
 			(await cUSD.balanceOf(user1.address)).should.eq(
 				initialUser1Balance.add(amount).sub(expectedCurrentDebt)
 			);
@@ -1679,6 +1854,11 @@ describe("Microcredit", () => {
 			repayment1.amount.should.eq(expectedCurrentDebt);
 			repayment1.date.should.eq(repaymentDate1);
 
+			const managerData1After = await Microcredit.managers(
+				manager1.address
+			);
+			managerData1After.currentLentAmount.should.eq(0);
+
 			(await cUSD.balanceOf(user1.address)).should.eq(
 				initialUser1Balance.add(amount).sub(expectedCurrentDebt)
 			);
@@ -1737,6 +1917,11 @@ describe("Microcredit", () => {
 			);
 			repayment1.amount.should.eq(expectedCurrentDebt);
 			repayment1.date.should.eq(repaymentDate1);
+
+			const managerData1After = await Microcredit.managers(
+				manager1.address
+			);
+			managerData1After.currentLentAmount.should.eq(0);
 
 			(await cUSD.balanceOf(user1.address)).should.eq(
 				initialUser1Balance.add(amount).sub(expectedCurrentDebt)
@@ -1801,6 +1986,11 @@ describe("Microcredit", () => {
 			repayment1.amount.should.eq(expectedCurrentDebt);
 			repayment1.date.should.eq(repaymentDate1);
 
+			const managerData1After = await Microcredit.managers(
+				manager1.address
+			);
+			managerData1After.currentLentAmount.should.eq(0);
+
 			(await cUSD.balanceOf(user1.address)).should.eq(
 				initialUser1Balance.add(amount).sub(expectedCurrentDebt)
 			);
@@ -1864,6 +2054,11 @@ describe("Microcredit", () => {
 			repayment1.amount.should.eq(expectedCurrentDebt);
 			repayment1.date.should.eq(repaymentDate1);
 
+			const managerData1After = await Microcredit.managers(
+				manager1.address
+			);
+			managerData1After.currentLentAmount.should.eq(0);
+
 			(await cUSD.balanceOf(user1.address)).should.eq(
 				initialUser1Balance.add(amount).sub(expectedCurrentDebt)
 			);
@@ -1926,6 +2121,11 @@ describe("Microcredit", () => {
 			);
 			repayment1.amount.should.eq(expectedCurrentDebt);
 			repayment1.date.should.eq(repaymentDate1);
+
+			const managerData1After = await Microcredit.managers(
+				manager1.address
+			);
+			managerData1After.currentLentAmount.should.eq(0);
 
 			(await cUSD.balanceOf(user1.address)).should.eq(
 				initialUser1Balance.add(amount).sub(expectedCurrentDebt)
@@ -2100,6 +2300,11 @@ describe("Microcredit", () => {
 			repayment2.amount.should.eq(repaymentAmount2);
 			repayment2.date.should.eq(repaymentDate2);
 
+			const managerData1After = await Microcredit.managers(
+				manager1.address
+			);
+			managerData1After.currentLentAmount.should.eq(0);
+
 			(await cUSD.balanceOf(user1.address)).should.eq(
 				initialUser1Balance
 					.add(amount)
@@ -2227,6 +2432,11 @@ describe("Microcredit", () => {
 			);
 			repayment2.amount.should.eq(repaymentAmount2);
 			repayment2.date.should.eq(repaymentDate2);
+
+			const managerData1After = await Microcredit.managers(
+				manager1.address
+			);
+			managerData1After.currentLentAmount.should.eq(0);
 
 			(await cUSD.balanceOf(user1.address)).should.eq(
 				initialUser1Balance
@@ -2368,7 +2578,7 @@ describe("Microcredit", () => {
 			);
 		});
 
-		it("should cancel loan if manager", async function () {
+		it("should cancel loan if manager #1", async function () {
 			const amount = toEther(100);
 			const period = sixMonth;
 			const dailyInterest = toEther(0.2);
@@ -2404,6 +2614,11 @@ describe("Microcredit", () => {
 			loan.repaymentsLength.should.eq(0);
 			loan.lastComputedDate.should.eq(0);
 
+			const managerData1Before = await Microcredit.managers(
+				manager1.address
+			);
+			managerData1Before.currentLentAmount.should.eq(amount);
+
 			await Microcredit.connect(manager1)
 				.cancelLoans([user1.address], [0])
 				.should.emit(Microcredit, "LoanCanceled")
@@ -2420,9 +2635,14 @@ describe("Microcredit", () => {
 			loan.amountRepayed.should.eq(0);
 			loan.repaymentsLength.should.eq(0);
 			loan.lastComputedDate.should.eq(0);
+
+			const managerData1After = await Microcredit.managers(
+				manager1.address
+			);
+			managerData1After.currentLentAmount.should.eq(0);
 		});
 
-		it("should cancel loans if manager", async function () {
+		it("should cancel loans if manager #2", async function () {
 			const amount = toEther(100);
 			const period = sixMonth;
 			const dailyInterest = toEther(0.2);
@@ -2454,6 +2674,36 @@ describe("Microcredit", () => {
 
 			let loan2 = await Microcredit.userLoans(user2.address, 0);
 			loan2.claimDeadline.should.eq(0);
+		});
+
+		it("should cancel loan and recalculate initial manager's currentLentAmount", async function () {
+			const amount = toEther(100);
+			const period = sixMonth;
+			const dailyInterest = toEther(0.2);
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
+
+			await Microcredit.connect(manager1).addLoan(
+				user1.address,
+				amount,
+				period,
+				dailyInterest,
+				claimDeadline
+			).should.be.fulfilled;
+
+			const managerData1Before = await Microcredit.managers(
+				manager1.address
+			);
+			managerData1Before.currentLentAmount.should.eq(amount);
+
+			await Microcredit.connect(manager2)
+				.cancelLoans([user1.address], [0])
+				.should.emit(Microcredit, "LoanCanceled")
+				.withArgs(user1.address, 0);
+
+			const managerData1After = await Microcredit.managers(
+				manager1.address
+			);
+			managerData1After.currentLentAmount.should.eq(0);
 		});
 
 		it("should not cancel loan if not manager", async function () {
@@ -2715,12 +2965,17 @@ describe("Microcredit", () => {
 	});
 
 	describe("Microcredit - loan functionalities (revenue address != 0)", () => {
+		const manager1currentLentAmountLimit = toEther(1000);
+
 		before(async function () {});
 
 		beforeEach(async () => {
 			await deploy();
 
-			await Microcredit.connect(owner).addManagers([manager1.address]);
+			await Microcredit.connect(owner).addManagers(
+				[manager1.address],
+				[manager1currentLentAmountLimit]
+			);
 		});
 
 		it("should repayLoan and redirect revenue #1", async function () {
@@ -3080,13 +3335,18 @@ describe("Microcredit", () => {
 		});
 	});
 
-	describe("Microcredit - loan functionalities (revenue address != 0)", () => {
+	describe("Microcredit - change manager", () => {
+		const manager1currentLentAmountLimit = toEther(1000);
+
 		before(async function () {});
 
 		beforeEach(async () => {
 			await deploy();
 
-			await Microcredit.connect(owner).addManagers([manager1.address]);
+			await Microcredit.connect(owner).addManagers(
+				[manager1.address],
+				[manager1currentLentAmountLimit]
+			);
 		});
 
 		it("Should not changeManager if not manager", async function () {

@@ -21,7 +21,7 @@ chai.use(chaiAsPromised);
 const expect = chai.expect;
 should();
 
-describe.only("DonationMiner", () => {
+describe("DonationMiner", () => {
 	const REWARD_PERIOD_SIZE = 20;
 	const CLAIM_DELAY = 5;
 	const AGAINST_PERIODS = 8;
@@ -41,7 +41,8 @@ describe.only("DonationMiner", () => {
 	let user9: SignerWithAddress;
 	let entity: SignerWithAddress;
 	let ambassador: SignerWithAddress;
-	let airdropV3: SignerWithAddress;
+	let airdropV3Mock: SignerWithAddress;
+	let microcreditMock: SignerWithAddress;
 
 	let ImpactProxyAdmin: ethersTypes.Contract;
 	let DonationMiner: ethersTypes.Contract;
@@ -140,7 +141,8 @@ describe.only("DonationMiner", () => {
 			user9,
 			entity,
 			ambassador,
-			airdropV3,
+			airdropV3Mock,
+			microcreditMock,
 		] = await ethers.getSigners();
 
 		ImpactProxyAdmin = await ethers.getContractAt(
@@ -229,7 +231,8 @@ describe.only("DonationMiner", () => {
 
 		Treasury.updateDonationMiner(DonationMiner.address);
 
-		await DonationMiner.updateAirdropV3(airdropV3.address);
+		await DonationMiner.updateAirdropV3(airdropV3Mock.address);
+		await DonationMiner.updateMicrocredit(microcreditMock.address);
 	});
 
 	async function logRewardPeriods(DonationMiner: any) {
@@ -3694,7 +3697,8 @@ describe.only("DonationMiner", () => {
 		});
 	});
 
-	describe("Donation Miner + Staking", () => {
+	describe.skip("Donation Miner + Staking", () => {
+		//these tests work only on a celo mainnet fork network
 		before(async function () {});
 
 		const user1InitialPACTBalance = toEther("1000000");
@@ -4634,7 +4638,7 @@ describe.only("DonationMiner", () => {
 		});
 	});
 
-	describe("Donation Miner + Treasury", () => {
+	describe.skip("Donation Miner + Treasury", () => {
 		//these tests work only on a celo mainnet fork network
 		before(async function () {});
 
@@ -4918,7 +4922,8 @@ describe.only("DonationMiner", () => {
 		});
 	});
 
-	describe("Donation Miner + Treasury + TreasuryLpSwap", () => {
+	describe.skip("Donation Miner + Treasury + TreasuryLpSwap", () => {
+		//these tests work only on a celo mainnet fork network
 		let cUSDToMUSDTokenId: number;
 		let cUSDToPACTTokenId: number;
 		let mUSDToPACTTokenId: number;
@@ -5319,14 +5324,20 @@ describe.only("DonationMiner", () => {
 				);
 
 			expect(await cUSD.balanceOf(Treasury.address)).to.be.equal(
-				(user1Donation1.add(user1Donation2).add(user1Donation3)).mul(90).div(100)
+				user1Donation1
+					.add(user1Donation2)
+					.add(user1Donation3)
+					.mul(90)
+					.div(100)
 			);
 		});
 	});
 
-	describe("Donation Miner + AirdropV3", () => {
+	describe("Donation Miner (donateVirtual)", () => {
 		const AIRDROP_V3_TOKEN_ADDRESS =
 			"0x00000000000000000000000000000000000000A3";
+		const MICROCREDIT_TOKEN_ADDRESS =
+			"0x00000000000000000000000000000000000000C1";
 
 		before(async function () {});
 
@@ -5338,41 +5349,18 @@ describe.only("DonationMiner", () => {
 
 		it("Should not donateVirtual if not airdropV3", async function () {
 			await expect(
-				DonationMiner.connect(user1).donateVirtual(
-					PACT.address,
-					100,
-					user1.address
-				)
-			).to.be.rejectedWith("DonationMiner: NOT_AIRDROP_V3");
+				DonationMiner.connect(user1).donateVirtual(100, user1.address)
+			).to.be.rejectedWith(
+				"DonationMiner: You are not allow to call this method"
+			);
 		});
 
-		it("Should not donateVirtual invalid token (PACT)", async function () {
-			await expect(
-				DonationMiner.connect(airdropV3).donateVirtual(
-					PACT.address,
-					100,
-					user1.address
-				)
-			).to.be.rejectedWith("DonationMiner: Invalid token");
-		});
-
-		it("Should not donateVirtual invalid token (cUSD)", async function () {
-			await expect(
-				DonationMiner.connect(airdropV3).donateVirtual(
-					cUSD.address,
-					100,
-					user1.address
-				)
-			).to.be.rejectedWith("DonationMiner: Invalid token");
-		});
-
-		it("Should donateVirtual", async function () {
+		it("Should donateVirtual if airdropV3", async function () {
 			const user1VirtualDonationAmount = toEther("100");
 			const user1ExpectedReward = toEther("4320000");
 
 			await expect(
-				DonationMiner.connect(airdropV3).donateVirtual(
-					AIRDROP_V3_TOKEN_ADDRESS,
+				DonationMiner.connect(airdropV3Mock).donateVirtual(
 					user1VirtualDonationAmount,
 					user1.address
 				)
@@ -5410,7 +5398,50 @@ describe.only("DonationMiner", () => {
 			);
 		});
 
-		it("Should donateVirtual multiple donation types", async function () {
+		it("Should donateVirtual if microcredit", async function () {
+			const user1VirtualDonationAmount = toEther("100");
+			const user1ExpectedReward = toEther("4320000");
+
+			await expect(
+				DonationMiner.connect(microcreditMock).donateVirtual(
+					user1VirtualDonationAmount,
+					user1.address
+				)
+			)
+				.to.emit(DonationMiner, "DonationAdded")
+				.withArgs(
+					1,
+					user1.address,
+					user1VirtualDonationAmount,
+					MICROCREDIT_TOKEN_ADDRESS,
+					user1VirtualDonationAmount,
+					Treasury.address
+				);
+
+			expect(
+				(await DonationMiner.rewardPeriods(1)).donationsAmount
+			).to.be.equal(user1VirtualDonationAmount);
+
+			const donation1 = await DonationMiner.donations(1);
+			expect(donation1.donor).to.equal(user1.address);
+			expect(donation1.target).to.equal(Treasury.address);
+			expect(donation1.rewardPeriod).to.equal(1);
+			expect(donation1.amount).to.equal(user1VirtualDonationAmount);
+			expect(donation1.token).to.equal(MICROCREDIT_TOKEN_ADDRESS);
+			expect(donation1.initialAmount).to.equal(
+				user1VirtualDonationAmount
+			);
+
+			await advanceToRewardPeriodN(2);
+
+			await DonationMiner.connect(user1).claimRewards();
+
+			expect(await PACT.balanceOf(user1.address)).to.equal(
+				user1ExpectedReward
+			);
+		});
+
+		it("Should donateVirtual multiple donation types if airdropV3", async function () {
 			const user1VirtualDonationAmount = toEther("100");
 			const user1ExpectedReward = toEther("4320000").div(2);
 
@@ -5418,8 +5449,7 @@ describe.only("DonationMiner", () => {
 			const user2ExpectedReward = toEther("4320000").div(2);
 
 			await expect(
-				DonationMiner.connect(airdropV3).donateVirtual(
-					AIRDROP_V3_TOKEN_ADDRESS,
+				DonationMiner.connect(airdropV3Mock).donateVirtual(
 					user1VirtualDonationAmount,
 					user1.address
 				)
@@ -5471,6 +5501,97 @@ describe.only("DonationMiner", () => {
 
 			expect(await PACT.balanceOf(user2.address)).to.equal(
 				user2ExpectedReward
+			);
+		});
+
+		it("Should donateVirtual multiple donation types if airdropV3 or microcredit", async function () {
+			const user1VirtualDonationAmount = toEther("100");
+			const user2DonationAmount = toEther("200");
+			const user3VirtualDonationAmount = toEther("300");
+
+			const user1ExpectedReward = toEther("4320000").div(6);
+			const user2ExpectedReward = toEther("4320000").div(3);
+			const user3ExpectedReward = toEther("4320000").div(2);
+
+			await expect(
+				DonationMiner.connect(airdropV3Mock).donateVirtual(
+					user1VirtualDonationAmount,
+					user1.address
+				)
+			)
+				.to.emit(DonationMiner, "DonationAdded")
+				.withArgs(
+					1,
+					user1.address,
+					user1VirtualDonationAmount,
+					AIRDROP_V3_TOKEN_ADDRESS,
+					user1VirtualDonationAmount,
+					Treasury.address
+				);
+
+			await cUSD
+				.connect(owner)
+				.approve(DonationMiner.address, user2DonationAmount);
+
+			await expect(
+				DonationMiner.connect(owner).donate(
+					cUSD.address,
+					user2DonationAmount,
+					user2.address
+				)
+			)
+				.to.emit(DonationMiner, "DonationAdded")
+				.withArgs(
+					2,
+					user2.address,
+					user2DonationAmount,
+					cUSD.address,
+					user2DonationAmount,
+					Treasury.address
+				);
+
+			await expect(
+				DonationMiner.connect(microcreditMock).donateVirtual(
+					user3VirtualDonationAmount,
+					user3.address
+				)
+			)
+				.to.emit(DonationMiner, "DonationAdded")
+				.withArgs(
+					3,
+					user3.address,
+					user3VirtualDonationAmount,
+					MICROCREDIT_TOKEN_ADDRESS,
+					user3VirtualDonationAmount,
+					Treasury.address
+				);
+
+			expect(
+				(await DonationMiner.rewardPeriods(1)).donationsAmount
+			).to.be.equal(
+				user1VirtualDonationAmount
+					.add(user2DonationAmount)
+					.add(user3VirtualDonationAmount)
+			);
+
+			await advanceToRewardPeriodN(2);
+
+			await DonationMiner.connect(user1).claimRewards();
+
+			await DonationMiner.connect(user2).claimRewards();
+
+			await DonationMiner.connect(user3).claimRewards();
+
+			expect(await PACT.balanceOf(user1.address)).to.equal(
+				user1ExpectedReward
+			);
+
+			expect(await PACT.balanceOf(user2.address)).to.equal(
+				user2ExpectedReward
+			);
+
+			expect(await PACT.balanceOf(user3.address)).to.equal(
+				user3ExpectedReward
 			);
 		});
 	});

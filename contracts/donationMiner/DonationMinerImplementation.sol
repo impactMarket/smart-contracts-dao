@@ -16,6 +16,8 @@ contract DonationMinerImplementation is
     DonationMinerStorageV5
 {
     address internal constant AIRDROP_V3_TOKEN_ADDRESS = 0x00000000000000000000000000000000000000A3;
+    address internal constant MICROCREDIT_TOKEN_ADDRESS =
+        0x00000000000000000000000000000000000000C1;
 
     using SafeERC20Upgradeable for IERC20;
 
@@ -171,14 +173,6 @@ contract DonationMinerImplementation is
      */
     modifier onlyStaking() {
         require(msg.sender == address(staking), "DonationMiner: NOT_STAKING");
-        _;
-    }
-
-    /**
-     * @notice Enforces sender to be Staking contract
-     */
-    modifier onlyAirdropV3() {
-        require(msg.sender == address(airdropV3), "DonationMiner: NOT_AIRDROP_V3");
         _;
     }
 
@@ -407,6 +401,15 @@ contract DonationMinerImplementation is
     }
 
     /**
+     * @notice Updates Microcredit address
+     *
+     * @param _newMicrocredit address of new Microcredit contract
+     */
+    function updateMicrocredit(IMicrocredit _newMicrocredit) external override onlyOwner {
+        microcredit = _newMicrocredit;
+    }
+
+    /**
      * @notice Transfers cUSD tokens to the treasury contract
      *
      * @param _token address of the token
@@ -461,18 +464,31 @@ contract DonationMinerImplementation is
     /**
      * @notice Transfers cUSD tokens to the treasury contract
      *
-     * @param _token address of the token
      * @param _amount Amount of cUSD tokens to deposit.
      * @param _delegateAddress the address that will claim the reward for the donation
      */
-    function donateVirtual(
-        IERC20 _token,
-        uint256 _amount,
-        address _delegateAddress
-    ) external override whenNotPaused onlyAirdropV3 {
-        require(address(_token) == AIRDROP_V3_TOKEN_ADDRESS, "DonationMiner: Invalid token");
-
-        _addDonation(_delegateAddress, _token, _amount, address(treasury));
+    function donateVirtual(uint256 _amount, address _delegateAddress)
+        external
+        override
+        whenNotPaused
+    {
+        if (msg.sender == address(airdropV3)) {
+            _addDonation(
+                _delegateAddress,
+                IERC20(AIRDROP_V3_TOKEN_ADDRESS),
+                _amount,
+                address(treasury)
+            );
+        } else if (msg.sender == address(microcredit)) {
+            _addDonation(
+                _delegateAddress,
+                IERC20(MICROCREDIT_TOKEN_ADDRESS),
+                _amount,
+                address(treasury)
+            );
+        } else {
+            revert("DonationMiner: You are not allow to call this method");
+        }
     }
 
     /**
@@ -858,7 +874,11 @@ contract DonationMinerImplementation is
         _donation.token = _token;
         _donation.initialAmount = _initialAmount;
 
-        if (_token == cUSD || address(_token) == AIRDROP_V3_TOKEN_ADDRESS) {
+        if (
+            _token == cUSD ||
+            address(_token) == AIRDROP_V3_TOKEN_ADDRESS ||
+            address(_token) == MICROCREDIT_TOKEN_ADDRESS
+        ) {
             _donation.amount = _initialAmount;
         } else {
             _donation.amount = treasury.getConvertedAmount(address(_token), _initialAmount);

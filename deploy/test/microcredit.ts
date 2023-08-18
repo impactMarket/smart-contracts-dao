@@ -12,8 +12,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	const accounts: SignerWithAddress[] = await ethers.getSigners();
 	const deployer = accounts[0];
-
-	const ownerAddress = accounts[1].address; //dev
+	const owner = accounts[1];
 
 	const ImpactMultiSigProxyAdminResult = await deploy(
 		"ImpactMultiSigProxyAdmin",
@@ -56,7 +55,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	);
 
 	await microcreditRevenueContract.initialize();
-	await microcreditRevenueContract.transferOwnership(ownerAddress);
+	await microcreditRevenueContract.transferOwnership(owner.address);
 
 	// deploy microcredit
 	const microcreditImplementationResult = await deploy(
@@ -88,9 +87,19 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		microcreditRevenueContract.address
 	);
 
-	await microcreditContract.transferOwnership(ownerAddress);
+	const donationMiner = await ethers.getContractAt(
+		"DonationMinerImplementation",
+		(
+			await deployments.get("DonationMinerProxy")
+		).address
+	);
+
+	await donationMiner.updateMicrocredit(microcreditContract.address);
+	await microcreditContract.updateDonationMiner(donationMiner.address);
+
+	await microcreditContract.transferOwnership(owner.address);
 };
 
 export default func;
-func.dependencies = ["ImpactProxyAdminTest", "cUSDTest"];
+func.dependencies = ["ImpactProxyAdminTest", "cUSDTest", "DonationMinerTest"];
 func.tags = ["MicrocreditTest"];

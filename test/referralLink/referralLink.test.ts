@@ -1082,9 +1082,7 @@ describe("ReferralLink", () => {
 				sender1InitialBalance.add(campaign1Reward)
 			);
 
-			(await PACT.balanceOf(sender1.address)).should.eq(
-				campaign3Reward
-			);
+			(await PACT.balanceOf(sender1.address)).should.eq(campaign3Reward);
 
 			(await cUSD.balanceOf(receiver1Address)).should.eq(
 				receiver1InitialBalance.add(campaign1Reward)
@@ -1181,7 +1179,9 @@ describe("ReferralLink", () => {
 			);
 
 			(await cUSD.balanceOf(ReferralLink.address)).should.eq(
-				referralLinkInitialBalanceCUSD.sub(campaign1Reward.mul(3).mul(2))
+				referralLinkInitialBalanceCUSD.sub(
+					campaign1Reward.mul(3).mul(2)
+				)
 			);
 		});
 
@@ -1271,10 +1271,10 @@ describe("ReferralLink", () => {
 				.should.emit(ReferralLink, "RewardClaimed")
 				.withArgs(sender1.address, 1, receiver3Address);
 
-
-
 			(await cUSD.balanceOf(sender1.address)).should.eq(
-				sender1InitialBalance.add(campaign0Reward.mul(2).add(campaign1Reward))
+				sender1InitialBalance.add(
+					campaign0Reward.mul(2).add(campaign1Reward)
+				)
 			);
 
 			(await cUSD.balanceOf(receiver1Address)).should.eq(

@@ -11,7 +11,7 @@ let deployer: SignerWithAddress;
 // // mainnet
 // const governanceDelegatorAddress = "0x8f8BB984e652Cb8D0aa7C9D6712Ec2020EB1BAb4";
 // const targetAddress = "0x1C51657af2ceBA3D5492bA0c5A17E562F7ba6593";
-// const newOwnerAddress = "0x9bDD1df7e44c120C51E74E5C6FA2e0b41487De9F";
+// const newOwnerAddress = "";
 
 
 //alfajores

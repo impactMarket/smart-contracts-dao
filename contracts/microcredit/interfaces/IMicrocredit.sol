@@ -2,6 +2,7 @@
 pragma solidity 0.8.4;
 
 import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "../../donationMiner/interfaces/IDonationMiner.sol";
 
 interface IMicrocredit {
     struct WalletMetadata {
@@ -11,6 +12,11 @@ interface IMicrocredit {
 
     struct User {
         Loan[] loans;
+    }
+
+    struct Manager {
+        uint256 currentLentAmountLimit;
+        uint256 currentLentAmount;
     }
 
     struct Repayment {
@@ -28,11 +34,13 @@ interface IMicrocredit {
         uint256 amountRepayed;
         Repayment[] repayments;
         uint256 lastComputedDate;
+        address managerAddress;
     }
 
     function getVersion() external pure returns(uint256);
     function cUSD() external view returns(IERC20);
     function revenueAddress() external view returns(address);
+    function donationMiner() external view returns(IDonationMiner);
     function walletMetadata(address userAddress)
         external view returns(uint256 userId, address movedTo, uint256 loansLength);
     function userLoans(address userAddress, uint256 loanId) external view returns(
@@ -45,7 +53,8 @@ interface IMicrocredit {
         uint256 currentDebt,
         uint256 amountRepayed,
         uint256 repaymentsLength,
-        uint256 lastComputedDate
+        uint256 lastComputedDate,
+        address managerAddress
     );
     function userLoanRepayments(address userAddress, uint256 loanId, uint256 repaymentId)
         external view returns( uint256 date, uint256 amount);
@@ -53,8 +62,13 @@ interface IMicrocredit {
     function walletListLength() external view returns (uint256);
     function managerListAt(uint256 index) external view returns (address);
     function managerListLength() external view returns (uint256);
+    function managers(address managerAddress) external view returns (
+        uint256 currentLentAmountLimit,
+        uint256 currentLentAmount
+    );
     function updateRevenueAddress(address newRevenueAddress) external;
-    function addManagers(address[] calldata managerAddresses) external;
+    function updateDonationMiner(IDonationMiner newDonationMiner) external;
+    function addManagers(address[] calldata managerAddresses, uint256[] calldata currentLentAmountLimit) external;
     function removeManagers(address[] calldata managerAddresses) external;
     function addLoan(
         address userAddress,
@@ -80,3 +94,4 @@ interface IMicrocredit {
     function changeManager(address[] memory borrowerAddresses, address managerAddress) external;
     function transferERC20(IERC20 _token, address _to, uint256 _amount) external;
 }
+

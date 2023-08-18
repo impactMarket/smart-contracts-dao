@@ -17,7 +17,7 @@ contract MicrocreditImplementation is
     using SafeERC20Upgradeable for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    event ManagerAdded(address indexed managerAddress);
+    event ManagerAdded(address indexed managerAddress, uint256 currentLentAmountLimit);
 
     event ManagerRemoved(address indexed managerAddress);
 
@@ -151,7 +151,8 @@ contract MicrocreditImplementation is
             uint256 lastComputedDebt,
             uint256 amountRepayed,
             uint256 repaymentsLength,
-            uint256 lastComputedDate
+            uint256 lastComputedDate,
+            address managerAddress
         )
     {
         _checkUserLoan(_userAddress, _loanId);
@@ -170,6 +171,7 @@ contract MicrocreditImplementation is
         amountRepayed = _loan.amountRepayed;
         repaymentsLength = _loan.repayments.length;
         lastComputedDate = _loan.lastComputedDate;
+        managerAddress = _loan.managerAddress;
     }
 
     function userLoanRepayments(
@@ -193,18 +195,29 @@ contract MicrocreditImplementation is
         revenueAddress = _newRevenueAddress;
     }
 
+    function updateDonationMiner(IDonationMiner _newDonationMiner) external override onlyOwner {
+        donationMiner = _newDonationMiner;
+    }
+
     /**
      * @notice Adds managers
      *
      * @param _managerAddresses      addresses of the managers
      */
-    function addManagers(address[] calldata _managerAddresses) external override onlyOwner {
+    function addManagers(
+        address[] calldata _managerAddresses,
+        uint256[] calldata _currentLentAmountLimit
+    ) external override onlyOwner {
         uint256 _length = _managerAddresses.length;
         uint256 _index;
 
         for (_index = 0; _index < _length; _index++) {
             _managerList.add(_managerAddresses[_index]);
-            emit ManagerAdded(_managerAddresses[_index]);
+
+            managers[_managerAddresses[_index]].currentLentAmountLimit = _currentLentAmountLimit[
+                _index
+            ];
+            emit ManagerAdded(_managerAddresses[_index], _currentLentAmountLimit[_index]);
         }
     }
 
@@ -390,23 +403,26 @@ contract MicrocreditImplementation is
             _repaymentAmount = _currentDebt;
         }
 
-        uint256 _revenueAmount;
-        uint256 _loanAmount;
-
-        if (
-            _loan.amountRepayed + _repaymentAmount <= _loan.amountBorrowed ||
-            revenueAddress == address(0)
-        ) {
+        if (_loan.amountRepayed + _repaymentAmount <= _loan.amountBorrowed) {
             //all repaymentAmount should go to microcredit address
             cUSD.safeTransferFrom(msg.sender, address(this), _repaymentAmount);
+            _registerRepaymentToManager(_loan.managerAddress, _repaymentAmount);
         } else if (_loan.amountRepayed >= _loan.amountBorrowed) {
             //all repaymentAmount should go to revenue address
             cUSD.safeTransferFrom(msg.sender, revenueAddress, _repaymentAmount);
         } else {
             //a part of the repayment should go to microcredit address and the rest should go to the revenue address
+
             uint256 _loanDiff = _loan.amountBorrowed - _loan.amountRepayed;
-            cUSD.safeTransferFrom(msg.sender, address(this), _loanDiff);
-            cUSD.safeTransferFrom(msg.sender, revenueAddress, _repaymentAmount - _loanDiff);
+
+            if (revenueAddress == address(0)) {
+                cUSD.safeTransferFrom(msg.sender, address(this), _repaymentAmount);
+            } else {
+                cUSD.safeTransferFrom(msg.sender, address(this), _loanDiff);
+                cUSD.safeTransferFrom(msg.sender, revenueAddress, _repaymentAmount - _loanDiff);
+            }
+
+            _registerRepaymentToManager(_loan.managerAddress, _loanDiff);
         }
 
         Repayment storage _repayment = _loan.repayments.push();
@@ -419,6 +435,10 @@ contract MicrocreditImplementation is
         uint256 _days = (block.timestamp - _loan.lastComputedDate) / 86400; //86400 = 1 day in seconds
 
         _loan.lastComputedDate = _loan.lastComputedDate + _days * 86400;
+
+        if (_loan.lastComputedDebt == 0 && address(donationMiner) != address(0)) {
+            donationMiner.donateVirtual(_loan.amountRepayed - _loan.amountBorrowed, msg.sender);
+        }
 
         emit RepaymentAdded(msg.sender, _loanId, _repaymentAmount, _loan.lastComputedDebt);
     }
@@ -504,6 +524,12 @@ contract MicrocreditImplementation is
         WalletMetadata storage _metadata = _walletMetadata[_userAddress];
         require(_metadata.movedTo == address(0), "Microcredit: The user has been moved");
 
+        Manager storage _manager = managers[msg.sender];
+        require(
+            _manager.currentLentAmount + _amount <= _manager.currentLentAmountLimit,
+            "Microcredit: Manager don't have enough funds to borrow this amount"
+        );
+
         if (_metadata.userId == 0) {
             _usersLength++;
             _metadata.userId = _usersLength;
@@ -531,6 +557,9 @@ contract MicrocreditImplementation is
         _loan.period = _period;
         _loan.dailyInterest = _dailyInterest;
         _loan.claimDeadline = _claimDeadline;
+        _loan.managerAddress = msg.sender;
+
+        _manager.currentLentAmount += _amount;
 
         emit LoanAdded(
             _userAddress,
@@ -554,6 +583,22 @@ contract MicrocreditImplementation is
 
         _loan.claimDeadline = 0; //set claimDeadline to 0 to prevent claiming (cancel the loan)
 
+        Manager storage _manager = managers[_loan.managerAddress];
+
+        _manager.currentLentAmount -= _loan.amountBorrowed;
+
         emit LoanCanceled(_userAddress, _loanId);
+    }
+
+    function _registerRepaymentToManager(address _managerAddress, uint256 _repaymentAmount)
+        internal
+    {
+        if (_managerAddress != address(0)) {
+            if (managers[_managerAddress].currentLentAmount > _repaymentAmount) {
+                managers[_managerAddress].currentLentAmount -= _repaymentAmount;
+            } else {
+                managers[_managerAddress].currentLentAmount = 0;
+            }
+        }
     }
 }
