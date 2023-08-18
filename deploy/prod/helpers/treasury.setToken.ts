@@ -21,6 +21,9 @@ const PACTAddress = "0x46c9757C5497c5B1f2eb73aE79b6B67D119B0B58";
 // const governanceDelegatorAddress = "0x5c27e2600a3eDEF53DE0Ec32F01efCF145419eDF";
 // const treasuryAddress = "0xB0deEE097B5227C5E6bbE787665e4e62b4fE85f3";
 // const cUSDAddress = "0x874069fa1eb16d44d622f2e0ca25eea172369bc1";
+// const uniswapNFTPositionManagerId = 3108;
+// const PACTAddress = "0x73A2De6A8370108D43c3C80430C84c30df323eD2";
+
 
 
 let GovernanceProxy: ethersTypes.Contract;
@@ -57,7 +60,7 @@ async function createCallProposal() {
 			["address", "uint256", "uint8", "uint256", "uint256", "uint256", "bytes", "bytes"]
 		],
 		[
-			[cUSDAddress, toEther(1), 1, toEther(50), toEther(300), uniswapNFTPositionManagerId, "0x", getExchangePathProd(cUSDAddress, PACTAddress)]
+			[cUSDAddress, toEther(1), 1, toEther(80), toEther(100), uniswapNFTPositionManagerId, "0x", getExchangePathProd(cUSDAddress, PACTAddress)]
 		],
 		'Add treasury tokens'
 	);

@@ -13,7 +13,7 @@ import {
 chai.use(chaiAsPromised);
 should();
 
-describe.only("ReferralLink", () => {
+describe("ReferralLink", () => {
 	const FAKE_ADDRESS = "0x000000000000000000000000000000000000dEaD";
 
 	let owner: SignerWithAddress;
