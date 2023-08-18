@@ -195,6 +195,10 @@ contract MicrocreditImplementation is
         revenueAddress = _newRevenueAddress;
     }
 
+    function updateDonationMiner(IDonationMiner _newDonationMiner) external override onlyOwner {
+        donationMiner = _newDonationMiner;
+    }
+
     /**
      * @notice Adds managers
      *
@@ -431,6 +435,10 @@ contract MicrocreditImplementation is
         uint256 _days = (block.timestamp - _loan.lastComputedDate) / 86400; //86400 = 1 day in seconds
 
         _loan.lastComputedDate = _loan.lastComputedDate + _days * 86400;
+
+        if (_loan.lastComputedDebt == 0 && address(donationMiner) != address(0)) {
+            donationMiner.donateVirtual(_loan.amountRepayed - _loan.amountBorrowed, msg.sender);
+        }
 
         emit RepaymentAdded(msg.sender, _loanId, _repaymentAmount, _loan.lastComputedDebt);
     }

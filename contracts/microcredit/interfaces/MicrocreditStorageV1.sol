@@ -23,4 +23,6 @@ abstract contract MicrocreditStorageV1 is IMicrocredit {
     address public override revenueAddress;
 
     mapping(address => Manager) public override managers;
+
+    IDonationMiner public override donationMiner;
 }

@@ -11,9 +11,6 @@ contract AirdropV3Implementation is
     PausableUpgradeable,
     AirdropV3StorageV1
 {
-    address public constant override VIRTUAL_TOKEN_ADDRESS =
-        0x00000000000000000000000000000000000000A3;
-
     /**
      * @notice Triggered after a claim
      *
@@ -104,11 +101,7 @@ contract AirdropV3Implementation is
 
             _beneficiary.amount = amount;
 
-            donationMiner.donateVirtual(
-                IERC20(VIRTUAL_TOKEN_ADDRESS),
-                amount,
-                _beneficiaryAddresses[_index]
-            );
+            donationMiner.donateVirtual(amount, _beneficiaryAddresses[_index]);
 
             emit Registered(_beneficiaryAddresses[_index], _communityAddresses[_index], amount);
         }

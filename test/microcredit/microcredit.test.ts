@@ -30,6 +30,7 @@ describe.only("Microcredit", () => {
 	let cUSD: ethersTypes.Contract;
 	let Microcredit: ethersTypes.Contract;
 	let MicrocreditRevenue: ethersTypes.Contract;
+	let DonationMiner: ethersTypes.Contract;
 
 	const oneMonth = 3600 * 24 * 30;
 	const sixMonth = oneMonth * 6;
@@ -67,6 +68,13 @@ describe.only("Microcredit", () => {
 			).address
 		);
 
+		DonationMiner = await ethers.getContractAt(
+			"DonationMinerImplementation",
+			(
+				await deployments.get("DonationMinerProxy")
+			).address
+		);
+
 		await cUSD.mint(Microcredit.address, initialMicrocreditBalance);
 		await cUSD.mint(user1.address, initialUser1Balance);
 		await cUSD.mint(user2.address, initialUser2Balance);
@@ -99,6 +107,9 @@ describe.only("Microcredit", () => {
 			(await Microcredit.cUSD()).should.eq(cUSD.address);
 			(await Microcredit.revenueAddress()).should.eq(
 				MicrocreditRevenue.address
+			);
+			(await Microcredit.donationMiner()).should.eq(
+				DonationMiner.address
 			);
 
 			await Microcredit.userLoans(

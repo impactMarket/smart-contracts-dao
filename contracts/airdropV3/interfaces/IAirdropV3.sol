@@ -13,7 +13,6 @@ interface IAirdropV3 {
 
     function getVersion() external pure returns(uint256);
     function donationMiner() external view returns(IDonationMiner);
-    function VIRTUAL_TOKEN_ADDRESS() external view returns(address);
     function socialConnect() external view returns(ISocialConnect);
     function socialConnectIssuer() external view returns(address);
     function amount() external view returns(uint256);
