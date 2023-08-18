@@ -802,6 +802,8 @@ contract DonationMinerImplementation is
         if (_donor.lastClaimPeriod == 0 && _donor.rewardPeriodsCount == 0) {
             _donor.lastClaimPeriod = rewardPeriodCount - 1;
         }
+
+        treasury.useFundsForLP();
     }
 
     function currentRewardPeriodNumber() public view override returns (uint256) {
@@ -845,8 +847,6 @@ contract DonationMinerImplementation is
             }
             _newPeriod.rewardAmount = _rewardAmount;
             _lastPeriod = _newPeriod;
-
-            treasury.useFundsForLP();
         }
     }
 
@@ -890,6 +890,8 @@ contract DonationMinerImplementation is
 
         updateRewardPeriodAmounts(rewardPeriodCount, _delegateAddress, _donation.amount);
         addCurrentRewardPeriodToDonor(_delegateAddress);
+
+        treasury.useFundsForLP();
 
         emit DonationAdded(
             donationCount,

@@ -33,6 +33,7 @@ export default {
       gasPrice: "auto",
       gas: 13000000,
       // forking: {
+      //   chainId: 42220,
       //   url: "https://forno.celo.org"
       // },
     },

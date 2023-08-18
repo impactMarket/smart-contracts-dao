@@ -34,7 +34,7 @@ export async function createPool(
 	await token0.connect(creator).approve(NFTPositionManager.address, amount0);
 	await token1.connect(creator).approve(NFTPositionManager.address, amount1);
 
-	if (token0.address > token1.address) {
+	if (token0.address.toLowerCase() > token1.address.toLowerCase()) {
 		const token0Copy = token0;
 		token0 = token1;
 		token1 = token0Copy;
