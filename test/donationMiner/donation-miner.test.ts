@@ -21,7 +21,7 @@ chai.use(chaiAsPromised);
 const expect = chai.expect;
 should();
 
-describe("DonationMiner", () => {
+describe.only("DonationMiner", () => {
 	const REWARD_PERIOD_SIZE = 20;
 	const CLAIM_DELAY = 5;
 	const AGAINST_PERIODS = 8;
@@ -5248,21 +5248,21 @@ describe("DonationMiner", () => {
 			expect(donation2.initialAmount).to.equal(user1Donation2);
 		});
 
-		it("Should not increase LP for each donation", async function () {
+		it("Should increase LP if treasuryBalance higher than threshold", async function () {
 			await Treasury.setToken(
 				cUSD.address,
 				toEther(1),
 				LpStrategy.MainCoin,
 				toEther(10),
-				toEther(0),
+				toEther(100),
 				cUSDToPACTTokenId,
 				"0x",
 				getExchangePath(cUSD, PACT)
 			);
 
-			const user1Donation1 = toEther("100");
-			const user1Donation2 = toEther("50");
-			const user1Donation3 = toEther("25");
+			const user1Donation1 = toEther("50");
+			const user1Donation2 = toEther("40");
+			const user1Donation3 = toEther("20");
 
 			await cUSD.mint(
 				user1.address,
@@ -5296,18 +5296,10 @@ describe("DonationMiner", () => {
 					user1Donation2,
 					user1.address
 				)
-			)
-				.to.emit(TreasuryLpSwap, "LiquidityIncreased")
-				.withArgs(
-					cUSDToPACTTokenId,
-					toEther("7.424944869784341851"),
-					toEther(7.5),
-					toEther("7.424944869784341851"),
-					toEther("7.425055130625000000")
-				);
+			).to.be.fulfilled;
 
 			expect(await cUSD.balanceOf(Treasury.address)).to.be.equal(
-				user1Donation1.add(user1Donation2).mul(90).div(100)
+				user1Donation1.add(user1Donation2)
 			);
 
 			await expect(
@@ -5316,14 +5308,18 @@ describe("DonationMiner", () => {
 					user1Donation3,
 					user1.address
 				)
-			).to.be.fulfilled;
+			)
+				.to.emit(TreasuryLpSwap, "LiquidityIncreased")
+				.withArgs(
+					cUSDToPACTTokenId,
+					toEther("5.444970352136432617"),
+					toEther(5.5),
+					toEther("5.444970352136432617"),
+					toEther("5.445029648025000000")
+				);
 
 			expect(await cUSD.balanceOf(Treasury.address)).to.be.equal(
-				user1Donation1
-					.add(user1Donation2)
-					.mul(90)
-					.div(100)
-					.add(user1Donation3)
+				(user1Donation1.add(user1Donation2).add(user1Donation3)).mul(90).div(100)
 			);
 		});
 	});
