@@ -26,7 +26,11 @@ contract ContributorImplementation is
      * @param dailyPaymentAmount    amount of cUSD (in PACT) to be added as reward for a contributor every day
      * @param startPeriod           timestamp when the user became a contributor
      */
-    event ContributorAdded(address indexed contributor, uint256 dailyPaymentAmount, uint256 startPeriod);
+    event ContributorAdded(
+        address indexed contributor,
+        uint256 dailyPaymentAmount,
+        uint256 startPeriod
+    );
 
     /**
      * @notice Triggered after a claim
@@ -59,9 +63,8 @@ contract ContributorImplementation is
         treasury = _treasury;
 
         require(
-            _claimPeriod > 0 &&
-            (_claimPeriod / BASE_PERIOD) * BASE_PERIOD == claimPeriod,
-            "ContributorImplementation: Invalid claimPeriod"  //_claimPeriod must be multiple of 7 days
+            _claimPeriod > 0 && (_claimPeriod / BASE_PERIOD) * BASE_PERIOD == claimPeriod,
+            "ContributorImplementation: Invalid claimPeriod"
         );
         claimPeriod = _claimPeriod;
     }
@@ -72,7 +75,7 @@ contract ContributorImplementation is
     function getVersion() external pure override returns (uint256) {
         return 1;
     }
-    
+
     /**
      * @notice Returns the length of the contributorList
      */
@@ -104,16 +107,21 @@ contract ContributorImplementation is
     ) external onlyOwner {
         Contributor storage _contributor = contributors[_contributorAddress];
 
-        require(_contributor.dailyPaymentAmount == 0, "ContributorImplementation: Contributor already added");
+        require(
+            _contributor.dailyPaymentAmount == 0,
+            "ContributorImplementation: Contributor already added"
+        );
 
         _contributor.dailyPaymentAmount = _dailyPaymentAmount;
 
         if (_startPeriod == 0) {
             _contributor.lastClaimTime = block.timestamp;
         } else {
-            require((block.timestamp - _startPeriod) < 90 days, "ContributorImplementation: start date cannot be more than 90 days in the past");
+            require(
+                (block.timestamp - _startPeriod) < 90 days,
+                "ContributorImplementation: start date cannot be more than 90 days in the past"
+            );
             _contributor.lastClaimTime = _startPeriod;
-
         }
         contributorList.add(_contributorAddress);
 
@@ -123,9 +131,15 @@ contract ContributorImplementation is
     function claim(address _contributorAddress) external override {
         Contributor storage _contributor = contributors[_contributorAddress];
 
-        require(_contributor.dailyPaymentAmount > 0, "ContributorImplementation: Invalid contributor");
+        require(
+            _contributor.dailyPaymentAmount > 0,
+            "ContributorImplementation: Invalid contributor"
+        );
 
-        require(_contributor.lastClaimTime + claimPeriod <= block.timestamp, "ContributorImplementation: You don't have funds to claim yet");
+        require(
+            _contributor.lastClaimTime + claimPeriod <= block.timestamp,
+            "ContributorImplementation: You don't have funds to claim yet"
+        );
 
         uint256 _periodsToClaim = (block.timestamp - _contributor.lastClaimTime) / claimPeriod;
         uint256 _onePeriodReward = _contributor.dailyPaymentAmount * (claimPeriod / BASE_PERIOD);
@@ -134,20 +148,25 @@ contract ContributorImplementation is
 
         _contributor.lastClaimTime = _contributor.lastClaimTime + _periodsToClaim * claimPeriod;
 
-        (,,,,,,bytes memory _exchangePathToPACT) = treasury.tokens(address(cUSD));
+        (, , , , , , bytes memory _exchangePathToPACT) = treasury.tokens(address(cUSD));
 
-
-        uint256 _convertedAmount = treasury.lpSwap().uniswapQuoter().quoteExactInput(_exchangePathToPACT, _paymentAmount);
+        uint256 _convertedAmount = treasury.lpSwap().uniswapQuoter().quoteExactInput(
+            _exchangePathToPACT,
+            _paymentAmount
+        );
 
         _contributor.claimedAmount += _convertedAmount;
 
         PACT.safeTransfer(_contributorAddress, _convertedAmount);
     }
 
-    function claimAmount(address _contributorAddress) external override returns(uint256) {
+    function claimAmount(address _contributorAddress) external override returns (uint256) {
         Contributor memory _contributor = contributors[_contributorAddress];
 
-        require(_contributor.dailyPaymentAmount > 0, "ContributorImplementation: Invalid contributor");
+        require(
+            _contributor.dailyPaymentAmount > 0,
+            "ContributorImplementation: Invalid contributor"
+        );
 
         if (_contributor.lastClaimTime + claimPeriod > block.timestamp) {
             return 0;
@@ -160,9 +179,9 @@ contract ContributorImplementation is
 
         _contributor.lastClaimTime = _contributor.lastClaimTime + _periodsToClaim * claimPeriod;
 
-        (,,,,,,bytes memory _exchangePathToPACT) = treasury.tokens(address(cUSD));
+        (, , , , , , bytes memory _exchangePathToPACT) = treasury.tokens(address(cUSD));
 
-
-        return treasury.lpSwap().uniswapQuoter().quoteExactInput(_exchangePathToPACT, _paymentAmount);
+        return
+            treasury.lpSwap().uniswapQuoter().quoteExactInput(_exchangePathToPACT, _paymentAmount);
     }
 }
