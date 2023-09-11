@@ -5,6 +5,7 @@ import "@nomiclabs/hardhat-waffle";
 import "@nomiclabs/hardhat-waffle";
 import "hardhat-deploy";
 import "@nomiclabs/hardhat-ethers";
+import '@openzeppelin/hardhat-upgrades';
 
 task("accounts", "Prints the list of accounts", async (args, hre) => {
   const accounts = await hre.ethers.getSigners();
@@ -32,10 +33,10 @@ export default {
       timeout: 100000,
       gasPrice: "auto",
       gas: 13000000,
-      // forking: {
-      //   chainId: 42220,
-      //   url: "https://forno.celo.org"
-      // },
+      forking: {
+        chainId: 42220,
+        url: "https://forno.celo.org"
+      },
     },
     alfajores: {
       chainId: 44787,

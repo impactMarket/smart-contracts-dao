@@ -6,13 +6,14 @@ import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "./interfaces/MicrocreditStorageV1.sol";
+import "./interfaces/IMicrocreditOld.sol";
 
 contract MicrocreditImplementation is
-    Initializable,
-    OwnableUpgradeable,
-    PausableUpgradeable,
-    ReentrancyGuardUpgradeable,
-    MicrocreditStorageV1
+Initializable,
+OwnableUpgradeable,
+PausableUpgradeable,
+ReentrancyGuardUpgradeable,
+MicrocreditStorageV1
 {
     using SafeERC20Upgradeable for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -87,20 +88,20 @@ contract MicrocreditImplementation is
      * @return loansLength           the number of the user's loans
      */
     function walletMetadata(address _userAddress)
-        external
-        view
-        override
-        returns (
-            uint256 userId,
-            address movedTo,
-            uint256 loansLength
-        )
+    external
+    view
+    override
+    returns (
+        uint256 userId,
+        address movedTo,
+        uint256 loansLength
+    )
     {
         WalletMetadata memory _metadata = _walletMetadata[_userAddress];
 
         userId = _metadata.userId;
         movedTo = _metadata.movedTo;
-        loansLength = _users[_metadata.userId].loans.length;
+        loansLength = _users[_metadata.userId].loansLength;
     }
 
     /**
@@ -138,28 +139,27 @@ contract MicrocreditImplementation is
     }
 
     function userLoans(address _userAddress, uint256 _loanId)
-        external
-        view
-        override
-        returns (
-            uint256 amountBorrowed,
-            uint256 period,
-            uint256 dailyInterest,
-            uint256 claimDeadline,
-            uint256 startDate,
-            uint256 currentDebt,
-            uint256 lastComputedDebt,
-            uint256 amountRepayed,
-            uint256 repaymentsLength,
-            uint256 lastComputedDate,
-            address managerAddress
-        )
+    external
+    view
+    override
+    returns (
+        uint256 amountBorrowed,
+        uint256 period,
+        uint256 dailyInterest,
+        uint256 claimDeadline,
+        uint256 startDate,
+        uint256 currentDebt,
+        uint256 lastComputedDebt,
+        uint256 amountRepayed,
+        uint256 repaymentsLength,
+        uint256 lastComputedDate,
+        address managerAddress
+    )
     {
         _checkUserLoan(_userAddress, _loanId);
 
         WalletMetadata memory _metadata = _walletMetadata[_userAddress];
-        User memory _user = _users[_metadata.userId];
-        Loan memory _loan = _user.loans[_loanId];
+        Loan storage _loan = _users[_metadata.userId].loans[_loanId];
 
         amountBorrowed = _loan.amountBorrowed;
         period = _loan.period;
@@ -169,7 +169,7 @@ contract MicrocreditImplementation is
         lastComputedDebt = _loan.lastComputedDebt;
         currentDebt = _calculateCurrentDebt(_loan);
         amountRepayed = _loan.amountRepayed;
-        repaymentsLength = _loan.repayments.length;
+        repaymentsLength = _loan.repaymentsLength;
         lastComputedDate = _loan.lastComputedDate;
         managerAddress = _loan.managerAddress;
     }
@@ -182,10 +182,10 @@ contract MicrocreditImplementation is
         _checkUserLoan(_userAddress, _loanId);
 
         WalletMetadata memory _metadata = _walletMetadata[_userAddress];
-        User memory _user = _users[_metadata.userId];
-        Loan memory _loan = _user.loans[_loanId];
+        User storage _user = _users[_metadata.userId];
+        Loan storage _loan = _user.loans[_loanId];
 
-        require(_loan.repayments.length > _repaymentId, "Microcredit: Repayment doesn't exist");
+        require(_loan.repaymentsLength > _repaymentId, "Microcredit: Repayment doesn't exist");
 
         date = _loan.repayments[_repaymentId].date;
         amount = _loan.repayments[_repaymentId].amount;
@@ -215,7 +215,7 @@ contract MicrocreditImplementation is
             _managerList.add(_managerAddresses[_index]);
 
             managers[_managerAddresses[_index]].currentLentAmountLimit = _currentLentAmountLimit[
-                _index
+            _index
             ];
             emit ManagerAdded(_managerAddresses[_index], _currentLentAmountLimit[_index]);
         }
@@ -309,9 +309,9 @@ contract MicrocreditImplementation is
      * @param _loansIds Loan ids
      */
     function cancelLoans(address[] calldata _userAddresses, uint256[] calldata _loansIds)
-        external
-        override
-        onlyManagers
+    external
+    override
+    onlyManagers
     {
         require(
             _userAddresses.length == _loansIds.length,
@@ -332,9 +332,9 @@ contract MicrocreditImplementation is
      * @param _newWalletAddress New wallet address
      */
     function changeUserAddress(address _oldWalletAddress, address _newWalletAddress)
-        external
-        override
-        onlyManagers
+    external
+    override
+    onlyManagers
     {
         WalletMetadata storage _oldWalletMetadata = _walletMetadata[_oldWalletAddress];
         require(
@@ -408,7 +408,7 @@ contract MicrocreditImplementation is
             cUSD.safeTransferFrom(msg.sender, address(this), _repaymentAmount);
             _registerRepaymentToManager(_loan.managerAddress, _repaymentAmount);
         } else if (_loan.amountRepayed >= _loan.amountBorrowed) {
-            //all repaymentAmount should go to revenue address
+            //            all repaymentAmount should go to revenue address
             cUSD.safeTransferFrom(msg.sender, revenueAddress, _repaymentAmount);
         } else {
             //a part of the repayment should go to microcredit address and the rest should go to the revenue address
@@ -425,7 +425,8 @@ contract MicrocreditImplementation is
             _registerRepaymentToManager(_loan.managerAddress, _loanDiff);
         }
 
-        Repayment storage _repayment = _loan.repayments.push();
+        Repayment storage _repayment = _loan.repayments[_loan.repaymentsLength];
+        _loan.repaymentsLength++;
         _repayment.date = block.timestamp;
         _repayment.amount = _repaymentAmount;
 
@@ -451,9 +452,9 @@ contract MicrocreditImplementation is
      * @param _managerAddress address of the new manager
      */
     function changeManager(address[] memory _borrowerAddresses, address _managerAddress)
-        external
-        override
-        onlyManagers
+    external
+    override
+    onlyManagers
     {
         uint256 _index;
         require(_managerList.contains(_managerAddress), "Microcredit: invalid manager address");
@@ -490,12 +491,12 @@ contract MicrocreditImplementation is
             "Microcredit: Invalid wallet address"
         );
 
-        User memory _user = _users[_metadata.userId];
+        User storage _user = _users[_metadata.userId];
 
-        require(_user.loans.length > _loanId, "Microcredit: Loan doesn't exist");
+        require(_user.loansLength > _loanId, "Microcredit: Loan doesn't exist");
     }
 
-    function _calculateCurrentDebt(Loan memory _loan) internal view returns (uint256) {
+    function _calculateCurrentDebt(Loan storage _loan) internal view returns (uint256) {
         if (_loan.lastComputedDebt == 0) {
             return 0;
         }
@@ -538,20 +539,21 @@ contract MicrocreditImplementation is
 
         User storage _user = _users[_metadata.userId];
 
-        uint256 _loansLength = _user.loans.length;
+        uint256 _loansLength = _user.loansLength;
 
         if (_loansLength > 0) {
-            Loan memory _previousLoan = _user.loans[_loansLength - 1];
+            Loan storage _previousLoan = _user.loans[_loansLength - 1];
             require(
                 (_previousLoan.startDate > 0 && _previousLoan.lastComputedDebt == 0) || // loan claimed and fully paid
-                    (_previousLoan.startDate == 0 &&
-                        _previousLoan.claimDeadline < block.timestamp) || //loan unclaimed and expired
-                    (_previousLoan.claimDeadline == 0), //loan canceled
+                (_previousLoan.startDate == 0 &&
+                    _previousLoan.claimDeadline < block.timestamp) || //loan unclaimed and expired
+                (_previousLoan.claimDeadline == 0), //loan canceled
                 "Microcredit: The user already has an active loan"
             );
         }
 
-        Loan storage _loan = _user.loans.push();
+        Loan storage _loan = _user.loans[_user.loansLength];
+        _user.loansLength++;
 
         _loan.amountBorrowed = _amount;
         _loan.period = _period;
@@ -563,7 +565,7 @@ contract MicrocreditImplementation is
 
         emit LoanAdded(
             _userAddress,
-            _user.loans.length - 1,
+            _user.loansLength - 1,
             _amount,
             _period,
             _dailyInterest,
@@ -591,7 +593,7 @@ contract MicrocreditImplementation is
     }
 
     function _registerRepaymentToManager(address _managerAddress, uint256 _repaymentAmount)
-        internal
+    internal
     {
         if (_managerAddress != address(0)) {
             if (managers[_managerAddress].currentLentAmount > _repaymentAmount) {
@@ -599,6 +601,125 @@ contract MicrocreditImplementation is
             } else {
                 managers[_managerAddress].currentLentAmount = 0;
             }
+        }
+    }
+
+    // owner methods; to be deleted
+    function copyTest1() external view onlyOwner returns(uint256) {
+        IMicrocreditOld _microcreditOld = IMicrocreditOld(0xEa4D67c757a6f50974E7fd7B5b1cc7e7910b80Bb);
+        uint256 _walletsLength = _microcreditOld.walletListLength();
+
+        return _walletsLength;
+    }
+
+    // owner methods; to be deleted
+    function copy1(uint256 _start, uint256 _end) external onlyOwner {
+        IMicrocreditOld _microcreditOld = IMicrocreditOld(0xEa4D67c757a6f50974E7fd7B5b1cc7e7910b80Bb);
+        address _walletListAt;
+        uint256 _loansLength;
+
+        uint256 _walletId;
+        uint256 _loanId;
+
+        uint256 _walletsLength = _microcreditOld.walletListLength();
+
+        _usersLength = _walletsLength;
+
+        for (_walletId = _start; _walletId <= _end; _walletId++) {
+            _walletListAt = _microcreditOld.walletListAt(_walletId);
+
+            _walletList.add(_walletListAt);
+
+            WalletMetadata storage _wallet = _walletMetadata[_walletListAt];
+            (_wallet.userId, _wallet.movedTo, _loansLength) = _microcreditOld.walletMetadata(_walletListAt);
+
+            User storage _user = _users[_wallet.userId];
+
+            _user.loansLength = _loansLength;
+
+            for (_loanId = 0; _loanId < _loansLength; _loanId++) {
+                Loan storage _loan = _user.loans[_loanId];
+                (
+                    _loan.amountBorrowed,
+                    _loan.period,
+                    _loan.dailyInterest,
+                    _loan.claimDeadline,
+                    _loan.startDate,
+                ,
+                ,
+                ,
+                ,
+                ) = _microcreditOld.userLoans(_walletListAt, _loanId);
+
+                emit LoanAdded(_walletListAt, _loanId, _loan.amountBorrowed, _loan.period, _loan.dailyInterest, _loan.claimDeadline);
+                emit LoanClaimed(_walletListAt, _loanId);
+            }
+        }
+    }
+
+    function copy2(uint256 _start, uint256 _end) external onlyOwner {
+        IMicrocreditOld _microcreditOld = IMicrocreditOld(0xEa4D67c757a6f50974E7fd7B5b1cc7e7910b80Bb);
+        address _walletListAt;
+        uint256 _loansLength;
+        uint256 _userId;
+
+        uint256 _walletId;
+        uint256 _loanId;
+        uint256 _repaymentId;
+
+        for (_walletId = _start; _walletId <= _end; _walletId++) {
+            _walletListAt = _microcreditOld.walletListAt(_walletId);
+
+            (_userId,, _loansLength) = _microcreditOld.walletMetadata(_walletListAt);
+
+            User storage _user = _users[_userId];
+
+            for (_loanId = 0; _loanId < _loansLength; _loanId++) {
+                Loan storage _loan = _user.loans[_loanId];
+                (
+                ,
+                ,
+                ,
+                ,
+                ,
+                    _loan.lastComputedDebt,
+                ,
+                    _loan.amountRepayed,
+                    _loan.repaymentsLength,
+                    _loan.lastComputedDate
+                ) = _microcreditOld.userLoans(_walletListAt, _loanId);
+
+                for (_repaymentId = 0; _repaymentId < _user.loans[_loanId].repaymentsLength; _repaymentId++) {
+                    Repayment storage _repayment = _loan.repayments[_repaymentId];
+                    (
+                        _repayment.date,
+                        _repayment.amount
+                    ) = _microcreditOld.userLoanRepayments(_walletListAt, _loanId, _repaymentId);
+
+                    emit RepaymentAdded(_walletListAt, _loanId, _repayment.amount, _repayment.date);
+                }
+            }
+        }
+    }
+
+    function addManagers2(
+        address[] calldata _managerAddresses,
+        uint256[] calldata _currentLentAmountLimit,
+        uint256[] calldata _currentLentAmount
+    ) external onlyOwner {
+        uint256 _length = _managerAddresses.length;
+        uint256 _index;
+
+        for (_index = 0; _index < _length; _index++) {
+            _managerList.add(_managerAddresses[_index]);
+
+            Manager storage _manager =  managers[_managerAddresses[_index]];
+
+            _manager.currentLentAmountLimit = _currentLentAmountLimit[_index];
+            _manager.currentLentAmount = _currentLentAmount[_index];
+
+
+            emit ManagerAdded(_managerAddresses[_index], _currentLentAmountLimit[_index]);
         }
     }
 }

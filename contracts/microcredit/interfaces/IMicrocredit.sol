@@ -11,7 +11,8 @@ interface IMicrocredit {
     }
 
     struct User {
-        Loan[] loans;
+        uint256 loansLength;
+        mapping(uint256 => Loan) loans;
     }
 
     struct Manager {
@@ -32,7 +33,8 @@ interface IMicrocredit {
         uint256 startDate;                // the timestamp the user claimed the amountBorrowed
         uint256 lastComputedDebt;
         uint256 amountRepayed;
-        Repayment[] repayments;
+        uint256 repaymentsLength;
+        mapping(uint256 => Repayment) repayments;
         uint256 lastComputedDate;
         address managerAddress;
     }
