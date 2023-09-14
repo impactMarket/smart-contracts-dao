@@ -14,7 +14,7 @@ abstract contract MicrocreditStorageV1 is IMicrocredit {
     IERC20 public override cUSD;
 
     uint256 internal  _usersLength;
-    mapping(uint256 => User) internal _users;
+    mapping(uint256 => UserOld) internal _usersOld;
 
     mapping(address => WalletMetadata) internal _walletMetadata;
     EnumerableSet.AddressSet internal _walletList;
@@ -25,4 +25,6 @@ abstract contract MicrocreditStorageV1 is IMicrocredit {
     mapping(address => Manager) public override managers;
 
     IDonationMiner public override donationMiner;
+
+    mapping(uint256 => User) internal _users;
 }

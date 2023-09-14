@@ -128,11 +128,6 @@ async function test() {
   // console.log(2);
 
 
-  console.log('1')
-  await Microcredit.connect(owner).copy1(MicrocreditOld.address);
-  console.log('2')
-
-
 
 
   // let metadata: any;
@@ -175,6 +170,25 @@ async function test() {
   //     console.log('------------------------------------------------------------------------------');
   //   }
   // }
+
+  let managerLength  = await MicrocreditOld.managerListLength();
+
+  let managersAddresses = [];
+  let managersCurrentLentAmountLimit = [];
+  let managersCurrentLentAmount = [];
+
+  for(let index = 0; index<managerLength; index++) {
+    let managerAddress = await MicrocreditOld.managerListAt(index);
+    let manager = await MicrocreditOld.managers(managerAddress);
+
+    managersAddresses.push(managerAddress);
+    managersCurrentLentAmountLimit.push(manager.currentLentAmountLimit);
+    managersCurrentLentAmount.push(manager.currentLentAmount);
+  }
+
+  console.log(managersAddresses)
+  console.log(managersCurrentLentAmountLimit)
+  console.log(managersCurrentLentAmount)
 }
 
 

@@ -5,6 +5,23 @@ import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/t
 import "../../donationMiner/interfaces/IDonationMiner.sol";
 
 interface IMicrocredit {
+    struct UserOld {
+        LoanOld[] loans;
+    }
+
+    struct LoanOld {
+        uint256 amountBorrowed;
+        uint256 period;                   // the number of seconds after a loan should be fully repaid
+        uint256 dailyInterest;
+        uint256 claimDeadline;
+        uint256 startDate;                // the timestamp the user claimed the amountBorrowed
+        uint256 lastComputedDebt;
+        uint256 amountRepayed;
+        Repayment[] repayments;
+        uint256 lastComputedDate;
+        address managerAddress;
+    }
+
     struct WalletMetadata {
         uint256 userId;
         address movedTo;

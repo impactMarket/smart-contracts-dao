@@ -101,7 +101,7 @@ describe.only("Microcredit", () => {
 			await deploy();
 		});
 
-		it.only("should have correct values", async function () {
+		it("should have correct values", async function () {
 			(await Microcredit.owner()).should.eq(owner.address);
 			(await Microcredit.getVersion()).should.eq(1);
 			(await Microcredit.cUSD()).should.eq(cUSD.address);
