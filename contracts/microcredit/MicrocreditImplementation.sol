@@ -17,11 +17,7 @@ contract MicrocreditImplementation is
     using SafeERC20Upgradeable for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    event ManagerAdded(
-        address indexed managerAddress,
-        address indexed tokenAddress,
-        uint256 currentLentAmountLimit
-    );
+    event ManagerAdded(address indexed managerAddress, address indexed tokenAddress, uint256 currentLentAmountLimit);
 
     event ManagerRemoved(address indexed managerAddress);
 
@@ -65,14 +61,6 @@ contract MicrocreditImplementation is
         _;
     }
 
-    modifier onlyAdmin() {
-        require(
-            msg.sender == 0xa34737409091eBD0726A3Ab5863Fc7Ee9243Edab,
-            "Microcredit: caller is not admin"
-        );
-        _;
-    }
-
     /**
      * @notice Used to initialize the Microcredit contract
      *
@@ -104,14 +92,14 @@ contract MicrocreditImplementation is
      * @return loansLength           the number of the user's loans
      */
     function walletMetadata(address _userAddress)
-        external
-        view
-        override
-        returns (
-            uint256 userId,
-            address movedTo,
-            uint256 loansLength
-        )
+    external
+    view
+    override
+    returns (
+        uint256 userId,
+        address movedTo,
+        uint256 loansLength
+    )
     {
         WalletMetadata memory _metadata = _walletMetadata[_userAddress];
 
@@ -386,9 +374,9 @@ contract MicrocreditImplementation is
      * @param _loansIds Loan ids
      */
     function cancelLoans(address[] calldata _userAddresses, uint256[] calldata _loansIds)
-        external
-        override
-        onlyManagers
+    external
+    override
+    onlyManagers
     {
         require(
             _userAddresses.length == _loansIds.length,
@@ -409,9 +397,9 @@ contract MicrocreditImplementation is
      * @param _newWalletAddress New wallet address
      */
     function changeUserAddress(address _oldWalletAddress, address _newWalletAddress)
-        external
-        override
-        onlyManagers
+    external
+    override
+    onlyManagers
     {
         WalletMetadata storage _oldWalletMetadata = _walletMetadata[_oldWalletAddress];
         require(
