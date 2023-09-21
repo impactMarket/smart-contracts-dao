@@ -88,6 +88,13 @@ contract ImpactLabsVestingImplementation is
     }
 
     /**
+     * @notice Updates the address of impactLabs
+     */
+    function updateImpactLabs(address _impactLabs) external override onlyOwner {
+        impactLabs = _impactLabs;
+    }
+
+    /**
      * @notice Transfers PACT to ImpactLabs
      * it will not be transferred PACTs to ImpactLabs until
      * the entire amount payed in advance will be covered

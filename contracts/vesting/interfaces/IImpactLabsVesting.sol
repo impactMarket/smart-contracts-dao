@@ -13,6 +13,7 @@ interface IImpactLabsVesting {
     function donationMiner() external view returns (IDonationMiner);
     function nextRewardPeriod() external view returns (uint256);
     function advancePayment() external view returns (uint256);
+    function updateImpactLabs(address _impactLabs) external;
     function claim() external;
     function transfer(IERC20 _token, address _to, uint256 _amount) external;
 }
