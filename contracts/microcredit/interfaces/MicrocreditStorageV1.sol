@@ -22,9 +22,12 @@ abstract contract MicrocreditStorageV1 is IMicrocredit {
     EnumerableSet.AddressSet internal _managerList;
     address public override revenueAddress;
 
-    mapping(address => Manager) public override managers;
+    mapping(address => Manager) internal _managers;
 
     IDonationMiner public override donationMiner;
 
     mapping(uint256 => User) internal _users;
+
+    mapping(address => Token) internal _tokens;
+    EnumerableSet.AddressSet internal _tokenList;
 }

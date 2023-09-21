@@ -113,8 +113,6 @@ describe("Treasury", () => {
 		);
 
 		const tokenFactory = await ethers.getContractFactory("TokenMock");
-
-		const fake = await tokenFactory.deploy("fake", "fake");
 		mUSD = await tokenFactory.deploy("mUSD", "mUSD");
 		cTKN = await tokenFactory.deploy("cTKN", "cTKN");
 	});

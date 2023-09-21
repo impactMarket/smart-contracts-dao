@@ -24,7 +24,7 @@ async function main() {
 
 
 	const microcreditV2 = await upgrades.upgradeProxy(
-		'0x323a1E64A978AbCe3e29Ba0419dB3541aa7023dd',
+		'0xD40F2C57981AC7e98aAf893F8De259C9B74DAd77',
 		await ethers.getContractFactory("MicrocreditImplementation"));
 	console.log("Microcredit upgraded");
 }
