@@ -13,20 +13,20 @@ const ownerAddress = "0xa34737409091eBD0726A3Ab5863Fc7Ee9243Edab";
 
 
 async function main() {
-	// const microcredit = await upgrades.deployProxy(
-	// 	await ethers.getContractFactory("MicrocreditImplementation"),
-	// 	[cUSDAddress, ownerAddress],
-	// 	{verifySourceCode: true}
-	// );
-	// await microcredit.deployed();
-	// console.log("microcredit deployed to:", await microcredit.address);
+	const microcredit = await upgrades.deployProxy(
+		await ethers.getContractFactory("MicrocreditImplementation"),
+		[cUSDAddress, ownerAddress],
+		{verifySourceCode: true}
+	);
+	await microcredit.deployed();
+	console.log("microcredit deployed to:", await microcredit.address);
 
 
 
-	const microcreditV2 = await upgrades.upgradeProxy(
-		'0xD40F2C57981AC7e98aAf893F8De259C9B74DAd77',
-		await ethers.getContractFactory("MicrocreditImplementation"));
-	console.log("Microcredit upgraded");
+	// const microcreditV2 = await upgrades.upgradeProxy(
+	// 	'0xD40F2C57981AC7e98aAf893F8De259C9B74DAd77',
+	// 	await ethers.getContractFactory("MicrocreditImplementation"));
+	// console.log("Microcredit upgraded");
 }
 
 main();
