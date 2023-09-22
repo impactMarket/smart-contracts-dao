@@ -892,6 +892,11 @@ contract MicrocreditImplementation is
             "Microcredit: The user has just made a repayment"
         );
 
+        require(
+            _newLastComputedDate >= _loan.startDate && _newLastComputedDate <= block.timestamp,
+            "Microcredit: Invalid newLastComputedDate"
+        );
+
         _loan.period = _newPeriod;
         _loan.dailyInterest = _newDailyInterest;
         _loan.lastComputedDebt = _newLastComputedDebt;
