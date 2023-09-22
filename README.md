@@ -49,6 +49,6 @@ $ yarn test
 | `/learnAndEarn/LearnAndEarnProxy.sol`                                 | LearnAndEarnProxy                                                            | 0x496F7De1420ad52659e257C7Aa3f79a995274dbc |
 | `/deposit/DepositProxy.sol`                                           | DepositProxy                                                                 | 0xF9163f95DF91ad103659cb7C8936Aceb63c7E410 |
 | `/microcredit/ImpactMultiSigProxyAdmin.sol`                           | Contract that is admin for some proxies                                      | 0x5e7912f6C052D4D7ec8D6a14330c0c3a538e3f2B |
-| `/microcredit/MicrocreditRevenueProxy.sol`                            | Contract that receive all intrest from the microcredit contract              | 0xa75D14c212df85F24ead896747cb1688C1F889D7 |
+| `/microcredit/MicrocreditRevenueProxy.sol`                            | Contract that receive all interest from the microcredit contract             | 0xa75D14c212df85F24ead896747cb1688C1F889D7 |
 | `/microcredit/MicrocreditProxy.sol`                                   | Proxy for the microcredit pilot                                              | 0xEa4D67c757a6f50974E7fd7B5b1cc7e7910b80Bb |
 
