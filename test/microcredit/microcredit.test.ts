@@ -3416,4 +3416,513 @@ describe.only("Microcredit", () => {
 				.withArgs(user2.address, manager1.address);
 		});
 	});
+
+	describe("Microcredit - editLoan", () => {
+		const manager1currentLentAmountLimit = toEther(1000);
+
+		before(async function () {});
+
+		beforeEach(async () => {
+			await deploy();
+
+			await Microcredit.connect(owner).addManagers(
+				[manager1.address],
+				[manager1currentLentAmountLimit]
+			);
+		});
+
+		it("Should not editLoan if not owner", async function () {
+			await Microcredit.connect(manager1)
+				.editLoan(user1.address, 0, 0, 0, 0, 0, 0)
+				.should.be.rejectedWith("Ownable: caller is not the owner");
+		});
+
+		it("Should not editLoan if invalid loan user", async function () {
+			const amount = toEther(100);
+			const period = sixMonth;
+			const dailyInterest = toEther(0.2);
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
+
+			await Microcredit.connect(manager1).addLoan(
+				user1.address,
+				amount,
+				period,
+				dailyInterest,
+				claimDeadline
+			).should.be.fulfilled;
+
+			await Microcredit.connect(owner)
+				.editLoan(user2.address, 0, 0, 0, 0, 0, 0)
+				.should.be.rejectedWith("Microcredit: Invalid wallet address");
+		});
+
+		it("Should not editLoan if invalid loan id", async function () {
+			const amount = toEther(100);
+			const period = sixMonth;
+			const dailyInterest = toEther(0.2);
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
+
+			await Microcredit.connect(manager1).addLoan(
+				user1.address,
+				amount,
+				period,
+				dailyInterest,
+				claimDeadline
+			).should.be.fulfilled;
+
+			await Microcredit.connect(owner)
+				.editLoan(user1.address, 1, 0, 0, 0, 0, 0)
+				.should.be.rejectedWith("Microcredit: Loan doesn't exist");
+		});
+
+		it("Should not editLoan if loan not claimed", async function () {
+			const amount = toEther(100);
+			const period = sixMonth;
+			const dailyInterest = toEther(0.2);
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
+
+			await Microcredit.connect(manager1).addLoan(
+				user1.address,
+				amount,
+				period,
+				dailyInterest,
+				claimDeadline
+			).should.be.fulfilled;
+
+			await Microcredit.connect(owner)
+				.editLoan(user1.address, 0, 0, 0, 0, 0, 0)
+				.should.be.rejectedWith(
+					"Microcredit: Loan is not active, use cancel method instead"
+				);
+		});
+
+		it("Should not editLoan if invalid currentLastComputeDate", async function () {
+			const amount = toEther(100);
+			const period = sixMonth;
+			const dailyInterest = toEther(0.2);
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
+
+			const expectedDebt = getDebtOnDayX(amount, dailyInterest, 1);
+
+			const repaymentAmount1 = toEther(50);
+
+			await Microcredit.connect(manager1).addLoan(
+				user1.address,
+				amount,
+				period,
+				dailyInterest,
+				claimDeadline
+			).should.be.fulfilled;
+
+			await Microcredit.connect(user1).claimLoan(0).should.be.fulfilled;
+
+			const statDate = await getCurrentBlockTimestamp();
+
+			await advanceNSecondsAndBlock(3600 * 25);
+
+			let loanBefore = await Microcredit.userLoans(user1.address, 0);
+			loanBefore.period.should.eq(period);
+			loanBefore.dailyInterest.should.eq(dailyInterest);
+			loanBefore.currentDebt.should.eq(expectedDebt);
+			loanBefore.lastComputedDebt.should.eq(
+				getDebtOnDayX(amount, dailyInterest, 0)
+			);
+			loanBefore.lastComputedDate.should.eq(statDate);
+
+			await cUSD
+				.connect(user1)
+				.approve(Microcredit.address, repaymentAmount1);
+
+			await Microcredit.connect(user1).repayLoan(0, repaymentAmount1)
+				.should.be.fulfilled;
+
+			let loanAfter1 = await Microcredit.userLoans(user1.address, 0);
+			loanAfter1.period.should.eq(period);
+			loanAfter1.dailyInterest.should.eq(dailyInterest);
+			loanAfter1.currentDebt.should.eq(
+				expectedDebt.sub(repaymentAmount1)
+			);
+			loanAfter1.lastComputedDebt.should.eq(
+				expectedDebt.sub(repaymentAmount1)
+			);
+			loanAfter1.lastComputedDate.should.eq(statDate + 24 * 3600);
+
+			await Microcredit.connect(owner)
+				.editLoan(
+					user1.address,
+					0,
+					loanBefore.lastComputedDate,
+					0,
+					0,
+					0,
+					0
+				)
+				.should.be.rejectedWith(
+					"Microcredit: The user has just made a repayment"
+				);
+		});
+
+		it("Should editLoan just after claiming", async function () {
+			const amount = toEther(100);
+			const period = sixMonth;
+			const dailyInterest = toEther(0.2);
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
+
+			const expectedDebt = getDebtOnDayX(amount, dailyInterest, 1);
+
+			await Microcredit.connect(manager1).addLoan(
+				user1.address,
+				amount,
+				period,
+				dailyInterest,
+				claimDeadline
+			).should.be.fulfilled;
+
+			await Microcredit.connect(user1).claimLoan(0).should.be.fulfilled;
+
+			const statDate = await getCurrentBlockTimestamp();
+
+			await advanceNSecondsAndBlock(3600 * 25);
+
+			let loanAfter1 = await Microcredit.userLoans(user1.address, 0);
+			loanAfter1.period.should.eq(period);
+			loanAfter1.dailyInterest.should.eq(dailyInterest);
+			loanAfter1.currentDebt.should.eq(expectedDebt);
+			loanAfter1.lastComputedDebt.should.eq(
+				getDebtOnDayX(amount, dailyInterest, 0)
+			);
+			loanAfter1.lastComputedDate.should.eq(statDate);
+
+
+			const newPeriod = oneMonth;
+			const newDailyInterest = toEther(0.1);
+			const newLastComputedDebt = loanAfter1.lastComputedDebt.add(
+				toEther(10)
+			);
+			const newLastComputedDate = statDate;
+
+			await Microcredit.connect(owner)
+				.editLoan(
+					user1.address,
+					0,
+					loanAfter1.lastComputedDate,
+					newPeriod,
+					newDailyInterest,
+					newLastComputedDebt,
+					newLastComputedDate
+				)
+				.should.emit(Microcredit, "LoanEdited")
+				.withArgs(
+					user1.address,
+					0,
+					newPeriod,
+					newDailyInterest,
+					newLastComputedDebt,
+					newLastComputedDate
+				);
+
+			let loanAfter2 = await Microcredit.userLoans(user1.address, 0);
+			loanAfter2.amountBorrowed.should.eq(amount);
+			loanAfter2.startDate.should.eq(statDate);
+			loanAfter2.amountRepayed.should.eq(0);
+			loanAfter2.repaymentsLength.should.eq(0);
+			loanAfter2.managerAddress.should.eq(manager1.address);
+
+			loanAfter2.period.should.eq(newPeriod);
+			loanAfter2.dailyInterest.should.eq(newDailyInterest);
+			loanAfter2.lastComputedDebt.should.eq(newLastComputedDebt);
+			loanAfter2.lastComputedDate.should.eq(newLastComputedDate);
+			loanAfter2.currentDebt.should.eq(
+				getDebtOnDayX(newLastComputedDebt, newDailyInterest, 0)
+			);
+		});
+
+		it("Should editLoan just after a repayment", async function () {
+			const amount = toEther(100);
+			const period = sixMonth;
+			const dailyInterest = toEther(0.2);
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
+
+			const expectedDebt = getDebtOnDayX(amount, dailyInterest, 1);
+
+			const repaymentAmount1 = toEther(50);
+
+			await Microcredit.connect(manager1).addLoan(
+				user1.address,
+				amount,
+				period,
+				dailyInterest,
+				claimDeadline
+			).should.be.fulfilled;
+
+			await Microcredit.connect(user1).claimLoan(0).should.be.fulfilled;
+
+			const statDate = await getCurrentBlockTimestamp();
+
+			await advanceNSecondsAndBlock(3600 * 25);
+
+			let loanBefore = await Microcredit.userLoans(user1.address, 0);
+			loanBefore.period.should.eq(period);
+			loanBefore.dailyInterest.should.eq(dailyInterest);
+			loanBefore.currentDebt.should.eq(expectedDebt);
+			loanBefore.lastComputedDebt.should.eq(
+				getDebtOnDayX(amount, dailyInterest, 0)
+			);
+			loanBefore.lastComputedDate.should.eq(statDate);
+
+			await cUSD
+				.connect(user1)
+				.approve(Microcredit.address, repaymentAmount1);
+
+			await Microcredit.connect(user1).repayLoan(0, repaymentAmount1)
+				.should.be.fulfilled;
+
+			let loanAfter1 = await Microcredit.userLoans(user1.address, 0);
+			loanAfter1.period.should.eq(period);
+			loanAfter1.dailyInterest.should.eq(dailyInterest);
+			loanAfter1.currentDebt.should.eq(
+				expectedDebt.sub(repaymentAmount1)
+			);
+			loanAfter1.lastComputedDebt.should.eq(
+				expectedDebt.sub(repaymentAmount1)
+			);
+			loanAfter1.lastComputedDate.should.eq(statDate + 24 * 3600);
+
+			const newPeriod = oneMonth;
+			const newDailyInterest = toEther(0.1);
+			const newLastComputedDebt = loanAfter1.lastComputedDebt.add(
+				toEther(10)
+			);
+			const newLastComputedDate = statDate;
+
+			await Microcredit.connect(owner)
+				.editLoan(
+					user1.address,
+					0,
+					loanAfter1.lastComputedDate,
+					newPeriod,
+					newDailyInterest,
+					newLastComputedDebt,
+					newLastComputedDate
+				)
+				.should.emit(Microcredit, "LoanEdited")
+				.withArgs(
+					user1.address,
+					0,
+					newPeriod,
+					newDailyInterest,
+					newLastComputedDebt,
+					newLastComputedDate
+				);
+
+			let loanAfter2 = await Microcredit.userLoans(user1.address, 0);
+			loanAfter2.amountBorrowed.should.eq(amount);
+			loanAfter2.startDate.should.eq(statDate);
+			loanAfter2.amountRepayed.should.eq(repaymentAmount1);
+			loanAfter2.repaymentsLength.should.eq(1);
+			loanAfter2.managerAddress.should.eq(manager1.address);
+
+			loanAfter2.period.should.eq(newPeriod);
+			loanAfter2.dailyInterest.should.eq(newDailyInterest);
+			loanAfter2.lastComputedDebt.should.eq(newLastComputedDebt);
+			loanAfter2.lastComputedDate.should.eq(newLastComputedDate);
+			loanAfter2.currentDebt.should.eq(
+				getDebtOnDayX(newLastComputedDebt, newDailyInterest, 0)
+			);
+		});
+
+		it("Should editLoan a day after a repayment", async function () {
+			const amount = toEther(100);
+			const period = sixMonth;
+			const dailyInterest = toEther(0.2);
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
+
+			const expectedDebt = getDebtOnDayX(amount, dailyInterest, 1);
+
+			const repaymentAmount1 = toEther(50);
+
+			await Microcredit.connect(manager1).addLoan(
+				user1.address,
+				amount,
+				period,
+				dailyInterest,
+				claimDeadline
+			).should.be.fulfilled;
+
+			await Microcredit.connect(user1).claimLoan(0).should.be.fulfilled;
+
+			const statDate = await getCurrentBlockTimestamp();
+
+			await advanceNSecondsAndBlock(3600 * 25);
+
+			let loanBefore = await Microcredit.userLoans(user1.address, 0);
+			loanBefore.period.should.eq(period);
+			loanBefore.dailyInterest.should.eq(dailyInterest);
+			loanBefore.currentDebt.should.eq(expectedDebt);
+			loanBefore.lastComputedDebt.should.eq(
+				getDebtOnDayX(amount, dailyInterest, 0)
+			);
+			loanBefore.lastComputedDate.should.eq(statDate);
+
+			await cUSD
+				.connect(user1)
+				.approve(Microcredit.address, repaymentAmount1);
+
+			await Microcredit.connect(user1).repayLoan(0, repaymentAmount1)
+				.should.be.fulfilled;
+
+
+			await advanceNSecondsAndBlock(3600 * 25);
+
+			let loanAfter1 = await Microcredit.userLoans(user1.address, 0);
+			loanAfter1.period.should.eq(period);
+			loanAfter1.dailyInterest.should.eq(dailyInterest);
+			loanAfter1.lastComputedDebt.should.eq(
+				expectedDebt.sub(repaymentAmount1)
+			);
+			loanAfter1.lastComputedDate.should.eq(statDate + 24 * 3600);
+			loanAfter1.currentDebt.should.eq(
+				getDebtOnDayX(expectedDebt.sub(repaymentAmount1), dailyInterest, 0)
+			);
+
+			const newPeriod = oneMonth;
+			const newDailyInterest = toEther(0.1);
+			const newLastComputedDebt = loanAfter1.lastComputedDebt.add(
+				toEther(10)
+			);
+			const newLastComputedDate = statDate + 24 * 3600;
+
+			await Microcredit.connect(owner)
+				.editLoan(
+					user1.address,
+					0,
+					loanAfter1.lastComputedDate,
+					newPeriod,
+					newDailyInterest,
+					newLastComputedDebt,
+					newLastComputedDate
+				)
+				.should.emit(Microcredit, "LoanEdited")
+				.withArgs(
+					user1.address,
+					0,
+					newPeriod,
+					newDailyInterest,
+					newLastComputedDebt,
+					newLastComputedDate
+				);
+
+			let loanAfter2 = await Microcredit.userLoans(user1.address, 0);
+			loanAfter2.amountBorrowed.should.eq(amount);
+			loanAfter2.startDate.should.eq(statDate);
+			loanAfter2.amountRepayed.should.eq(repaymentAmount1);
+			loanAfter2.repaymentsLength.should.eq(1);
+			loanAfter2.managerAddress.should.eq(manager1.address);
+
+			loanAfter2.period.should.eq(newPeriod);
+			loanAfter2.dailyInterest.should.eq(newDailyInterest);
+			loanAfter2.lastComputedDebt.should.eq(newLastComputedDebt);
+			loanAfter2.lastComputedDate.should.eq(newLastComputedDate);
+			loanAfter2.currentDebt.should.eq(
+				getDebtOnDayX(newLastComputedDebt, newDailyInterest, 0)
+			);
+		});
+
+		it("Should editLoan after many days after a repayment", async function () {
+			const amount = toEther(100);
+			const period = sixMonth;
+			const dailyInterest = toEther(0.2);
+			const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
+
+			const expectedDebt = getDebtOnDayX(amount, dailyInterest, 1);
+
+			const repaymentAmount1 = toEther(50);
+
+			await Microcredit.connect(manager1).addLoan(
+				user1.address,
+				amount,
+				period,
+				dailyInterest,
+				claimDeadline
+			).should.be.fulfilled;
+
+			await Microcredit.connect(user1).claimLoan(0).should.be.fulfilled;
+
+			const statDate = await getCurrentBlockTimestamp();
+
+			await advanceNSecondsAndBlock(3600 * 25);
+
+			let loanBefore = await Microcredit.userLoans(user1.address, 0);
+			loanBefore.period.should.eq(period);
+			loanBefore.dailyInterest.should.eq(dailyInterest);
+			loanBefore.currentDebt.should.eq(expectedDebt);
+			loanBefore.lastComputedDebt.should.eq(
+				getDebtOnDayX(amount, dailyInterest, 0)
+			);
+			loanBefore.lastComputedDate.should.eq(statDate);
+
+			await cUSD
+				.connect(user1)
+				.approve(Microcredit.address, repaymentAmount1);
+
+			await Microcredit.connect(user1).repayLoan(0, repaymentAmount1)
+				.should.be.fulfilled;
+
+
+			await advanceNSecondsAndBlock(50 * 3600 * 24 + 1);
+
+			let loanAfter1 = await Microcredit.userLoans(user1.address, 0);
+			loanAfter1.period.should.eq(period);
+			loanAfter1.dailyInterest.should.eq(dailyInterest);
+			loanAfter1.lastComputedDebt.should.eq(
+				expectedDebt.sub(repaymentAmount1)
+			);
+			loanAfter1.lastComputedDate.should.eq(statDate + 24 * 3600);
+			loanAfter1.currentDebt.should.eq(
+				getDebtOnDayX(expectedDebt.sub(repaymentAmount1), dailyInterest, 49)
+			);
+
+			const newPeriod = oneMonth;
+			const newDailyInterest = toEther(0.1);
+			const newLastComputedDebt = loanAfter1.lastComputedDebt.add(
+				toEther(10)
+			);
+			const newLastComputedDate = statDate + 20 * 24 * 3600;
+
+			await Microcredit.connect(owner)
+				.editLoan(
+					user1.address,
+					0,
+					loanAfter1.lastComputedDate,
+					newPeriod,
+					newDailyInterest,
+					newLastComputedDebt,
+					newLastComputedDate
+				)
+				.should.emit(Microcredit, "LoanEdited")
+				.withArgs(
+					user1.address,
+					0,
+					newPeriod,
+					newDailyInterest,
+					newLastComputedDebt,
+					newLastComputedDate
+				);
+
+			let loanAfter2 = await Microcredit.userLoans(user1.address, 0);
+			loanAfter2.amountBorrowed.should.eq(amount);
+			loanAfter2.startDate.should.eq(statDate);
+			loanAfter2.amountRepayed.should.eq(repaymentAmount1);
+			loanAfter2.repaymentsLength.should.eq(1);
+			loanAfter2.managerAddress.should.eq(manager1.address);
+
+			loanAfter2.period.should.eq(newPeriod);
+			loanAfter2.dailyInterest.should.eq(newDailyInterest);
+			loanAfter2.lastComputedDebt.should.eq(newLastComputedDebt);
+			loanAfter2.lastComputedDate.should.eq(newLastComputedDate);
+			loanAfter2.currentDebt.should.eq(
+				getDebtOnDayX(newLastComputedDebt, newDailyInterest, 30)
+			);
+		});
+	});
 });
