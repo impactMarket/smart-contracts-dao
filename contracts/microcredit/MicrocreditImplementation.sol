@@ -35,6 +35,15 @@ contract MicrocreditImplementation is
         uint256 claimDeadline
     );
 
+    event LoanEdited(
+        address indexed _userAddress,
+        uint256 _loanId,
+        uint256 _newPeriod,
+        uint256 _newDailyInterest,
+        uint256 _newLastComputedDebt,
+        uint256 _newLastComputedDate
+    );
+
     event LoanCanceled(address indexed userAddress, uint256 loanId);
 
     event UserAddressChanged(address indexed oldWalletAddress, address indexed newWalletAddress);
@@ -724,5 +733,78 @@ contract MicrocreditImplementation is
                 _managerTokenLimit.currentLentAmount = 0;
             }
         }
+    }
+
+    // OWNER METHODS FOR EMERGENCY SITUATION
+
+    function setManagers(
+        address[] calldata _userAddresses,
+        uint256[] calldata _loanIds,
+        address[] calldata _managersAddresses
+    ) external onlyOwner {
+        require(
+            _userAddresses.length == _managersAddresses.length,
+            "Microcredit: calldata information arity mismatch"
+        );
+
+        uint256 _index;
+
+        for (_index = 0; _index < _userAddresses.length; _index++) {
+            WalletMetadata memory _metadata = _walletMetadata[_userAddresses[_index]];
+
+            _users[_metadata.userId].loans[_loanIds[_index]].managerAddress = _managersAddresses[
+                        _index
+                ];
+        }
+    }
+
+    /**
+     * @notice Used by owner to fix when an active loan has wrong params
+     *
+     * @param _currentLastComputedDate   used as a control mechanism
+                                            - if this value doesn't match the loan current lastComputedDate,
+                                            it means that the user has made a repayment in the mean time
+                                            so this call is not valid any more
+     */
+    function editLoan(
+        address _userAddress,
+        uint256 _loanId,
+        uint256 _currentLastComputedDate,
+        uint256 _newPeriod,
+        uint256 _newDailyInterest,
+        uint256 _newLastComputedDebt,
+        uint256 _newLastComputedDate
+    ) external onlyOwner {
+        _checkUserLoan(_userAddress, _loanId);
+
+        WalletMetadata memory _metadata = _walletMetadata[_userAddress];
+        User storage _user = _users[_metadata.userId];
+        Loan storage _loan = _user.loans[_loanId];
+
+        require(_loan.startDate > 0, "Microcredit: Loan is not active, use cancel method instead");
+
+        require(
+            _loan.lastComputedDate == _currentLastComputedDate,
+            "Microcredit: The user has just made a repayment"
+        );
+
+        require(
+            _newLastComputedDate >= _loan.startDate && _newLastComputedDate <= block.timestamp,
+            "Microcredit: Invalid newLastComputedDate"
+        );
+
+        _loan.period = _newPeriod;
+        _loan.dailyInterest = _newDailyInterest;
+        _loan.lastComputedDebt = _newLastComputedDebt;
+        _loan.lastComputedDate = _newLastComputedDate;
+
+        emit LoanEdited(
+            _userAddress,
+            _loanId,
+            _newPeriod,
+            _newDailyInterest,
+            _newLastComputedDebt,
+            _newLastComputedDate
+        );
     }
 }
