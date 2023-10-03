@@ -427,10 +427,10 @@ contract DonationMinerImplementation is
     }
 
     /**
-     * @notice Transfers cUSD tokens to the treasury contract
+     * @notice Transfers tokens to the treasury contract
      *
      * @param _token address of the token
-     * @param _amount Amount of cUSD tokens to deposit.
+     * @param _amount Amount of tokens to deposit.
      * @param _delegateAddress the address that will claim the reward for the donation
      */
     function donate(
@@ -438,10 +438,7 @@ contract DonationMinerImplementation is
         uint256 _amount,
         address _delegateAddress
     ) external override whenNotPaused whenStarted nonReentrant {
-        require(
-            _token == cUSD || treasury.isToken(address(_token)),
-            "DonationMiner::donate: Invalid token"
-        );
+        require(treasury.isToken(address(_token)), "DonationMiner::donate: Invalid token");
 
         _token.safeTransferFrom(msg.sender, address(treasury), _amount);
 
@@ -449,11 +446,11 @@ contract DonationMinerImplementation is
     }
 
     /**
-     * @notice Transfers cUSD tokens from the _from to the treasury contract
+     * @notice Transfers tokens from the _from to the treasury contract
      *
      * @param _from address of the user
      * @param _token address of the token
-     * @param _amount Amount of cUSD tokens to deposit.
+     * @param _amount Amount of tokens to deposit.
      * @param _delegateAddress the address that will claim the reward for the donation
      */
     function donateFrom(
@@ -463,9 +460,7 @@ contract DonationMinerImplementation is
         address _delegateAddress
     ) external override onlyRecurringCron whenNotPaused whenStarted nonReentrant {
         require(
-            _token == cUSD || treasury.isToken(address(_token)),
-            "DonationMiner: Invalid token"
-        );
+            treasury.isToken(address(_token)), "DonationMiner: Invalid token");
 
         _token.safeTransferFrom(_from, address(treasury), _amount);
 
@@ -477,7 +472,7 @@ contract DonationMinerImplementation is
      *
      * @param _community address of the community
      * @param _token address of the token
-     * @param _amount amount of cUSD tokens to deposit
+     * @param _amount amount of tokens to deposit
      * @param _delegateAddress the address that will claim the reward for the donation
      */
     function donateToCommunity(
@@ -503,9 +498,9 @@ contract DonationMinerImplementation is
     }
 
     /**
-     * @notice Transfers cUSD tokens to the treasury contract
+     * @notice Virtual donate tokens to the treasury contract
      *
-     * @param _amount Amount of cUSD tokens to deposit.
+     * @param _amount Amount of tokens to fake deposit.
      * @param _delegateAddress the address that will claim the reward for the donation
      */
     function donateVirtual(uint256 _amount, address _delegateAddress)
