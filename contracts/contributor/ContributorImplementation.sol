@@ -7,6 +7,8 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "./interfaces/ContributorStorageV1.sol";
 
+import "hardhat/console.sol";
+
 contract ContributorImplementation is
     Initializable,
     OwnableUpgradeable,
@@ -43,30 +45,34 @@ contract ContributorImplementation is
     /**
      * @notice Used to initialize a new Contributor contract
      *
-     * @param _PACT             The address of the PACT token
-     * @param _cUSD             The address of the cUSD token
-     * @param _treasury         The address of the Treasury contract
-     * @param _claimPeriod      The period of time between two contributor's claim
+     * @param _PACT                     The address of the PACT token
+     * @param _uniswapQuoter            The address of the UniswapQuoter
+     * @param _exchangePathCUSDToPACT   The exchange path
+     * @param _claimDelay              The period of time between two contributor's claim
      */
     function initialize(
         IERC20 _PACT,
-        IERC20 _cUSD,
-        ITreasury _treasury,
-        uint256 _claimPeriod
+        IQuoter _uniswapQuoter,
+        bytes calldata _exchangePathCUSDToPACT,
+        uint256 _claimDelay
     ) public initializer {
         __Ownable_init();
         __Pausable_init();
         __ReentrancyGuard_init();
 
         PACT = _PACT;
-        cUSD = _cUSD;
-        treasury = _treasury;
+        uniswapQuoter = _uniswapQuoter;
+        exchangePathCUSDToPACT = _exchangePathCUSDToPACT;
 
+        console.log('BASE_PERIOD', BASE_PERIOD);
+        console.log('claimDelay', _claimDelay);
+        console.log('_claimDelay / BASE_PERIOD', _claimDelay / BASE_PERIOD);
+        console.log('_claimDelay / BASE_PERIOD', _claimDelay / BASE_PERIOD);
         require(
-            _claimPeriod > 0 && (_claimPeriod / BASE_PERIOD) * BASE_PERIOD == claimPeriod,
-            "ContributorImplementation: Invalid claimPeriod"
+            _claimDelay > 0 && (_claimDelay / BASE_PERIOD) * BASE_PERIOD == _claimDelay,
+            "ContributorImplementation: Invalid claimDelay"
         );
-        claimPeriod = _claimPeriod;
+        claimDelay = _claimDelay;
     }
 
     /**
@@ -137,23 +143,19 @@ contract ContributorImplementation is
         );
 
         require(
-            _contributor.lastClaimTime + claimPeriod <= block.timestamp,
+            _contributor.lastClaimTime + claimDelay <= block.timestamp,
             "ContributorImplementation: You don't have funds to claim yet"
         );
 
-        uint256 _periodsToClaim = (block.timestamp - _contributor.lastClaimTime) / claimPeriod;
-        uint256 _onePeriodReward = _contributor.dailyPaymentAmount * (claimPeriod / BASE_PERIOD);
+        uint256 _periodsToClaim = (block.timestamp - _contributor.lastClaimTime) / claimDelay;
+        uint256 _onePeriodReward = _contributor.dailyPaymentAmount * (claimDelay / BASE_PERIOD);
 
         uint256 _paymentAmount = _periodsToClaim * _onePeriodReward;
 
-        _contributor.lastClaimTime = _contributor.lastClaimTime + _periodsToClaim * claimPeriod;
+        _contributor.lastClaimTime = _contributor.lastClaimTime + _periodsToClaim * claimDelay;
 
-        (, , , , , , bytes memory _exchangePathToPACT) = treasury.tokens(address(cUSD));
 
-        uint256 _convertedAmount = treasury.lpSwap().uniswapQuoter().quoteExactInput(
-            _exchangePathToPACT,
-            _paymentAmount
-        );
+        uint256 _convertedAmount =  uniswapQuoter.quoteExactInput(exchangePathCUSDToPACT, 1e18) * _paymentAmount / 1e18;
 
         _contributor.claimedAmount += _convertedAmount;
 
@@ -168,20 +170,18 @@ contract ContributorImplementation is
             "ContributorImplementation: Invalid contributor"
         );
 
-        if (_contributor.lastClaimTime + claimPeriod > block.timestamp) {
+        if (_contributor.lastClaimTime + claimDelay > block.timestamp) {
             return 0;
         }
 
-        uint256 _periodsToClaim = (block.timestamp - _contributor.lastClaimTime) / claimPeriod;
-        uint256 _onePeriodReward = _contributor.dailyPaymentAmount * (claimPeriod / BASE_PERIOD);
+        uint256 _periodsToClaim = (block.timestamp - _contributor.lastClaimTime) / claimDelay;
+        uint256 _onePeriodReward = _contributor.dailyPaymentAmount * (claimDelay / BASE_PERIOD);
 
         uint256 _paymentAmount = _periodsToClaim * _onePeriodReward;
 
-        _contributor.lastClaimTime = _contributor.lastClaimTime + _periodsToClaim * claimPeriod;
+        _contributor.lastClaimTime = _contributor.lastClaimTime + _periodsToClaim * claimDelay;
 
-        (, , , , , , bytes memory _exchangePathToPACT) = treasury.tokens(address(cUSD));
 
-        return
-            treasury.lpSwap().uniswapQuoter().quoteExactInput(_exchangePathToPACT, _paymentAmount);
+        return uniswapQuoter.quoteExactInput(exchangePathCUSDToPACT, 1e18) * _paymentAmount / 1e18;
     }
 }
