@@ -62,6 +62,7 @@ interface IDonationMiner {
     function staking() external view returns (IStaking);
     function airdropV3() external view returns (IAirdropV3);
     function microcredit() external view returns (IMicrocredit);
+    function recurringCronAddress() external view returns (address);
     function rewardPeriodSize() external view returns (uint256);
     function decayNumerator() external view returns (uint256);
     function decayDenominator() external view returns (uint256);
@@ -112,9 +113,11 @@ interface IDonationMiner {
     function updateStaking(IStaking _newStaking) external;
     function updateAirdropV3(IAirdropV3 _newAirdropV3) external;
     function updateMicrocredit(IMicrocredit newMicrocredit) external;
+    function updateRecurringCronAddress(address newRecurringCronAddress) external;
     function donate(IERC20 _token, uint256 _amount, address _delegateAddress) external;
     function donateToCommunity(ICommunity _community, IERC20 _token, uint256 _amount, address _delegateAddress) external;
     function donateVirtual(uint256 _amount, address _delegateAddress) external;
+    function donateFrom(address from, IERC20 token, uint256 amount, address delegateAddress) external;
     function claimRewards() external;
     function claimRewardsPartial(uint256 _lastPeriodNumber) external;
     function stakeRewards() external;
