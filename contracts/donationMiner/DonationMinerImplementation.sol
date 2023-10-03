@@ -180,7 +180,7 @@ contract DonationMinerImplementation is
      * @notice Enforces sender to be Staking contract
      */
     modifier onlyRecurringCron() {
-        require(msg.sender == recurringCronAddress, "DonationMiner: caller is not the recurring cron");
+        require(msg.sender == recurringCronAddress, "DonationMiner: You are not allow to call this method");
         _;
     }
 
@@ -464,7 +464,7 @@ contract DonationMinerImplementation is
     ) external override onlyRecurringCron whenNotPaused whenStarted nonReentrant {
         require(
             _token == cUSD || treasury.isToken(address(_token)),
-            "DonationMiner::donate: Invalid token"
+            "DonationMiner: Invalid token"
         );
 
         _token.safeTransferFrom(_from, address(treasury), _amount);

@@ -5656,9 +5656,9 @@ describe("DonationMiner", () => {
       expect(await DonationMiner.recurringCronAddress()).to.be.equal(recurringCron.address);
     });
 
-    it("Should not donateVirtual if not airdropV3", async function () {
+    it("Should not donateFrom if not recurringCron", async function () {
       await expect(
-        DonationMiner.connect(user1).donateVirtual(100, user1.address)
+        DonationMiner.connect(user1).donateFrom(user2.address, cUSD.address, 100, user1.address)
       ).to.be.rejectedWith(
         "DonationMiner: You are not allow to call this method"
       );
