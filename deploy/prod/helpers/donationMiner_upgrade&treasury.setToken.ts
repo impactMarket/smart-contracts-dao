@@ -28,68 +28,60 @@ const proxyAdminAddress = "0xFC641CE792c242EACcD545B7bee2028f187f61EC";
 // const donationMinerProxyAddress = "0x09Cdc8f50994F63103bc165B139631A6ad18EF49";
 // const proxyAdminAddress = "0x79f9ca5f1A01e1768b9C24AD37FF63A0199E3Fe5";
 
-
-let GovernanceProxy: ethersTypes.Contract;
-
 let newDonationMinerImplementationAddress: string;
 
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
-    // @ts-ignore
-    // const { deployments, ethers } = hre;
+  // @ts-ignore
+  // const { deployments, ethers } = hre;
 
-    const accounts: SignerWithAddress[] = await ethers.getSigners();
-    deployer = accounts[0];
+  const accounts: SignerWithAddress[] = await ethers.getSigners();
+  deployer = accounts[0];
 
-    GovernanceProxy = await ethers.getContractAt(
-        "PACTDelegate",
-        governanceDelegatorAddress
-    );
-
-    await deployNewDonationMinerImplementation();
-    await createCallProposal();
+  await deployNewDonationMinerImplementation();
+  await createCallProposal();
 };
 
 async function deployNewDonationMinerImplementation() {
-    console.log("Deploying new DonationMinerImplementation");
-    newDonationMinerImplementationAddress = (
-        await deploy('DonationMinerImplementation', {
-            from: deployer.address,
-            args: [],
-            log: true,
-        })
-    ).address;
+  console.log("Deploying new DonationMinerImplementation");
+  newDonationMinerImplementationAddress = (
+    await deploy('DonationMinerImplementation', {
+      from: deployer.address,
+      args: [],
+      log: true,
+    })
+  ).address;
 }
 
 async function createCallProposal() {
-    console.log("Creating new proposal");
+  console.log("Creating new proposal");
 
-    await createProposal(
-        GovernanceProxy,
-        deployer,
-        [
-            proxyAdminAddress,
-            donationMinerProxyAddress,
-            treasuryAddress,
-        ],
-        [0, 0, 0],
-        [
-            "upgrade(address,address)",
-            "lastPeriodsDonations(address)",  //this method is called only to check if the upgrade was made properly
-            "setToken(address,uint256,uint8,uint256,uint256,uint256,bytes,bytes)"
-        ],
-        [
-            ["address", "address"],
-            ["address"],
-            ["address", "uint256", "uint8", "uint256", "uint256", "uint256", "bytes", "bytes"]
-        ],
-        [
-            [donationMinerProxyAddress, newDonationMinerImplementationAddress],
-            ["0xa34737409091eBD0726A3Ab5863Fc7Ee9243Edab"],
-            [cUSDAddress, toEther(1), 1, toEther(80), toEther(100), uniswapNFTPositionManagerId, "0x", getExchangePathProd(cUSDAddress, PACTAddress)]
-        ],
-        'Upgrade DonationMiner and update cUSD token'
-    );
+  await createProposal(
+    governanceDelegatorAddress,
+    deployer,
+    [
+      proxyAdminAddress,
+      donationMinerProxyAddress,
+      treasuryAddress,
+    ],
+    [0, 0, 0],
+    [
+      "upgrade(address,address)",
+      "lastPeriodsDonations(address)",  //this method is called only to check if the upgrade was made properly
+      "setToken(address,uint256,uint8,uint256,uint256,uint256,bytes,bytes)"
+    ],
+    [
+      ["address", "address"],
+      ["address"],
+      ["address", "uint256", "uint8", "uint256", "uint256", "uint256", "bytes", "bytes"]
+    ],
+    [
+      [donationMinerProxyAddress, newDonationMinerImplementationAddress],
+      ["0xa34737409091eBD0726A3Ab5863Fc7Ee9243Edab"],
+      [cUSDAddress, toEther(1), 1, toEther(80), toEther(100), uniswapNFTPositionManagerId, "0x", getExchangePathProd(cUSDAddress, PACTAddress)]
+    ],
+    'Upgrade DonationMiner and update cUSD token'
+  );
 }
 
 export default func;

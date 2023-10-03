@@ -50,7 +50,7 @@ export async function createAndExecuteProposal(
 	description: string = ""
 ) {
 	await createProposal(
-		governanceDelegator,
+		governanceDelegator.address,
 		proposer,
 		targets,
 		values,
@@ -74,7 +74,7 @@ export async function createAndExecuteProposal(
 }
 
 export async function createProposal(
-	governanceDelegator: ethersTypes.Contract,
+	governanceDelegatorAddress: string,
 	proposer: SignerWithAddress,
 	targets: string[],
 	values: any[],
@@ -105,6 +105,11 @@ export async function createProposal(
 			)
 		);
 	}
+
+	const governanceDelegator = await ethers.getContractAt(
+		"PACTDelegate",
+		governanceDelegatorAddress
+	);
 
 	console.log("***************************************");
 	console.log(proposer.address);

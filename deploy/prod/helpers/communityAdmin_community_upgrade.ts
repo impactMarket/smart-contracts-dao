@@ -73,7 +73,7 @@ async function createUpgradeImplementation() {
 
 	await new Promise((resolve) => setTimeout(resolve, 6000));
 	await createProposal(
-		GovernanceProxy,
+		governanceDelegatorAddress,
 		deployer,
 		[
 			proxyAdminAddress,
