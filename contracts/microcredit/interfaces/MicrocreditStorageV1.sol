@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.4;
 
-import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./IMicrocredit.sol";
 
 /**
@@ -30,4 +29,7 @@ abstract contract MicrocreditStorageV1 is IMicrocredit {
 
     mapping(address => Token) internal _tokens;
     EnumerableSet.AddressSet internal _tokenList;
+
+    IUniswapRouter02 public override uniswapRouter;
+    IQuoter public override uniswapQuoter;
 }

@@ -19,8 +19,7 @@ contract MicrocreditImplementation is
 
     event ManagerAdded(
         address indexed managerAddress,
-        address indexed tokenAddress,
-        uint256 currentLentAmountLimit
+        uint256 lentAmountLimit
     );
 
     event ManagerRemoved(address indexed managerAddress);
@@ -159,26 +158,9 @@ contract MicrocreditImplementation is
         external
         view
         override
-        returns (ManagerTokenLimit[] memory)
+        returns (Manager memory)
     {
-        Manager storage _manager = _managers[_managerAddress];
-
-        ManagerTokenLimit[] memory limits = new ManagerTokenLimit[](_tokenList.length());
-
-        for (uint256 i = 0; i < _tokenList.length(); i++) {
-            limits[i] = _manager.tokenLimits[_tokenList.at(i)];
-        }
-
-        return limits;
-    }
-
-    function managerTokens(address _managerAddress, address _tokenAddress)
-        external
-        view
-        override
-        returns (ManagerTokenLimit memory)
-    {
-        return _managers[_managerAddress].tokenLimits[_tokenAddress];
+        return _managers[_managerAddress];
     }
 
     /**
@@ -204,7 +186,6 @@ contract MicrocreditImplementation is
 
     function userLoans(address _userAddress, uint256 _loanId)
         external
-        view
         override
         returns (UserLoanResponse memory userLoan)
     {
@@ -225,6 +206,10 @@ contract MicrocreditImplementation is
         userLoan.lastComputedDate = _loan.lastComputedDate;
         userLoan.managerAddress = _loan.managerAddress;
         userLoan.tokenAddress = _loan.tokenAddress;
+        userLoan.tokenAmountBorrowed = _loan.tokenAmountBorrowed;
+        userLoan.tokenAmountRepayed = _loan.tokenAmountRepayed;
+        userLoan.tokenLastComputedDebt = _getTokenAmountFromExactCUSDOutput(_loan.tokenAddress, userLoan.lastComputedDebt);
+        userLoan.tokenCurrentDebt = _getTokenAmountFromExactCUSDOutput(_loan.tokenAddress, userLoan.currentDebt);
     }
 
     function userLoanRepayments(
@@ -252,6 +237,14 @@ contract MicrocreditImplementation is
         donationMiner = _newDonationMiner;
     }
 
+    function updateUniswapQuoter(IQuoter _newUniswapQuoter) external override onlyOwner {
+        uniswapQuoter = _newUniswapQuoter;
+    }
+
+    function updateUniswapRouter(IUniswapRouter02 _newUniswapRouter) external override onlyOwner {
+        uniswapRouter = _newUniswapRouter;
+    }
+
     /**
      * @notice Adds managers
      *
@@ -259,24 +252,19 @@ contract MicrocreditImplementation is
      */
     function addManagers(
         address[] calldata _managerAddresses,
-        address[] calldata _tokenAddresses,
-        uint256[] calldata _currentLentAmountLimit
+        uint256[] calldata _lentAmountLimits
     ) external override onlyOwner {
         uint256 _length = _managerAddresses.length;
         uint256 _index;
 
         for (_index = 0; _index < _length; _index++) {
-            require(_tokens[_tokenAddresses[_index]].active == true, "Microcredit: invalid token");
             _managerList.add(_managerAddresses[_index]);
 
-            _managers[_managerAddresses[_index]]
-                .tokenLimits[_tokenAddresses[_index]]
-                .currentLentAmountLimit = _currentLentAmountLimit[_index];
+            _managers[_managerAddresses[_index]].lentAmountLimit = _lentAmountLimits[_index];
 
             emit ManagerAdded(
                 _managerAddresses[_index],
-                _tokenAddresses[_index],
-                _currentLentAmountLimit[_index]
+                _lentAmountLimits[_index]
             );
         }
     }
@@ -288,18 +276,14 @@ contract MicrocreditImplementation is
      */
     function removeManagers(address[] calldata _managerAddresses) external override onlyOwner {
         uint256 _length = _managerAddresses.length;
-        uint256 _tokenListLength = _tokenList.length();
         uint256 _managerId;
-        uint256 _tokenId;
 
         for (_managerId = 0; _managerId < _length; _managerId++) {
+            require(_managers[_managerAddresses[_managerId]].lentAmount == 0, 'Microcredit: manager has ongoing loans');
             _managerList.remove(_managerAddresses[_managerId]);
 
-            for (_tokenId = 0; _tokenId < _tokenListLength; _tokenId++) {
-                _managers[_managerAddresses[_managerId]]
-                    .tokenLimits[_tokenList.at(_tokenId)]
-                    .currentLentAmountLimit = 0;
-            }
+            _managers[_managerAddresses[_managerId]].lentAmountLimit = 0;
+
             emit ManagerRemoved(_managerAddresses[_managerId]);
         }
     }
@@ -452,7 +436,12 @@ contract MicrocreditImplementation is
         _loan.lastComputedDebt = (_loan.amountBorrowed * (1e18 + _loan.dailyInterest / 100)) / 1e18;
         _loan.lastComputedDate = block.timestamp;
 
-        IERC20(_loan.tokenAddress).safeTransfer(msg.sender, _loan.amountBorrowed);
+        _loan.tokenAmountBorrowed = _getTokenAmountFromExactCUSDOutput(
+            _loan.tokenAddress,
+            _loan.amountBorrowed
+        );
+
+        IERC20(_loan.tokenAddress).safeTransfer(msg.sender, _loan.tokenAmountBorrowed);
 
         emit LoanClaimed(msg.sender, _loanId);
     }
@@ -461,10 +450,10 @@ contract MicrocreditImplementation is
      * @notice Repay a loan
      *
      * @param _loanId Loan ID
-     * @param _repaymentAmount Repayment amount
+     * @param _tokenRepaymentAmount Repayment amount
      */
-    function repayLoan(uint256 _loanId, uint256 _repaymentAmount) external override nonReentrant {
-        require(_repaymentAmount > 0, "Microcredit: Invalid amount");
+    function repayLoan(uint256 _loanId, uint256 _tokenRepaymentAmount) external override nonReentrant {
+        require(_tokenRepaymentAmount > 0, "Microcredit: Invalid amount");
 
         _checkUserLoan(msg.sender, _loanId);
 
@@ -477,8 +466,11 @@ contract MicrocreditImplementation is
 
         uint256 _currentDebt = _calculateCurrentDebt(_loan);
 
+        uint256 _repaymentAmount = _getCUSDAmountFromExactTokenInput(_loan.tokenAddress, _tokenRepaymentAmount);
+
         if (_currentDebt < _repaymentAmount) {
             _repaymentAmount = _currentDebt;
+            _tokenRepaymentAmount = _getTokenAmountFromExactCUSDOutput(_loan.tokenAddress, _repaymentAmount);
         }
 
         if (_loan.amountRepayed + _repaymentAmount <= _loan.amountBorrowed) {
@@ -486,46 +478,41 @@ contract MicrocreditImplementation is
             IERC20(_loan.tokenAddress).safeTransferFrom(
                 msg.sender,
                 address(this),
-                _repaymentAmount
+                _tokenRepaymentAmount
             );
-            _registerRepaymentToManager(_loan.managerAddress, _loan.tokenAddress, _repaymentAmount);
+            _registerRepaymentToManager(_loan.managerAddress, _repaymentAmount);
         } else if (_loan.amountRepayed >= _loan.amountBorrowed) {
             //all repaymentAmount should go to revenue address
             IERC20(_loan.tokenAddress).safeTransferFrom(
                 msg.sender,
                 revenueAddress,
-                _repaymentAmount
+                _tokenRepaymentAmount
             );
         } else {
             //a part of the repayment should go to microcredit address and the rest should go to the revenue address
 
             uint256 _loanDiff = _loan.amountBorrowed - _loan.amountRepayed;
+            uint256 _tokenLoanDiff = _getTokenAmountFromExactCUSDOutput(_loan.tokenAddress, _loanDiff);
 
-            if (revenueAddress == address(0)) {
-                IERC20(_loan.tokenAddress).safeTransferFrom(
-                    msg.sender,
-                    address(this),
-                    _repaymentAmount
-                );
-            } else {
-                IERC20(_loan.tokenAddress).safeTransferFrom(msg.sender, address(this), _loanDiff);
-                IERC20(_loan.tokenAddress).safeTransferFrom(
-                    msg.sender,
-                    revenueAddress,
-                    _repaymentAmount - _loanDiff
-                );
-            }
+            IERC20(_loan.tokenAddress).safeTransferFrom(msg.sender, address(this), _tokenLoanDiff);
+            IERC20(_loan.tokenAddress).safeTransferFrom(
+                msg.sender,
+                revenueAddress,
+                _tokenRepaymentAmount - _tokenLoanDiff
+            );
 
-            _registerRepaymentToManager(_loan.managerAddress, _loan.tokenAddress, _loanDiff);
+            _registerRepaymentToManager(_loan.managerAddress, _loanDiff);
         }
 
         Repayment storage _repayment = _loan.repayments[_loan.repaymentsLength];
         _loan.repaymentsLength++;
         _repayment.date = block.timestamp;
         _repayment.amount = _repaymentAmount;
+        _repayment.tokenAmount = _tokenRepaymentAmount;
 
         _loan.lastComputedDebt = _currentDebt - _repaymentAmount;
         _loan.amountRepayed += _repaymentAmount;
+        _loan.tokenAmountRepayed += _tokenRepaymentAmount;
 
         uint256 _days = (block.timestamp - _loan.lastComputedDate) / 86400; //86400 = 1 day in seconds
 
@@ -563,16 +550,44 @@ contract MicrocreditImplementation is
         }
     }
 
+
     /**
      * @notice Adds a new token
      *
      * @param _tokenAddress address of the token to be added
      */
-    function addToken(address _tokenAddress) external override onlyOwner {
+    function addToken(address _tokenAddress, address[] calldata _exchangeTokens, bytes[] calldata _exchangePaths) external override onlyOwner {
+        require(
+            _exchangeTokens.length == _exchangePaths.length,
+            "Microcredit: calldata information arity mismatch"
+        );
+
         require(_tokens[_tokenAddress].active == false, "Microcredit: Token already exists");
 
-        _tokens[_tokenAddress].active = true;
         _tokenList.add(_tokenAddress);
+
+        Token storage _token = _tokens[_tokenAddress];
+
+        _token.active = true;
+
+        uint256 _length = _exchangePaths.length;
+        while(_length > 0) {
+            _length--;
+
+            require(
+                uniswapQuoter.quoteExactInput(_exchangePaths[_length], 1e18) > 0,
+                "Microcredit: invalid exchangePath"
+            );
+
+            _token.exchangePaths[_exchangeTokens[_length]] = _exchangePaths[_length];
+
+            _token.exchangePathList.add(_exchangeTokens[_length]);
+        }
+
+        require(
+            _token.exchangePaths[address(cUSD)].length > 0 || _tokenAddress == address(cUSD),
+            'Microcredit: exchangePath to cUSD must be set'
+        );
 
         emit TokenAdded(_tokenAddress);
     }
@@ -582,7 +597,7 @@ contract MicrocreditImplementation is
      *
      * @param _tokenAddress address of the token to be added
      */
-    function removeToken(address _tokenAddress) external override onlyOwner {
+    function inactivateToken(address _tokenAddress) external override onlyOwner {
         require(_tokens[_tokenAddress].active == true, "Microcredit: Token is not active");
 
         _tokens[_tokenAddress].active = false;
@@ -651,9 +666,9 @@ contract MicrocreditImplementation is
         require(_metadata.movedTo == address(0), "Microcredit: The user has been moved");
 
         Manager storage _manager = _managers[msg.sender];
+
         require(
-            _manager.tokenLimits[_tokenAddress].currentLentAmount + _amount <=
-                _manager.tokenLimits[_tokenAddress].currentLentAmountLimit,
+            _manager.lentAmount + _amount <= _manager.lentAmountLimit,
             "Microcredit: Manager don't have enough funds to borrow this amount"
         );
 
@@ -686,7 +701,7 @@ contract MicrocreditImplementation is
         _loan.claimDeadline = _claimDeadline;
         _loan.managerAddress = msg.sender;
 
-        _manager.tokenLimits[_tokenAddress].currentLentAmount += _amount;
+        _manager.lentAmount += _amount;
 
         emit LoanAdded(
             _userAddress,
@@ -713,30 +728,48 @@ contract MicrocreditImplementation is
 
         Manager storage _manager = _managers[_loan.managerAddress];
 
-        _manager.tokenLimits[_loan.tokenAddress].currentLentAmount -= _loan.amountBorrowed;
+        _manager.lentAmount -= _loan.amountBorrowed;
 
         emit LoanCanceled(_userAddress, _loanId);
     }
 
     function _registerRepaymentToManager(
         address _managerAddress,
-        address _tokenAddress,
         uint256 _repaymentAmount
     ) internal {
-        ManagerTokenLimit storage _managerTokenLimit = _managers[_managerAddress].tokenLimits[
-            _tokenAddress
-        ];
+        Manager storage _manager = _managers[_managerAddress];
         if (_managerAddress != address(0)) {
-            if (_managerTokenLimit.currentLentAmount > _repaymentAmount) {
-                _managerTokenLimit.currentLentAmount -= _repaymentAmount;
+            if (_manager.lentAmount > _repaymentAmount) {
+                _manager.lentAmount -= _repaymentAmount;
             } else {
-                _managerTokenLimit.currentLentAmount = 0;
+                _manager.lentAmount = 0;
             }
         }
     }
 
-    // OWNER METHODS FOR EMERGENCY SITUATION
+    function _getCUSDAmountFromExactTokenInput(address _tokenAddress, uint256 _tokenAmount) internal returns(uint256) {
+        if (_tokenAddress == address(cUSD)) {
+            return _tokenAmount;
+        } else {
+            return uniswapQuoter.quoteExactInput(
+                _tokens[_tokenAddress].exchangePaths[address(cUSD)],
+                _tokenAmount
+            );
+        }
+    }
 
+    function _getTokenAmountFromExactCUSDOutput(address _tokenAddress, uint256 _cUSDAmount) internal returns(uint256) {
+        if (_tokenAddress == address(cUSD)) {
+            return _cUSDAmount;
+        } else {
+            return uniswapQuoter.quoteExactOutput(
+                _tokens[_tokenAddress].exchangePaths[address(cUSD)],
+                _cUSDAmount
+            );
+        }
+    }
+
+    // OWNER METHODS FOR EMERGENCY SITUATION
     function setManagers(
         address[] calldata _userAddresses,
         uint256[] calldata _loanIds,
@@ -806,5 +839,22 @@ contract MicrocreditImplementation is
             _newLastComputedDebt,
             _newLastComputedDate
         );
+    }
+
+    function initV2() external onlyOwner {
+        uint256 _userId;
+        uint256 _loanId;
+
+        for (_userId = 0; _userId < _usersLength; _userId++) {
+            for (_loanId = 0; _loanId < _users[_userId].loansLength; _loanId++) {
+                _users[_userId].loans[_loanId].tokenAddress = address(cUSD);
+            }
+        }
+
+        if (!_tokenList.contains(address(cUSD))) {
+            _tokenList.add(address(cUSD));
+            _tokens[address(cUSD)].active = true;
+            emit TokenAdded(address(cUSD));
+        }
     }
 }
