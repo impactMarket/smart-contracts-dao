@@ -177,6 +177,14 @@ contract DonationMinerImplementation is
     }
 
     /**
+     * @notice Enforces sender to be Staking contract
+     */
+    modifier onlyRecurringCron() {
+        require(msg.sender == recurringCronAddress, "DonationMiner: You are not allow to call this method");
+        _;
+    }
+
+    /**
      * @notice Used to initialize a new DonationMiner contract
      *
      * @param _cUSD                 Address of the cUSD token
@@ -232,7 +240,7 @@ contract DonationMinerImplementation is
      * @notice Returns the current implementation version
      */
     function getVersion() external pure override returns (uint256) {
-        return 4;
+        return 5;
     }
 
     /**
@@ -410,10 +418,19 @@ contract DonationMinerImplementation is
     }
 
     /**
-     * @notice Transfers cUSD tokens to the treasury contract
+     * @notice Updates recurring cron address address
+     *
+     * @param _newRecurringCronAddress  new address of recurring cron
+     */
+    function updateRecurringCronAddress(address _newRecurringCronAddress) external override onlyOwner {
+        recurringCronAddress = _newRecurringCronAddress;
+    }
+
+    /**
+     * @notice Transfers tokens to the treasury contract
      *
      * @param _token address of the token
-     * @param _amount Amount of cUSD tokens to deposit.
+     * @param _amount Amount of tokens to deposit.
      * @param _delegateAddress the address that will claim the reward for the donation
      */
     function donate(
@@ -421,12 +438,31 @@ contract DonationMinerImplementation is
         uint256 _amount,
         address _delegateAddress
     ) external override whenNotPaused whenStarted nonReentrant {
-        require(
-            _token == cUSD || treasury.isToken(address(_token)),
-            "DonationMiner::donate: Invalid token"
-        );
+        require(treasury.isToken(address(_token)), "DonationMiner::donate: Invalid token");
 
         _token.safeTransferFrom(msg.sender, address(treasury), _amount);
+
+        _addDonation(_delegateAddress, _token, _amount, address(treasury));
+    }
+
+    /**
+     * @notice Transfers tokens from the _from to the treasury contract
+     *
+     * @param _from address of the user
+     * @param _token address of the token
+     * @param _amount Amount of tokens to deposit.
+     * @param _delegateAddress the address that will claim the reward for the donation
+     */
+    function donateFrom(
+        address _from,
+        IERC20 _token,
+        uint256 _amount,
+        address _delegateAddress
+    ) external override onlyRecurringCron whenNotPaused whenStarted nonReentrant {
+        require(
+            treasury.isToken(address(_token)), "DonationMiner: Invalid token");
+
+        _token.safeTransferFrom(_from, address(treasury), _amount);
 
         _addDonation(_delegateAddress, _token, _amount, address(treasury));
     }
@@ -436,7 +472,7 @@ contract DonationMinerImplementation is
      *
      * @param _community address of the community
      * @param _token address of the token
-     * @param _amount amount of cUSD tokens to deposit
+     * @param _amount amount of tokens to deposit
      * @param _delegateAddress the address that will claim the reward for the donation
      */
     function donateToCommunity(
@@ -462,9 +498,9 @@ contract DonationMinerImplementation is
     }
 
     /**
-     * @notice Transfers cUSD tokens to the treasury contract
+     * @notice Virtual donate tokens to the treasury contract
      *
-     * @param _amount Amount of cUSD tokens to deposit.
+     * @param _amount Amount of tokens to fake deposit.
      * @param _delegateAddress the address that will claim the reward for the donation
      */
     function donateVirtual(uint256 _amount, address _delegateAddress)

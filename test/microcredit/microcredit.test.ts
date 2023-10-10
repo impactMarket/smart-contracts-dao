@@ -17,7 +17,7 @@ import { BigNumber } from "@ethersproject/bignumber";
 chai.use(chaiAsPromised);
 should();
 
-describe.only("Microcredit", () => {
+describe("Microcredit", () => {
 	let deployer: SignerWithAddress;
 	let owner: SignerWithAddress;
 	let manager1: SignerWithAddress;
