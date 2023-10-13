@@ -117,6 +117,16 @@ export function getExchangePath(
 	}
 }
 
+export function getExchangePath2(
+	token0: string,
+	token1: string,
+) {
+
+		return ethers.utils.solidityPack(
+			["address", "uint24", "address"],
+			[token0, 10000, token1]);
+}
+
 export function getExchangePathProd(
 	token0Address: string,
 	token1Address: string
@@ -254,6 +264,21 @@ export async function getExactInput(
 			amount
 		)
 	).amountOut;
+}
+
+export async function getExactOutput(
+	token0: ethersTypes.Contract,
+	token1: ethersTypes.Contract,
+	amount: BigNumber
+): Promise<BigNumber> {
+	const Quoter = await ethers.getContractAt(QuoterABI, uniswapQuoterAddress);
+
+	return (
+		await Quoter.callStatic.quoteExactOutput(
+			getExchangePath(token0, token1),
+			amount
+		)
+	).amountIn;
 }
 
 export async function position(tokenId: number) {

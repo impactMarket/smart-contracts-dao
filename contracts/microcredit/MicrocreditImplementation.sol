@@ -7,6 +7,8 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "./interfaces/MicrocreditStorageV1.sol";
 
+import "hardhat/console.sol";
+
 contract MicrocreditImplementation is
     Initializable,
     OwnableUpgradeable,
@@ -85,7 +87,7 @@ contract MicrocreditImplementation is
         __ReentrancyGuard_init();
 
         cUSD = IERC20(_cUSDAddress);
-        revenueAddress = _revenueAddress;
+        revenueAddress = _revenueAddress == address(0) ? address(this) : _revenueAddress;
     }
 
     /**
@@ -206,7 +208,13 @@ contract MicrocreditImplementation is
         userLoan.lastComputedDate = _loan.lastComputedDate;
         userLoan.managerAddress = _loan.managerAddress;
         userLoan.tokenAddress = _loan.tokenAddress;
-        userLoan.tokenAmountBorrowed = _loan.tokenAmountBorrowed;
+        //if the loan hasn't been claimed, the userLoan.tokenAmountBorrowed is 0
+        //so we need to compute it based on the current price
+        userLoan.tokenAmountBorrowed = _loan.tokenAmountBorrowed > 0 ? _loan.tokenAmountBorrowed :
+            _getTokenAmountFromExactCUSDOutput(
+                _loan.tokenAddress,
+                _loan.amountBorrowed
+            );
         userLoan.tokenAmountRepayed = _loan.tokenAmountRepayed;
         userLoan.tokenLastComputedDebt = _getTokenAmountFromExactCUSDOutput(_loan.tokenAddress, userLoan.lastComputedDebt);
         userLoan.tokenCurrentDebt = _getTokenAmountFromExactCUSDOutput(_loan.tokenAddress, userLoan.currentDebt);
@@ -230,6 +238,8 @@ contract MicrocreditImplementation is
     }
 
     function updateRevenueAddress(address _newRevenueAddress) external override onlyOwner {
+        require(_newRevenueAddress != address(0), "Microcredit: revenueAddress must be set");
+
         revenueAddress = _newRevenueAddress;
     }
 
@@ -748,7 +758,7 @@ contract MicrocreditImplementation is
     }
 
     function _getCUSDAmountFromExactTokenInput(address _tokenAddress, uint256 _tokenAmount) internal returns(uint256) {
-        if (_tokenAddress == address(cUSD)) {
+        if (_tokenAddress == address(cUSD) || _tokenAmount == 0) {
             return _tokenAmount;
         } else {
             return uniswapQuoter.quoteExactInput(
@@ -759,7 +769,7 @@ contract MicrocreditImplementation is
     }
 
     function _getTokenAmountFromExactCUSDOutput(address _tokenAddress, uint256 _cUSDAmount) internal returns(uint256) {
-        if (_tokenAddress == address(cUSD)) {
+        if (_tokenAddress == address(cUSD) || _cUSDAmount == 0) {
             return _cUSDAmount;
         } else {
             return uniswapQuoter.quoteExactOutput(
@@ -848,6 +858,8 @@ contract MicrocreditImplementation is
         for (_userId = 0; _userId < _usersLength; _userId++) {
             for (_loanId = 0; _loanId < _users[_userId].loansLength; _loanId++) {
                 _users[_userId].loans[_loanId].tokenAddress = address(cUSD);
+                _users[_userId].loans[_loanId].tokenAmountBorrowed = _users[_userId].loans[_loanId].amountBorrowed;
+                _users[_userId].loans[_loanId].tokenAmountRepayed = _users[_userId].loans[_loanId].amountRepayed;
             }
         }
 
