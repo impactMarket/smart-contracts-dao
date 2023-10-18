@@ -66,8 +66,8 @@ interface IMicrocredit {
 
     struct Token {
         bool active;
-        EnumerableSet.AddressSet exchangePathList;
-        mapping(address => bytes) exchangePaths;
+        EnumerableSet.AddressSet exchangeTokens;
+        mapping(address => uint24) exchangeTokensFees;
     }
 
     function getVersion() external pure returns(uint256);
@@ -100,7 +100,7 @@ interface IMicrocredit {
     function userLoans(address userAddress, uint256 loanId) external returns(
         UserLoanResponse memory userLoan);
     function userLoanRepayments(address userAddress, uint256 loanId, uint256 repaymentId)
-        external view returns( uint256 date, uint256 amount);
+        external view returns(Repayment memory repayment);
     function walletListAt(uint256 index) external view returns (address);
     function walletListLength() external view returns (uint256);
     function managerListAt(uint256 index) external view returns (address);
@@ -134,6 +134,11 @@ interface IMicrocredit {
         uint256[] calldata dailyInterests,
         uint256[] calldata claimDeadlines
     ) external;
+    function editLoanClaimDeadlines(
+        address[] calldata userAddresses,
+        uint256[] calldata loanIds,
+        uint256[] calldata newClaimDeadlines
+    ) external;
     function cancelLoans(
         address[] calldata userAddresses,
         uint256[] calldata loansIds
@@ -145,7 +150,7 @@ interface IMicrocredit {
     function addToken(
         address tokenAddress,
         address[] calldata exchangeTokens,
-        bytes[] calldata exchangePaths
+        uint24[] calldata exchangeTokensFees
     ) external;
     function inactivateToken(address tokenAddress) external;
     function transferERC20(IERC20 token, address to, uint256 amount) external;

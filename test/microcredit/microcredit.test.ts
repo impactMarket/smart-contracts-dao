@@ -11,21 +11,16 @@ import {
 } from "../utils/TimeTravel";
 import {SignerWithAddress} from "@nomiclabs/hardhat-ethers/signers";
 import * as ethersTypes from "ethers";
-import {fromEther, toEther} from "../utils/helpers";
+import {toEther} from "../utils/helpers";
 import {BigNumber} from "@ethersproject/bignumber";
 import {
-  createPool, getExactInput, getExactOutput,
-  getExchangePath, getExchangePath2,
-  swap,
-  uniswapNFTPositionManagerAddress,
+  createPool, getExactInput, getExactOutput, getExchangePath,
   uniswapQuoterAddress,
   uniswapRouterAddress,
 } from "../utils/uniswap";
 
 chai.use(chaiAsPromised);
 should();
-
-console.log(getExchangePath2('0x73A2De6A8370108D43c3C80430C84c30df323eD2', '0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1'));
 
 describe.only("Microcredit", () => {
   let deployer: SignerWithAddress;
@@ -47,9 +42,6 @@ describe.only("Microcredit", () => {
   const oneMonth = 3600 * 24 * 30;
   const sixMonth = oneMonth * 6;
 
-  let exchangePathCUSMUSD: string;
-  let exchangePathCUSCTKN: string;
-
   const initialMicrocreditcUSDBalance = toEther(1000000);
   const initialUser1cUSDBalance = toEther(10000);
   const initialUser2cUSDBalance = toEther(20000);
@@ -57,6 +49,10 @@ describe.only("Microcredit", () => {
   const initialMicrocreditmUSDBalance = toEther(2000000);
   const initialUser1mUSDBalance = toEther(30000);
   const initialUser2mUSDBalance = toEther(40000);
+
+  const initialMicrocreditcTKNBalance = toEther(3000000);
+  const initialUser1cTKNBalance = toEther(40000);
+  const initialUser2cTKNBalance = toEther(50000);
 
   const deploy = deployments.createFixture(async () => {
     await deployments.fixture("MicrocreditTest", {
@@ -106,12 +102,14 @@ describe.only("Microcredit", () => {
     await mUSD.mint(user1.address, initialUser1mUSDBalance);
     await mUSD.mint(user2.address, initialUser2mUSDBalance);
 
+    await cTKN.mint(Microcredit.address, initialMicrocreditcTKNBalance);
+    await cTKN.mint(user1.address, initialUser1cTKNBalance);
+    await cTKN.mint(user2.address, initialUser2cTKNBalance);
+
     await Microcredit.connect(owner).updateUniswapRouter(uniswapRouterAddress);
     await Microcredit.connect(owner).updateUniswapQuoter(uniswapQuoterAddress);
 
     await createPools();
-    exchangePathCUSMUSD = getExchangePath(mUSD, cUSD);
-    exchangePathCUSCTKN = getExchangePath(cTKN, cUSD);
   });
 
   function getDebtOnDayX(
@@ -145,8 +143,8 @@ describe.only("Microcredit", () => {
       owner,
       cUSD,
       cTKN,
-      toEther(1000000),
-      toEther(500000)
+      toEther(500000),
+      toEther(1000000)
     )
   }
 
@@ -261,12 +259,12 @@ describe.only("Microcredit", () => {
         .withArgs(cUSD.address);
 
       await Microcredit.connect(owner)
-        .addToken(mUSD.address, [cUSD.address], [exchangePathCUSMUSD])
+        .addToken(mUSD.address, [cUSD.address], [10000])
         .should.emit(Microcredit, "TokenAdded")
         .withArgs(mUSD.address);
 
       await Microcredit.connect(owner)
-        .addToken(cTKN.address, [cUSD.address], [exchangePathCUSCTKN])
+        .addToken(cTKN.address, [cUSD.address], [10000])
         .should.emit(Microcredit, "TokenAdded")
         .withArgs(cTKN.address);
 
@@ -285,21 +283,10 @@ describe.only("Microcredit", () => {
         .should.be.rejectedWith("Ownable: caller is not the owner");
     });
 
-    it("Should not addToken twice", async function () {
-      await Microcredit.connect(owner)
-        .addToken(cUSD.address, [], [])
-        .should.emit(Microcredit, "TokenAdded")
-        .withArgs(cUSD.address);
-
-      await Microcredit.connect(owner)
-        .addToken(cUSD.address, [], [])
-        .should.be.rejectedWith("Microcredit: Token already exists");
-    });
-
     it("Should inactivateToken if owner", async function () {
       await Microcredit.connect(owner).addToken(cUSD.address, [], []);
-      await Microcredit.connect(owner).addToken(mUSD.address, [cUSD.address], [exchangePathCUSMUSD]);
-      await Microcredit.connect(owner).addToken(cTKN.address, [cUSD.address], [exchangePathCUSCTKN]);
+      await Microcredit.connect(owner).addToken(mUSD.address, [cUSD.address], [10000]);
+      await Microcredit.connect(owner).addToken(cTKN.address, [cUSD.address], [10000]);
 
       (await Microcredit.tokenListLength()).should.eq(3);
       (await Microcredit.tokenListAt(0)).should.eq(cUSD.address);
@@ -365,7 +352,7 @@ describe.only("Microcredit", () => {
       await deploy();
 
       await Microcredit.connect(owner).addToken(cUSD.address, [], []);
-      await Microcredit.connect(owner).addToken(mUSD.address, [cUSD.address], [exchangePathCUSMUSD]);
+      await Microcredit.connect(owner).addToken(mUSD.address, [cUSD.address], [10000]);
     });
 
     it("Should addManagers if owner (one manager)", async function () {
@@ -415,7 +402,7 @@ describe.only("Microcredit", () => {
           [toEther(1000), toEther(2000)]
         )
         .should.emit(Microcredit, "ManagerAdded")
-        .withArgs(manager1.address,  toEther(1000))
+        .withArgs(manager1.address, toEther(1000))
         .emit(Microcredit, "ManagerAdded")
         .withArgs(manager2.address, toEther(2000));
 
@@ -515,7 +502,7 @@ describe.only("Microcredit", () => {
       );
 
       await Microcredit.connect(owner).addToken(cUSD.address, [], []);
-      await Microcredit.connect(owner).addToken(mUSD.address, [cUSD.address], [exchangePathCUSMUSD]);
+      await Microcredit.connect(owner).addToken(mUSD.address, [cUSD.address], [10000]);
 
       await Microcredit.connect(owner).addManagers(
         [manager1.address, manager2.address, manager1.address],
@@ -1430,12 +1417,11 @@ describe.only("Microcredit", () => {
       loan1.repaymentsLength.should.eq(0);
       loan1.lastComputedDate.should.eq(0);
       loan1.tokenAmountBorrowed.should.eq(loan1.amountBorrowed);
-      loan1.tokenAmountRepayed.should.eq(loan1.amountRepayed);
-      loan1.tokenLastComputedDebt.should.eq(loan1.lastComputedDebt);
-      loan1.tokenCurrentDebt.should.eq(loan1.currentDebt);
+      loan1.tokenAmountRepayed.should.eq(0);
+      loan1.tokenLastComputedDebt.should.eq(0);
+      loan1.tokenCurrentDebt.should.eq(0);
 
       let loan2 = await Microcredit.callStatic.userLoans(user2.address, 0);
-      loan2.tokenAddress.should.eq(mUSD.address);
       loan2.amountBorrowed.should.eq(amount2);
       loan2.period.should.eq(period2);
       loan2.dailyInterest.should.eq(dailyInterest2);
@@ -1446,16 +1432,78 @@ describe.only("Microcredit", () => {
       loan2.amountRepayed.should.eq(0);
       loan2.repaymentsLength.should.eq(0);
       loan2.lastComputedDate.should.eq(0);
-      loan2.tokenAmountBorrowed.should.eq(loan2.amountBorrowed);
-      loan2.tokenAmountRepayed.should.eq(loan2.amountRepayed);
-      loan2.tokenLastComputedDebt.should.eq(loan2.lastComputedDebt);
-      loan2.tokenCurrentDebt.should.eq(loan2.currentDebt);
+      loan2.tokenAmountBorrowed.should.eq(await getExactOutput(cUSD, mUSD, loan2.amountBorrowed));
+      loan2.tokenAmountRepayed.should.eq(0);
+      loan2.tokenLastComputedDebt.should.eq(0);
+      loan2.tokenCurrentDebt.should.eq(0);
 
       const manager1Info = await Microcredit.managers(manager1.address);
       manager1Info.lentAmountLimit.should.eq(
         manager1LentAmountLimit
       );
       manager1Info.lentAmount.should.eq(amount1.add(amount2));
+    });
+
+    it("should not editLoanClaimDeadlines is not Manager", async function () {
+      const amount1 = toEther(100);
+      const period1 = sixMonth;
+      const dailyInterest1 = toEther(0.2);
+      const claimDeadline1 = (await getCurrentBlockTimestamp()) + 1000;
+
+      const amount2 = toEther(200);
+      const period2 = oneMonth;
+      const dailyInterest2 = toEther(0.3);
+      const claimDeadline2 = (await getCurrentBlockTimestamp()) + 2000;
+
+      await Microcredit.connect(manager1)
+        .addLoans(
+          [user1.address, user2.address],
+          [cUSD.address, mUSD.address],
+          [amount1, amount2],
+          [period1, period2],
+          [dailyInterest1, dailyInterest2],
+          [claimDeadline1, claimDeadline2]
+        ).should.fulfilled;
+
+      await Microcredit.connect(user1)
+        .editLoanClaimDeadlines(
+          [user1.address],
+          [0],
+          [(await getCurrentBlockTimestamp()) + 1001]
+        ).should.be.rejectedWith('Microcredit: caller is not a manager');
+    });
+
+
+    it("should editLoanClaimDeadlines is manager", async function () {
+      const amount1 = toEther(100);
+      const period1 = sixMonth;
+      const dailyInterest1 = toEther(0.2);
+      const claimDeadline1 = (await getCurrentBlockTimestamp()) + 1000;
+
+      const amount2 = toEther(200);
+      const period2 = oneMonth;
+      const dailyInterest2 = toEther(0.3);
+      const claimDeadline2 = (await getCurrentBlockTimestamp()) + 2000;
+
+      await Microcredit.connect(manager1)
+        .addLoans(
+          [user1.address, user2.address],
+          [cUSD.address, mUSD.address],
+          [amount1, amount2],
+          [period1, period2],
+          [dailyInterest1, dailyInterest2],
+          [claimDeadline1, claimDeadline2]
+        ).should.fulfilled;
+
+      await Microcredit.connect(manager1)
+        .editLoanClaimDeadlines(
+          [user1.address, user2.address],
+          [0, 0],
+          [claimDeadline1 + 100, claimDeadline2 + 200]
+        ).should.emit(Microcredit, "LoanEdited")
+        .withArgs(user1.address, 0, period1, claimDeadline1 + 100, dailyInterest1, 0, 0)
+        .withArgs(user2.address, 0, period2, claimDeadline2 + 200, dailyInterest2, 0, 0);
+
     });
 
     it("should claimLoan #1", async function () {
@@ -3703,7 +3751,8 @@ describe.only("Microcredit", () => {
       await deploy();
 
       await Microcredit.connect(owner).addToken(cUSD.address, [], []);
-      await Microcredit.connect(owner).addToken(mUSD.address, [cUSD.address], [exchangePathCUSMUSD]);
+      await Microcredit.connect(owner).addToken(mUSD.address, [cUSD.address], [10000]);
+      await Microcredit.connect(owner).addToken(cTKN.address, [cUSD.address], [10000]);
 
       await Microcredit.connect(owner).addManagers(
         [manager1.address, manager2.address, manager1.address],
@@ -4109,11 +4158,13 @@ describe.only("Microcredit", () => {
       );
     });
 
-    it("should repayLoan and redirect revenue #4", async function () {
+    it("should repayLoan and redirect revenue custom token same price as cUSD", async function () {
       const amount = toEther(100);
       const period = sixMonth;
       const dailyInterest = toEther(0.2);
       const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
+      const tokenRepaymentAmount1 = toEther(40);
+      const repaymentAmount1 = await getExactInput(mUSD, cUSD, toEther(40));
 
       await Microcredit.connect(manager1).addLoan(
         user1.address,
@@ -4124,7 +4175,7 @@ describe.only("Microcredit", () => {
         claimDeadline
       ).should.be.fulfilled;
 
-      const tokenAmount = await getExactOutput(mUSD, cUSD, amount);
+      const tokenAmount = await getExactOutput(cUSD, mUSD, amount);
       await Microcredit.connect(user1).claimLoan(0).should.be.fulfilled;
       const statDate = await getCurrentBlockTimestamp();
 
@@ -4139,8 +4190,8 @@ describe.only("Microcredit", () => {
       let loan = await Microcredit.callStatic.userLoans(user1.address, 0);
       loan.currentDebt.should.eq(expectedCurrentDebt);
 
-      await mUSD.connect(user1).approve(Microcredit.address, toEther(40));
-      await Microcredit.connect(user1).repayLoan(0, toEther(40)).should.be
+      await mUSD.connect(user1).approve(Microcredit.address, tokenRepaymentAmount1);
+      await Microcredit.connect(user1).repayLoan(0, tokenRepaymentAmount1).should.be
         .fulfilled;
       const repaymentDate1 = await getCurrentBlockTimestamp();
 
@@ -4152,42 +4203,49 @@ describe.only("Microcredit", () => {
       loan.claimDeadline.should.eq(claimDeadline);
       loan.startDate.should.eq(statDate);
       loan.lastComputedDebt.should.eq(
-        expectedCurrentDebt.sub(toEther(40))
+        expectedCurrentDebt.sub(repaymentAmount1)
       );
-      loan.currentDebt.should.eq(expectedCurrentDebt.sub(toEther(40)));
-      loan.amountRepayed.should.eq(toEther(40));
+      loan.currentDebt.should.eq(expectedCurrentDebt.sub(repaymentAmount1));
+      loan.amountRepayed.should.eq(repaymentAmount1);
       loan.repaymentsLength.should.eq(1);
       loan.lastComputedDate.should.eq(statDate + 3600 * 24 * 180);
-      loan.tokenAmountBorrowed.should.eq(loan.amountBorrowed);
-      loan.tokenAmountRepayed.should.eq(loan.amountRepayed);
-      loan.tokenLastComputedDebt.should.eq(loan.lastComputedDebt);
-      loan.tokenCurrentDebt.should.eq(loan.currentDebt);
+      loan.tokenAmountBorrowed.should.eq(tokenAmount);
+      loan.tokenAmountRepayed.should.eq(tokenRepaymentAmount1);
+      loan.tokenLastComputedDebt.should.eq(await getExactOutput(cUSD, mUSD, loan.lastComputedDebt));
+      loan.tokenCurrentDebt.should.eq(await getExactOutput(cUSD, mUSD, loan.currentDebt));
 
       let repayment1 = await Microcredit.userLoanRepayments(
         user1.address,
         0,
         0
       );
-      repayment1.amount.should.eq(toEther(40));
+      repayment1.amount.should.eq(repaymentAmount1);
+      repayment1.tokenAmount.should.eq(tokenRepaymentAmount1);
       repayment1.date.should.eq(repaymentDate1);
 
       const manager1InfoAfter1 = await Microcredit.managers(
         manager1.address
       );
-      manager1InfoAfter1[1].lentAmount.should.eq(
-        amount.sub(toEther(40))
+      manager1InfoAfter1.lentAmount.should.eq(
+        amount.sub(repaymentAmount1)
       );
 
       (await mUSD.balanceOf(user1.address)).should.eq(
-        initialUser1mUSDBalance.add(amount).sub(toEther(40))
+        initialUser1mUSDBalance.add(tokenAmount).sub(tokenRepaymentAmount1)
       );
       (await mUSD.balanceOf(Microcredit.address)).should.eq(
-        initialMicrocreditmUSDBalance.sub(amount).add(toEther(40))
+        initialMicrocreditmUSDBalance.sub(tokenAmount).add(tokenRepaymentAmount1)
       );
       (await mUSD.balanceOf(MicrocreditRevenue.address)).should.eq(0);
 
-      await mUSD.connect(user1).approve(Microcredit.address, toEther(70));
-      await Microcredit.connect(user1).repayLoan(0, toEther(70)).should.be
+      const tokenRepaymentAmount2 = toEther(70);
+      const repaymentAmount2 = await getExactInput(mUSD, cUSD, toEther(70))
+
+      const microcreditShare = await getExactOutput(cUSD, mUSD, amount.sub(repaymentAmount1));
+      const microcreditRevenueShare = tokenRepaymentAmount2.sub(microcreditShare);
+
+      await mUSD.connect(user1).approve(Microcredit.address, tokenRepaymentAmount2);
+      await Microcredit.connect(user1).repayLoan(0, tokenRepaymentAmount2).should.be
         .fulfilled;
       const repaymentDate2 = await getCurrentBlockTimestamp();
 
@@ -4199,51 +4257,55 @@ describe.only("Microcredit", () => {
       loan.claimDeadline.should.eq(claimDeadline);
       loan.startDate.should.eq(statDate);
       loan.lastComputedDebt.should.eq(
-        expectedCurrentDebt.sub(toEther(40)).sub(toEther(70))
+        expectedCurrentDebt.sub(repaymentAmount1).sub(repaymentAmount2)
       );
       loan.currentDebt.should.eq(
-        expectedCurrentDebt.sub(toEther(40)).sub(toEther(70))
+        expectedCurrentDebt.sub(repaymentAmount1).sub(repaymentAmount2)
       );
-      loan.amountRepayed.should.eq(toEther(110));
+      loan.amountRepayed.should.eq(repaymentAmount1.add(repaymentAmount2));
       loan.repaymentsLength.should.eq(2);
       loan.lastComputedDate.should.eq(statDate + 3600 * 24 * 180);
-      loan.tokenAmountBorrowed.should.eq(loan.amountBorrowed);
-      loan.tokenAmountRepayed.should.eq(loan.amountRepayed);
-      loan.tokenLastComputedDebt.should.eq(loan.lastComputedDebt);
-      loan.tokenCurrentDebt.should.eq(loan.currentDebt);
+      loan.tokenAmountBorrowed.should.eq(tokenAmount);
+      loan.tokenAmountRepayed.should.eq(tokenRepaymentAmount1.add(tokenRepaymentAmount2));
+      loan.tokenLastComputedDebt.should.eq(await getExactOutput(cUSD, mUSD, loan.lastComputedDebt));
+      loan.tokenCurrentDebt.should.eq(await getExactOutput(cUSD, mUSD, loan.currentDebt));
 
       let repayment2 = await Microcredit.userLoanRepayments(
         user1.address,
         0,
         1
       );
-      repayment2.amount.should.eq(toEther(70));
+      repayment2.amount.should.eq(repaymentAmount2);
+      repayment2.tokenAmount.should.eq(tokenRepaymentAmount2);
       repayment2.date.should.eq(repaymentDate2);
 
       const manager1InfoAfter2 = await Microcredit.managers(
         manager1.address
       );
-      manager1InfoAfter2[1].lentAmount.should.eq(0);
+      manager1InfoAfter2.lentAmount.should.eq(0);
 
       (await mUSD.balanceOf(user1.address)).should.eq(
-        initialUser1mUSDBalance.add(amount).sub(toEther(110))
+        initialUser1mUSDBalance.add(tokenAmount).sub(tokenRepaymentAmount1).sub(tokenRepaymentAmount2)
       );
       (await mUSD.balanceOf(Microcredit.address)).should.eq(
-        initialMicrocreditmUSDBalance
+        initialMicrocreditmUSDBalance.sub(tokenAmount).add(tokenRepaymentAmount1).add(microcreditShare)
       );
       (await mUSD.balanceOf(MicrocreditRevenue.address)).should.eq(
-        toEther(10)
+        microcreditRevenueShare
       );
+
+      const tokenRepaymentAmount3 = loan.tokenLastComputedDebt;
+      const repaymentAmount3 = await getExactInput(mUSD, cUSD, tokenRepaymentAmount3);
 
       await mUSD
         .connect(user1)
         .approve(
           Microcredit.address,
-          expectedCurrentDebt.sub(toEther(40)).sub(toEther(70))
+          tokenRepaymentAmount3
         );
       await Microcredit.connect(user1).repayLoan(
         0,
-        expectedCurrentDebt.sub(toEther(40)).sub(toEther(70))
+        tokenRepaymentAmount3
       ).should.be.fulfilled;
       const repaymentDate3 = await getCurrentBlockTimestamp();
 
@@ -4259,34 +4321,240 @@ describe.only("Microcredit", () => {
       loan.amountRepayed.should.eq(expectedCurrentDebt);
       loan.repaymentsLength.should.eq(3);
       loan.lastComputedDate.should.eq(statDate + 3600 * 24 * 180);
-      loan.tokenAmountBorrowed.should.eq(loan.amountBorrowed);
-      loan.tokenAmountRepayed.should.eq(loan.amountRepayed);
-      loan.tokenLastComputedDebt.should.eq(loan.lastComputedDebt);
-      loan.tokenCurrentDebt.should.eq(loan.currentDebt);
+      loan.tokenAmountBorrowed.should.eq(tokenAmount);
+      loan.tokenAmountRepayed.should.eq(tokenRepaymentAmount1.add(tokenRepaymentAmount2).add(tokenRepaymentAmount3));
+      loan.tokenLastComputedDebt.should.eq(0);
+      loan.tokenCurrentDebt.should.eq(0);
 
       let repayment3 = await Microcredit.userLoanRepayments(
         user1.address,
         0,
         2
       );
-      repayment3.amount.should.eq(
-        expectedCurrentDebt.sub(toEther(40)).sub(toEther(70))
-      );
+      repayment3.amount.should.eq(repaymentAmount3);
+      repayment3.tokenAmount.should.eq(tokenRepaymentAmount3);
       repayment3.date.should.eq(repaymentDate3);
 
       const manager1InfoAfter3 = await Microcredit.managers(
         manager1.address
       );
-      manager1InfoAfter3[1].lentAmount.should.eq(0);
+      manager1InfoAfter3.lentAmount.should.eq(0);
 
       (await mUSD.balanceOf(user1.address)).should.eq(
-        initialUser1mUSDBalance.add(amount).sub(expectedCurrentDebt)
+        initialUser1mUSDBalance.add(tokenAmount).sub(tokenRepaymentAmount1.add(tokenRepaymentAmount2).add(tokenRepaymentAmount3))
       );
       (await mUSD.balanceOf(Microcredit.address)).should.eq(
-        initialMicrocreditmUSDBalance
+        initialMicrocreditmUSDBalance.sub(tokenAmount).add(tokenRepaymentAmount1).add(microcreditShare)
       );
       (await mUSD.balanceOf(MicrocreditRevenue.address)).should.eq(
-        expectedCurrentDebt.sub(amount)
+        microcreditRevenueShare.add(tokenRepaymentAmount3)
+      );
+    });
+
+    it("should repayLoan and redirect revenue custom token price != cUSD price", async function () {
+      const amount = toEther(100);
+      const period = sixMonth;
+      const dailyInterest = toEther(10);
+      const claimDeadline = (await getCurrentBlockTimestamp()) + 1000;
+      const repaymentAmount1 = toEther(40);
+      const tokenRepaymentAmount1 = await getExactOutput(cUSD, cTKN, repaymentAmount1);
+      tokenRepaymentAmount1.should.eq(toEther('80.814545971758548766'));
+
+      await Microcredit.connect(manager1).addLoan(
+        user1.address,
+        cTKN.address,
+        amount,
+        period,
+        dailyInterest,
+        claimDeadline
+      ).should.be.fulfilled;
+
+      const tokenAmount = await getExactOutput(cUSD, cTKN, amount);
+      tokenAmount.should.eq(toEther('202.060614143030626329'));
+      await Microcredit.connect(user1).claimLoan(0).should.be.fulfilled;
+      const statDate = await getCurrentBlockTimestamp();
+
+      const expectedCurrentDebt = getDebtOnDayX(
+        amount,
+        dailyInterest,
+        0
+      );
+
+      let loan = await Microcredit.callStatic.userLoans(user1.address, 0);
+      loan.currentDebt.should.eq(expectedCurrentDebt);
+      loan.currentDebt.should.eq(toEther('110'));
+      loan.tokenCurrentDebt.should.eq(await getExactOutput(cUSD, cTKN, expectedCurrentDebt));
+      loan.tokenCurrentDebt.should.eq(toEther('222.271121869033409573'));
+
+      await cTKN.connect(user1).approve(Microcredit.address, tokenRepaymentAmount1);
+      await Microcredit.connect(user1).repayLoan(0, tokenRepaymentAmount1).should.be
+        .fulfilled;
+      const repaymentDate1 = await getCurrentBlockTimestamp();
+
+      loan = await Microcredit.callStatic.userLoans(user1.address, 0);
+      loan.tokenAddress.should.eq(cTKN.address);
+      loan.amountBorrowed.should.eq(amount);
+      loan.period.should.eq(period);
+      loan.dailyInterest.should.eq(dailyInterest);
+      loan.claimDeadline.should.eq(claimDeadline);
+      loan.startDate.should.eq(statDate);
+      loan.lastComputedDebt.should.eq(
+        expectedCurrentDebt.sub(repaymentAmount1)
+      );
+      loan.lastComputedDebt.should.eq(
+        toEther(70)
+      );
+      loan.currentDebt.should.eq(expectedCurrentDebt.sub(repaymentAmount1));
+      loan.amountRepayed.should.eq(repaymentAmount1);
+      loan.repaymentsLength.should.eq(1);
+      loan.lastComputedDate.should.eq(statDate);
+      loan.tokenAmountBorrowed.should.eq(tokenAmount);
+      loan.tokenAmountRepayed.should.eq(tokenRepaymentAmount1);
+      loan.tokenLastComputedDebt.should.eq(await getExactOutput(cUSD, cTKN, loan.lastComputedDebt));
+      loan.tokenLastComputedDebt.should.eq(toEther('141.433942166044660394'));
+      loan.tokenCurrentDebt.should.eq(await getExactOutput(cUSD, cTKN, loan.currentDebt));
+
+      let repayment1 = await Microcredit.userLoanRepayments(
+        user1.address,
+        0,
+        0
+      );
+      repayment1.amount.should.eq(repaymentAmount1);
+      repayment1.tokenAmount.should.eq(tokenRepaymentAmount1);
+      repayment1.date.should.eq(repaymentDate1);
+
+      const manager1InfoAfter1 = await Microcredit.managers(
+        manager1.address
+      );
+      manager1InfoAfter1.lentAmount.should.eq(
+        amount.sub(repaymentAmount1)
+      );
+
+      (await cTKN.balanceOf(user1.address)).should.eq(
+        initialUser1cTKNBalance.add(tokenAmount).sub(tokenRepaymentAmount1)
+      );
+      (await cTKN.balanceOf(Microcredit.address)).should.eq(
+        initialMicrocreditcTKNBalance.sub(tokenAmount).add(tokenRepaymentAmount1)
+      );
+      (await cTKN.balanceOf(MicrocreditRevenue.address)).should.eq(0);
+
+      const repaymentAmount2 = toEther(65);
+      const tokenRepaymentAmount2 = await getExactOutput(cUSD, cTKN, toEther(65))
+      tokenRepaymentAmount2.should.eq(toEther('131.330204239682471854'));
+
+      const microcreditShare = await getExactOutput(cUSD, cTKN, toEther(60));
+      const microcreditRevenueShare = tokenRepaymentAmount2.sub(microcreditShare);
+      microcreditShare.should.eq(toEther('121.226668412330691806'));
+      microcreditRevenueShare.should.eq(toEther('10.103535827351780048'));
+
+      await cTKN.connect(user1).approve(Microcredit.address, tokenRepaymentAmount2);
+      await Microcredit.connect(user1).repayLoan(0, tokenRepaymentAmount2).should.be
+        .fulfilled;
+      const repaymentDate2 = await getCurrentBlockTimestamp();
+
+      loan = await Microcredit.callStatic.userLoans(user1.address, 0);
+      loan.tokenAddress.should.eq(cTKN.address);
+      loan.amountBorrowed.should.eq(amount);
+      loan.period.should.eq(period);
+      loan.dailyInterest.should.eq(dailyInterest);
+      loan.claimDeadline.should.eq(claimDeadline);
+      loan.startDate.should.eq(statDate);
+      loan.lastComputedDebt.should.eq(
+        expectedCurrentDebt.sub(repaymentAmount1).sub(repaymentAmount2)
+      );
+      loan.lastComputedDebt.should.eq(
+        toEther(5)
+      );
+      loan.currentDebt.should.eq(
+        expectedCurrentDebt.sub(repaymentAmount1).sub(repaymentAmount2)
+      );
+      loan.amountRepayed.should.eq(repaymentAmount1.add(repaymentAmount2));
+      loan.repaymentsLength.should.eq(2);
+      loan.lastComputedDate.should.eq(statDate);
+      loan.tokenAmountBorrowed.should.eq(tokenAmount);
+      loan.tokenAmountRepayed.should.eq(tokenRepaymentAmount1.add(tokenRepaymentAmount2));
+      loan.tokenLastComputedDebt.should.eq(await getExactOutput(cUSD, cTKN, toEther(5)));
+      loan.tokenCurrentDebt.should.eq(await getExactOutput(cUSD, cTKN, toEther(5)));
+      loan.tokenCurrentDebt.should.eq(toEther('10.101111112121222224'));
+
+      let repayment2 = await Microcredit.userLoanRepayments(
+        user1.address,
+        0,
+        1
+      );
+      repayment2.amount.should.eq(repaymentAmount2);
+      repayment2.tokenAmount.should.eq(tokenRepaymentAmount2);
+      repayment2.date.should.eq(repaymentDate2);
+
+      const manager1InfoAfter2 = await Microcredit.managers(
+        manager1.address
+      );
+      manager1InfoAfter2.lentAmount.should.eq(0);
+
+      (await cTKN.balanceOf(user1.address)).should.eq(
+        initialUser1cTKNBalance.add(tokenAmount).sub(tokenRepaymentAmount1).sub(tokenRepaymentAmount2)
+      );
+      (await cTKN.balanceOf(Microcredit.address)).should.eq(
+        initialMicrocreditcTKNBalance.sub(tokenAmount).add(tokenRepaymentAmount1).add(microcreditShare)
+      );
+      (await cTKN.balanceOf(MicrocreditRevenue.address)).should.eq(
+        microcreditRevenueShare
+      );
+
+      const tokenRepaymentAmount3 = loan.tokenLastComputedDebt;
+      const repaymentAmount3 = await getExactInput(cTKN, cUSD, tokenRepaymentAmount3);
+
+      await cTKN
+        .connect(user1)
+        .approve(
+          Microcredit.address,
+          tokenRepaymentAmount3
+        );
+      await Microcredit.connect(user1).repayLoan(
+        0,
+        tokenRepaymentAmount3
+      ).should.be.fulfilled;
+      const repaymentDate3 = await getCurrentBlockTimestamp();
+
+      loan = await Microcredit.callStatic.userLoans(user1.address, 0);
+      loan.tokenAddress.should.eq(cTKN.address);
+      loan.amountBorrowed.should.eq(amount);
+      loan.period.should.eq(period);
+      loan.dailyInterest.should.eq(dailyInterest);
+      loan.claimDeadline.should.eq(claimDeadline);
+      loan.startDate.should.eq(statDate);
+      loan.lastComputedDebt.should.eq(0);
+      loan.currentDebt.should.eq(0);
+      loan.amountRepayed.should.eq(expectedCurrentDebt);
+      loan.repaymentsLength.should.eq(3);
+      loan.lastComputedDate.should.eq(statDate);
+      loan.tokenAmountBorrowed.should.eq(tokenAmount);
+      loan.tokenAmountRepayed.should.eq(tokenRepaymentAmount1.add(tokenRepaymentAmount2).add(tokenRepaymentAmount3));
+      loan.tokenLastComputedDebt.should.eq(0);
+      loan.tokenCurrentDebt.should.eq(0);
+
+      let repayment3 = await Microcredit.userLoanRepayments(
+        user1.address,
+        0,
+        2
+      );
+      repayment3.amount.should.eq(repaymentAmount3);
+      repayment3.tokenAmount.should.eq(tokenRepaymentAmount3);
+      repayment3.date.should.eq(repaymentDate3);
+
+      const manager1InfoAfter3 = await Microcredit.managers(
+        manager1.address
+      );
+      manager1InfoAfter3.lentAmount.should.eq(0);
+
+      (await cTKN.balanceOf(user1.address)).should.eq(
+        initialUser1cTKNBalance.add(tokenAmount).sub(tokenRepaymentAmount1.add(tokenRepaymentAmount2).add(tokenRepaymentAmount3))
+      );
+      (await cTKN.balanceOf(Microcredit.address)).should.eq(
+        initialMicrocreditcTKNBalance.sub(tokenAmount).add(tokenRepaymentAmount1).add(microcreditShare)
+      );
+      (await cTKN.balanceOf(MicrocreditRevenue.address)).should.eq(
+        microcreditRevenueShare.add(tokenRepaymentAmount3)
       );
     });
   });
@@ -4306,7 +4574,7 @@ describe.only("Microcredit", () => {
       );
 
       await Microcredit.connect(owner).addToken(cUSD.address, [], []);
-      await Microcredit.connect(owner).addToken(mUSD.address, [cUSD.address], [exchangePathCUSMUSD]);
+      await Microcredit.connect(owner).addToken(mUSD.address, [cUSD.address], [10000]);
 
       await Microcredit.connect(owner).addManagers(
         [manager1.address, manager2.address, manager1.address],
@@ -4405,7 +4673,7 @@ describe.only("Microcredit", () => {
       );
 
       await Microcredit.connect(owner).addToken(cUSD.address, [], []);
-      await Microcredit.connect(owner).addToken(mUSD.address, [cUSD.address], [exchangePathCUSMUSD]);
+      await Microcredit.connect(owner).addToken(mUSD.address, [cUSD.address], [10000]);
 
       await Microcredit.connect(owner).addManagers(
         [manager1.address, manager2.address, manager1.address],
@@ -4618,6 +4886,7 @@ describe.only("Microcredit", () => {
           user1.address,
           0,
           newPeriod,
+          claimDeadline,
           newDailyInterest,
           newLastComputedDebt,
           newLastComputedDate
@@ -4725,6 +4994,7 @@ describe.only("Microcredit", () => {
           user1.address,
           0,
           newPeriod,
+          claimDeadline,
           newDailyInterest,
           newLastComputedDebt,
           newLastComputedDate
@@ -4838,6 +5108,7 @@ describe.only("Microcredit", () => {
           user1.address,
           0,
           newPeriod,
+          claimDeadline,
           newDailyInterest,
           newLastComputedDebt,
           newLastComputedDate
@@ -4951,6 +5222,7 @@ describe.only("Microcredit", () => {
           user1.address,
           0,
           newPeriod,
+          claimDeadline,
           newDailyInterest,
           newLastComputedDebt,
           newLastComputedDate
@@ -5064,6 +5336,7 @@ describe.only("Microcredit", () => {
           user1.address,
           0,
           newPeriod,
+          claimDeadline,
           newDailyInterest,
           newLastComputedDebt,
           newLastComputedDate

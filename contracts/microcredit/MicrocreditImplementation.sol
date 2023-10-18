@@ -40,6 +40,7 @@ contract MicrocreditImplementation is
         address indexed _userAddress,
         uint256 _loanId,
         uint256 _newPeriod,
+        uint256 _newClaimDeadline,
         uint256 _newDailyInterest,
         uint256 _newLastComputedDebt,
         uint256 _newLastComputedDate
@@ -224,7 +225,7 @@ contract MicrocreditImplementation is
         address _userAddress,
         uint256 _loanId,
         uint256 _repaymentId
-    ) external view override returns (uint256 date, uint256 amount) {
+    ) external view override returns (Repayment memory repayment) {
         _checkUserLoan(_userAddress, _loanId);
 
         WalletMetadata memory _metadata = _walletMetadata[_userAddress];
@@ -233,8 +234,7 @@ contract MicrocreditImplementation is
 
         require(_loan.repaymentsLength > _repaymentId, "Microcredit: Repayment doesn't exist");
 
-        date = _loan.repayments[_repaymentId].date;
-        amount = _loan.repayments[_repaymentId].amount;
+        return _loan.repayments[_repaymentId];
     }
 
     function updateRevenueAddress(address _newRevenueAddress) external override onlyOwner {
@@ -370,6 +370,53 @@ contract MicrocreditImplementation is
                 _periods[_index],
                 _dailyInterests[_index],
                 _claimDeadlines[_index]
+            );
+        }
+    }
+
+    /**
+     * @notice Edits multiples loans claim deadline
+     *
+     * @param _userAddresses             addresses of the user
+     * @param _loanIds                   id of the loans
+     * @param _newClaimDeadlines         new claim deadlines of the loan
+     */
+    function editLoanClaimDeadlines(
+        address[] calldata _userAddresses,
+        uint256[] calldata _loanIds,
+        uint256[] calldata _newClaimDeadlines
+    ) external override onlyManagers {
+        uint256 _loansNumber = _userAddresses.length;
+
+        require(
+            _loansNumber == _loanIds.length,
+            "Microcredit: calldata information arity mismatch"
+        );
+        require(
+            _loansNumber == _newClaimDeadlines.length,
+            "Microcredit: calldata information arity mismatch"
+        );
+
+        uint256 _index;
+        for (_index = 0; _index < _loansNumber; _index++) {
+            _checkUserLoan(_userAddresses[_index], _loanIds[_index]);
+
+            WalletMetadata memory _metadata = _walletMetadata[_userAddresses[_index]];
+            User storage _user = _users[_metadata.userId];
+            Loan storage _loan = _user.loans[_loanIds[_index]];
+
+            require(_loan.startDate == 0, 'Microcredit: Loan already claimed');
+            require(_newClaimDeadlines[_index] > block.timestamp, 'Microcredit: invalid claimDeadline');
+            _loan.claimDeadline = _newClaimDeadlines[_index];
+
+            emit LoanEdited(
+                _userAddresses[_index],
+                _loanIds[_index],
+                _loan.period,
+                _newClaimDeadlines[_index],
+                _loan.dailyInterest,
+                _loan.lastComputedDebt,
+                _loan.lastComputedDate
             );
         }
     }
@@ -566,38 +613,47 @@ contract MicrocreditImplementation is
      *
      * @param _tokenAddress address of the token to be added
      */
-    function addToken(address _tokenAddress, address[] calldata _exchangeTokens, bytes[] calldata _exchangePaths) external override onlyOwner {
+    function addToken(
+        address _tokenAddress,
+        address[] calldata _exchangeTokens,
+        uint24[] calldata _exchangeTokensFees
+    ) external override onlyOwner {
         require(
-            _exchangeTokens.length == _exchangePaths.length,
+            _exchangeTokens.length == _exchangeTokensFees.length,
             "Microcredit: calldata information arity mismatch"
         );
 
-        require(_tokens[_tokenAddress].active == false, "Microcredit: Token already exists");
-
         _tokenList.add(_tokenAddress);
-
         Token storage _token = _tokens[_tokenAddress];
-
         _token.active = true;
 
-        uint256 _length = _exchangePaths.length;
-        while(_length > 0) {
-            _length--;
-
+        if (_tokenAddress == address(cUSD)) {
             require(
-                uniswapQuoter.quoteExactInput(_exchangePaths[_length], 1e18) > 0,
-                "Microcredit: invalid exchangePath"
+                _exchangeTokens.length == 0 &&  _exchangeTokensFees.length == 0,
+                "Microcredit: cUSD can't have exchangeTokens"
+            );
+        } else {
+            require(
+                _exchangeTokens.length == 1 && _exchangeTokens[0] == address(cUSD),
+                "Microcredit: For the moment, just cUSD is accepted as exchangeToken"
             );
 
-            _token.exchangePaths[_exchangeTokens[_length]] = _exchangePaths[_length];
+            uint256 _length = _exchangeTokensFees.length;
+            for (uint256 _index = 0; _index < _length; _index++) {
+                _token.exchangeTokensFees[_exchangeTokens[_index]] = _exchangeTokensFees[_index];
+                _token.exchangeTokens.add(_exchangeTokens[_index]);
 
-            _token.exchangePathList.add(_exchangeTokens[_length]);
+                require(
+                    _getCUSDAmountFromExactTokenInput(_tokenAddress, 1e18) > 0,
+                    "Microcredit: invalid exchangeToken"
+                );
+            }
+
+            require(
+                _token.exchangeTokens.contains(address(cUSD)),
+                'Microcredit: exchangeToken to cUSD must be set'
+            );
         }
-
-        require(
-            _token.exchangePaths[address(cUSD)].length > 0 || _tokenAddress == address(cUSD),
-            'Microcredit: exchangePath to cUSD must be set'
-        );
 
         emit TokenAdded(_tokenAddress);
     }
@@ -757,24 +813,24 @@ contract MicrocreditImplementation is
         }
     }
 
-    function _getCUSDAmountFromExactTokenInput(address _tokenAddress, uint256 _tokenAmount) internal returns(uint256) {
+    function _getCUSDAmountFromExactTokenInput(address _tokenAddress, uint256 _tokenAmount) public returns(uint256) {
         if (_tokenAddress == address(cUSD) || _tokenAmount == 0) {
             return _tokenAmount;
         } else {
+            Token storage _token = _tokens[_tokenAddress];
             return uniswapQuoter.quoteExactInput(
-                _tokens[_tokenAddress].exchangePaths[address(cUSD)],
-                _tokenAmount
+                abi.encodePacked(_tokenAddress, _token.exchangeTokensFees[address(cUSD)], address(cUSD)), _tokenAmount
             );
         }
     }
 
-    function _getTokenAmountFromExactCUSDOutput(address _tokenAddress, uint256 _cUSDAmount) internal returns(uint256) {
+    function _getTokenAmountFromExactCUSDOutput(address _tokenAddress, uint256 _cUSDAmount) public returns(uint256) {
         if (_tokenAddress == address(cUSD) || _cUSDAmount == 0) {
             return _cUSDAmount;
         } else {
+            Token storage _token = _tokens[_tokenAddress];
             return uniswapQuoter.quoteExactOutput(
-                _tokens[_tokenAddress].exchangePaths[address(cUSD)],
-                _cUSDAmount
+                abi.encodePacked(address(cUSD), _token.exchangeTokensFees[address(cUSD)], _tokenAddress), _cUSDAmount
             );
         }
     }
@@ -845,6 +901,7 @@ contract MicrocreditImplementation is
             _userAddress,
             _loanId,
             _newPeriod,
+            _loan.claimDeadline,
             _newDailyInterest,
             _newLastComputedDebt,
             _newLastComputedDate
