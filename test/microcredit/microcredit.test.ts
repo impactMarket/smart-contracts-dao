@@ -4,7 +4,7 @@ import chai, {should} from "chai";
 import chaiAsPromised from "chai-as-promised";
 
 // @ts-ignore
-import {deployments, ethers, getNamedAccounts, network} from "hardhat";
+import {deployments, ethers} from "hardhat";
 import {
   advanceNSecondsAndBlock,
   getCurrentBlockTimestamp,
