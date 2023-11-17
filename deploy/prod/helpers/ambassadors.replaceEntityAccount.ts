@@ -11,23 +11,16 @@ let deployer: SignerWithAddress;
 
 // mainnet
 const governanceDelegatorAddress = "0x8f8BB984e652Cb8D0aa7C9D6712Ec2020EB1BAb4";
-const treasuryAddress = "0xa302dd52a4a85e6778E6A64A0E5EB0e8C76463d6";
-const cUSDAddress = "0x765de816845861e75a25fca122bb6898b8b1282a";
-const uniswapNFTPositionManagerId = 3108;
-const PACTAddress = "0x46c9757C5497c5B1f2eb73aE79b6B67D119B0B58";
+const ambassadorsAddress = "0x25f58d8C2522dC7E0C53cF8163C837De2415Ba51";
+const newOldAddress = "0x266f8E061AD13dDF79Cb662FF633Ddb6dd40725d";
+const newEntityAddress = "0xd3762200407133f7dDd5FE6073300fea3CaC948a";
 
-
-// //alfajores
+// // //alfajores
 // const governanceDelegatorAddress = "0x5c27e2600a3eDEF53DE0Ec32F01efCF145419eDF";
-// const treasuryAddress = "0xB0deEE097B5227C5E6bbE787665e4e62b4fE85f3";
-// const cUSDAddress = "0x874069fa1eb16d44d622f2e0ca25eea172369bc1";
-// const uniswapNFTPositionManagerId = 3108;
-// const PACTAddress = "0x73A2De6A8370108D43c3C80430C84c30df323eD2";
+// const ambassadorsAddress = "0xF7f1675e5A6fa5D2dd4F3b534a59B5B6Ef866221";
+// const newEntityAddress = "0x1FfceAF524aB1a882a1FD5E17ba650F33A969094";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
-	// @ts-ignore
-	// const { deployments, ethers } = hre;
-
 	const accounts: SignerWithAddress[] = await ethers.getSigners();
 	deployer = accounts[0];
 
@@ -41,21 +34,21 @@ async function createCallProposal() {
 		governanceDelegatorAddress,
 		deployer,
 		[
-			treasuryAddress,
+			ambassadorsAddress,
 		],
 		[0],
 		[
-			"setToken(address,uint256,uint8,uint256,uint256,uint256,bytes,bytes)"
+			"replaceEntityAccount(address,address)"
 		],
 		[
-			["address", "uint256", "uint8", "uint256", "uint256", "uint256", "bytes", "bytes"]
+			["address","address"]
 		],
 		[
-			[cUSDAddress, toEther(1), 1, toEther(80), toEther(100), uniswapNFTPositionManagerId, "0x", getExchangePathProd(cUSDAddress, PACTAddress)]
+			[newOldAddress, newEntityAddress]
 		],
-		'Add treasury tokens'
+		'Ambassadors - replaceEntityAccount'
 	);
 }
 
 export default func;
-func.tags = ["Treasury_setToken"];
+func.tags = ["Ambassadors_replaceEntityAccount"];

@@ -22,9 +22,6 @@ const donationMinerProxyAddress = "0x09Cdc8f50994F63103bc165B139631A6ad18EF49";
 const proxyAdminAddress = "0x79f9ca5f1A01e1768b9C24AD37FF63A0199E3Fe5";
 const recurringCronAddress = "0x8903B83B6e1B1379f41a9cc82080Be10E1c8E6d3";
 
-
-let GovernanceProxy: ethersTypes.Contract;
-
 let newDonationMinerImplementationAddress: string;
 
 
@@ -34,11 +31,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
     const accounts: SignerWithAddress[] = await ethers.getSigners();
     deployer = accounts[0];
-
-    GovernanceProxy = await ethers.getContractAt(
-        "PACTDelegate",
-        governanceDelegatorAddress
-    );
 
     await deployNewDonationMinerImplementation();
     await createCallProposal();
@@ -59,7 +51,7 @@ async function createCallProposal() {
     console.log("Creating new proposal");
 
     await createProposal(
-        GovernanceProxy,
+        governanceDelegatorAddress,
         deployer,
         [
             proxyAdminAddress,

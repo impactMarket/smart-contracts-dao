@@ -6,6 +6,7 @@ import "@nomiclabs/hardhat-waffle";
 import "hardhat-deploy";
 import "@nomiclabs/hardhat-ethers";
 import '@openzeppelin/hardhat-upgrades';
+// import "@nomicfoundation/hardhat-verify";
 
 task("accounts", "Prints the list of accounts", async (args, hre) => {
   const accounts = await hre.ethers.getSigners();
@@ -33,10 +34,10 @@ export default {
       timeout: 100000,
       gasPrice: "auto",
       gas: 13000000,
-      // forking: {
-      //   chainId: 42220,
-      //   url: "https://forno.celo.org"
-      // },
+      forking: {
+        chainId: 42220,
+        url: "https://forno.celo.org"
+      },
     },
     alfajores: {
       chainId: 44787,
@@ -88,20 +89,29 @@ export default {
   namedAccounts: {
     deployer: {
       default: 0
-    },
-    user1: {
-      default: 1
-    },
-    user2: {
-      default: 2
-    },
-    user3: {
-      default: 3
     }
   },
   docgen: {
     path: './docs',
     clear: true,
     runOnCompile: true,
-  }
+  },
+  sourcify: {
+    enabled: true
+  },
+  // etherscan: {
+  //   apiKey: {
+  //     mainnet: "C9E1APEXRU2GT61PDAR4CYMHJZ1E6K5P28",
+  //   },
+  //   customChains: [
+  //     {
+  //       network: "mainnet",
+  //       chainId: 42220,
+  //       urls: {
+  //         apiURL: "https://api.celoscan.io/api",
+  //         browserURL: "https://celoscan.io"
+  //       }
+  //     }
+  //   ]
+  // },
 };

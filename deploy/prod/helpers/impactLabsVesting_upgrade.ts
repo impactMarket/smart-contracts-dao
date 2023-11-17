@@ -18,11 +18,9 @@ let deployer: SignerWithAddress;
 const governanceDelegatorAddress = "0x8f8BB984e652Cb8D0aa7C9D6712Ec2020EB1BAb4";
 const proxyAdminAddress = "0xFC641CE792c242EACcD545B7bee2028f187f61EC";
 const impactLabsVestingProxyAddress = "0x767DA1d208DDA5bc517dcd4ba2A83591D68A5535";
-const newImpactLabsAddress = '0x10FB65dc26a7aCC7CFB4eA3b6E007c8C77591486';
+const newImpactLabsAddress = '0xE6662E970CD54c154af8b9dEd54C95a69b133A5a';
 
 let newImpactLabsVestingImplementationAddress: string;
-
-let GovernanceProxy: ethersTypes.Contract;
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// @ts-ignore
@@ -31,12 +29,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const accounts: SignerWithAddress[] = await ethers.getSigners();
 	deployer = accounts[0];
 
-	GovernanceProxy = await ethers.getContractAt(
-		"PACTDelegate",
-		governanceDelegatorAddress
-	);
-
-	await deployNewImpactLabsImplementation();
+	// await deployNewImpactLabsImplementation();
 	await createUpgradeImplementation();
 };
 
@@ -55,23 +48,23 @@ async function createUpgradeImplementation() {
 	console.log("Creating new proposal");
 
 	await createProposal(
-		GovernanceProxy,
+		governanceDelegatorAddress,
 		deployer,
 		[
-			proxyAdminAddress,
+			// proxyAdminAddress,
 			impactLabsVestingProxyAddress,
 		],
-		[0, 0],
+		[0],
 		[
-			"upgrade(address,address)",
+			// "upgrade(address,address)",
 			"updateImpactLabs(address)",
 		],
 		[
-			["address", "address"],
+			// ["address", "address"],
 			["address"],
 		],
 		[
-			[impactLabsVestingProxyAddress, newImpactLabsVestingImplementationAddress],
+			// [impactLabsVestingProxyAddress, newImpactLabsVestingImplementationAddress],
 			[newImpactLabsAddress],
 		],
 		'Upgrade ImpactLabsVesting implementation'

@@ -1,20 +1,20 @@
 {
   "manifestVersion": "3.2",
   "admin": {
-    "address": "0xFF3034058Cf2d558272C82A255bf26F8dafd5484",
-    "txHash": "0xdb604712dfaf6197ebbaa0be8f6c334e6924f054b0e78c0c4676c42b72d89633"
+    "address": "0x7412eB46B5815175957a4134E406AFbf6547ecA7",
+    "txHash": "0x31e0c3bb88a95976465567bae18194aba8898a2ac3f6fdb34d1d9ebcfa013320"
   },
   "proxies": [
     {
-      "address": "0x323a1E64A978AbCe3e29Ba0419dB3541aa7023dd",
-      "txHash": "0x5be98a48ce9372b8834c8f24a12ec40d05139b70771121e86293034ec46ae47b",
+      "address": "0xaAc248Fe8eC7Ca6b6b87A9959b2Ea587309C3b78",
+      "txHash": "0xfaaa91221646ed206dcd508fd4d68460e89829650283c7050960a1427171a1fb",
       "kind": "transparent"
     }
   ],
   "impls": {
-    "522de230555ec99055a4257e6277313f3c7900c8f307aecd8213a4eedf9cb45d": {
-      "address": "0x970d3Fb8B29f2115a26edC00cE8bAE0F78AA8913",
-      "txHash": "0x3228e5a8d05d23c60f87ed56fa96900b3de666ea16d70a27e6815d0503fd482b",
+    "34440b6dbe67573be55593df2777c4ba3af6ef413bfd2da54cb22bd30714efad": {
+      "address": "0xc39B761BDf7dee891e68f8D2d517B8CCE18F3EAF",
+      "txHash": "0xcc60e21213198cc0334d02bcb7c0bb2f1b7e77b7a363850f4a0a710aba8b6b96",
       "layout": {
         "solcVersion": "0.8.4",
         "storage": [
@@ -96,7 +96,7 @@
             "slot": "201",
             "type": "t_contract(IERC20Upgradeable)858",
             "contract": "MicrocreditStorageV1",
-            "src": "contracts/microcredit/interfaces/MicrocreditStorageV1.sol:14"
+            "src": "contracts/microcredit/interfaces/MicrocreditStorageV1.sol:13"
           },
           {
             "label": "_usersLength",
@@ -104,23 +104,23 @@
             "slot": "202",
             "type": "t_uint256",
             "contract": "MicrocreditStorageV1",
-            "src": "contracts/microcredit/interfaces/MicrocreditStorageV1.sol:16"
+            "src": "contracts/microcredit/interfaces/MicrocreditStorageV1.sol:15"
           },
           {
-            "label": "_users",
+            "label": "_usersOld",
             "offset": 0,
             "slot": "203",
-            "type": "t_mapping(t_uint256,t_struct(User)25429_storage)",
+            "type": "t_mapping(t_uint256,t_struct(UserOld)26524_storage)",
             "contract": "MicrocreditStorageV1",
-            "src": "contracts/microcredit/interfaces/MicrocreditStorageV1.sol:17"
+            "src": "contracts/microcredit/interfaces/MicrocreditStorageV1.sol:16"
           },
           {
             "label": "_walletMetadata",
             "offset": 0,
             "slot": "204",
-            "type": "t_mapping(t_address,t_struct(WalletMetadata)25421_storage)",
+            "type": "t_mapping(t_address,t_struct(WalletMetadata)26550_storage)",
             "contract": "MicrocreditStorageV1",
-            "src": "contracts/microcredit/interfaces/MicrocreditStorageV1.sol:19"
+            "src": "contracts/microcredit/interfaces/MicrocreditStorageV1.sol:18"
           },
           {
             "label": "_walletList",
@@ -128,7 +128,7 @@
             "slot": "205",
             "type": "t_struct(AddressSet)5505_storage",
             "contract": "MicrocreditStorageV1",
-            "src": "contracts/microcredit/interfaces/MicrocreditStorageV1.sol:20"
+            "src": "contracts/microcredit/interfaces/MicrocreditStorageV1.sol:19"
           },
           {
             "label": "_managerList",
@@ -136,7 +136,7 @@
             "slot": "207",
             "type": "t_struct(AddressSet)5505_storage",
             "contract": "MicrocreditStorageV1",
-            "src": "contracts/microcredit/interfaces/MicrocreditStorageV1.sol:22"
+            "src": "contracts/microcredit/interfaces/MicrocreditStorageV1.sol:21"
           },
           {
             "label": "revenueAddress",
@@ -144,23 +144,63 @@
             "slot": "209",
             "type": "t_address",
             "contract": "MicrocreditStorageV1",
-            "src": "contracts/microcredit/interfaces/MicrocreditStorageV1.sol:23"
+            "src": "contracts/microcredit/interfaces/MicrocreditStorageV1.sol:22"
           },
           {
-            "label": "managers",
+            "label": "_managers",
             "offset": 0,
             "slot": "210",
-            "type": "t_mapping(t_address,t_struct(Manager)25434_storage)",
+            "type": "t_mapping(t_address,t_struct(Manager)26563_storage)",
             "contract": "MicrocreditStorageV1",
-            "src": "contracts/microcredit/interfaces/MicrocreditStorageV1.sol:25"
+            "src": "contracts/microcredit/interfaces/MicrocreditStorageV1.sol:24"
           },
           {
             "label": "donationMiner",
             "offset": 0,
             "slot": "211",
-            "type": "t_contract(IDonationMiner)18469",
+            "type": "t_contract(IDonationMiner)18572",
             "contract": "MicrocreditStorageV1",
-            "src": "contracts/microcredit/interfaces/MicrocreditStorageV1.sol:27"
+            "src": "contracts/microcredit/interfaces/MicrocreditStorageV1.sol:26"
+          },
+          {
+            "label": "_users",
+            "offset": 0,
+            "slot": "212",
+            "type": "t_mapping(t_uint256,t_struct(User)26558_storage)",
+            "contract": "MicrocreditStorageV1",
+            "src": "contracts/microcredit/interfaces/MicrocreditStorageV1.sol:28"
+          },
+          {
+            "label": "_tokens",
+            "offset": 0,
+            "slot": "213",
+            "type": "t_mapping(t_address,t_struct(Token)26612_storage)",
+            "contract": "MicrocreditStorageV1",
+            "src": "contracts/microcredit/interfaces/MicrocreditStorageV1.sol:30"
+          },
+          {
+            "label": "_tokenList",
+            "offset": 0,
+            "slot": "214",
+            "type": "t_struct(AddressSet)5505_storage",
+            "contract": "MicrocreditStorageV1",
+            "src": "contracts/microcredit/interfaces/MicrocreditStorageV1.sol:31"
+          },
+          {
+            "label": "uniswapRouter",
+            "offset": 0,
+            "slot": "216",
+            "type": "t_contract(IUniswapRouter02)19960",
+            "contract": "MicrocreditStorageV1",
+            "src": "contracts/microcredit/interfaces/MicrocreditStorageV1.sol:33"
+          },
+          {
+            "label": "uniswapQuoter",
+            "offset": 0,
+            "slot": "217",
+            "type": "t_contract(IQuoter)19914",
+            "contract": "MicrocreditStorageV1",
+            "src": "contracts/microcredit/interfaces/MicrocreditStorageV1.sol:34"
           }
         ],
         "types": {
@@ -170,6 +210,14 @@
           },
           "t_array(t_bytes32)dyn_storage": {
             "label": "bytes32[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_struct(LoanOld)26545_storage)dyn_storage": {
+            "label": "struct IMicrocredit.LoanOld[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_struct(Repayment)26570_storage)dyn_storage": {
+            "label": "struct IMicrocredit.Repayment[]",
             "numberOfBytes": "32"
           },
           "t_array(t_uint256)49_storage": {
@@ -188,7 +236,7 @@
             "label": "bytes32",
             "numberOfBytes": "32"
           },
-          "t_contract(IDonationMiner)18469": {
+          "t_contract(IDonationMiner)18572": {
             "label": "contract IDonationMiner",
             "numberOfBytes": "20"
           },
@@ -196,28 +244,48 @@
             "label": "contract IERC20Upgradeable",
             "numberOfBytes": "20"
           },
-          "t_mapping(t_address,t_struct(Manager)25434_storage)": {
+          "t_contract(IQuoter)19914": {
+            "label": "contract IQuoter",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IUniswapRouter02)19960": {
+            "label": "contract IUniswapRouter02",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_address,t_struct(Manager)26563_storage)": {
             "label": "mapping(address => struct IMicrocredit.Manager)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_address,t_struct(WalletMetadata)25421_storage)": {
+          "t_mapping(t_address,t_struct(Token)26612_storage)": {
+            "label": "mapping(address => struct IMicrocredit.Token)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_struct(WalletMetadata)26550_storage)": {
             "label": "mapping(address => struct IMicrocredit.WalletMetadata)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_uint24)": {
+            "label": "mapping(address => uint24)",
             "numberOfBytes": "32"
           },
           "t_mapping(t_bytes32,t_uint256)": {
             "label": "mapping(bytes32 => uint256)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_uint256,t_struct(Loan)25463_storage)": {
+          "t_mapping(t_uint256,t_struct(Loan)26602_storage)": {
             "label": "mapping(uint256 => struct IMicrocredit.Loan)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_uint256,t_struct(Repayment)25439_storage)": {
+          "t_mapping(t_uint256,t_struct(Repayment)26570_storage)": {
             "label": "mapping(uint256 => struct IMicrocredit.Repayment)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_uint256,t_struct(User)25429_storage)": {
+          "t_mapping(t_uint256,t_struct(User)26558_storage)": {
             "label": "mapping(uint256 => struct IMicrocredit.User)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_struct(UserOld)26524_storage)": {
+            "label": "mapping(uint256 => struct IMicrocredit.UserOld)",
             "numberOfBytes": "32"
           },
           "t_struct(AddressSet)5505_storage": {
@@ -232,7 +300,7 @@
             ],
             "numberOfBytes": "64"
           },
-          "t_struct(Loan)25463_storage": {
+          "t_struct(Loan)26602_storage": {
             "label": "struct IMicrocredit.Loan",
             "members": [
               {
@@ -285,390 +353,7 @@
               },
               {
                 "label": "repayments",
-                "type": "t_mapping(t_uint256,t_struct(Repayment)25439_storage)",
-                "offset": 0,
-                "slot": "8"
-              },
-              {
-                "label": "lastComputedDate",
-                "type": "t_uint256",
-                "offset": 0,
-                "slot": "9"
-              }
-            ],
-            "numberOfBytes": "320"
-          },
-          "t_struct(Manager)25434_storage": {
-            "label": "struct IMicrocredit.Manager",
-            "members": [
-              {
-                "label": "currentLentAmountLimit",
-                "type": "t_uint256",
-                "offset": 0,
-                "slot": "0"
-              },
-              {
-                "label": "currentLentAmount",
-                "type": "t_uint256",
-                "offset": 0,
-                "slot": "1"
-              }
-            ],
-            "numberOfBytes": "64"
-          },
-          "t_struct(Repayment)25439_storage": {
-            "label": "struct IMicrocredit.Repayment",
-            "members": [
-              {
-                "label": "date",
-                "type": "t_uint256",
-                "offset": 0,
-                "slot": "0"
-              },
-              {
-                "label": "amount",
-                "type": "t_uint256",
-                "offset": 0,
-                "slot": "1"
-              }
-            ],
-            "numberOfBytes": "64"
-          },
-          "t_struct(Set)5204_storage": {
-            "label": "struct EnumerableSet.Set",
-            "members": [
-              {
-                "label": "_values",
-                "type": "t_array(t_bytes32)dyn_storage",
-                "offset": 0,
-                "slot": "0"
-              },
-              {
-                "label": "_indexes",
-                "type": "t_mapping(t_bytes32,t_uint256)",
-                "offset": 0,
-                "slot": "1"
-              }
-            ],
-            "numberOfBytes": "64"
-          },
-          "t_struct(User)25429_storage": {
-            "label": "struct IMicrocredit.User",
-            "members": [
-              {
-                "label": "loansLength",
-                "type": "t_uint256",
-                "offset": 0,
-                "slot": "0"
-              },
-              {
-                "label": "loans",
-                "type": "t_mapping(t_uint256,t_struct(Loan)25463_storage)",
-                "offset": 0,
-                "slot": "1"
-              }
-            ],
-            "numberOfBytes": "64"
-          },
-          "t_struct(WalletMetadata)25421_storage": {
-            "label": "struct IMicrocredit.WalletMetadata",
-            "members": [
-              {
-                "label": "userId",
-                "type": "t_uint256",
-                "offset": 0,
-                "slot": "0"
-              },
-              {
-                "label": "movedTo",
-                "type": "t_address",
-                "offset": 0,
-                "slot": "1"
-              }
-            ],
-            "numberOfBytes": "64"
-          },
-          "t_uint256": {
-            "label": "uint256",
-            "numberOfBytes": "32"
-          }
-        }
-      }
-    },
-    "92e0503d74b985666576ceb00e7b134e2a5e2d8a7c0b50b97214c851fb62df56": {
-      "address": "0x6e986c5Ba1ae50cE510C9654998925DC02E7a2B3",
-      "txHash": "0x7fadbbdce5938aa53b14314edf8ea84c2a321072ec2c147668a06fc7c132d70c",
-      "layout": {
-        "solcVersion": "0.8.4",
-        "storage": [
-          {
-            "label": "_initialized",
-            "offset": 0,
-            "slot": "0",
-            "type": "t_bool",
-            "contract": "Initializable",
-            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:39"
-          },
-          {
-            "label": "_initializing",
-            "offset": 1,
-            "slot": "0",
-            "type": "t_bool",
-            "contract": "Initializable",
-            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:44"
-          },
-          {
-            "label": "__gap",
-            "offset": 0,
-            "slot": "1",
-            "type": "t_array(t_uint256)50_storage",
-            "contract": "ContextUpgradeable",
-            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:31"
-          },
-          {
-            "label": "_owner",
-            "offset": 0,
-            "slot": "51",
-            "type": "t_address",
-            "contract": "OwnableUpgradeable",
-            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:22"
-          },
-          {
-            "label": "__gap",
-            "offset": 0,
-            "slot": "52",
-            "type": "t_array(t_uint256)49_storage",
-            "contract": "OwnableUpgradeable",
-            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:82"
-          },
-          {
-            "label": "_paused",
-            "offset": 0,
-            "slot": "101",
-            "type": "t_bool",
-            "contract": "PausableUpgradeable",
-            "src": "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol:29"
-          },
-          {
-            "label": "__gap",
-            "offset": 0,
-            "slot": "102",
-            "type": "t_array(t_uint256)49_storage",
-            "contract": "PausableUpgradeable",
-            "src": "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol:97"
-          },
-          {
-            "label": "_status",
-            "offset": 0,
-            "slot": "151",
-            "type": "t_uint256",
-            "contract": "ReentrancyGuardUpgradeable",
-            "src": "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:38"
-          },
-          {
-            "label": "__gap",
-            "offset": 0,
-            "slot": "152",
-            "type": "t_array(t_uint256)49_storage",
-            "contract": "ReentrancyGuardUpgradeable",
-            "src": "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:68"
-          },
-          {
-            "label": "cUSD",
-            "offset": 0,
-            "slot": "201",
-            "type": "t_contract(IERC20Upgradeable)858",
-            "contract": "MicrocreditStorageV1",
-            "src": "contracts/microcredit/interfaces/MicrocreditStorageV1.sol:14"
-          },
-          {
-            "label": "_usersLength",
-            "offset": 0,
-            "slot": "202",
-            "type": "t_uint256",
-            "contract": "MicrocreditStorageV1",
-            "src": "contracts/microcredit/interfaces/MicrocreditStorageV1.sol:16"
-          },
-          {
-            "label": "_users",
-            "offset": 0,
-            "slot": "203",
-            "type": "t_mapping(t_uint256,t_struct(User)25465_storage)",
-            "contract": "MicrocreditStorageV1",
-            "src": "contracts/microcredit/interfaces/MicrocreditStorageV1.sol:17"
-          },
-          {
-            "label": "_walletMetadata",
-            "offset": 0,
-            "slot": "204",
-            "type": "t_mapping(t_address,t_struct(WalletMetadata)25457_storage)",
-            "contract": "MicrocreditStorageV1",
-            "src": "contracts/microcredit/interfaces/MicrocreditStorageV1.sol:19"
-          },
-          {
-            "label": "_walletList",
-            "offset": 0,
-            "slot": "205",
-            "type": "t_struct(AddressSet)5505_storage",
-            "contract": "MicrocreditStorageV1",
-            "src": "contracts/microcredit/interfaces/MicrocreditStorageV1.sol:20"
-          },
-          {
-            "label": "_managerList",
-            "offset": 0,
-            "slot": "207",
-            "type": "t_struct(AddressSet)5505_storage",
-            "contract": "MicrocreditStorageV1",
-            "src": "contracts/microcredit/interfaces/MicrocreditStorageV1.sol:22"
-          },
-          {
-            "label": "revenueAddress",
-            "offset": 0,
-            "slot": "209",
-            "type": "t_address",
-            "contract": "MicrocreditStorageV1",
-            "src": "contracts/microcredit/interfaces/MicrocreditStorageV1.sol:23"
-          },
-          {
-            "label": "managers",
-            "offset": 0,
-            "slot": "210",
-            "type": "t_mapping(t_address,t_struct(Manager)25470_storage)",
-            "contract": "MicrocreditStorageV1",
-            "src": "contracts/microcredit/interfaces/MicrocreditStorageV1.sol:25"
-          },
-          {
-            "label": "donationMiner",
-            "offset": 0,
-            "slot": "211",
-            "type": "t_contract(IDonationMiner)18469",
-            "contract": "MicrocreditStorageV1",
-            "src": "contracts/microcredit/interfaces/MicrocreditStorageV1.sol:27"
-          }
-        ],
-        "types": {
-          "t_address": {
-            "label": "address",
-            "numberOfBytes": "20"
-          },
-          "t_array(t_bytes32)dyn_storage": {
-            "label": "bytes32[]",
-            "numberOfBytes": "32"
-          },
-          "t_array(t_uint256)49_storage": {
-            "label": "uint256[49]",
-            "numberOfBytes": "1568"
-          },
-          "t_array(t_uint256)50_storage": {
-            "label": "uint256[50]",
-            "numberOfBytes": "1600"
-          },
-          "t_bool": {
-            "label": "bool",
-            "numberOfBytes": "1"
-          },
-          "t_bytes32": {
-            "label": "bytes32",
-            "numberOfBytes": "32"
-          },
-          "t_contract(IDonationMiner)18469": {
-            "label": "contract IDonationMiner",
-            "numberOfBytes": "20"
-          },
-          "t_contract(IERC20Upgradeable)858": {
-            "label": "contract IERC20Upgradeable",
-            "numberOfBytes": "20"
-          },
-          "t_mapping(t_address,t_struct(Manager)25470_storage)": {
-            "label": "mapping(address => struct IMicrocredit.Manager)",
-            "numberOfBytes": "32"
-          },
-          "t_mapping(t_address,t_struct(WalletMetadata)25457_storage)": {
-            "label": "mapping(address => struct IMicrocredit.WalletMetadata)",
-            "numberOfBytes": "32"
-          },
-          "t_mapping(t_bytes32,t_uint256)": {
-            "label": "mapping(bytes32 => uint256)",
-            "numberOfBytes": "32"
-          },
-          "t_mapping(t_uint256,t_struct(Loan)25501_storage)": {
-            "label": "mapping(uint256 => struct IMicrocredit.Loan)",
-            "numberOfBytes": "32"
-          },
-          "t_mapping(t_uint256,t_struct(Repayment)25475_storage)": {
-            "label": "mapping(uint256 => struct IMicrocredit.Repayment)",
-            "numberOfBytes": "32"
-          },
-          "t_mapping(t_uint256,t_struct(User)25465_storage)": {
-            "label": "mapping(uint256 => struct IMicrocredit.User)",
-            "numberOfBytes": "32"
-          },
-          "t_struct(AddressSet)5505_storage": {
-            "label": "struct EnumerableSet.AddressSet",
-            "members": [
-              {
-                "label": "_inner",
-                "type": "t_struct(Set)5204_storage",
-                "offset": 0,
-                "slot": "0"
-              }
-            ],
-            "numberOfBytes": "64"
-          },
-          "t_struct(Loan)25501_storage": {
-            "label": "struct IMicrocredit.Loan",
-            "members": [
-              {
-                "label": "amountBorrowed",
-                "type": "t_uint256",
-                "offset": 0,
-                "slot": "0"
-              },
-              {
-                "label": "period",
-                "type": "t_uint256",
-                "offset": 0,
-                "slot": "1"
-              },
-              {
-                "label": "dailyInterest",
-                "type": "t_uint256",
-                "offset": 0,
-                "slot": "2"
-              },
-              {
-                "label": "claimDeadline",
-                "type": "t_uint256",
-                "offset": 0,
-                "slot": "3"
-              },
-              {
-                "label": "startDate",
-                "type": "t_uint256",
-                "offset": 0,
-                "slot": "4"
-              },
-              {
-                "label": "lastComputedDebt",
-                "type": "t_uint256",
-                "offset": 0,
-                "slot": "5"
-              },
-              {
-                "label": "amountRepayed",
-                "type": "t_uint256",
-                "offset": 0,
-                "slot": "6"
-              },
-              {
-                "label": "repaymentsLength",
-                "type": "t_uint256",
-                "offset": 0,
-                "slot": "7"
-              },
-              {
-                "label": "repayments",
-                "type": "t_mapping(t_uint256,t_struct(Repayment)25475_storage)",
+                "type": "t_mapping(t_uint256,t_struct(Repayment)26570_storage)",
                 "offset": 0,
                 "slot": "8"
               },
@@ -683,21 +368,99 @@
                 "type": "t_address",
                 "offset": 0,
                 "slot": "10"
+              },
+              {
+                "label": "tokenAddress",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "11"
+              },
+              {
+                "label": "tokenAmountBorrowed",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "12"
+              },
+              {
+                "label": "tokenAmountRepayed",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "13"
               }
             ],
-            "numberOfBytes": "352"
+            "numberOfBytes": "448"
           },
-          "t_struct(Manager)25470_storage": {
-            "label": "struct IMicrocredit.Manager",
+          "t_struct(LoanOld)26545_storage": {
+            "label": "struct IMicrocredit.LoanOld",
             "members": [
               {
-                "label": "currentLentAmountLimit",
+                "label": "amountBorrowed",
                 "type": "t_uint256",
                 "offset": 0,
                 "slot": "0"
               },
               {
-                "label": "currentLentAmount",
+                "label": "period",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "dailyInterest",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "claimDeadline",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "startDate",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "4"
+              },
+              {
+                "label": "lastComputedDebt",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "5"
+              },
+              {
+                "label": "amountRepayed",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "6"
+              },
+              {
+                "label": "repayments",
+                "type": "t_array(t_struct(Repayment)26570_storage)dyn_storage",
+                "offset": 0,
+                "slot": "7"
+              },
+              {
+                "label": "lastComputedDate",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "8"
+              }
+            ],
+            "numberOfBytes": "288"
+          },
+          "t_struct(Manager)26563_storage": {
+            "label": "struct IMicrocredit.Manager",
+            "members": [
+              {
+                "label": "lentAmountLimit",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "lentAmount",
                 "type": "t_uint256",
                 "offset": 0,
                 "slot": "1"
@@ -705,7 +468,7 @@
             ],
             "numberOfBytes": "64"
           },
-          "t_struct(Repayment)25475_storage": {
+          "t_struct(Repayment)26570_storage": {
             "label": "struct IMicrocredit.Repayment",
             "members": [
               {
@@ -719,9 +482,15 @@
                 "type": "t_uint256",
                 "offset": 0,
                 "slot": "1"
+              },
+              {
+                "label": "tokenAmount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
               }
             ],
-            "numberOfBytes": "64"
+            "numberOfBytes": "96"
           },
           "t_struct(Set)5204_storage": {
             "label": "struct EnumerableSet.Set",
@@ -741,7 +510,31 @@
             ],
             "numberOfBytes": "64"
           },
-          "t_struct(User)25465_storage": {
+          "t_struct(Token)26612_storage": {
+            "label": "struct IMicrocredit.Token",
+            "members": [
+              {
+                "label": "active",
+                "type": "t_bool",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "exchangeTokens",
+                "type": "t_struct(AddressSet)5505_storage",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "exchangeTokensFees",
+                "type": "t_mapping(t_address,t_uint24)",
+                "offset": 0,
+                "slot": "3"
+              }
+            ],
+            "numberOfBytes": "128"
+          },
+          "t_struct(User)26558_storage": {
             "label": "struct IMicrocredit.User",
             "members": [
               {
@@ -752,14 +545,26 @@
               },
               {
                 "label": "loans",
-                "type": "t_mapping(t_uint256,t_struct(Loan)25501_storage)",
+                "type": "t_mapping(t_uint256,t_struct(Loan)26602_storage)",
                 "offset": 0,
                 "slot": "1"
               }
             ],
             "numberOfBytes": "64"
           },
-          "t_struct(WalletMetadata)25457_storage": {
+          "t_struct(UserOld)26524_storage": {
+            "label": "struct IMicrocredit.UserOld",
+            "members": [
+              {
+                "label": "loans",
+                "type": "t_array(t_struct(LoanOld)26545_storage)dyn_storage",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(WalletMetadata)26550_storage": {
             "label": "struct IMicrocredit.WalletMetadata",
             "members": [
               {
@@ -776,6 +581,10 @@
               }
             ],
             "numberOfBytes": "64"
+          },
+          "t_uint24": {
+            "label": "uint24",
+            "numberOfBytes": "3"
           },
           "t_uint256": {
             "label": "uint256",

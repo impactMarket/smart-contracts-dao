@@ -51,9 +51,9 @@ async function getCommunities() {
     );
 
     communityListLength = (await communityAdmin.communityListLength()).toNumber();
-    // const communityListLength = 2;
+    // communityListLength = 2;
 
-    console.log('communityListLength 1: ', communityListLength);
+    console.log('communityListLength: ', communityListLength);
 
     let getCommunityAddressPromises = [];
 
@@ -63,6 +63,8 @@ async function getCommunities() {
     }
 
     await Promise.all(getCommunityAddressPromises);
+
+    console.log('after getCommunityAddressPromises');
 
     let maxBeneficiariesNumber = 0
     let totalBeneficiariesNumber = 0
@@ -77,7 +79,7 @@ async function getCommunities() {
 
     console.log('maxBeneficiariesNumber: ', maxBeneficiariesNumber);
     console.log('totalBeneficiariesNumber: ', totalBeneficiariesNumber);
-    console.log('totalValidBeneficiariesNumber 1: ', totalValidBeneficiariesNumber);
+    console.log('totalValidBeneficiariesNumber: ', totalValidBeneficiariesNumber);
 
     fs.writeFileSync("results/communities.json", JSON.stringify(communities), function (err: any) {
         if (err) {
@@ -118,7 +120,7 @@ async function getBeneficiaries(communities: any) {
         }
     }
 
-    // await Promise.all(getCommunityBeneficiaryPromises);
+    await Promise.all(getCommunityBeneficiaryPromises);
 
     // let chunkSize = 100;
     // let counter = 0;

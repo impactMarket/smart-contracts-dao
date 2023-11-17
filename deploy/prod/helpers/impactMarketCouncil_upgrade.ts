@@ -20,19 +20,12 @@ const impactMarketCouncilAddress = "0xF2CA11DA5c3668DD48774f3Ce8ac09aFDc24aF3E";
 
 let newImpactMarketCouncilImplementationAddress: string;
 
-let GovernanceProxy: ethersTypes.Contract;
-
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// @ts-ignore
 	// const { deployments, ethers } = hre;
 
 	const accounts: SignerWithAddress[] = await ethers.getSigners();
 	deployer = accounts[0];
-
-	GovernanceProxy = await ethers.getContractAt(
-		"PACTDelegate",
-		governanceDelegatorAddress
-	);
 
 	await deployNewImpactMarketCouncilImplementation();
 	await createUpgradeImplementationProposal();
@@ -54,7 +47,7 @@ async function createUpgradeImplementationProposal() {
 
 	await new Promise((resolve) => setTimeout(resolve, 6000));
 	await createProposal(
-		GovernanceProxy,
+		governanceDelegatorAddress,
 		deployer,
 		[
 			proxyAdminAddress,

@@ -23,19 +23,12 @@ const contractName = 'DonationMinerImplementation';
 
 let newImplementationAddress: string;
 
-let GovernanceProxy: ethersTypes.Contract;
-
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// @ts-ignore
 	// const { deployments, ethers } = hre;
 
 	const accounts: SignerWithAddress[] = await ethers.getSigners();
 	deployer = accounts[0];
-
-	GovernanceProxy = await ethers.getContractAt(
-		"PACTDelegate",
-		governanceDelegatorAddress
-	);
 
 	await deployNewImplementation();
 	await createUpgradeImplementation();
@@ -58,7 +51,7 @@ async function createUpgradeImplementation() {
 
 	await new Promise((resolve) => setTimeout(resolve, 6000));
 	await createProposal(
-		GovernanceProxy,
+		governanceDelegatorAddress,
 		deployer,
 		[
 			proxyAdminAddress,

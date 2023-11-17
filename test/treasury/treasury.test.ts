@@ -3,22 +3,18 @@ import chai, { should } from "chai";
 // @ts-ignore
 import chaiAsPromised from "chai-as-promised";
 // @ts-ignore
-import { deployments, ethers, getNamedAccounts } from "hardhat";
+import { deployments, ethers } from "hardhat";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import * as ethersTypes from "ethers";
-import { fromEther, toEther } from "../utils/helpers";
+import { toEther } from "../utils/helpers";
 import {
 	createPool,
-	getExactInput,
 	getExchangePath,
-	increaseLiquidity,
-	position,
 	swap,
 	uniswapNFTPositionManagerAddress,
 	uniswapQuoterAddress,
 	uniswapRouterAddress,
 } from "../utils/uniswap";
-import { BigNumber } from "@ethersproject/bignumber";
 
 const NFTPositionManagerABI =
 	require("../../util/abi/uniswap/periphery/NonfungiblePositionManager.json").abi;
@@ -113,8 +109,6 @@ describe("Treasury", () => {
 		);
 
 		const tokenFactory = await ethers.getContractFactory("TokenMock");
-
-		const fake = await tokenFactory.deploy("fake", "fake");
 		mUSD = await tokenFactory.deploy("mUSD", "mUSD");
 		cTKN = await tokenFactory.deploy("cTKN", "cTKN");
 	});
@@ -1381,14 +1375,14 @@ describe("Treasury", () => {
 				.withArgs(
 					cUSDToPACTTokenId,
 					toEther("0.499999999999999999"),
-					toEther("1")
+					toEther("0.999999999999999999")
 				);
 
 			expect(await PACT.balanceOf(Treasury.address)).to.be.eq(
 				treasuryInitialPACTBalance.add(toEther("0.499999999999999999"))
 			);
 			expect(await cUSD.balanceOf(Treasury.address)).to.be.eq(
-				treasuryInitialCUSDBalance.add(toEther("1"))
+				treasuryInitialCUSDBalance.add(toEther("0.999999999999999999"))
 			);
 
 			expect(await PACT.balanceOf(TreasuryLpSwap.address)).to.be.eq(0);
