@@ -1,13 +1,13 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { parseEther } from "@ethersproject/units";
-import { BigNumberish } from "ethers";
+import { BigNumber } from "@ethersproject/bignumber";
 
 const TWO_DAYS_SECONDS = 2 * 24 * 60 * 60; // 2 days
 const VOTING_PERIOD_BLOCKS = 17280;
 const VOTING_DELAY_BLOCKS = 720; // about 1 hour
-const PROPOSAL_THRESHOLD: BigNumberish = parseEther("100000000"); // 100 millions units (1%)
-const QUORUM_VOTES: BigNumberish = parseEther("100000000"); // 100 millions units (1%)
+const PROPOSAL_THRESHOLD: BigNumber = parseEther("100000000"); // 100 millions units (1%)
+const QUORUM_VOTES: BigNumber = parseEther("100000000"); // 100 millions units (1%)
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
