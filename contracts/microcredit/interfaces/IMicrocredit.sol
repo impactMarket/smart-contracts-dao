@@ -126,6 +126,13 @@ interface IMicrocredit {
         uint256 dailyInterest,
         uint256 claimDeadline
     ) external;
+    function addLoan(
+        address userAddress,
+        uint256 amount,
+        uint256 period,
+        uint256 dailyInterest,
+        uint256 claimDeadline
+    ) external;
     function addLoans(
         address[] calldata userAddresses,
         address[] calldata tokenAddresses,

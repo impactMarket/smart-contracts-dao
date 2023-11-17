@@ -316,8 +316,28 @@ contract MicrocreditImplementation is
         uint256 _dailyInterest,
         uint256 _claimDeadline
     ) external override onlyManagers {
-        _addLoan(_tokenAddress, _userAddress, _amount, _period, _dailyInterest, _claimDeadline);
+        _addLoan(_userAddress, _tokenAddress, _amount, _period, _dailyInterest, _claimDeadline);
     }
+
+    /**
+     * @notice Adds a loan
+     *
+     * @param _userAddress           address of the user
+     * @param _amount                amount of the loan
+     * @param _period                period of the loan
+     * @param _dailyInterest         daily interest of the loan
+     * @param _claimDeadline         claim deadline of the loan
+     */
+    function addLoan(
+        address _userAddress,
+        uint256 _amount,
+        uint256 _period,
+        uint256 _dailyInterest,
+        uint256 _claimDeadline
+    ) external override onlyManagers {
+        _addLoan(_userAddress, address(cUSD), _amount, _period, _dailyInterest, _claimDeadline);
+    }
+
 
     /**
      * @notice Adds multiples loans
@@ -717,8 +737,8 @@ contract MicrocreditImplementation is
     }
 
     function _addLoan(
-        address _tokenAddress,
         address _userAddress,
+        address _tokenAddress,
         uint256 _amount,
         uint256 _period,
         uint256 _dailyInterest,
@@ -908,11 +928,12 @@ contract MicrocreditImplementation is
         );
     }
 
-    function initV2() external onlyOwner {
+    function initV2(uint256 _from, uint256 _to) external onlyOwner {
         uint256 _userId;
         uint256 _loanId;
 
-        for (_userId = 0; _userId < _usersLength; _userId++) {
+        _to  = _to < _usersLength ? _to : _usersLength;
+        for (_userId = _from; _userId < _to; _userId++) {
             for (_loanId = 0; _loanId < _users[_userId].loansLength; _loanId++) {
                 _users[_userId].loans[_loanId].tokenAddress = address(cUSD);
                 _users[_userId].loans[_loanId].tokenAmountBorrowed = _users[_userId].loans[_loanId].amountBorrowed;
