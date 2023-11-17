@@ -18,10 +18,7 @@ const governanceDelegatorAddress = "0x8f8BB984e652Cb8D0aa7C9D6712Ec2020EB1BAb4";
 const communityAdminProxyAddress = "0xd61c407c3A00dFD8C355973f7a14c55ebaFDf6F9";
 const communityTestAddress = '0xCDb4Fe1C54842Cd644aAb9249CE56D6a32E038bD';
 
-
 let newCommunityImplementationAddress: string;
-
-let GovernanceProxy: ethersTypes.Contract;
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// @ts-ignore
@@ -29,11 +26,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	const accounts: SignerWithAddress[] = await ethers.getSigners();
 	deployer = accounts[0];
-
-	GovernanceProxy = await ethers.getContractAt(
-		"PACTDelegate",
-		governanceDelegatorAddress
-	);
 
 	await deployNewCommunityImplementation();
 	await createUpgradeImplementation();
@@ -58,7 +50,7 @@ async function createUpgradeImplementation() {
 
 	await new Promise((resolve) => setTimeout(resolve, 6000));
 	await createProposal(
-		GovernanceProxy,
+		governanceDelegatorAddress,
 		deployer,
 		[
 			communityAdminProxyAddress,

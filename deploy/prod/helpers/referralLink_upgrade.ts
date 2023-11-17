@@ -23,19 +23,12 @@ const contractName = 'ReferralLinkImplementation';
 
 let newReferralLinkImplementationAddress: string;
 
-let GovernanceProxy: ethersTypes.Contract;
-
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// @ts-ignore
 	// const { deployments, ethers } = hre;
 
 	const accounts: SignerWithAddress[] = await ethers.getSigners();
 	deployer = accounts[0];
-
-	GovernanceProxy = await ethers.getContractAt(
-		"PACTDelegate",
-		governanceDelegatorAddress
-	);
 
 	await deployNewImplementation();
 	await createUpgradeImplementation();
@@ -57,7 +50,7 @@ async function createUpgradeImplementation() {
 	console.log("Creating new proposal");
 
 	await createProposal(
-		GovernanceProxy,
+		governanceDelegatorAddress,
 		deployer,
 		[
 			proxyAdminAddress,

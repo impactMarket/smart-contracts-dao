@@ -18,17 +18,9 @@ let deployer: SignerWithAddress;
 const governanceDelegatorAddress = "0x5c27e2600a3eDEF53DE0Ec32F01efCF145419eDF";
 const airdropV2Address = "0xEb0b7fE19c764224e4a6572CC0EA80074489896E";
 
-
-let GovernanceProxy: ethersTypes.Contract;
-
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const accounts: SignerWithAddress[] = await ethers.getSigners();
 	deployer = accounts[0];
-
-	GovernanceProxy = await ethers.getContractAt(
-		"PACTDelegate",
-		governanceDelegatorAddress
-	);
 
 	await createCallProposal();
 };
@@ -37,7 +29,7 @@ async function createCallProposal() {
 	console.log("Creating new proposal");
 
 	await createProposal(
-		GovernanceProxy,
+		governanceDelegatorAddress,
 		deployer,
 		[
 			airdropV2Address

@@ -24,21 +24,12 @@ const PACTAddress = "0x46c9757C5497c5B1f2eb73aE79b6B67D119B0B58";
 // const uniswapNFTPositionManagerId = 3108;
 // const PACTAddress = "0x73A2De6A8370108D43c3C80430C84c30df323eD2";
 
-
-
-let GovernanceProxy: ethersTypes.Contract;
-
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// @ts-ignore
 	// const { deployments, ethers } = hre;
 
 	const accounts: SignerWithAddress[] = await ethers.getSigners();
 	deployer = accounts[0];
-
-	GovernanceProxy = await ethers.getContractAt(
-		"PACTDelegate",
-		governanceDelegatorAddress
-	);
 
 	await createCallProposal();
 };
@@ -47,7 +38,7 @@ async function createCallProposal() {
 	console.log("Creating new proposal");
 
 	await createProposal(
-		GovernanceProxy,
+		governanceDelegatorAddress,
 		deployer,
 		[
 			treasuryAddress,

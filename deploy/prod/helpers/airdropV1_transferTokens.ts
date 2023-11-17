@@ -15,16 +15,10 @@ const PACTAddress = "0x46c9757C5497c5B1f2eb73aE79b6B67D119B0B58";
 const impactLabsMultisig = "0x266f8E061AD13dDF79Cb662FF633Ddb6dd40725d";
 
 
-let GovernanceProxy: ethersTypes.Contract;
-
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const accounts: SignerWithAddress[] = await ethers.getSigners();
 	deployer = accounts[0];
 
-	GovernanceProxy = await ethers.getContractAt(
-		"PACTDelegate",
-		governanceDelegatorAddress
-	);
 
 	await createCallProposal();
 };
@@ -33,7 +27,7 @@ async function createCallProposal() {
 	console.log("Creating new proposal");
 
 	await createProposal(
-		GovernanceProxy,
+		governanceDelegatorAddress,
 		deployer,
 		[
 			airdropV1Address

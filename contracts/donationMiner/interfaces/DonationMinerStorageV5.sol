@@ -12,4 +12,5 @@ import "./DonationMinerStorageV4.sol";
 abstract contract DonationMinerStorageV5 is DonationMinerStorageV4 {
     IAirdropV3 public override airdropV3;
     IMicrocredit public override microcredit;
+    address public override recurringCronAddress;
 }
