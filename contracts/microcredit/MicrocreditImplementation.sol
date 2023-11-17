@@ -933,7 +933,7 @@ contract MicrocreditImplementation is
         uint256 _loanId;
 
         _to  = _to < _usersLength ? _to : _usersLength;
-        for (_userId = _from; _userId < _to; _userId++) {
+        for (_userId = _from; _userId <= _to; _userId++) {
             for (_loanId = 0; _loanId < _users[_userId].loansLength; _loanId++) {
                 _users[_userId].loans[_loanId].tokenAddress = address(cUSD);
                 _users[_userId].loans[_loanId].tokenAmountBorrowed = _users[_userId].loans[_loanId].amountBorrowed;
