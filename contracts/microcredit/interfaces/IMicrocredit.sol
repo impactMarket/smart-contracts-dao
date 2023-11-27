@@ -4,6 +4,7 @@ pragma solidity 0.8.4;
 import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "../../donationMiner/interfaces/IDonationMiner.sol";
+import "../../microcreditManager/interfaces/IMicrocreditManager.sol";
 import "../../externalInterfaces/uniswapV3/IUniswapRouter02.sol";
 import "../../externalInterfaces/uniswapV3/IQuoter.sol";
 
@@ -76,6 +77,7 @@ interface IMicrocredit {
     function donationMiner() external view returns(IDonationMiner);
     function uniswapRouter() external view returns(IUniswapRouter02);
     function uniswapQuoter() external view returns(IQuoter);
+    function microcreditManager() external view returns(IMicrocreditManager);
     function walletMetadata(address userAddress)
         external view returns(uint256 userId, address movedTo, uint256 loansLength);
     struct UserLoanResponse {
@@ -103,6 +105,8 @@ interface IMicrocredit {
         external view returns(Repayment memory repayment);
     function walletListAt(uint256 index) external view returns (address);
     function walletListLength() external view returns (uint256);
+    function maintainerListAt(uint256 index) external view returns (address);
+    function maintainerListLength() external view returns (uint256);
     function managerListAt(uint256 index) external view returns (address);
     function managerListLength() external view returns (uint256);
     function managers(address managerAddress) external view returns(Manager memory);
@@ -113,6 +117,9 @@ interface IMicrocredit {
     function updateDonationMiner(IDonationMiner newDonationMiner) external;
     function updateUniswapRouter(IUniswapRouter02 _uniswapRouter) external;
     function updateUniswapQuoter(IQuoter _uniswapQuoter) external;
+    function updateMicrocreditManager(IMicrocreditManager _uniswapQuoter) external;
+    function addMaintainers(address[] calldata _maintainerAddresses) external;
+    function removeMaintainers(address[] calldata _maintainerAddresses) external;
     function addManagers(
         address[] calldata managerAddresses,
         uint256[] calldata lentAmountLimits
@@ -121,13 +128,6 @@ interface IMicrocredit {
     function addLoan(
         address userAddress,
         address tokenAddress,
-        uint256 amount,
-        uint256 period,
-        uint256 dailyInterest,
-        uint256 claimDeadline
-    ) external;
-    function addLoan(
-        address userAddress,
         uint256 amount,
         uint256 period,
         uint256 dailyInterest,

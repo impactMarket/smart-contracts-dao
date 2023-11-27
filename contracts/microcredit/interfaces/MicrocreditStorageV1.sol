@@ -17,7 +17,6 @@ abstract contract MicrocreditStorageV1 is IMicrocredit {
 
     mapping(address => WalletMetadata) internal _walletMetadata;
     EnumerableSet.AddressSet internal _walletList;
-
     EnumerableSet.AddressSet internal _managerList;
     address public override revenueAddress;
 
@@ -32,4 +31,8 @@ abstract contract MicrocreditStorageV1 is IMicrocredit {
 
     IUniswapRouter02 public override uniswapRouter;
     IQuoter public override uniswapQuoter;
+
+    IMicrocreditManager public override microcreditManager;
+
+    EnumerableSet.AddressSet internal _maintainerList;
 }

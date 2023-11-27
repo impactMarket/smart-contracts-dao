@@ -3,7 +3,7 @@ pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
-contract ContributorProxy is TransparentUpgradeableProxy {
+contract MicrocreditManagerProxy is TransparentUpgradeableProxy {
     constructor(address _logic, address _proxyAdmin)
         TransparentUpgradeableProxy(_logic, _proxyAdmin, "")
     {}

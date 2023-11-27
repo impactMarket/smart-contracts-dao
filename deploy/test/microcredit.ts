@@ -4,6 +4,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { toEther } from "../../test/utils/helpers";
 import { generateMerkleTree } from "../../script/merkleTree/generateMerkleTree";
 import { getCUSDAddress } from "./cUSD";
+import {uniswapQuoterAddress, uniswapRouterAddress} from "../../test/utils/uniswap";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	// @ts-ignore
@@ -95,7 +96,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	);
 
 	await donationMiner.updateMicrocredit(microcreditContract.address);
+
 	await microcreditContract.updateDonationMiner(donationMiner.address);
+	await microcreditContract.updateUniswapRouter(uniswapRouterAddress);
+	await microcreditContract.updateUniswapQuoter(uniswapQuoterAddress);
 
 	await microcreditContract.transferOwnership(owner.address);
 };
