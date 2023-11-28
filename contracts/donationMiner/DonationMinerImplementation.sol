@@ -1229,6 +1229,13 @@ contract DonationMinerImplementation is
         view
         returns (uint256)
     {
+        Donor storage _donor = donors[_donorAddress];
+
+        if (_inAdvanceRewardPeriods > currentRewardPeriodNumber() - _donor.rewardPeriods[_donor.rewardPeriodsCount]) {
+            _inAdvanceRewardPeriods -= (currentRewardPeriodNumber() - _donor.rewardPeriods[_donor.rewardPeriodsCount]);
+        } else {
+            _inAdvanceRewardPeriods = 0;
+        }
         uint256 _totalReward = _calculateRewardForTheNextXPeriods(_inAdvanceRewardPeriods);
 
         return _calculateDonorShare(_donorAddress, _totalReward);

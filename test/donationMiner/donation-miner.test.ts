@@ -3061,7 +3061,7 @@ describe.only("DonationMiner", () => {
       );
     });
 
-    it.only("Should estimateClaimableRewardAdvance #1", async function () {
+    it("Should estimateClaimableRewardAdvance #1", async function () {
       const user1Donation = toEther("100");
 
       await advanceToRewardPeriodN(1);
@@ -3083,7 +3083,7 @@ describe.only("DonationMiner", () => {
       );
     });
 
-    it.only("Should estimateClaimableRewardAdvance #2", async function () {
+    it("Should estimateClaimableRewardAdvance #2", async function () {
       const user1Donation = toEther("100");
 
       await advanceToRewardPeriodN(2);
@@ -3105,7 +3105,7 @@ describe.only("DonationMiner", () => {
       );
     });
 
-    it.only("Should estimateClaimableRewardAdvance #3", async function () {
+    it("Should estimateClaimableRewardAdvance #3", async function () {
       const user1Donation = toEther("100");
 
       await advanceToRewardPeriodN(2);
@@ -3125,11 +3125,56 @@ describe.only("DonationMiner", () => {
 
       shouldBeAlmostEqual(
         await DonationMiner.estimateClaimableRewardAdvance(user1.address),
-        rewardsSum(3, 8)
+        rewardsSum(3, 7)
       );
     });
 
-    it.only("Should estimateClaimableRewardAdvance #4", async function () {
+    it("Should estimateClaimableRewardAdvance #4", async function () {
+      const user1Donation = toEther("100");
+
+      await advanceToRewardPeriodN(2);
+
+      // Approve
+      await cUSD
+        .connect(user1)
+        .approve(DonationMiner.address, user1Donation);
+
+      await DonationMiner.connect(user1).donate(
+        cUSD.address,
+        user1Donation,
+        user1.address
+      );
+
+      await advanceToRewardPeriodN(7);
+
+      shouldBeAlmostEqual(
+        await DonationMiner.estimateClaimableRewardAdvance(user1.address),
+        rewardsSum(7, 7)
+      );
+    });
+
+    it("Should estimateClaimableRewardAdvance #5", async function () {
+      const user1Donation = toEther("100");
+
+      await advanceToRewardPeriodN(2);
+
+      // Approve
+      await cUSD
+        .connect(user1)
+        .approve(DonationMiner.address, user1Donation);
+
+      await DonationMiner.connect(user1).donate(
+        cUSD.address,
+        user1Donation,
+        user1.address
+      );
+
+      await advanceToRewardPeriodN(8);
+
+      (await DonationMiner.estimateClaimableRewardAdvance(user1.address)).should.eq(0);
+    });
+
+    it("Should estimateClaimableRewardAdvance #6", async function () {
       const user1Donation = toEther("100");
       const user2Donation = toEther("300");
 
@@ -3167,7 +3212,7 @@ describe.only("DonationMiner", () => {
       );
     });
 
-    it.only("Should estimateClaimableRewardAdvance #1", async function () {
+    it("Should estimateNewDonationClaimableRewardAdvance #1", async function () {
       await advanceToRewardPeriodN(1);
 
       shouldBeAlmostEqual(
@@ -3176,7 +3221,7 @@ describe.only("DonationMiner", () => {
       );
     });
 
-    it.only("Should estimateClaimableRewardAdvance #2", async function () {
+    it("Should estimateNewDonationClaimableRewardAdvance #2", async function () {
       await advanceToRewardPeriodN(2);
 
       shouldBeAlmostEqual(
@@ -3185,7 +3230,7 @@ describe.only("DonationMiner", () => {
       );
     });
 
-    it.only("Should estimateClaimableRewardAdvance #3", async function () {
+    it("Should estimateNewDonationClaimableRewardAdvance #3", async function () {
       const user1Donation = toEther("100");
 
       await advanceToRewardPeriodN(2);
