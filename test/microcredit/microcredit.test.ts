@@ -22,9 +22,11 @@ import {
 chai.use(chaiAsPromised);
 should();
 
-describe.only("Microcredit", () => {
+describe("Microcredit", () => {
   let deployer: SignerWithAddress;
   let owner: SignerWithAddress;
+  let maintainer1: SignerWithAddress;
+  let maintainer2: SignerWithAddress;
   let manager1: SignerWithAddress;
   let manager2: SignerWithAddress;
   let user1: SignerWithAddress;
@@ -59,7 +61,7 @@ describe.only("Microcredit", () => {
       fallbackToGlobal: false,
     });
 
-    [deployer, owner, manager1, manager2, user1, user2, user3, user4] =
+    [deployer, owner, maintainer1, maintainer2, manager1, manager2, user1, user2, user3, user4] =
       await ethers.getSigners();
 
     cUSD = await ethers.getContractAt(
@@ -106,10 +108,7 @@ describe.only("Microcredit", () => {
     await cTKN.mint(user1.address, initialUser1cTKNBalance);
     await cTKN.mint(user2.address, initialUser2cTKNBalance);
 
-    await Microcredit.connect(owner).updateUniswapRouter(uniswapRouterAddress);
-    await Microcredit.connect(owner).updateUniswapQuoter(uniswapQuoterAddress);
-
-    await createPools();
+    // await createPools();
   });
 
   function getDebtOnDayX(
@@ -344,6 +343,72 @@ describe.only("Microcredit", () => {
     });
   });
 
+  describe("Microcredit - maintainer", () => {
+    before(async function () {
+    });
+
+    beforeEach(async () => {
+      await deploy();
+    });
+
+    it("Should not addMaintainers if not owner", async function () {
+      await Microcredit.connect(user1)
+        .addMaintainers(
+          [maintainer1.address]
+        )
+        .should.be.rejectedWith("Ownable: caller is not the owner");
+    });
+
+    it("Should addMaintainers if owner (one maintainer)", async function () {
+      (await Microcredit.maintainerListLength()).should.eq(0);
+      await Microcredit.connect(owner)
+        .addMaintainers(
+          [maintainer1.address]
+        )
+        .should.emit(Microcredit, "MaintainerAdded")
+        .withArgs(maintainer1.address);
+
+      (await Microcredit.maintainerListLength()).should.eq(1);
+      (await Microcredit.maintainerListAt(0)).should.eq(maintainer1.address);
+    });
+
+    it("Should addMaintainers (multiple maintainers)", async function () {
+      (await Microcredit.maintainerListLength()).should.eq(0);
+      await Microcredit.connect(owner)
+        .addMaintainers(
+          [maintainer1.address, maintainer2.address]
+        )
+        .should.emit(Microcredit, "MaintainerAdded")
+        .withArgs(maintainer1.address)
+        .emit(Microcredit, "MaintainerAdded")
+        .withArgs(maintainer2.address);
+
+      (await Microcredit.maintainerListLength()).should.eq(2);
+      (await Microcredit.maintainerListAt(0)).should.eq(maintainer1.address);
+      (await Microcredit.maintainerListAt(1)).should.eq(maintainer2.address);
+    });
+
+    it("Should removeMaintainers if owner", async function () {
+      await Microcredit.connect(owner).addMaintainers(
+        [maintainer1.address, maintainer2.address]
+      );
+
+      await Microcredit.connect(owner)
+        .removeMaintainers([maintainer1.address])
+        .should.emit(Microcredit, "MaintainerRemoved")
+        .withArgs(maintainer1.address);
+
+      (await Microcredit.maintainerListLength()).should.eq(1);
+    });
+
+    it("Should not removeMaintainers if not owner", async function () {
+      await Microcredit.connect(user1)
+        .removeMaintainers([maintainer1.address])
+        .should.be.rejectedWith("Ownable: caller is not the owner");
+    });
+  });
+
+
   describe("Microcredit - managers", () => {
     before(async function () {
     });
@@ -352,12 +417,60 @@ describe.only("Microcredit", () => {
       await deploy();
 
       await Microcredit.connect(owner).addToken(cUSD.address, [], []);
-      await Microcredit.connect(owner).addToken(mUSD.address, [cUSD.address], [10000]);
+
+      await Microcredit.connect(owner).addMaintainers(
+        [maintainer1.address, maintainer2.address]
+      );
+    });
+
+    it("Should not addManagers if not owner nor maintainer", async function () {
+      await Microcredit.connect(user1)
+        .addManagers(
+          [manager1.address],
+          [toEther(1000)]
+        )
+        .should.be.rejectedWith("Microcredit: caller is not a maintainer");
     });
 
     it("Should addManagers if owner (one manager)", async function () {
       (await Microcredit.managerListLength()).should.eq(0);
       await Microcredit.connect(owner)
+        .addManagers(
+          [manager1.address],
+          [toEther(1000)]
+        )
+        .should.emit(Microcredit, "ManagerAdded")
+        .withArgs(manager1.address, toEther(1000));
+
+      (await Microcredit.managerListLength()).should.eq(1);
+      (await Microcredit.managerListAt(0)).should.eq(manager1.address);
+
+      const manager1Info = await Microcredit.managers(manager1.address);
+      manager1Info.lentAmountLimit.should.eq(toEther(1000));
+      manager1Info.lentAmount.should.eq(toEther(0));
+    });
+
+    it("Should addManagers if maintainer #1", async function () {
+      (await Microcredit.managerListLength()).should.eq(0);
+      await Microcredit.connect(maintainer1)
+        .addManagers(
+          [manager1.address],
+          [toEther(1000)]
+        )
+        .should.emit(Microcredit, "ManagerAdded")
+        .withArgs(manager1.address, toEther(1000));
+
+      (await Microcredit.managerListLength()).should.eq(1);
+      (await Microcredit.managerListAt(0)).should.eq(manager1.address);
+
+      const manager1Info = await Microcredit.managers(manager1.address);
+      manager1Info.lentAmountLimit.should.eq(toEther(1000));
+      manager1Info.lentAmount.should.eq(toEther(0));
+    });
+
+    it("Should addManagers if maintainer #2", async function () {
+      (await Microcredit.managerListLength()).should.eq(0);
+      await Microcredit.connect(maintainer2)
         .addManagers(
           [manager1.address],
           [toEther(1000)]
@@ -453,15 +566,6 @@ describe.only("Microcredit", () => {
       manager1InfoAfter.lentAmount.should.eq(toEther(0));
     });
 
-    it("Should not addManagers if not owner", async function () {
-      await Microcredit.connect(user1)
-        .addManagers(
-          [manager1.address],
-          [toEther(1000)]
-        )
-        .should.be.rejectedWith("Ownable: caller is not the owner");
-    });
-
     it("Should removeManagers if owner", async function () {
       await Microcredit.connect(owner).addManagers(
         [manager1.address, manager1.address],
@@ -483,7 +587,7 @@ describe.only("Microcredit", () => {
     it("Should not removeManagers if not owner", async function () {
       await Microcredit.connect(user1)
         .removeManagers([manager1.address])
-        .should.be.rejectedWith("Ownable: caller is not the owner");
+        .should.be.rejectedWith("Microcredit: caller is not a maintainer");
     });
   });
 

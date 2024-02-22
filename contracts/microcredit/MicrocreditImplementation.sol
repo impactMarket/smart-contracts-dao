@@ -19,6 +19,12 @@ contract MicrocreditImplementation is
     using SafeERC20Upgradeable for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
+    event MaintainerAdded(
+        address indexed maintainerAddress
+    );
+
+    event MaintainerRemoved(address indexed maintainerRemovedAddress);
+
     event ManagerAdded(
         address indexed managerAddress,
         uint256 lentAmountLimit
@@ -73,6 +79,13 @@ contract MicrocreditImplementation is
 
     modifier onlyManagers() {
         require(_managerList.contains(msg.sender), "Microcredit: caller is not a manager");
+        _;
+    }
+
+    modifier onlyMaintainers() {
+        require(
+            _maintainerList.contains(msg.sender) || msg.sender == owner(),
+            "Microcredit: caller is not a maintainer");
         _;
     }
 
@@ -138,6 +151,23 @@ contract MicrocreditImplementation is
      */
     function walletListAt(uint256 _index) external view override returns (address) {
         return _walletList.at(_index);
+    }
+
+    /**
+     * @notice Returns an address from the maintainerList
+     *
+     * @param _index index value
+     * @return address of the maintainer
+     */
+    function maintainerListAt(uint256 _index) external view override returns (address) {
+        return _maintainerList.at(_index);
+    }
+
+    /**
+     * @notice Returns the length of the maintainerList
+     */
+    function maintainerListLength() external view override returns (uint256) {
+        return _maintainerList.length();
     }
 
     /**
@@ -255,6 +285,44 @@ contract MicrocreditImplementation is
         uniswapRouter = _newUniswapRouter;
     }
 
+    function updateMicrocreditManager(IMicrocreditManager _newMicrocreditManager) external override onlyOwner {
+        microcreditManager = _newMicrocreditManager;
+    }
+
+    /**
+     * @notice Adds maintainers
+     *
+     * @param _maintainerAddresses      addresses of the maintainers
+     */
+    function addMaintainers(address[] calldata _maintainerAddresses) external override onlyOwner {
+        uint256 _length = _maintainerAddresses.length;
+        uint256 _index;
+
+        for (_index = 0; _index < _length; _index++) {
+            _maintainerList.add(_maintainerAddresses[_index]);
+
+            emit MaintainerAdded(
+                _maintainerAddresses[_index]
+            );
+        }
+    }
+
+    /**
+     * @notice Removes maintainers
+     *
+     * @param _maintainerAddresses     addresses of the maintainers
+     */
+    function removeMaintainers(address[] calldata _maintainerAddresses) external override onlyOwner {
+        uint256 _length = _maintainerAddresses.length;
+        uint256 _maintainerId;
+
+        for (_maintainerId = 0; _maintainerId < _length; _maintainerId++) {
+            _maintainerList.remove(_maintainerAddresses[_maintainerId]);
+
+            emit MaintainerRemoved(_maintainerAddresses[_maintainerId]);
+        }
+    }
+
     /**
      * @notice Adds managers
      *
@@ -263,7 +331,7 @@ contract MicrocreditImplementation is
     function addManagers(
         address[] calldata _managerAddresses,
         uint256[] calldata _lentAmountLimits
-    ) external override onlyOwner {
+    ) external override onlyMaintainers {
         uint256 _length = _managerAddresses.length;
         uint256 _index;
 
@@ -284,7 +352,7 @@ contract MicrocreditImplementation is
      *
      * @param _managerAddresses     addresses of the managers
      */
-    function removeManagers(address[] calldata _managerAddresses) external override onlyOwner {
+    function removeManagers(address[] calldata _managerAddresses) external override onlyMaintainers {
         uint256 _length = _managerAddresses.length;
         uint256 _managerId;
 
@@ -318,26 +386,6 @@ contract MicrocreditImplementation is
     ) external override onlyManagers {
         _addLoan(_userAddress, _tokenAddress, _amount, _period, _dailyInterest, _claimDeadline);
     }
-
-    /**
-     * @notice Adds a loan
-     *
-     * @param _userAddress           address of the user
-     * @param _amount                amount of the loan
-     * @param _period                period of the loan
-     * @param _dailyInterest         daily interest of the loan
-     * @param _claimDeadline         claim deadline of the loan
-     */
-    function addLoan(
-        address _userAddress,
-        uint256 _amount,
-        uint256 _period,
-        uint256 _dailyInterest,
-        uint256 _claimDeadline
-    ) external override onlyManagers {
-        _addLoan(_userAddress, address(cUSD), _amount, _period, _dailyInterest, _claimDeadline);
-    }
-
 
     /**
      * @notice Adds multiples loans
@@ -384,8 +432,8 @@ contract MicrocreditImplementation is
 
         for (_index = 0; _index < _loansNumber; _index++) {
             _addLoan(
-                _tokenAddresses[_index],
                 _userAddresses[_index],
+                _tokenAddresses[_index],
                 _amounts[_index],
                 _periods[_index],
                 _dailyInterests[_index],
@@ -595,8 +643,14 @@ contract MicrocreditImplementation is
 
         _loan.lastComputedDate = _loan.lastComputedDate + _days * 86400;
 
-        if (_loan.lastComputedDebt == 0 && address(donationMiner) != address(0)) {
-            donationMiner.donateVirtual(_loan.amountRepayed - _loan.amountBorrowed, msg.sender);
+        if (_loan.lastComputedDebt == 0) {
+            if (address(microcreditManager) != address(0)) {
+                microcreditManager.addCompletedLoanToManager(_loan.managerAddress, msg.sender, _loanId);
+            }
+
+            if (address(donationMiner) != address(0)) {
+                donationMiner.donateVirtual(_loan.amountRepayed - _loan.amountBorrowed, msg.sender);
+            }
         }
 
         emit RepaymentAdded(msg.sender, _loanId, _repaymentAmount, _loan.lastComputedDebt);

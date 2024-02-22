@@ -17,6 +17,8 @@ export const uniswapQuoterAddress =
 	"0x82825d0554fA07f7FC52Ab63c961F330fdEFa8E8";
 export const uniswapNFTPositionManagerAddress =
 	"0x3d79EdAaBC0EaB6F08ED885C05Fc0B014290D95A";
+export const uniswapExchangePathCUSDToPACT =
+	"0x765de816845861e75a25fca122bb6898b8b1282a00271046c9757c5497c5b1f2eb73ae79b6b67d119b0b58";
 
 export async function createPool(
 	creator: SignerWithAddress,

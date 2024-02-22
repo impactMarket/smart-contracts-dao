@@ -609,6 +609,10 @@ describe.only("DonationMiner", () => {
     );
   }
 
+  function shouldBeAlmostEqual(value1: BigNumber, value2: BigNumber) {
+    (value1.div(1000)).should.eq(value2.div(1000))
+  }
+
   describe("Donation Miner (claimDelay = 0, againstPeriods = 0)", () => {
     before(async function () {
     });
@@ -1682,6 +1686,127 @@ describe.only("DonationMiner", () => {
       expect(await PACT.balanceOf(user2.address)).to.equal(
         user2ExpectedReward
       );
+    });
+
+    it("Should estimateClaimableRewardAdvance #1", async function () {
+      const user1Donation = toEther("100");
+      const user1ExpectedReward = toEther("8635256.64");
+
+      await advanceToRewardPeriodN(1);
+
+      // Approve
+      await cUSD
+        .connect(user1)
+        .approve(DonationMiner.address, user1Donation);
+
+      await DonationMiner.connect(user1).donate(
+        cUSD.address,
+        user1Donation,
+        user1.address
+      );
+
+      (await DonationMiner.estimateClaimableRewardAdvance(user1.address)).should.eq(rewardsSum(1, 1));
+    });
+
+    it("Should estimateClaimableRewardAdvance #2", async function () {
+      const user1Donation = toEther("100");
+      const user1ExpectedReward = toEther("8635256.64");
+
+      await advanceToRewardPeriodN(2);
+
+      // Approve
+      await cUSD
+        .connect(user1)
+        .approve(DonationMiner.address, user1Donation);
+
+      await DonationMiner.connect(user1).donate(
+        cUSD.address,
+        user1Donation,
+        user1.address
+      );
+
+      (await DonationMiner.estimateClaimableRewardAdvance(user1.address)).should.eq(rewardsSum(2, 2));
+    });
+
+    it("Should estimateClaimableRewardAdvance #3", async function () {
+      const user1Donation = toEther("100");
+      const user1ExpectedReward = toEther("8635256.64");
+
+      await advanceToRewardPeriodN(2);
+
+      // Approve
+      await cUSD
+        .connect(user1)
+        .approve(DonationMiner.address, user1Donation);
+
+      await DonationMiner.connect(user1).donate(
+        cUSD.address,
+        user1Donation,
+        user1.address
+      );
+
+      await advanceToRewardPeriodN(3);
+
+      (await DonationMiner.estimateClaimableRewardAdvance(user1.address)).should.eq(0);
+    });
+
+    it("Should estimateClaimableRewardAdvance #4", async function () {
+      const user1Donation = toEther("100");
+      const user2Donation = toEther("300");
+
+      await advanceToRewardPeriodN(2);
+
+      // Approve
+      await cUSD.connect(user1).approve(DonationMiner.address, user1Donation);
+      await cUSD.connect(user2).approve(DonationMiner.address, user2Donation);
+
+      await DonationMiner.connect(user1).donate(
+        cUSD.address,
+        user1Donation,
+        user1.address
+      );
+
+      await DonationMiner.connect(user2).donate(
+        cUSD.address,
+        user2Donation,
+        user2.address
+      );
+
+      (await DonationMiner.estimateClaimableRewardAdvance(user1.address)).should.eq(rewardsSum(2, 2).div(4));
+      (await DonationMiner.estimateClaimableRewardAdvance(user2.address)).should.eq(rewardsSum(2, 2).div(4).mul(3));
+    });
+
+    it("Should estimateNewDonationClaimableRewardAdvance #1", async function () {
+      await advanceToRewardPeriodN(1);
+
+      (await DonationMiner.estimateNewDonationClaimableRewardAdvance(toEther(100)))
+        .should.eq(rewardsSum(1, 1));
+    });
+
+    it("Should estimateNewDonationClaimableRewardAdvance #2", async function () {
+      await advanceToRewardPeriodN(2);
+
+      (await DonationMiner.estimateNewDonationClaimableRewardAdvance(toEther(100)))
+        .should.eq(rewardsSum(2, 2));
+    });
+
+    it("Should estimateNewDonationClaimableRewardAdvance #3", async function () {
+      const user1Donation = toEther("100");
+      const user2PossibleDonation = toEther("300");
+
+      await advanceToRewardPeriodN(2);
+
+      // Approve
+      await cUSD.connect(user1).approve(DonationMiner.address, user1Donation);
+
+      await DonationMiner.connect(user1).donate(
+        cUSD.address,
+        user1Donation,
+        user1.address
+      );
+
+      (await DonationMiner.estimateClaimableRewardAdvance(user1.address)).should.eq(rewardsSum(2, 2));
+      (await DonationMiner.estimateNewDonationClaimableRewardAdvance(user2PossibleDonation)).should.eq(rewardsSum(2, 2).div(4).mul(3));
     });
   });
 
@@ -2933,6 +3058,202 @@ describe.only("DonationMiner", () => {
       );
       expect(await PACT.balanceOf(user2.address)).to.equal(
         user2ExpectedReward2
+      );
+    });
+
+    it("Should estimateClaimableRewardAdvance #1", async function () {
+      const user1Donation = toEther("100");
+
+      await advanceToRewardPeriodN(1);
+
+      // Approve
+      await cUSD
+        .connect(user1)
+        .approve(DonationMiner.address, user1Donation);
+
+      await DonationMiner.connect(user1).donate(
+        cUSD.address,
+        user1Donation,
+        user1.address
+      );
+
+      shouldBeAlmostEqual(
+        await DonationMiner.estimateClaimableRewardAdvance(user1.address),
+        rewardsSum(1, 6)
+      );
+    });
+
+    it("Should estimateClaimableRewardAdvance #2", async function () {
+      const user1Donation = toEther("100");
+
+      await advanceToRewardPeriodN(2);
+
+      // Approve
+      await cUSD
+        .connect(user1)
+        .approve(DonationMiner.address, user1Donation);
+
+      await DonationMiner.connect(user1).donate(
+        cUSD.address,
+        user1Donation,
+        user1.address
+      );
+
+      shouldBeAlmostEqual(
+        await DonationMiner.estimateClaimableRewardAdvance(user1.address),
+        rewardsSum(2, 7)
+      );
+    });
+
+    it("Should estimateClaimableRewardAdvance #3", async function () {
+      const user1Donation = toEther("100");
+
+      await advanceToRewardPeriodN(2);
+
+      // Approve
+      await cUSD
+        .connect(user1)
+        .approve(DonationMiner.address, user1Donation);
+
+      await DonationMiner.connect(user1).donate(
+        cUSD.address,
+        user1Donation,
+        user1.address
+      );
+
+      await advanceToRewardPeriodN(3);
+
+      shouldBeAlmostEqual(
+        await DonationMiner.estimateClaimableRewardAdvance(user1.address),
+        rewardsSum(3, 7)
+      );
+    });
+
+    it("Should estimateClaimableRewardAdvance #4", async function () {
+      const user1Donation = toEther("100");
+
+      await advanceToRewardPeriodN(2);
+
+      // Approve
+      await cUSD
+        .connect(user1)
+        .approve(DonationMiner.address, user1Donation);
+
+      await DonationMiner.connect(user1).donate(
+        cUSD.address,
+        user1Donation,
+        user1.address
+      );
+
+      await advanceToRewardPeriodN(7);
+
+      shouldBeAlmostEqual(
+        await DonationMiner.estimateClaimableRewardAdvance(user1.address),
+        rewardsSum(7, 7)
+      );
+    });
+
+    it("Should estimateClaimableRewardAdvance #5", async function () {
+      const user1Donation = toEther("100");
+
+      await advanceToRewardPeriodN(2);
+
+      // Approve
+      await cUSD
+        .connect(user1)
+        .approve(DonationMiner.address, user1Donation);
+
+      await DonationMiner.connect(user1).donate(
+        cUSD.address,
+        user1Donation,
+        user1.address
+      );
+
+      await advanceToRewardPeriodN(8);
+
+      (await DonationMiner.estimateClaimableRewardAdvance(user1.address)).should.eq(0);
+    });
+
+    it("Should estimateClaimableRewardAdvance #6", async function () {
+      const user1Donation = toEther("100");
+      const user2Donation = toEther("300");
+
+      await advanceToRewardPeriodN(2);
+
+      // Approve
+      await cUSD
+        .connect(user1)
+        .approve(DonationMiner.address, user1Donation);
+      // Approve
+      await cUSD
+        .connect(user2)
+        .approve(DonationMiner.address, user2Donation);
+
+      await DonationMiner.connect(user1).donate(
+        cUSD.address,
+        user1Donation,
+        user1.address
+      );
+
+      await DonationMiner.connect(user2).donate(
+        cUSD.address,
+        user2Donation,
+        user2.address
+      );
+
+      shouldBeAlmostEqual(
+        await DonationMiner.estimateClaimableRewardAdvance(user1.address),
+        rewardsSum(2, 7).div(4)
+      );
+
+      shouldBeAlmostEqual(
+        await DonationMiner.estimateClaimableRewardAdvance(user2.address),
+        rewardsSum(2, 7).div(4).mul(3)
+      );
+    });
+
+    it("Should estimateNewDonationClaimableRewardAdvance #1", async function () {
+      await advanceToRewardPeriodN(1);
+
+      shouldBeAlmostEqual(
+        await DonationMiner.estimateNewDonationClaimableRewardAdvance(toEther(100)),
+        rewardsSum(1, 6)
+      );
+    });
+
+    it("Should estimateNewDonationClaimableRewardAdvance #2", async function () {
+      await advanceToRewardPeriodN(2);
+
+      shouldBeAlmostEqual(
+        await DonationMiner.estimateNewDonationClaimableRewardAdvance(toEther(100)),
+        rewardsSum(2, 7)
+      );
+    });
+
+    it("Should estimateNewDonationClaimableRewardAdvance #3", async function () {
+      const user1Donation = toEther("100");
+
+      await advanceToRewardPeriodN(2);
+
+      // Approve
+      await cUSD
+        .connect(user1)
+        .approve(DonationMiner.address, user1Donation);
+
+      await DonationMiner.connect(user1).donate(
+        cUSD.address,
+        user1Donation,
+        user1.address
+      );
+
+      shouldBeAlmostEqual(
+        await DonationMiner.estimateClaimableRewardAdvance(user1.address),
+        rewardsSum(2, 7)
+      );
+
+      shouldBeAlmostEqual(
+        await DonationMiner.estimateNewDonationClaimableRewardAdvance(toEther(300)),
+        rewardsSum(2, 7).div(4).mul(3)
       );
     });
   });

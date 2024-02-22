@@ -659,11 +659,9 @@ contract DonationMinerImplementation is
         external
         view
         override
-        whenStarted
-        whenNotPaused
         returns (uint256)
     {
-        return _estimateClaimableReward(_donorAddress, 0);
+        return _estimateDonorClaimableReward(_donorAddress, 0);
     }
 
     /**
@@ -671,17 +669,31 @@ contract DonationMinerImplementation is
      *
      * @param _donorAddress             address of the donor
      *
-     * @return uint256 reward that donor will receive in current reward period if there isn't another donation
+     * @return uint256 the estimate reward donor will receive after against periods based on the current donations and stakings
      */
     function estimateClaimableRewardAdvance(address _donorAddress)
         external
         view
         override
-        whenStarted
-        whenNotPaused
         returns (uint256)
     {
-        return _estimateClaimableReward(_donorAddress, againstPeriods);
+        return _estimateDonorClaimableReward(_donorAddress, againstPeriods);
+    }
+
+    /**
+     * @notice Calculates the estimate reward of a possible new donation  for the next againstPeriods reward periods
+     *
+     * @param _donationAmount             amount of the donation
+     *
+     * @return uint256 the estimate reward donor will receive after against periods based on the current donations and stakings
+     */
+    function estimateNewDonationClaimableRewardAdvance(uint256 _donationAmount)
+        external
+        view
+        override
+        returns (uint256)
+    {
+        return _estimateNewDonationClaimableReward(_donationAmount, againstPeriods);
     }
 
     /**
@@ -693,8 +705,6 @@ contract DonationMinerImplementation is
         external
         view
         override
-        whenStarted
-        whenNotPaused
         returns (uint256)
     {
         uint256 _donorAmount;
@@ -720,8 +730,6 @@ contract DonationMinerImplementation is
         external
         view
         override
-        whenStarted
-        whenNotPaused
         returns (uint256)
     {
         uint256 _stakeholderAmount = staking.stakeholderAmount(_stakeholderAddress);
@@ -730,7 +738,7 @@ contract DonationMinerImplementation is
         }
 
         return
-            (1e18 * 365100 * _estimateClaimableReward(_stakeholderAddress, 0)) / _stakeholderAmount;
+            (1e18 * 365100 * _estimateDonorClaimableReward(_stakeholderAddress, 0)) / _stakeholderAmount;
     }
 
     /**
@@ -738,7 +746,7 @@ contract DonationMinerImplementation is
      *
      * @return uint256 APR
      */
-    function generalApr() public view override whenStarted whenNotPaused returns (uint256) {
+    function generalApr() public view override returns (uint256) {
         uint256 _donorAmount;
         uint256 _totalAmount;
 
@@ -773,8 +781,7 @@ contract DonationMinerImplementation is
     }
 
     /**
-     * @dev Calculate all donations on the last X epochs as well as everyone
-     * else in the same period.
+     * @dev Calculate all donations on the last X epochs as well as everyone else in the same period.
      *
      * @param _donorAddress  address of the donor
      *
@@ -1058,6 +1065,10 @@ contract DonationMinerImplementation is
     {
         Donor storage _donor = donors[_donorAddress];
 
+        if (_donor.lastClaimPeriod == 0 && _donor.rewardPeriodsCount == 0) {
+            return (0, 0);
+        }
+
         // _index is the last reward period number for which the donor claimed his reward
         uint256 _index = _donor.lastClaimPeriod + 1;
 
@@ -1211,22 +1222,42 @@ contract DonationMinerImplementation is
      * @param _inAdvanceRewardPeriods   number of reward periods in front
      *                                   if _inAdvanceRewardPeriods is 0 the method returns
      *                                        the estimated reward for current reward period
-     * @return uint256 reward that donor will receive in current reward period if there isn't another donation
+     * @return uint256 the estimate reward donor will receive after against periods based on the current donations and stakings
      */
-    function _estimateClaimableReward(address _donorAddress, uint256 _inAdvanceRewardPeriods)
+    function _estimateDonorClaimableReward(address _donorAddress, uint256 _inAdvanceRewardPeriods)
         internal
         view
         returns (uint256)
     {
-        uint256 _currentPeriodReward = _calculateCurrentPeriodReward();
-        uint256 _totalReward = _currentPeriodReward;
+        Donor storage _donor = donors[_donorAddress];
 
-        while (_inAdvanceRewardPeriods > 0) {
-            _currentPeriodReward = (_currentPeriodReward * decayNumerator) / decayDenominator;
-            _totalReward += _currentPeriodReward;
-            _inAdvanceRewardPeriods--;
+        if (_inAdvanceRewardPeriods > currentRewardPeriodNumber() - _donor.rewardPeriods[_donor.rewardPeriodsCount]) {
+            _inAdvanceRewardPeriods -= (currentRewardPeriodNumber() - _donor.rewardPeriods[_donor.rewardPeriodsCount]);
+        } else {
+            _inAdvanceRewardPeriods = 0;
         }
+        uint256 _totalReward = _calculateRewardForTheNextXPeriods(_inAdvanceRewardPeriods);
+
         return _calculateDonorShare(_donorAddress, _totalReward);
+    }
+
+    /**
+     * @notice Calculates the estimate reward for a new possible donation
+     *
+     * @param _donationAmount           amount of the new possible donation
+     * @param _inAdvanceRewardPeriods   number of reward periods in front
+     *                                   if _inAdvanceRewardPeriods is 0 the method returns
+     *                                        the estimated reward for current reward period
+     * @return uint256 the estimate reward donor will receive after against periods based on the current donations and stakings
+     */
+    function _estimateNewDonationClaimableReward(uint256 _donationAmount, uint256 _inAdvanceRewardPeriods)
+    internal
+    view
+    returns (uint256)
+    {
+        uint256 _totalReward = _calculateRewardForTheNextXPeriods(_inAdvanceRewardPeriods);
+
+        return _calculateNewDonationShare(_donationAmount, _totalReward);
     }
 
     /**
@@ -1258,6 +1289,36 @@ contract DonationMinerImplementation is
             (_totalAmount * _stakingDonationRatio + staking.currentTotalAmount());
     }
 
+    /**
+     * @notice Calculates a new donation share based on the donations and stakes from the last x rewardPeriods
+     *
+     *
+     * @return uint256 the estimate reward donor will receive after against periods based on the current donations and stakings
+     */
+    function _calculateNewDonationShare(uint256  _donationAmount, uint256 _total)
+    internal
+    view
+    returns (uint256)
+    {
+        uint256 _totalAmount;
+
+        (, _totalAmount) = lastPeriodsDonations(msg.sender);
+
+        _totalAmount += _donationAmount;
+
+        uint256 totalStakeAmount = staking.SPACT().totalSupply();
+        if (totalStakeAmount == 0 && _totalAmount == 0) {
+            return 0;
+        }
+
+        uint256 _stakingDonationRatio = stakingDonationRatio > 0 ? stakingDonationRatio : 1;
+
+        return
+            (_total *
+                (_donationAmount * _stakingDonationRatio)) /
+            (_totalAmount * _stakingDonationRatio + staking.currentTotalAmount());
+    }
+
     function _calculateCurrentPeriodReward() internal view returns (uint256) {
         uint256 _currentRewardPeriodNumber = currentRewardPeriodNumber();
 
@@ -1266,5 +1327,18 @@ contract DonationMinerImplementation is
             decayDenominator**(_currentRewardPeriodNumber - rewardPeriodCount);
 
         return _rewardPerBlock * rewardPeriodSize;
+    }
+
+    function _calculateRewardForTheNextXPeriods(uint256 _inAdvanceRewardPeriods) internal view returns(uint256) {
+        uint256 _currentPeriodReward = _calculateCurrentPeriodReward();
+        uint256 _totalReward = _currentPeriodReward;
+
+        while (_inAdvanceRewardPeriods > 0) {
+            _currentPeriodReward = (_currentPeriodReward * decayNumerator) / decayDenominator;
+            _totalReward += _currentPeriodReward;
+            _inAdvanceRewardPeriods--;
+        }
+
+        return _totalReward;
     }
 }

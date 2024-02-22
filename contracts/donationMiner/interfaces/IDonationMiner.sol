@@ -126,6 +126,7 @@ interface IDonationMiner {
     function calculateClaimableRewardsByPeriodNumber(address _donor, uint256 _lastPeriodNumber) external returns (uint256);
     function estimateClaimableReward(address _donor) external view returns (uint256);
     function estimateClaimableRewardAdvance(address _donor) external view returns (uint256);
+    function estimateNewDonationClaimableRewardAdvance(uint256 _donationAmount) external view returns (uint256);
     function estimateClaimableRewardByStaking(address _donor) external view returns (uint256);
     function apr(address _stakeholderAddress) external view returns (uint256);
     function generalApr() external view returns (uint256);

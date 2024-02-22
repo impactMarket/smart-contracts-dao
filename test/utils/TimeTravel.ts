@@ -70,21 +70,35 @@ export async function advanceNSecondsAndBlock(n: number) {
 	await advanceBlock();
 }
 
-export async function getBlockNumber() {
+export async function getBlockNumber(): Promise<number> {
 	return Number(await network.provider.send("eth_blockNumber", []));
 }
 
 export async function getCurrentBlockTimestamp(): Promise<number> {
-	return getBlockTimestamp((await getBlockNumber()).toString(16));
+	return getBlockTimestamp(await getBlockNumber());
+}
+
+export async function getFutureBlockTimestamp(
+	blockNumber: number
+): Promise<number> {
+	const currentBlockNumber = await getBlockNumber();
+
+	if(currentBlockNumber > blockNumber) {
+		return getBlockTimestamp(blockNumber);
+	} else {
+
+		return (await getCurrentBlockTimestamp()) + 5 * (blockNumber - currentBlockNumber)
+	}
+	return getBlockTimestamp((await getBlockNumber()));
 }
 
 export async function getBlockTimestamp(
-	blockNumber: number | string
+	blockNumber: number
 ): Promise<number> {
 	return parseInt(
 		(
 			await network.provider.send("eth_getBlockByNumber", [
-				"0x" + blockNumber,
+				"0x" + Number(blockNumber).toString(16),
 				true,
 			])
 		).timestamp,
