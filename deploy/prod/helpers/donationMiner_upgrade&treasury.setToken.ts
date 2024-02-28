@@ -39,13 +39,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   deployer = accounts[0];
 
   await deployNewDonationMinerImplementation();
-  await createCallProposal();
+  // await createCallProposal();
 };
 
 async function deployNewDonationMinerImplementation() {
   console.log("Deploying new DonationMinerImplementation");
   newDonationMinerImplementationAddress = (
-    await deploy('DonationMinerImplementation', {
+    await deploy('MicrocreditImplementation', {
       from: deployer.address,
       args: [],
       log: true,

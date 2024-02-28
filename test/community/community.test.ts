@@ -21,7 +21,7 @@ import { LpStrategy } from "../treasury/treasury.test";
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
-const provider = waffle.provider;
+// const provider = waffle.provider;
 should();
 
 describe("Community", () => {
@@ -3359,7 +3359,7 @@ describe("Community", () => {
 			const tx = await community
 				.connect(communityManagerAddress)
 				.addBeneficiaries([beneficiaryAddress.address]);
-			const block = await provider.getBlock(tx.blockNumber); // block is null; the regular provider apparently doesn't know about this block yet.
+			// const block = await provider.getBlock(tx.blockNumber); // block is null; the regular provider apparently doesn't know about this block yet.
 
 			(
 				await community.beneficiaries(beneficiaryAddress.address)

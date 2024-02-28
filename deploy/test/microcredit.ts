@@ -98,6 +98,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	await donationMiner.updateMicrocredit(microcreditContract.address);
 
 	await microcreditContract.updateDonationMiner(donationMiner.address);
+
 	await microcreditContract.updateUniswapRouter(uniswapRouterAddress);
 	await microcreditContract.updateUniswapQuoter(uniswapQuoterAddress);
 

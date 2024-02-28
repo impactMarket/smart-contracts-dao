@@ -1,12 +1,11 @@
 import { task } from "hardhat/config";
 import "solidity-coverage";
 import "hardhat-docgen";
-import "@nomiclabs/hardhat-waffle";
-import "@nomiclabs/hardhat-waffle";
+// import "@nomiclabs/hardhat-waffle";
 import "hardhat-deploy";
 import "@nomiclabs/hardhat-ethers";
-import '@openzeppelin/hardhat-upgrades';
-// import "@nomicfoundation/hardhat-verify";
+// import '@openzeppelin/hardhat-upgrades'; //conflict with @nomicfoundation/hardhat-verify. must comment one of them
+import "@nomicfoundation/hardhat-verify";
 
 task("accounts", "Prints the list of accounts", async (args, hre) => {
   const accounts = await hre.ethers.getSigners();
@@ -34,10 +33,10 @@ export default {
       timeout: 100000,
       gasPrice: "auto",
       gas: 13000000,
-      // forking: {
-      //   chainId: 42220,
-      //   url: "https://forno.celo.org"
-      // },
+      forking: {
+        chainId: 42220,
+        url: "https://forno.celo.org"
+      },
     },
     alfajores: {
       chainId: 44787,
@@ -99,19 +98,27 @@ export default {
   sourcify: {
     enabled: true
   },
-  // etherscan: {
-  //   apiKey: {
-  //     mainnet: "C9E1APEXRU2GT61PDAR4CYMHJZ1E6K5P28",
-  //   },
-  //   customChains: [
-  //     {
-  //       network: "mainnet",
-  //       chainId: 42220,
-  //       urls: {
-  //         apiURL: "https://api.celoscan.io/api",
-  //         browserURL: "https://celoscan.io"
-  //       }
-  //     }
-  //   ]
-  // },
+  etherscan: {
+    apiKey: {
+      mainnet: "C9E1APEXRU2GT61PDAR4CYMHJZ1E6K5P28",
+    },
+    customChains: [
+      {
+        network: "mainnet",
+        chainId: 42220,
+        urls: {
+          apiURL: "https://api.celoscan.io/api",
+          browserURL: "https://celoscan.io"
+        }
+      },
+      {
+        network: "alfajores",
+        chainId: 44787,
+        urls: {
+          apiURL: "https://api-alfajores.celoscan.io/api",
+          browserURL: "https://alfajores.celoscan.io",
+        },
+      },
+    ]
+  },
 };

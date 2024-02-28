@@ -19,6 +19,9 @@ contract MicrocreditImplementation is
     using SafeERC20Upgradeable for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
+    address public constant DEFAULT_LENDER_ADDRESS = 0xE6662E970CD54c154af8b9dEd54C95a69b133A5a;
+    uint256 public constant REWARD_MULTIPLIER = 10;
+
     event MaintainerAdded(
         address indexed maintainerAddress
     );
@@ -644,12 +647,16 @@ contract MicrocreditImplementation is
         _loan.lastComputedDate = _loan.lastComputedDate + _days * 86400;
 
         if (_loan.lastComputedDebt == 0) {
-            if (address(microcreditManager) != address(0)) {
-                microcreditManager.addCompletedLoanToManager(_loan.managerAddress, msg.sender, _loanId);
-            }
+//            if (address(microcreditManager) != address(0)) {
+//                microcreditManager.addCompletedLoanToManager(_loan.managerAddress, msg.sender, _loanId);
+//            }
+
+            uint256 rewardAmount = (_loan.amountRepayed - _loan.amountBorrowed) * REWARD_MULTIPLIER;
 
             if (address(donationMiner) != address(0)) {
-                donationMiner.donateVirtual(_loan.amountRepayed - _loan.amountBorrowed, msg.sender);
+                donationMiner.donateVirtual(rewardAmount, msg.sender);
+                donationMiner.donateVirtual(rewardAmount, _loan.managerAddress);
+                donationMiner.donateVirtual(rewardAmount, DEFAULT_LENDER_ADDRESS);
             }
         }
 

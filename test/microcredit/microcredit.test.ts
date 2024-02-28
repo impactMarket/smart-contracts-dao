@@ -56,6 +56,12 @@ describe("Microcredit", () => {
   const initialUser1cTKNBalance = toEther(40000);
   const initialUser2cTKNBalance = toEther(50000);
 
+  const MICROCREDIT_TOKEN_ADDRESS =
+    "0x00000000000000000000000000000000000000C1";
+
+  const DEFAULT_LENDER_ADDRESS = '0xE6662E970CD54c154af8b9dEd54C95a69b133A5a';
+  const REWARD_MULTIPLIER = 10;
+
   const deploy = deployments.createFixture(async () => {
     await deployments.fixture("MicrocreditTest", {
       fallbackToGlobal: false,
@@ -108,7 +114,11 @@ describe("Microcredit", () => {
     await cTKN.mint(user1.address, initialUser1cTKNBalance);
     await cTKN.mint(user2.address, initialUser2cTKNBalance);
 
-    // await createPools();
+
+    await Microcredit.connect(owner).updateUniswapQuoter(uniswapQuoterAddress)
+    await Microcredit.connect(owner).updateUniswapRouter(uniswapRouterAddress)
+
+    await createPools();
   });
 
   function getDebtOnDayX(
@@ -2471,7 +2481,7 @@ describe("Microcredit", () => {
       );
     });
 
-    it("should repayLoan after 1 day", async function () {
+    it.only("should repayLoan after 1 day", async function () {
       const amount = toEther(100);
       const period = sixMonth;
       const dailyInterest = toEther(0.2);
@@ -2540,6 +2550,33 @@ describe("Microcredit", () => {
         initialMicrocreditcUSDBalance
           .sub(amount)
           .add(expectedCurrentDebt)
+      );
+
+      const donation1 = await DonationMiner.donations(1);
+      (donation1.donor).should.eq(user1.address);
+      (donation1.rewardPeriod).should.eq(1);
+      (donation1.amount).should.eq(expectedCurrentDebt.sub(amount).mul(REWARD_MULTIPLIER));
+      (donation1.token).should.eq(MICROCREDIT_TOKEN_ADDRESS);
+      (donation1.initialAmount).should.eq(
+        expectedCurrentDebt.sub(amount).mul(10)
+      );
+
+      const donation2 = await DonationMiner.donations(2);
+      (donation2.donor).should.eq(manager1.address);
+      (donation2.rewardPeriod).should.eq(1);
+      (donation2.amount).should.eq(expectedCurrentDebt.sub(amount).mul(REWARD_MULTIPLIER));
+      (donation2.token).should.eq(MICROCREDIT_TOKEN_ADDRESS);
+      (donation2.initialAmount).should.eq(
+        expectedCurrentDebt.sub(amount).mul(10)
+      );
+
+      const donation3 = await DonationMiner.donations(3);
+      (donation3.donor).should.eq(DEFAULT_LENDER_ADDRESS);
+      (donation3.rewardPeriod).should.eq(1);
+      (donation3.amount).should.eq(expectedCurrentDebt.sub(amount).mul(REWARD_MULTIPLIER));
+      (donation3.token).should.eq(MICROCREDIT_TOKEN_ADDRESS);
+      (donation3.initialAmount).should.eq(
+        expectedCurrentDebt.sub(amount).mul(10)
       );
     });
 

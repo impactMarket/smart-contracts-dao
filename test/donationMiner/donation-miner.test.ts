@@ -21,7 +21,7 @@ chai.use(chaiAsPromised);
 const expect = chai.expect;
 should();
 
-describe.only("DonationMiner", () => {
+describe("DonationMiner", () => {
   const REWARD_PERIOD_SIZE = 20;
   const CLAIM_DELAY = 5;
   const AGAINST_PERIODS = 8;
